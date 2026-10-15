@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jarvis - Salle de marché</title>
+<style>html, body { background: #04070c; margin: 0; height: 100%; overflow: hidden; }</style>
+<style>
+:root { --fond: #04070c; --carte: #0a111b; --bord: #16253a; --texte: #d8e6f5; --doux: #7f97b3; --vert: #2fd27a; --rouge: #ff5a5f; --neutre: #8aa0b8; --alerte: #ffb454; --accent: #35b8ff; }
+* { box-sizing: border-box; }
+body { color: var(--texte); font: 15px/1.35 "Segoe UI", system-ui, sans-serif; display: grid; grid-template-rows: auto auto 1fr auto; gap: 10px; padding: 14px 18px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; }
+h1 { font-size: clamp(20px, 2.6vw, 34px); margin: 0; font-weight: 600; letter-spacing: .02em; }
+#symbole { color: var(--doux); font-size: .9em; }
+#prix { font-size: clamp(22px, 3vw, 40px); font-weight: 600; font-variant-numeric: tabular-nums; }
+#var { font-size: clamp(16px, 1.8vw, 24px); font-variant-numeric: tabular-nums; }
+.vert { color: var(--vert); } .rouge { color: var(--rouge); } .neutre { color: var(--neutre); }
+#barre { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.pbtn { background: var(--carte); color: var(--texte); border: 1px solid var(--bord); border-radius: 8px; padding: 6px 16px; font: inherit; cursor: pointer; }
+.pbtn[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.pbtn:disabled { opacity: .35; cursor: default; }
+#quota { margin-left: auto; font-size: .85em; padding: 3px 10px; border-radius: 99px; border: 1px solid var(--bord); color: var(--doux); }
+#quota.presque { color: #1a1204; background: var(--alerte); border-color: var(--alerte); font-weight: 600; }
+main { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr); gap: 12px; min-height: 0; }
+.carte { background: var(--carte); border: 1px solid var(--bord); border-radius: 12px; padding: 12px 14px; min-height: 0; display: flex; flex-direction: column; }
+.carte h2 { margin: 0 0 8px; font-size: .8em; text-transform: uppercase; letter-spacing: .12em; color: var(--doux); font-weight: 600; }
+#graphe { position: relative; flex: 1 1 auto; min-height: 120px; }
+#canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#info { color: var(--doux); font-size: .85em; margin-top: 6px; }
+#colonne { display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 12px; min-height: 0; }
+dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-variant-numeric: tabular-nums; }
+dt { color: var(--doux); } dd { margin: 0; text-align: right; }
+.defile { overflow-y: auto; min-height: 0; flex: 1 1 auto; scrollbar-width: thin; scrollbar-color: #25405f transparent; }
+ul { list-style: none; margin: 0; padding: 0; } li { padding: 5px 0; border-top: 1px solid var(--bord); } li:first-child { border-top: 0; }
+.src { color: var(--doux); font-size: .82em; }
+footer { color: var(--doux); font-size: .82em; display: flex; flex-wrap: wrap; gap: 4px 16px; }
+#vide { display: none; place-self: center; text-align: center; color: var(--doux); font-size: 1.1em; }
+body.vide main, body.vide #barre, body.vide header { display: none; } body.vide #vide { display: block; }
+body.vide { grid-template-rows: 1fr auto; }
+#controle { position: fixed; left: -99999px; top: 0; }
+@media (max-width: 900px), (max-aspect-ratio: 1/1) { main { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(160px, 1.3fr) minmax(0, 1fr); } }
+</style>
+</head>
+<body class="vide">
+<header>
+  <h1 id="nom">Salle de marché</h1><span id="symbole"></span>
+  <span id="prix"></span><span id="var"></span>
+</header>
+<div id="barre">
+  <button class="pbtn" data-p="1j" aria-pressed="false">1 J</button>
+  <button class="pbtn" data-p="1sem" aria-pressed="false">1 S</button>
+  <button class="pbtn" data-p="1mois" aria-pressed="true">1 M</button>
+  <button class="pbtn" data-p="1an" aria-pressed="false">1 A</button>
+  <span id="quota"></span>
+</div>
+<main>
+  <section class="carte" aria-label="Graphique du cours">
+    <h2 id="titre-graphe">Cours</h2>
+    <div id="graphe"><canvas id="canvas"></canvas></div>
+    <div id="info"></div>
+  </section>
+  <div id="colonne">
+    <section class="carte" aria-label="Chiffres de la période"><h2>Chiffres de la période</h2><dl id="stats"></dl></section>
+    <section class="carte" aria-label="Repères factuels"><h2>Repères factuels</h2><ul id="reperes" class="defile"></ul></section>
+    <section class="carte" aria-label="Actualités liées"><h2>Actualités liées (texte seulement)</h2><ul id="actus" class="defile"></ul></section>
+  </div>
+</main>
+<div id="vide">Aucune valeur affichée.<br>Dites : « Jarvis, montre-moi le marché de Thales ».</div>
+<footer id="pied"></footer>
+<script>
+const K = "__TOKEN__";
+const $ = id => document.getElementById(id);
+const fr = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 4 });
+const fr2 = new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+let D = window.__DEMO || null, periode = "1mois", survol = -1;
+
+function dateCourte(s) { const m = /^(\d{4})-(\d\d)-(\d\d)/.exec(s || ""); return m ? m[3] + "/" + m[2] + "/" + m[1] : (s || ""); }
+function dateHeure(s) { const d = new Date(s); return isNaN(d) ? "" : d.toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }); }
+function classe(x) { return x > 0.0499 ? "vert" : x < -0.0499 ? "rouge" : "neutre"; }
+function fmtPct(x) { const f = Math.abs(x) < 0.0499 ? "=" : x > 0 ? "▲" : "▼"; return f + " " + (x > 0 ? "+" : x < 0 ? "−" : "") + fr2.format(Math.abs(x)) + " %"; }
+function el(tag, texte, cls) { const e = document.createElement(tag); e.textContent = texte; if (cls) e.className = cls; return e; }   // TOUT texte reçu passe par textContent : une actualité est une donnée, jamais du HTML ni une commande
+
+function ligneDl(dl, a, b, cls) { dl.appendChild(el("dt", a)); dl.appendChild(el("dd", b, cls)); }
+
+function render() {
+  const vide = !D || D.vide || !D.periodes;
+  document.body.classList.toggle("vide", !!vide);
+  if (vide) { $("pied").textContent = "Lecture seule · chiffres datés et sourcés."; return; }
+  const P = D.periodes, cles = ["1j", "1sem", "1mois", "1an"];
+  if (!P[periode]) periode = cles.find(c => P[c]) || periode;
+  document.querySelectorAll(".pbtn").forEach(b => { b.disabled = !P[b.dataset.p]; b.setAttribute("aria-pressed", String(b.dataset.p === periode)); });
+  const p = P[periode];
+  $("nom").textContent = D.nom; $("symbole").textContent = D.symbole ? "(" + D.symbole + ")" : "";
+  const dev = D.devise ? " " + D.devise : "";
+  $("prix").textContent = fr.format(p.fin.c) + dev;
+  const v = $("var"); v.textContent = fmtPct(p.variation_pct) + " · " + p.libelle; v.className = classe(p.variation_pct);
+  $("titre-graphe").textContent = "Cours · " + p.libelle + " (" + p.n + (periode === "1an" ? " semaines" : p.n > 1 ? " séances" : " séance") + ")";
+  const q = D.quota || {}, qe = $("quota");
+  qe.textContent = q.presque ? "Quota presque atteint (" + q.n + "/" + q.plafond + ")" : (q.plafond ? "Requêtes du jour : " + q.n + "/" + q.plafond : "");
+  qe.className = q.presque ? "presque" : "";
+  const st = $("stats"); st.textContent = "";
+  ligneDl(st, "Dernier cours", fr.format(p.fin.c) + dev + " · " + dateCourte(p.fin.date));
+  ligneDl(st, "Variation", fmtPct(p.variation_pct), classe(p.variation_pct));
+  ligneDl(st, "Point de départ", fr.format(p.debut.c) + dev + " · " + dateCourte(p.debut.date));
+  ligneDl(st, "Plus haut", fr.format(p.haut.v) + dev + " · " + dateCourte(p.haut.date));
+  ligneDl(st, "Plus bas", fr.format(p.bas.v) + dev + " · " + dateCourte(p.bas.date));
+  const rp = $("reperes"); rp.textContent = "";
+  (D.reperes || []).forEach(r => {
+    const li = document.createElement("li");
+    if (r.disponible) { li.appendChild(el("div", "Le dernier cours est " + r.position + " la " + r.libelle + " (" + fr.format(r.valeur) + dev + ") : " + (r.ecart_pct > 0 ? "+" : r.ecart_pct < 0 ? "−" : "") + fr2.format(Math.abs(r.ecart_pct)) + " %")); }
+    else { li.appendChild(el("div", r.libelle + " : " + r.note, "src")); }
+    li.appendChild(el("div", "au " + dateCourte(r.date) + " · source " + D.source, "src")); rp.appendChild(li);
+  });
+  const ac = $("actus"); ac.textContent = "";
+  if (!(D.actus || []).length) ac.appendChild(el("li", "Aucune actualité récente dans vos sources.", "src"));
+  (D.actus || []).forEach(a => { const li = document.createElement("li"); li.appendChild(el("div", a.titre)); li.appendChild(el("div", a.source + " · " + dateCourte(a.date), "src")); ac.appendChild(li); });
+  const pied = $("pied"); pied.textContent = "";
+  pied.appendChild(el("span", "Lecture seule · données : " + D.source + ", mises à jour le " + dateHeure(D.maj) + (D.cache ? " (cache local)" : "") + (D.cache_perime ? " · cache plus ancien que prévu" : "")));
+  (D.avertissements || []).forEach(a => pied.appendChild(el("span", a)));
+  tracer();
+}
+
+function tracer() {
+  const cv = $("canvas"), p = D && D.periodes && D.periodes[periode]; if (!p) return;
+  const dpr = Math.min(2, window.devicePixelRatio || 1), W = cv.clientWidth, H = cv.clientHeight; if (!W || !H) return;
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+  const pts = p.points, vals = pts.map(x => x.c), mn = Math.min(...vals), mx = Math.max(...vals), marge = (mx - mn) * 0.08 || Math.abs(mx) * 0.01 || 1;
+  const lo = mn - marge, hi = mx + marge, gauche = 64, bas = 22, haut = 8, droite = 10;
+  const X = i => gauche + (W - gauche - droite) * (pts.length === 1 ? 0.5 : i / (pts.length - 1)), Y = v => haut + (H - haut - bas) * (1 - (v - lo) / (hi - lo));
+  const couleur = p.variation_pct > 0.0499 ? "#2fd27a" : p.variation_pct < -0.0499 ? "#ff5a5f" : "#8aa0b8";
+  g.font = "12px Segoe UI, sans-serif"; g.fillStyle = "#7f97b3"; g.strokeStyle = "#16253a"; g.lineWidth = 1;
+  for (let k = 0; k <= 3; k++) { const v = lo + (hi - lo) * k / 3, y = Y(v); g.beginPath(); g.moveTo(gauche, y); g.lineTo(W - droite, y); g.stroke(); g.textAlign = "right"; g.fillText(fr.format(Math.round(v * 100) / 100), gauche - 6, y + 4); }
+  g.textAlign = "left"; g.fillText(dateCourte(pts[0].t), gauche, H - 6); g.textAlign = "right"; g.fillText(dateCourte(pts[pts.length - 1].t), W - droite, H - 6);
+  const grad = g.createLinearGradient(0, haut, 0, H - bas); grad.addColorStop(0, couleur + "55"); grad.addColorStop(1, couleur + "00");
+  g.beginPath(); pts.forEach((x, i) => i ? g.lineTo(X(i), Y(x.c)) : g.moveTo(X(i), Y(x.c)));
+  g.lineTo(X(pts.length - 1), H - bas); g.lineTo(X(0), H - bas); g.closePath(); g.fillStyle = grad; g.fill();
+  g.beginPath(); pts.forEach((x, i) => i ? g.lineTo(X(i), Y(x.c)) : g.moveTo(X(i), Y(x.c))); g.strokeStyle = couleur; g.lineWidth = 2.2; g.lineJoin = "round"; g.stroke();
+  const dernier = pts.length - 1; g.fillStyle = couleur; g.beginPath(); g.arc(X(dernier), Y(vals[dernier]), 4, 0, 6.2832); g.fill();
+  cv._geo = { X, Y, pts, gauche, droite };
+  if (survol >= 0 && survol < pts.length) {
+    const x = X(survol), y = Y(vals[survol]); g.strokeStyle = "#35b8ff"; g.lineWidth = 1; g.beginPath(); g.moveTo(x, haut); g.lineTo(x, H - bas); g.stroke();
+    g.fillStyle = "#35b8ff"; g.beginPath(); g.arc(x, y, 4, 0, 6.2832); g.fill();
+    $("info").textContent = dateCourte(pts[survol].t) + " · clôture " + fr.format(vals[survol]) + (D.devise ? " " + D.devise : "");
+  } else { $("info").textContent = "Survolez le graphique pour lire une clôture · source " + D.source; }
+}
+
+document.querySelectorAll(".pbtn").forEach(b => b.addEventListener("click", () => { periode = b.dataset.p; survol = -1; render(); }));
+$("canvas").addEventListener("mousemove", e => { const cv = $("canvas"), gm = cv._geo; if (!gm) return; const r = cv.getBoundingClientRect(), x = e.clientX - r.left; const n = gm.pts.length; const i = n === 1 ? 0 : Math.round((x - gm.gauche) / (r.width - gm.gauche - gm.droite) * (n - 1)); survol = Math.max(0, Math.min(n - 1, i)); tracer(); });
+$("canvas").addEventListener("mouseleave", () => { survol = -1; tracer(); });
+window.addEventListener("resize", tracer);
+
+async function charger() {
+  if (window.__DEMO) { render(); return; }
+  try { const r = await fetch("/marche-donnees?k=" + K, { cache: "no-store" }); const j = await r.json(); const neuf = JSON.stringify(j); if (neuf !== charger.dernier) { charger.dernier = neuf; D = j; render(); } } catch (e) { /* Jarvis fermé ou occupé : on garde l'affichage */ }
+}
+charger(); if (!window.__DEMO) setInterval(charger, 4000);
+
+if (window.__CONTROLE) {   // contrôle de mise en page pour tests\interface-marche.ps1 (Edge sans fenêtre)
+  setTimeout(() => {
+    const pb = [], de = document.documentElement;
+    if (de.scrollHeight > innerHeight + 1) pb.push("la page défile verticalement (" + de.scrollHeight + " > " + innerHeight + ")");
+    if (de.scrollWidth > innerWidth + 1) pb.push("la page défile horizontalement");
+    document.querySelectorAll(".carte, header, #barre, footer").forEach(e => { const r = e.getBoundingClientRect(); if (r.width > 0 && (r.right > innerWidth + 1 || r.bottom > innerHeight + 1 || r.left < -1 || r.top < -1)) pb.push("hors écran : " + (e.id || e.className || e.tagName)); });
+    const cv = $("canvas"); let nonVide = 0;
+    if (cv.width) { const d = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) nonVide++; }
+    if (!document.body.classList.contains("vide") && nonVide < 200) pb.push("graphique vide (" + nonVide + " pixels)");
+    const pre = document.createElement("pre"); pre.id = "controle"; pre.textContent = JSON.stringify({ ok: pb.length === 0, problemes: pb, pixels: nonVide, w: innerWidth, h: innerHeight }); document.body.appendChild(pre);
+  }, 500);
+}
+</script>
+</body>
+</html>

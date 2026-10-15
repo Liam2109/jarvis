@@ -1,0 +1,8 @@
+[
+  { "re": "(?i)Set-MpPreference|Add-MpPreference|DisableRealtimeMonitoring|DisableAntiSpyware|sc(\\.exe)?\\s+(stop|config|delete)\\s+(WinDefend|Sense|MpsSvc)|Stop-Service.*(WinDefend|MpsSvc)", "raison": "désactiver l'antivirus" },
+  { "re": "(?i)Set-NetFirewallProfile|Disable-NetFirewallRule|netsh\\s+(adv)?firewall|netsh\\s+advfirewall|Remove-NetFirewallRule", "raison": "modifier ou désactiver le pare-feu" },
+  { "re": "(?i)\\bnet\\s+user\\s+\\S+\\s+\\S+|Set-LocalUser.*-Password|\\bnet\\s+user\\b.*/add|passwd", "raison": "modifier un mot de passe" },
+  { "re": "(?i)Format-Volume|Clear-Disk|Remove-Partition|bcdedit|cipher\\s+/w|vssadmin\\s+delete|wbadmin\\s+delete|diskpart", "raison": "une opération destructrice sur le disque" },
+  { "re": "(?i)\\bbw\\s+(get|list|export|login|unlock)\\b|bitwarden", "raison": "l'accès direct au coffre (passer par la compétence Bitwarden)" },
+  { "re": "(?i)interactivebrokers|ibkr|degiro|saxobank|saxotrader|etoro|trade-?republic|boursorama|boursobank|fortuneo|bforbank|binance|coinbase|kraken\\.com|bitpanda|revolut|robinhood|alpaca\\.markets|tradier|schwab|plus500|xtb\\.com|credit-?agricole|societegenerale|bnpparibas|labanquepostale|caisse-?epargne|banquepopulaire|creditmutuel|\\blcl\\.fr|hsbc|n26|qonto", "raison": "connexion à un courtier ou à une banque" }
+]

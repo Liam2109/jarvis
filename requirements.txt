@@ -1,0 +1,11 @@
+# Dépendances Python de Jarvis (installées par installer-serveur.ps1 : python -m pip install -r requirements.txt)
+# Reconnaissance vocale locale
+sounddevice>=0.5
+vosk>=0.3.45
+faster-whisper>=1.2
+numpy>=1.26
+# Voix
+edge-tts>=7.0
+piper-tts>=1.3
+# Pont Discord
+discord.py>=2.4
