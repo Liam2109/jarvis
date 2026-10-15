@@ -13,3 +13,5 @@ voix/models/
 config.local.json
 .claude/settings.local.json
 *.log
+.env.bak
+.env.tmp

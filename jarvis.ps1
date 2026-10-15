@@ -7,6 +7,7 @@
 #   resume          génère le résumé du jour
 #   micro [nom]     teste le micro : liste les entrées, niveau en direct et « J'ai entendu : ... » (20 s, aucune action)
 #   mots [nom]      diagnostic du mot d'éveil (60 s) : texte brut reconnu par phrase + déclenché ou non, mot par mot (aucune action)
+#   env-pousser     chiffre .env (mot de passe demandé, masqué) -> .env.chiffre, le commite SEUL et affiche « git push » (vous poussez vous-même)
 #   discord-apercu  écrit memoire\apercu-discord.html : aperçu des messages Discord (données fictives, rien n'est envoyé)
 #   discord-diag    liste les salons textuels que le bot Discord voit (noms et permissions seulement) et le mot-clé reconnu
 #   avtest          UN appel Alpha Vantage (recherche « thales ») pour trouver les symboles de Paris à mettre dans config.json
@@ -17,6 +18,9 @@ $ErrorActionPreference = 'Stop'
 $Root = $PSScriptRoot
 $Texte = ($Reste -join ' ').Trim()
 . (Join-Path $Root 'lib\journal.ps1')
+if (-not (Test-Path (Join-Path $Root '.env')) -and (Test-Path (Join-Path $Root '.env.chiffre'))) {      # premier démarrage (serveur) : .env est recréé depuis .env.chiffre (mot de passe protégé par DPAPI, voir installer-serveur.ps1)
+    try { . (Join-Path $Root 'lib\env-chiffre.ps1'); $rEnv = Initialize-EnvDepuisChiffre $Root; if ($rEnv.statut -ne 'rien') { Write-Journal -Action 'Clés (.env)' -Resultat ".env : $($rEnv.statut) $($rEnv.raison)" } } catch { }
+}
 Import-JarvisEnv
 $Config = Import-ConfigJarvis      # config.json + config.local.json (réglages de cette machine)
 $script:ReponseTest = $ReponseTest   # crochet de test : réponse automatique aux confirmations
@@ -76,6 +80,7 @@ switch ($Commande.ToLower()) {
         & python @a
         Write-Host "`nSi le niveau reste à 0 : mauvais micro (mettez son nom dans config.json, clé « micro_nom ») ou micro coupé dans Windows."
     }
+    'env-pousser' { & (Join-Path $Root 'env-chiffrer.ps1') -Commit }      # LE geste quand vous changez une clé : chiffre .env, commit de .env.chiffre SEUL, puis la commande « git push » à lancer vous-même
     'discord-apercu' {    # écrit memoire\apercu-discord.html : chaque modèle de message Discord avec des données fictives (rien n'est envoyé à Discord)
         $f = New-ApercuDiscord; Write-Host "Aperçu écrit : $f"; Write-Host "Ouvrez-le dans votre navigateur (double-clic). Données fictives ; style actuel : $(Get-DiscordStyle)."
     }

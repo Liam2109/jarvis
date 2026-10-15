@@ -2,12 +2,14 @@
 #   git fetch ; si origin/main a du nouveau : git pull --ff-only -> arrêt de Jarvis -> tests\tout.ps1 ->
 #     tout est vert : Jarvis est relancé (nouvelle version)
 #     un test est rouge : git reset --hard sur l'ancien commit, Jarvis relancé (ancienne version), journal + alerte Discord ; le commit refusé n'est pas réessayé tant qu'il reste le même.
-# Ne touche JAMAIS à .env, memoire\, logs\ ni config.local.json (ignorés par git : ni pull ni reset ne les modifient).
+# Ne touche JAMAIS à memoire\, logs\ ni config.local.json (ignorés par git : ni pull ni reset ne les modifient). .env n'est écrit que par le déchiffrement ATOMIQUE de .env.chiffre
+# (ancien .env dans .env.bak ; échec = ancien .env conservé + alerte ; mise à jour refusée = clés remises comme avant).
 # Options (tests / essais) : -Simulation (dit s'il y a une mise à jour, ne change rien) · -Racine · -ScriptTests · -SansArret · -SansRelance · -SansPip · -FichierAlerte (alerte écrite dans ce fichier au lieu de Discord).
 param([switch]$Simulation, [string]$Racine = $PSScriptRoot, [string]$ScriptTests = 'tests\tout.ps1', [switch]$SansArret, [switch]$SansRelance, [switch]$SansPip, [string]$FichierAlerte = '', [string]$Branche = 'main')
 $ErrorActionPreference = 'Stop'
 Set-Location $Racine
 . (Join-Path $Racine 'lib\journal.ps1')
+if (Test-Path (Join-Path $Racine 'lib\env-chiffre.ps1')) { . (Join-Path $Racine 'lib\env-chiffre.ps1') }      # synchro chiffrée du .env (absente d'un très ancien clone : la 1re mise à jour l'apporte)
 $script:Sortie = New-Object System.Collections.Generic.List[string]
 function Say([string]$t) { $script:Sortie.Add($t); Write-Host $t }
 function Invoke-Git {
@@ -45,12 +47,26 @@ function Stop-JarvisServeur {
     Say 'Jarvis arrêté (arreter.ps1)'
 }
 
+function Update-ClesDepuisChiffre {
+    # Déchiffre .env.chiffre vers .env (atomique, sauvegarde .env.bak). Échec (mauvais mot de passe, fichier corrompu) : l'ancien .env est CONSERVÉ, journal + alerte Discord. Retourne le statut.
+    if (-not (Get-Command Restore-EnvDepuisChiffre -ErrorAction SilentlyContinue)) { return 'absent' }
+    $m = Read-MotDePasseDpapi
+    try { $r = Restore-EnvDepuisChiffre $Racine $m } finally { Clear-Octets $m }
+    switch ($r.statut) {
+        'echec' { $msg = "clés (.env) NON mises à jour : $($r.raison). L'ancien .env est conservé ; vérifiez le mot de passe du serveur (installer-serveur.ps1)"; Write-Journal -Action 'Mise à jour auto' -Resultat $msg; Send-AlerteMaj $msg; Say $msg }
+        'cree' { Write-Journal -Action 'Mise à jour auto' -Resultat '.env créé depuis .env.chiffre'; Say 'clés (.env) créées depuis .env.chiffre' }
+        'mis-a-jour' { Write-Journal -Action 'Mise à jour auto' -Resultat '.env mis à jour depuis .env.chiffre (ancien .env sauvegardé dans .env.bak)'; Say 'clés (.env) mises à jour depuis .env.chiffre (sauvegarde .env.bak)' }
+    }
+    $r.statut
+}
+
 # Un seul passage à la fois
 $verrou = Get-FichierMemoire 'maj-auto.lock'
 if ((Test-Path $verrou) -and ((Get-Date) - (Get-Item $verrou).LastWriteTime).TotalMinutes -lt 45) { Say 'mise à jour déjà en cours : rien à faire'; return }
 if (-not (Test-Path (Join-Path $Racine '.git'))) { Write-Journal -Action 'Mise à jour auto' -Resultat 'ce dossier n''est pas un dépôt git'; Say 'pas un dépôt git'; exit 1 }
 Set-Content $verrou (Get-Date).ToString('o') -Encoding ASCII
 try {
+    if (-not $Simulation -and -not (Test-Path (Join-Path $Racine '.env')) -and (Test-Path (Join-Path $Racine '.env.chiffre'))) { [void](Update-ClesDepuisChiffre) }      # 1er démarrage : .env absent -> créé depuis .env.chiffre
     $f = Invoke-Git fetch origin $Branche
     if ($f.code -ne 0) { Write-Journal -Action 'Mise à jour auto' -Resultat ("fetch impossible (réseau ?) : " + (Hide-Secrets ($f.sortie -replace '\s+', ' '))); Say 'fetch impossible'; return }
     $ancien = (Invoke-Git rev-parse HEAD).sortie; $nouveau = (Invoke-Git rev-parse "origin/$Branche").sortie
@@ -70,9 +86,15 @@ try {
     $p = Invoke-Git pull --ff-only origin $Branche
     if ($p.code -ne 0) { $m = 'mise à jour refusée : git pull --ff-only a échoué'; Write-Journal -Action 'Mise à jour auto' -Resultat ($m + ' : ' + (Hide-Secrets ($p.sortie -replace '\s+', ' '))); Send-AlerteMaj $m; Say $m; exit 4 }
     Write-Journal -Action 'Mise à jour auto' -Resultat "pull réussi : $($ancien.Substring(0, 7)) -> $($nouveau.Substring(0, 7)) ; arrêt de Jarvis puis tests"
+    $changes = @((Invoke-Git diff --name-only $ancien $nouveau).sortie -split "`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ })
     Stop-JarvisServeur
     $rouge = ''
-    $changes = @((Invoke-Git diff --name-only $ancien $nouveau).sortie -split "`n" | ForEach-Object { $_.Trim() })
+    $envMaj = $false
+    if ($changes -contains '.env.chiffre') { $envMaj = ((Update-ClesDepuisChiffre) -in 'mis-a-jour', 'cree') }
+    if ($changes.Count -gt 0 -and @($changes | Where-Object { $_ -ne '.env.chiffre' }).Count -eq 0) {      # seules les clés ont changé : aucun code nouveau, donc pas de tests ; Jarvis est simplement redémarré
+        Write-Journal -Action 'Mise à jour auto' -Resultat "clés seules : redémarrage de Jarvis ($($nouveau.Substring(0, 7)))"
+        Say 'clés seules : pas de tests, redémarrage de Jarvis'; Start-JarvisServeur; return
+    }
     if (-not $SansPip -and ($changes -contains 'requirements.txt') -and (Test-Path (Join-Path $Racine 'requirements.txt'))) {
         & python -m pip install --disable-pip-version-check -r (Join-Path $Racine 'requirements.txt') 2>&1 | Out-Null
         if ($LASTEXITCODE -ne 0) { $rouge = 'pip install -r requirements.txt a échoué' }
@@ -91,6 +113,7 @@ try {
         Say "tests verts : version $($nouveau.Substring(0, 7)) adoptée"; Start-JarvisServeur; return
     }
     $r = Invoke-Git reset --hard $ancien
+    if ($envMaj -and (Test-Path (Join-Path $Racine '.env.bak'))) { Copy-Item (Join-Path $Racine '.env.bak') (Join-Path $Racine '.env') -Force; Write-Journal -Action 'Mise à jour auto' -Resultat 'clés (.env) remises à l''état d''avant la mise à jour refusée'; Say 'clés (.env) remises à l''état d''avant' }
     Set-Content $refuse $nouveau -Encoding ASCII
     $m = "mise à jour $($nouveau.Substring(0, 7)) REFUSÉE ($(Hide-Secrets $rouge)) : retour à la version précédente $($ancien.Substring(0, 7))"
     Write-Journal -Action 'Mise à jour auto' -Resultat ($m + $(if ($r.code -ne 0) { ' ; ATTENTION : git reset a échoué' } else { '' }))

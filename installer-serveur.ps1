@@ -11,6 +11,7 @@ param([switch]$Simulation, [switch]$SansBlocNotes, [switch]$SansModeles, [switch
 $ErrorActionPreference = 'Stop'
 $script:Simulation = [bool]$Simulation
 $script:Journal = New-Object System.Collections.Generic.List[string]
+. (Join-Path $PSScriptRoot 'lib\env-chiffre.ps1')      # synchro chiffrée du .env (mot de passe protégé par DPAPI)
 
 function Write-Etape([string]$t) { $script:Journal.Add($t); Write-Host $t }
 function Invoke-Etape([string]$description, [scriptblock]$bloc) {
@@ -24,6 +25,40 @@ function Update-CheminSession {
     $env:Path = (@($m, $u) | Where-Object { $_ }) -join ';'
 }
 function Test-Commande([string]$nom) { [bool](Get-Command $nom -ErrorAction SilentlyContinue) }
+# ---------- Python : un VRAI Python 3.11 (jamais le faux raccourci du Microsoft Store) ----------
+$script:PythonExe = ''
+$script:DossiersPythonParDefaut = @((Join-Path $env:LOCALAPPDATA 'Programs\Python\Python311'), 'C:\Program Files\Python311', 'C:\Python311')      # (tests : vidé)
+function Test-CheminWindowsApps([string]$chemin) { "$chemin" -match '(?i)[\\/]WindowsApps[\\/]' }
+function Find-PythonReel {
+    # Retourne @{ exe; version } pour un Python 3.11 qui S'EXÉCUTE vraiment (« --version » ou « py -3.11 »), ou $null. Tout python.exe situé dans WindowsApps (le raccourci du Store,
+    # qui n'est pas un Python et ouvrirait le Store) est ignoré et JAMAIS exécuté.
+    $exes = New-Object System.Collections.Generic.List[string]
+    $py = @(Get-Command py -All -ErrorAction SilentlyContinue | Where-Object { $_.CommandType -eq 'Application' -and -not (Test-CheminWindowsApps $_.Source) }) | Select-Object -First 1
+    if ($py) {
+        try { $o = (& $py.Source -3.11 -c "import sys; print(sys.executable)" 2>$null | Out-String).Trim(); if ($LASTEXITCODE -eq 0 -and $o -and (Test-Path $o) -and -not (Test-CheminWindowsApps $o)) { $exes.Add($o) } } catch { }
+    }
+    foreach ($c in @(Get-Command python -All -ErrorAction SilentlyContinue | Where-Object { $_.CommandType -eq 'Application' })) { if (-not (Test-CheminWindowsApps $c.Source)) { $exes.Add($c.Source) } }
+    foreach ($d in $script:DossiersPythonParDefaut) { $e = Join-Path $d 'python.exe'; if ((Test-Path $e) -and -not (Test-CheminWindowsApps $e)) { $exes.Add($e) } }
+    foreach ($e in ($exes | Select-Object -Unique)) {
+        try { $v = (& $e --version 2>&1 | Out-String).Trim(); if ($LASTEXITCODE -eq 0 -and $v -match '^Python 3\.11\.\d+') { return @{ exe = $e; version = $v } } } catch { }
+    }
+    $null
+}
+function Install-PythonSiAbsent {
+    $p = Find-PythonReel
+    if ($p) { $script:PythonExe = $p.exe; Write-Etape "OK  Python 3.11 est déjà installé ($($p.version) : $($p.exe))"; return }
+    if (-not (Test-Commande 'winget')) { Write-Etape "ATTENTION : aucun vrai Python 3.11 (le raccourci du Microsoft Store ne compte pas) et winget est absent : installez Python 3.11 à la main (python.org), puis relancez ce script."; return }
+    Invoke-Etape "installation de Python 3.11 (winget Python.Python.3.11) : aucun vrai Python 3.11 détecté (le raccourci du Microsoft Store ne compte pas)" {
+        & winget install --id Python.Python.3.11 -e --source winget --accept-package-agreements --accept-source-agreements --silent
+        Update-CheminSession      # le PATH de CETTE session est actualisé avant pip
+        $q = Find-PythonReel
+        if (-not $q) { Write-Etape 'ATTENTION : Python 3.11 n''est pas encore trouvable après l''installation : fermez cette fenêtre, ouvrez-en une nouvelle et relancez ce script.'; return }
+        $script:PythonExe = $q.exe
+        $env:Path = "$(Split-Path $q.exe);$(Join-Path (Split-Path $q.exe) 'Scripts');$env:Path"      # ce Python passe devant le faux raccourci pour la suite du script
+        Write-Etape "OK  Python 3.11 installé ($($q.version) : $($q.exe))"
+    }
+    if ($script:Simulation) { $script:PythonExe = 'python' }
+}
 function Get-RamGo { try { [math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB, 1) } catch { 8.0 } }
 function Select-ModeleOllama([double]$ramGo) {
     # Petit PC : un modèle de 3 milliards de paramètres (≈ 2 Go) ; sinon celui de la version principale.
@@ -47,6 +82,23 @@ function New-EnvSiNecessaire([string]$racine) {
     if ($script:Simulation) { return 'cree' }
     Copy-Item $ex $env1 -ErrorAction Stop
     'cree'
+}
+function Initialize-ClesServeur([string]$racine) {
+    # Dépôt avec .env.chiffre : le mot de passe est demandé UNE fois (saisie masquée, 3 essais), vérifié sur .env.chiffre, puis gardé protégé par DPAPI (lié au compte Windows de ce PC), HORS du dépôt.
+    # Retourne 'sans-chiffre' | 'simulation' | 'ok' | 'echec'. Le mot de passe n'est jamais affiché ni écrit en clair.
+    if (-not (Test-Path (Join-Path $racine '.env.chiffre'))) { return 'sans-chiffre' }
+    if ($script:Simulation) { Write-Etape '[simulation] demander UNE fois le mot de passe des clés (saisie masquée), le garder protégé par DPAPI hors du dépôt, puis créer .env depuis .env.chiffre'; return 'simulation' }
+    $texte = Get-Content (Join-Path $racine '.env.chiffre') -Raw -Encoding UTF8
+    $m = Read-MotDePasseDpapi
+    if ($m) { $t = Unprotect-EnvTexte $texte $m; Clear-Octets $m; if ($t.ok) { Clear-Octets $t.octets; Write-Etape 'OK  mot de passe des clés déjà enregistré (protégé par DPAPI)'; return 'ok' } }
+    for ($i = 1; $i -le 3; $i++) {
+        $s = Read-MotDePasseSaisie "Mot de passe des clés (.env.chiffre) - essai $i sur 3"
+        $b = ConvertTo-OctetsMotDePasse $s; $t = Unprotect-EnvTexte $texte $b; Clear-Octets $b
+        if ($t.ok) { Clear-Octets $t.octets; Save-MotDePasseDpapi $s; Write-Etape "mot de passe des clés enregistré, protégé par DPAPI ($(Get-FichierMotDePasseServeur))"; return 'ok' }
+        Write-Host "Mot de passe incorrect ou fichier altéré ($($t.raison))."
+    }
+    Write-Etape 'ATTENTION : mot de passe des clés non validé : .env n''a pas été créé depuis .env.chiffre.'
+    'echec'
 }
 function New-ConfigLocale([string]$racine, [string]$modele) {
     # config.local.json : réglages PROPRES à cette machine (jamais suivi par git, donc jamais écrasé ni bloquant pour les mises à jour). Retourne 'cree' | 'existe'.
@@ -78,7 +130,7 @@ function Install-Modeles([string]$racine) {
     }
     $wh = Join-Path $racine 'voix\models\faster-whisper-small'
     if ((Test-Path (Join-Path $wh 'model.bin')) -and (Get-Item (Join-Path $wh 'model.bin')).Length -gt 400MB) { Write-Etape 'OK  déjà présent : cache Whisper « small »' }
-    else { Invoke-Etape 'téléchargement du modèle Whisper « small » (≈ 0,5 Go, Hugging Face Systran/faster-whisper-small)' { & python -I -c "from huggingface_hub import snapshot_download; snapshot_download('Systran/faster-whisper-small', local_dir=r'$wh')"; if ($LASTEXITCODE -ne 0) { throw 'téléchargement Whisper échoué' } } }
+    else { Invoke-Etape 'téléchargement du modèle Whisper « small » (≈ 0,5 Go, Hugging Face Systran/faster-whisper-small)' { & $script:PythonExe -I -c "from huggingface_hub import snapshot_download; snapshot_download('Systran/faster-whisper-small', local_dir=r'$wh')"; if ($LASTEXITCODE -ne 0) { throw 'téléchargement Whisper échoué' } } }
     $vosk = Join-Path $racine 'voix\models\vosk-model-small-fr-0.22'
     if (Test-Path (Join-Path $vosk 'am')) { Write-Etape 'OK  déjà présent : petit modèle Vosk' }
     else {
@@ -133,18 +185,26 @@ $ram = Get-RamGo; $modele = Select-ModeleOllama $ram
 Write-Etape "RAM détectée : $ram Go -> modèle Ollama : $modele"
 # 1) Programmes
 Install-WingetSiAbsent 'Git.Git' 'git' 'Git'
-Install-WingetSiAbsent 'Python.Python.3.11' 'python' 'Python 3.11'
+Install-PythonSiAbsent
 if (-not $SansOllama) { Install-WingetSiAbsent 'Ollama.Ollama' 'ollama' 'Ollama' }
 Update-CheminSession
 # 2) Dépendances Python
-if (Test-Path (Join-Path $Racine 'requirements.txt')) { Invoke-Etape 'pip install -r requirements.txt' { & python -m pip install --disable-pip-version-check -r (Join-Path $Racine 'requirements.txt'); if ($LASTEXITCODE -ne 0) { throw 'pip a échoué' } } }
+if (Test-Path (Join-Path $Racine 'requirements.txt')) { Invoke-Etape 'pip install -r requirements.txt' { if (-not $script:PythonExe) { throw 'aucun Python 3.11 utilisable : relancez ce script dans une nouvelle fenêtre' }; & $script:PythonExe -m pip install --disable-pip-version-check -r (Join-Path $Racine 'requirements.txt'); if ($LASTEXITCODE -ne 0) { throw 'pip a échoué' } } }
 else { Write-Etape 'ATTENTION : requirements.txt est absent.' }
 # 3) Modèles (hors git)
 if (-not $SansModeles) { Install-Modeles $Racine }
 if (-not $SansOllama) { Install-Ollama $modele }
 # 4) .env et réglages de la machine
-$e = New-EnvSiNecessaire $Racine
-Write-Etape $(switch ($e) { 'cree' { ".env créé depuis .env.example : REMPLISSEZ-LE (jeton Discord, identifiant, clés)" } 'existe' { 'OK  .env existe déjà : conservé tel quel (jamais écrasé)' } default { 'ATTENTION : .env.example est absent' } })
+$cles = Initialize-ClesServeur $Racine
+$e = 'existe'
+if ($cles -eq 'ok') {
+    $r = Initialize-EnvDepuisChiffre $Racine
+    Write-Etape $(if ($r.statut -eq 'cree') { '.env créé depuis .env.chiffre (clés synchronisées depuis le PC principal)' } elseif (Test-Path (Join-Path $Racine '.env')) { 'OK  .env existe déjà : conservé tel quel (les prochaines modifications arrivent par la mise à jour automatique)' } else { "ATTENTION : .env non créé ($($r.raison))" })
+} elseif ($cles -eq 'simulation') { $e = 'simulation' }
+else {
+    $e = New-EnvSiNecessaire $Racine
+    Write-Etape $(switch ($e) { 'cree' { ".env créé depuis .env.example : REMPLISSEZ-LE (jeton Discord, identifiant, clés)" } 'existe' { 'OK  .env existe déjà : conservé tel quel (jamais écrasé)' } default { 'ATTENTION : .env.example est absent' } })
+}
 if ($e -eq 'cree' -and -not $SansBlocNotes) { Invoke-Etape 'ouverture de .env dans le Bloc-notes' { Start-Process notepad.exe (Join-Path $Racine '.env') } }
 $c = New-ConfigLocale $Racine $modele
 Write-Etape $(if ($c -eq 'cree') { "config.local.json créé (mode serveur, Discord actif, CPU, modèle $modele)" } else { 'OK  config.local.json existe déjà : conservé' })

@@ -114,6 +114,48 @@ Verifier ((New-ConfigLocale $srv 'qwen2.5:3b') -eq 'cree') 'config.local.json cr
 $cl = Get-Content "$srv\config.local.json" -Raw -Encoding UTF8 | ConvertFrom-Json
 Verifier ($cl.mode_serveur -eq $true -and $cl.discord_actif -eq $true -and $cl.etat_au_demarrage -eq 'actif' -and $cl.moteur_voix_appareil -eq 'cpu' -and $cl.ollama.modele -eq 'qwen2.5:3b') 'config.local.json : mode serveur, Discord actif, CPU, modèle choisi'
 $h1 = Hash "$srv\config.local.json"; Verifier ((New-ConfigLocale $srv 'qwen2.5:7b') -eq 'existe' -and (Hash "$srv\config.local.json") -eq $h1) 'config.local.json existant : conservé (relançable sans risque)'
+# --- détection d'un VRAI Python 3.11 (le faux python.exe du Microsoft Store ne compte pas) ---
+$fk = Join-Path $TR 'faux-python'; $wa = "$fk\Users\x\AppData\Local\Microsoft\WindowsApps"; $bon = "$fk\bon"; $vieux = "$fk\vieux"; $pyl = "$fk\launcher"; $apres = "$fk\apres"
+New-Item -ItemType Directory $wa, $bon, $vieux, $pyl, $apres -Force | Out-Null
+$marque = Join-Path $fk 'store-execute.txt'
+"@echo off`r`necho store>> `"$marque`"`r`necho Python was not found; run without arguments to install from the Microsoft Store 1>&2`r`nexit /b 9009" | Set-Content "$wa\python.bat" -Encoding ASCII
+"@echo off`r`necho store>> `"$marque`"`r`nexit /b 9009" | Set-Content "$wa\py.bat" -Encoding ASCII
+"@echo off`r`necho Python 3.11.9" | Set-Content "$bon\python.bat" -Encoding ASCII
+"@echo off`r`necho Python 3.9.13" | Set-Content "$vieux\python.bat" -Encoding ASCII
+"@echo off`r`nif `"%1`"==`"-3.11`" (echo $bon\python.bat) else (exit /b 1)" | Set-Content "$pyl\py.bat" -Encoding ASCII
+$sys32 = Join-Path $env:SystemRoot 'System32'; $pathAvant = $env:Path; $script:DossiersPythonParDefaut = @()
+$env:Path = "$wa;$sys32"
+$r = Find-PythonReel
+Verifier ($null -eq $r -and -not (Test-Path $marque)) 'seul le faux raccourci du Store (WindowsApps\python.exe) existe : AUCUN Python trouvé, et le raccourci n''est jamais exécuté'
+Verifier ((Test-CheminWindowsApps 'C:\Users\Liam\AppData\Local\Microsoft\WindowsApps\python.exe') -and -not (Test-CheminWindowsApps 'C:\Users\Liam\AppData\Local\Programs\Python\Python311\python.exe')) 'tout chemin contenant WindowsApps est reconnu comme faux'
+$env:Path = "$wa;$bon;$sys32"; $r = Find-PythonReel
+Verifier ($r -and $r.exe -eq "$bon\python.bat" -and $r.version -eq 'Python 3.11.9' -and -not (Test-Path $marque)) 'faux raccourci devant, vrai Python derrière : le vrai est trouvé (version réellement exécutée), le faux ignoré'
+$env:Path = "$vieux;$sys32"; Verifier ($null -eq (Find-PythonReel)) 'un Python 3.9 n''est pas un Python 3.11 : refusé'
+$env:Path = "$pyl;$sys32"; $r = Find-PythonReel; Verifier ($r -and $r.exe -eq "$bon\python.bat") 'py -3.11 : le lanceur donne le chemin du vrai Python 3.11'
+$env:Path = "$wa;$vieux;$sys32"; Verifier ($null -eq (Find-PythonReel) -and -not (Test-Path $marque)) 'Store + Python 3.9 : aucun 3.11, toujours rien d''exécuté dans WindowsApps'
+# installation : winget est appelé, le PATH de la session est actualisé AVANT pip
+$script:WingetAppels = @(); $script:OrdreEtapes = @()
+function winget { $script:WingetAppels += ($args -join ' '); $script:OrdreEtapes += 'winget'; "@echo off`r`necho Python 3.11.9" | Set-Content "$apres\python.bat" -Encoding ASCII }
+function Update-CheminSession { $script:OrdreEtapes += 'chemin'; $env:Path = "$apres;$env:Path" }
+$script:Simulation = $false; $script:PythonExe = ''
+$env:Path = "$wa;$sys32"
+Install-PythonSiAbsent
+Verifier ($script:WingetAppels.Count -eq 1 -and $script:WingetAppels[0] -match 'install --id Python\.Python\.3\.11' -and $script:PythonExe -eq "$apres\python.bat") 'pas de vrai Python 3.11 : winget installe Python.Python.3.11, puis le vrai Python est retrouvé'
+Verifier (($script:OrdreEtapes -join ',') -eq 'winget,chemin' -and $env:Path.StartsWith((Split-Path "$apres\python.bat"))) 'le PATH de la session est actualisé juste après winget (avant pip) et le vrai Python passe devant'
+Verifier (-not (Test-Path $marque)) '…sans jamais exécuter le faux raccourci du Store'
+$script:WingetAppels = @(); $script:PythonExe = ''; $env:Path = "$bon;$sys32"
+Install-PythonSiAbsent
+Verifier ($script:WingetAppels.Count -eq 0 -and $script:PythonExe -eq "$bon\python.bat") 'vrai Python 3.11 présent : « déjà installé », winget n''est pas appelé'
+$script:Simulation = $true; $script:WingetAppels = @(); $script:PythonExe = ''; $env:Path = "$wa;$sys32"
+Install-PythonSiAbsent
+Verifier ($script:WingetAppels.Count -eq 0 -and $script:Journal[-1] -match '\[simulation\] installation de Python 3\.11') 'simulation : annonce l''installation de Python sans rien exécuter'
+$script:Simulation = $false
+Remove-Item function:winget, function:Update-CheminSession; $env:Path = $pathAvant
+. $inst -SeulementFonctions -Racine $TR      # (fonctions d'origine remises)
+$script:DossiersPythonParDefaut = @((Join-Path $env:LOCALAPPDATA 'Programs\Python\Python311'))
+$insPy = Get-Content $inst -Raw -Encoding UTF8
+Verifier ($insPy -match '& \$script:PythonExe -m pip' -and $insPy -match '& \$script:PythonExe -I -c' -and $insPy -notmatch '& python ' -and $insPy -notmatch "Install-WingetSiAbsent 'Python") 'pip et le téléchargement Whisper utilisent le Python détecté ; plus de détection par « Get-Command python » seul'
+Verifier ($insPy -match 'Get-Command py ' -and $insPy -match '-3\.11' -and $insPy -match '--version' -and $insPy -match '\^Python 3\\\.11') 'détection : py -3.11 puis python --version réellement exécutés, version 3.11 exigée'
 $ins = Get-Content $inst -Raw -Encoding UTF8
 foreach ($m in 'Git.Git', 'Python.Python.3.11', 'Ollama.Ollama', 'requirements.txt', 'standby-timeout-ac 0', 'hibernate-timeout-ac 0', 'LIDACTION 0', 'Jarvis-Serveur', 'Jarvis-MajAuto', 'New-TimeSpan -Minutes 10', 'fr_FR-\$v-medium', 'faster-whisper-small', 'notepad.exe', 'AtLogOn') { Verifier ($ins -match [regex]::Escape($m) -or $ins -match $m) "installer-serveur.ps1 prévoit : $m" }
 Verifier ($ins -notmatch '(?i)Remove-Item[^\r\n]*\.env' -and $ins -notmatch 'Set-Content[^\r\n]*\.env\b' ) 'installer-serveur.ps1 : aucune écriture ni suppression de .env en dehors de New-EnvSiNecessaire'
@@ -134,7 +176,8 @@ Write-Host '6) maj-auto.ps1 sur de vrais dépôts git temporaires (origine local
 $maj = Join-Path $Root 'maj-auto.ps1'
 $mc = Get-Content $maj -Raw -Encoding UTF8
 Verifier ($mc -match 'pull --ff-only' -and $mc -match 'reset --hard' -and $mc -match 'merge-base --is-ancestor' -and $mc -match 'Send-AlerteMaj' -and $mc -match 'arreter\.ps1' -and $mc -match 'maj-auto-refuse\.txt') 'maj-auto.ps1 : fetch, pull --ff-only, tests, arrêt/relance, reset --hard, alerte, commit refusé mémorisé'
-Verifier ($mc -notmatch '(?i)(Remove-Item|Set-Content|Out-File|Copy-Item|Move-Item)[^\r\n]*\.env\b' -and $mc -notmatch 'Remove-Item[^\r\n]*memoire') 'maj-auto.ps1 : ne modifie jamais .env ni memoire\'
+$lignesEnv = @($mc -split "`n" | Where-Object { $_ -match '(?i)(Remove-Item|Set-Content|Out-File|Copy-Item|Move-Item)[^\r\n]*\.env\b' })
+Verifier ($lignesEnv.Count -eq 1 -and $lignesEnv[0] -match '\.env\.bak' -and $mc -notmatch 'Remove-Item[^\r\n]*memoire') 'maj-auto.ps1 : n''écrit .env que par le déchiffrement atomique (Restore-EnvDepuisChiffre) et pour remettre l''ancien .env.bak après un retour arrière ; ne touche jamais memoire\'
 if (-not $aGit) { Verifier $true '(git absent : scénarios de mise à jour sautés)' } else {
     $env:GIT_AUTHOR_NAME = 'test'; $env:GIT_AUTHOR_EMAIL = 't@t.t'; $env:GIT_COMMITTER_NAME = 'test'; $env:GIT_COMMITTER_EMAIL = 't@t.t'
     $ErrorActionPreference = 'Continue'      # (git écrit des avertissements sur stderr : ce ne sont pas des erreurs)
@@ -142,11 +185,11 @@ if (-not $aGit) { Verifier $true '(git absent : scénarios de mise à jour saut�
     $O = Join-Path $TR 'origin.git'; $D = Join-Path $TR 'dev'; $S = Join-Path $TR 'serveur'
     & $g init --bare -q $O; & $g clone -q $O $D; & git -C $D checkout -q -b main 2>$null
     New-Item -ItemType Directory "$D\lib", "$D\tests" | Out-Null
-    Copy-Item (Join-Path $Root 'lib\journal.ps1') "$D\lib\journal.ps1"; Copy-Item $maj "$D\maj-auto.ps1"
+    Copy-Item (Join-Path $Root 'lib\journal.ps1') "$D\lib\journal.ps1"; Copy-Item $maj "$D\maj-auto.ps1"; Copy-Item (Join-Path $Root 'lib\env-chiffre.ps1') "$D\lib\env-chiffre.ps1"
     "[Console]::Error.WriteLine('stub arreter'); exit 0" | Set-Content "$D\arreter.ps1" -Encoding ASCII
     "ECHO_STUB" | Out-Null
     "Write-Host '  OK  test factice'; exit 0" | Set-Content "$D\tests\tout.ps1" -Encoding ASCII
-    ".env`nmemoire/`nlogs/`nconfig.local.json`n" | Set-Content "$D\.gitignore" -Encoding ASCII
+    ".env`n.env.bak`n.env.tmp`nmemoire/`nlogs/`nconfig.local.json`n" | Set-Content "$D\.gitignore" -Encoding ASCII
     '1' | Set-Content "$D\VERSION.txt" -Encoding ASCII; "sounddevice>=0.5" | Set-Content "$D\requirements.txt" -Encoding ASCII
     & git -C $D add -A 2>$null; & git -C $D -c user.name=t -c user.email=t@t.t commit -q -m v1 2>$null; & git -C $D push -q origin main 2>$null; & git -C $O symbolic-ref HEAD refs/heads/main 2>$null
     & $g clone -q -b main $O $S
@@ -205,9 +248,178 @@ if (-not $aGit) { Verifier $true '(git absent : scénarios de mise à jour saut�
     & git -C $S checkout -q -- VERSION.txt 2>$null; Remove-Item $alerte -Force -ErrorAction SilentlyContinue
     $r = Maj
     Verifier ($r.code -eq 0 -and (Tete $S) -eq (Tete $D) -and (Intacts)) 'puis tout rentre dans l''ordre au passage suivant (mise à jour adoptée, .env et memoire\ intacts)'
+    # ----- Clés chiffrées (.env.chiffre) -----
+    . (Join-Path $Root 'lib\env-chiffre.ps1')
+    $PW2 = 'mdp-serveur-test-Ω-4Zq!'; $mdp2 = [Text.Encoding]::UTF8.GetBytes($PW2)
+    $mdpFichier = Join-Path $TR 'serveur-mdp.dpapi'; $env:JARVIS_ENV_MDP_FICHIER = $mdpFichier
+    Save-MotDePasseDpapi (ConvertTo-SecureDepuisTexte $PW2) $mdpFichier
+    function Cles([string]$valeur, [string]$mdpTexte = $PW2) {
+        # côté PC principal : écrit le .env du dépôt de développement, le chiffre (env-chiffrer.ps1), commit et pousse
+        [IO.File]::WriteAllText("$D\.env", "CLE=$valeur`n", [Text.UTF8Encoding]::new($false))
+        $a = $env:JARVIS_TEST; $env:JARVIS_TEST = '1'; $env:JARVIS_ENV_MDP_TEST = $mdpTexte; $env:JARVIS_ENV_ITER_TEST = '20000'
+        & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Root 'env-chiffrer.ps1') -Racine $D -Commit 2>&1 | Out-Null
+        Remove-Item Env:JARVIS_ENV_MDP_TEST, Env:JARVIS_ENV_ITER_TEST; if ($a) { $env:JARVIS_TEST = $a } else { Remove-Item Env:JARVIS_TEST -ErrorAction SilentlyContinue }
+        & git -C $D push -q origin main 2>$null
+    }
+    function EnvServeur { (Get-Content "$S\.env" -Raw -Encoding UTF8).Trim() }
+    $secretsTest = 'ancienne-valeur|nouvelle-valeur|troisieme|quatrieme|cinquieme|sixieme'
+    [IO.File]::WriteAllText("$S\.env", "CLE=ancienne-valeur`n", [Text.UTF8Encoding]::new($false)); Remove-Item "$S\.env.bak" -ErrorAction SilentlyContinue; Remove-Item $alerte -ErrorAction SilentlyContinue
+    $vAvant = Tete $S
+    # G : seules les clés changent -> déchiffrement atomique, .env.bak, pas de tests, Jarvis redémarré
+    Cles 'nouvelle-valeur'
+    $r = Maj
+    Verifier ($r.code -eq 0 -and (EnvServeur) -eq 'CLE=nouvelle-valeur' -and (Get-Content "$S\.env.bak" -Raw).Trim() -eq 'CLE=ancienne-valeur' -and -not (Test-Path "$S\.env.tmp")) 'G) .env.chiffre change : .env déchiffré, ancien .env sauvegardé dans .env.bak, aucun fichier temporaire'
+    Verifier ($r.sortie -match 'clés \(\.env\) mises à jour' -and $r.sortie -match 'clés seules : pas de tests, redémarrage de Jarvis' -and (Tete $S) -eq (Tete $D) -and -not (Test-Path $alerte)) 'G) clés seules : pas de tests (aucun code nouveau), Jarvis redémarré, aucune alerte'
+    Verifier ($r.sortie -notmatch $secretsTest -and ((Get-Content "$S\logs\journal-$(Get-Date -Format 'yyyy-MM-dd').md" -Raw -Encoding UTF8) -notmatch $secretsTest)) 'G) ni la sortie ni le journal ne contiennent de valeur de clé'
+    # H : mauvais mot de passe sur le serveur -> .env conservé, journal, alerte
+    Save-MotDePasseDpapi (ConvertTo-SecureDepuisTexte 'mauvais-mdp-serveur-12') $mdpFichier
+    Cles 'troisieme-valeur'
+    $r = Maj
+    Verifier ($r.code -eq 0 -and (EnvServeur) -eq 'CLE=nouvelle-valeur' -and (Test-Path $alerte) -and (Get-Content $alerte -Raw) -match 'clés \(\.env\) NON mises à jour' -and (Get-Content $alerte -Raw) -match 'ancien \.env est conservé') 'H) mot de passe du serveur incorrect : l''ancien .env est conservé, journal et alerte Discord'
+    Verifier ((Get-Content $alerte -Raw) -notmatch $secretsTest -and (Get-Content $alerte -Raw) -notmatch 'mauvais-mdp|mdp-serveur-test' -and (Get-Content "$S\logs\journal-$(Get-Date -Format 'yyyy-MM-dd').md" -Raw -Encoding UTF8) -match 'NON mises à jour') 'H) l''alerte et le journal ne contiennent ni clé ni mot de passe'
+    Remove-Item $alerte -Force
+    # I : fichier corrompu
+    Save-MotDePasseDpapi (ConvertTo-SecureDepuisTexte $PW2) $mdpFichier
+    Cles 'quatrieme-valeur'
+    $cc = Get-Content "$D\.env.chiffre" -Raw; Set-Content "$D\.env.chiffre" ($cc -replace 'donnees=.', 'donnees=!') -Encoding ASCII -NoNewline
+    & git -C $D add -A 2>$null; & git -C $D -c user.name=t -c user.email=t@t.t commit -q -m corrompu 2>$null; & git -C $D push -q origin main 2>$null
+    $r = Maj
+    Verifier ($r.code -eq 0 -and (EnvServeur) -eq 'CLE=nouvelle-valeur' -and (Test-Path $alerte) -and (Get-Content $alerte -Raw) -match 'NON mises à jour') 'I) .env.chiffre corrompu : l''ancien .env est conservé, alerte'
+    Remove-Item $alerte -Force
+    # J : 1er démarrage (.env absent) -> créé depuis .env.chiffre
+    Cles 'cinquieme-valeur'
+    $r = Maj; Remove-Item $alerte -ErrorAction SilentlyContinue
+    Remove-Item "$S\.env"
+    $r = Maj
+    Verifier ($r.code -eq 0 -and (EnvServeur) -eq 'CLE=cinquieme-valeur' -and $r.sortie -match 'créées depuis \.env\.chiffre') 'J) premier démarrage : .env absent -> créé depuis .env.chiffre (même sans nouvelle version)'
+    # K : mise à jour refusée (tests rouges) qui change aussi les clés -> les clés reviennent à l'état d'avant
+    $avant = EnvServeur
+    [IO.File]::WriteAllText("$D\.env", "CLE=sixieme-valeur`n", [Text.UTF8Encoding]::new($false))
+    $a0 = $env:JARVIS_TEST; $env:JARVIS_TEST = '1'; $env:JARVIS_ENV_MDP_TEST = $PW2; $env:JARVIS_ENV_ITER_TEST = '20000'
+    & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Root 'env-chiffrer.ps1') -Racine $D 2>&1 | Out-Null
+    Remove-Item Env:JARVIS_ENV_MDP_TEST, Env:JARVIS_ENV_ITER_TEST; if ($a0) { $env:JARVIS_TEST = $a0 } else { Remove-Item Env:JARVIS_TEST -ErrorAction SilentlyContinue }
+    Pousser '6' "Write-Host '  ECHEC test factice'; exit 1"
+    $vK = Tete $S
+    $r = Maj
+    Verifier ($r.code -eq 5 -and (Tete $S) -eq $vK -and (EnvServeur) -eq $avant -and $r.sortie -match 'remises à l''état d''avant') 'K) mise à jour refusée (tests rouges) : le code ET les clés reviennent à l''état d''avant'
+    Remove-Item Env:JARVIS_ENV_MDP_FICHIER
     if ($jt) { $env:JARVIS_TEST = $jt }; if ($jc2) { $env:JARVIS_CONFIG = $jc2 }
     Verifier (@(Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'jarvis\.ps1' -and $_.CommandLine -match [regex]::Escape($S) }).Count -eq 0) 'Jarvis n''a été ni lancé ni arrêté par ce test'
 }
+Write-Host '8) Synchro chiffrée du .env : chiffrement, mauvais mot de passe, altération, DPAPI, aucune fuite dans git'
+. (Join-Path $Root 'lib\env-chiffre.ps1')
+$PW = 'mdp-de-test-Ω-9X!q-Zéro'; $mdp = [Text.Encoding]::UTF8.GetBytes($PW)
+$SEC1 = 'tok-fictif-AAAA1111bbbbCCCC'; $SEC2 = 'rk_live_fictifBBBB2222cccc'; $SEC3 = 'cle-supabase-fictive-9876'
+$clair = [Text.Encoding]::UTF8.GetBytes("DISCORD_BOT_TOKEN=$SEC1`r`nSTRIPE_RESTRICTED_KEY=$SEC2`nSUPABASE_READ_KEY=$SEC3`nACCENTS=é à ü Ω ✓`n")
+Verifier ($script:EnvIterations -ge 600000) 'dérivation de clé : au moins 600 000 itérations PBKDF2-HMAC-SHA256 par défaut'
+$sw = [Diagnostics.Stopwatch]::StartNew(); $txt = Protect-EnvOctets $clair $mdp; $r = Unprotect-EnvTexte $txt $mdp; $ms = $sw.ElapsedMilliseconds
+Verifier ($r.ok -and (Test-OctetsEgaux $r.octets $clair)) "aller-retour avec les vraies itérations (600 000) : contenu identique octet pour octet ($ms ms pour chiffrer + déchiffrer)"
+$script:EnvIterations = 20000      # (les autres vérifications utilisent 20 000 itérations : même code, plus rapide)
+$txt = Protect-EnvOctets $clair $mdp; $l = @($txt -split "`n" | Where-Object { $_ })
+Verifier ($l.Count -eq 6 -and $l[0] -eq 'JARVIS-ENV-V1' -and $l[1] -eq 'iter=20000' -and $l[2] -match '^sel=' -and $l[3] -match '^iv=' -and $l[4] -match '^donnees=' -and $l[5] -match '^mac=') 'format : en-tête, itérations, sel, IV, données, MAC (6 lignes de texte)'
+Verifier ($txt -notmatch [regex]::Escape($SEC1) -and $txt -notmatch [regex]::Escape($SEC2) -and $txt -notmatch 'DISCORD_BOT_TOKEN' -and $txt -notmatch [regex]::Escape($PW) -and $txt -notmatch 'STRIPE') 'rien en clair : ni valeur, ni nom de variable, ni mot de passe dans .env.chiffre'
+$txt2 = Protect-EnvOctets $clair $mdp
+Verifier ($txt -ne $txt2 -and ($txt -split "`n")[2] -ne ($txt2 -split "`n")[2] -and ($txt -split "`n")[3] -ne ($txt2 -split "`n")[3]) 'sel et IV aléatoires : deux chiffrements du même .env sont différents'
+Verifier ((Unprotect-EnvTexte $txt2 $mdp).ok -and (Unprotect-EnvTexte ($txt -replace "`n", "`r`n") $mdp).ok) 'les deux se déchiffrent (fins de ligne Windows ou Unix)'
+$mauv = Unprotect-EnvTexte $txt ([Text.Encoding]::UTF8.GetBytes('mauvais-mot-de-passe'))
+Verifier (-not $mauv.ok -and $null -eq $mauv.octets -and $mauv.raison -match 'incorrect ou fichier altéré') 'mauvais mot de passe : refusé, aucune donnée rendue'
+Verifier (-not (Unprotect-EnvTexte $txt ([byte[]]@())).ok -and -not (Unprotect-EnvTexte $txt ([Text.Encoding]::UTF8.GetBytes($PW + ' '))).ok -and -not (Unprotect-EnvTexte $txt ([Text.Encoding]::UTF8.GetBytes($PW.ToUpper()))).ok) 'mot de passe vide, avec un espace de plus ou en majuscules : refusé'
+function Alterer([string]$t, [string]$cle, [scriptblock]$f) { ($t -split "`n" | ForEach-Object { if ($_ -like "$cle=*") { & $f $_ } else { $_ } }) -join "`n" }
+$flip = { param($x) $i = $x.IndexOf('=') + 3; $c = $x[$i]; $x.Substring(0, $i) + $(if ($c -eq 'A') { 'B' } else { 'A' }) + $x.Substring($i + 1) }
+foreach ($k in 'donnees', 'mac', 'sel', 'iv') { $a = Unprotect-EnvTexte (Alterer $txt $k $flip) $mdp; Verifier (-not $a.ok -and $null -eq $a.octets -and $a.raison -match 'incorrect ou fichier altéré') "fichier altéré (un caractère de « $k » change) : détecté, rien n'est déchiffré" }
+$a = Unprotect-EnvTexte (Alterer $txt 'iter' { 'iter=20001' }) $mdp; Verifier (-not $a.ok) 'nombre d''itérations modifié : détecté'
+$a = Unprotect-EnvTexte (Alterer $txt 'iter' { 'iter=999999999' }) $mdp; Verifier (-not $a.ok -and $a.raison -match 'format') 'itérations absurdes : refusé avant tout calcul (pas de blocage)'
+$a = Unprotect-EnvTexte (($txt -split "`n" | Select-Object -First 5) -join "`n") $mdp; Verifier (-not $a.ok -and $a.raison -match 'format') 'fichier tronqué (ligne manquante) : refusé'
+$a = Unprotect-EnvTexte ($txt + "ligne=ajoutee`n") $mdp; Verifier (-not $a.ok) 'ligne ajoutée : refusé'
+$a = Unprotect-EnvTexte ($txt -replace 'JARVIS-ENV-V1', 'JARVIS-ENV-V2') $mdp; Verifier (-not $a.ok) 'autre version de format : refusé'
+$a = Unprotect-EnvTexte 'n''importe quoi' $mdp; Verifier (-not $a.ok) 'fichier quelconque : refusé sans exception'
+$a = Unprotect-EnvTexte (Alterer $txt 'donnees' { 'donnees=!!pas-du-base64!!' }) $mdp; Verifier (-not $a.ok) 'base64 invalide : refusé sans exception'
+# DPAPI
+$fm = Join-Path $TR 'cache-serveur\env-mdp.dpapi'
+Save-MotDePasseDpapi (ConvertTo-SecureDepuisTexte $PW) $fm
+$lu = Read-MotDePasseDpapi $fm
+Verifier ($lu -and (Test-OctetsEgaux $lu $mdp)) 'DPAPI : le mot de passe enregistré se relit à l''identique (même compte Windows)'
+Verifier ((Get-Content $fm -Raw) -notmatch [regex]::Escape($PW) -and (Get-Content $fm -Raw).Length -gt 100) 'DPAPI : le fichier ne contient pas le mot de passe en clair'
+Verifier ($null -eq (Read-MotDePasseDpapi (Join-Path $TR 'absent.dpapi'))) 'DPAPI : fichier absent -> $null (pas d''exception)'
+Set-Content (Join-Path $TR 'corrompu.dpapi') 'pas du dpapi' -Encoding ASCII; Verifier ($null -eq (Read-MotDePasseDpapi (Join-Path $TR 'corrompu.dpapi'))) 'DPAPI : fichier illisible -> $null'
+$env:JARVIS_ENV_MDP_FICHIER = $fm; Verifier ((Get-FichierMotDePasseServeur) -eq $fm) 'emplacement du mot de passe : remplaçable (tests) ; par défaut dans %LOCALAPPDATA%\Jarvis, HORS du dépôt'
+Remove-Item Env:JARVIS_ENV_MDP_FICHIER; Verifier ((Get-FichierMotDePasseServeur) -like "$env:LOCALAPPDATA*" -and (Get-FichierMotDePasseServeur) -notlike "$Root*") 'emplacement par défaut : hors du dossier Jarvis'
+# restauration atomique
+$rr = Join-Path $TR 'restaure'; New-Item -ItemType Directory $rr | Out-Null
+[IO.File]::WriteAllText("$rr\.env.chiffre", $txt, [Text.UTF8Encoding]::new($false))
+$x = Restore-EnvDepuisChiffre $rr $mdp
+Verifier ($x.statut -eq 'cree' -and (Test-OctetsEgaux ([IO.File]::ReadAllBytes("$rr\.env")) $clair) -and -not (Test-Path "$rr\.env.tmp") -and -not (Test-Path "$rr\.env.bak")) '.env absent : créé depuis .env.chiffre (contenu identique, aucun fichier temporaire)'
+$x = Restore-EnvDepuisChiffre $rr $mdp; Verifier ($x.statut -eq 'inchange' -and -not (Test-Path "$rr\.env.bak")) 'même contenu : « inchangé » (pas de sauvegarde inutile, pas de redémarrage)'
+$clair2 = [Text.Encoding]::UTF8.GetBytes("DISCORD_BOT_TOKEN=nouvelle-valeur-zzz`n")
+[IO.File]::WriteAllText("$rr\.env.chiffre", (Protect-EnvOctets $clair2 $mdp), [Text.UTF8Encoding]::new($false))
+$x = Restore-EnvDepuisChiffre $rr $mdp
+Verifier ($x.statut -eq 'mis-a-jour' -and (Test-OctetsEgaux ([IO.File]::ReadAllBytes("$rr\.env")) $clair2) -and (Test-OctetsEgaux ([IO.File]::ReadAllBytes("$rr\.env.bak")) $clair) -and -not (Test-Path "$rr\.env.tmp")) 'nouvelle version : .env remplacé, ancien .env gardé dans .env.bak, aucun fichier temporaire'
+$hAvant = Hash "$rr\.env"
+$x = Restore-EnvDepuisChiffre $rr ([Text.Encoding]::UTF8.GetBytes('faux-mot-de-passe'))
+Verifier ($x.statut -eq 'echec' -and (Hash "$rr\.env") -eq $hAvant -and -not (Test-Path "$rr\.env.tmp")) 'mauvais mot de passe : l''ancien .env est conservé tel quel'
+Set-Content "$rr\.env.chiffre" ((Get-Content "$rr\.env.chiffre" -Raw) -replace 'mac=.', 'mac=Z') -Encoding ASCII
+$x = Restore-EnvDepuisChiffre $rr $mdp; Verifier ($x.statut -eq 'echec' -and (Hash "$rr\.env") -eq $hAvant) 'fichier corrompu : l''ancien .env est conservé tel quel'
+$x = Restore-EnvDepuisChiffre $rr $null; Verifier ($x.statut -eq 'echec' -and $x.raison -match 'mot de passe du serveur absent' -and (Hash "$rr\.env") -eq $hAvant) 'mot de passe du serveur absent : échec clair, .env intact'
+$x = Restore-EnvDepuisChiffre (Join-Path $TR 'vide') $mdp; Verifier ($x.statut -eq 'absent') 'sans .env.chiffre : rien à faire'
+# Initialize (1er démarrage)
+$ini = Join-Path $TR 'premier'; New-Item -ItemType Directory $ini | Out-Null; [IO.File]::WriteAllText("$ini\.env.chiffre", $txt, [Text.UTF8Encoding]::new($false))
+$env:JARVIS_ENV_MDP_FICHIER = $fm
+$x = Initialize-EnvDepuisChiffre $ini; Verifier ($x.statut -eq 'cree' -and (Test-OctetsEgaux ([IO.File]::ReadAllBytes("$ini\.env")) $clair)) 'premier démarrage : .env créé depuis .env.chiffre avec le mot de passe DPAPI'
+$h = Hash "$ini\.env"; $x = Initialize-EnvDepuisChiffre $ini; Verifier ($x.statut -eq 'rien' -and (Hash "$ini\.env") -eq $h) '.env déjà présent : jamais touché au démarrage'
+Remove-Item Env:JARVIS_ENV_MDP_FICHIER
+# script env-chiffrer.ps1 + audit git
+if ($aGit) {
+    $ErrorActionPreference = 'Continue'
+    $T = Join-Path $TR 'depot-cles'; New-Item -ItemType Directory $T | Out-Null
+    $env:GIT_AUTHOR_NAME = 'test'; $env:GIT_AUTHOR_EMAIL = 't@t.t'; $env:GIT_COMMITTER_NAME = 'test'; $env:GIT_COMMITTER_EMAIL = 't@t.t'
+    & git -c init.defaultBranch=main init -q $T 2>$null
+    Copy-Item (Join-Path $Root '.gitignore') "$T\.gitignore"; 'print("x")' | Set-Content "$T\code.py" -Encoding ASCII
+    [IO.File]::WriteAllText("$T\.env", [Text.Encoding]::UTF8.GetString($clair), [Text.UTF8Encoding]::new($false))
+    & git -C $T add -A 2>$null; & git -C $T commit -q -m base 2>$null
+    $env:JARVIS_ENV_MDP_TEST = $PW; $env:JARVIS_ENV_ITER_TEST = '20000'
+    function Chiffrer { $o = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Root 'env-chiffrer.ps1') -Racine $T -Commit 2>&1 | Out-String; @{ sortie = $o; code = $LASTEXITCODE } }
+    $c1 = Chiffrer
+    $suivis = @(& git -C $T ls-files 2>$null)
+    Verifier ($c1.code -eq 0 -and (Test-Path "$T\.env.chiffre") -and $suivis -contains '.env.chiffre' -and $suivis -notcontains '.env' -and $c1.sortie -match 'Commit créé' -and $c1.sortie -match 'git push') 'env-chiffrer.ps1 -Commit : .env.chiffre créé et commité, la commande « git push » est donnée, .env n''est pas suivi'
+    Verifier ($c1.sortie -notmatch [regex]::Escape($SEC1) -and $c1.sortie -notmatch [regex]::Escape($PW)) 'la sortie du script ne contient ni clé ni mot de passe'
+    $nb1 = @(& git -C $T log --oneline 2>$null).Count
+    $c2 = Chiffrer
+    Verifier ($c2.sortie -match 'déjà à jour' -and @(& git -C $T log --oneline 2>$null).Count -eq $nb1) '.env inchangé : « déjà à jour », aucun commit inutile'
+    [IO.File]::WriteAllText("$T\.env", "DISCORD_BOT_TOKEN=valeur-modifiee-QQQ`n", [Text.UTF8Encoding]::new($false))
+    $c3 = Chiffrer
+    Verifier ($c3.code -eq 0 -and $c3.sortie -match 'Commit créé' -and @(& git -C $T log --oneline 2>$null).Count -eq $nb1 + 1) 'clé modifiée : nouveau commit de .env.chiffre'
+    $modifies = @(& git -C $T show --name-only --pretty=format: HEAD 2>$null | Where-Object { $_ })
+    Verifier ($modifies.Count -eq 1 -and $modifies[0] -eq '.env.chiffre') 'le commit ne contient QUE .env.chiffre'
+    $dec = Unprotect-EnvTexte (Get-Content "$T\.env.chiffre" -Raw -Encoding UTF8) $mdp
+    Verifier ($dec.ok -and [Text.Encoding]::UTF8.GetString($dec.octets) -match 'valeur-modifiee-QQQ') 'le .env.chiffre commité se déchiffre avec le mot de passe'
+    $env:JARVIS_ENV_MDP_TEST = 'court'; $c4 = Chiffrer; Verifier ($c4.code -ne 0 -and $c4.sortie -match 'trop court') 'mot de passe trop court : refusé'
+    $env:JARVIS_ENV_MDP_TEST = $PW
+    # audit : rien de sensible nulle part dans git
+    $valeurs = @($SEC1, $SEC2, $SEC3, 'valeur-modifiee-QQQ', $PW, 'DISCORD_BOT_TOKEN=', 'STRIPE_RESTRICTED_KEY=')
+    $log = (& git -C $T log -p --all 2>$null | Out-String)
+    $objets = (& git -C $T cat-file --batch-all-objects --batch 2>$null | Out-String)
+    $arbre = (@(Get-ChildItem $T -Recurse -File -Force | Where-Object { $_.FullName -notmatch '\\\.git\\' -and $_.Name -ne '.env' } | ForEach-Object { Get-Content $_.FullName -Raw -Encoding UTF8 -ErrorAction SilentlyContinue }) -join "`n")
+    $fuites = @($valeurs | Where-Object { $log.Contains($_) -or $objets.Contains($_) -or $arbre.Contains($_) })
+    Verifier ($fuites.Count -eq 0) 'git log -p --all, tous les objets git et l''arbre de travail (hors .env) : AUCUNE valeur de clé, AUCUN nom de variable de clé, AUCUN mot de passe'
+    Verifier (@(& git -C $T ls-files 2>$null | Where-Object { $_ -match '^\.env$|\.env\.bak|\.env\.tmp' }).Count -eq 0 -and (& git -C $T check-ignore .env .env.bak .env.tmp 2>$null).Count -eq 3) '.env, .env.bak et .env.tmp sont ignorés par git ; git ls-files ne les contient pas'
+    Verifier ((& git -C $T check-ignore .env.chiffre 2>$null).Count -eq 0 -and (& git -C $T check-ignore .env.example 2>$null).Count -eq 0) '.env.chiffre et .env.example ne sont PAS ignorés (suivis)'
+    $disque = @(Get-ChildItem $TR -Recurse -File -Force -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notmatch '\\\.git\\' } | Where-Object { (Select-String -Path $_.FullName -Pattern $PW -SimpleMatch -Quiet -ErrorAction SilentlyContinue) })
+    Verifier ($disque.Count -eq 0) 'le mot de passe n''est écrit sur aucun fichier (ni dépôt, ni DPAPI, ni temporaire)'
+    Remove-Item Env:JARVIS_ENV_MDP_TEST, Env:JARVIS_ENV_ITER_TEST
+    $ErrorActionPreference = 'Stop'
+} else { Verifier $true '(git absent : audit du dépôt sauté)' }
+$si = Get-Content (Join-Path $Root 'installer-serveur.ps1') -Raw -Encoding UTF8; $ec = Get-Content (Join-Path $Root 'env-chiffrer.ps1') -Raw -Encoding UTF8; $lib = Get-Content (Join-Path $Root 'lib\env-chiffre.ps1') -Raw -Encoding UTF8
+Verifier ($si -match 'Initialize-ClesServeur' -and $si -match 'Save-MotDePasseDpapi' -and $si -match 'essai \$i sur 3' -and $si -match 'Read-MotDePasseSaisie') 'installer-serveur.ps1 : demande le mot de passe UNE fois (3 essais), le vérifie, le protège par DPAPI'
+Verifier ($lib -match 'Read-Host \$invite -AsSecureString' -and $lib -notmatch 'Write-Host[^;\r\n]*\$mdp' -and $ec -notmatch 'Write-Host\s+[^;\r\n]*\$b[12]' -and $ec -match 'Clear-Octets') 'mot de passe : saisie masquée (SecureString), jamais affiché, octets effacés après usage'
+$ecr = @($lib -split "`n" | Where-Object { $_ -match 'WriteAllText|WriteAllBytes|Set-Content|Out-File' -and $_ -match '\$mdp|\$m1|\$b1' })
+Verifier ($ecr.Count -eq 1 -and $ecr[0] -match 'ConvertFrom-SecureString' -and $ec -notmatch 'Set-Content|Out-File[^\r\n]*\$b1') 'le mot de passe en clair n''est jamais écrit : seule la version protégée par DPAPI (ConvertFrom-SecureString) est écrite'
+$mj = Get-Content (Join-Path $Root 'jarvis.ps1') -Raw -Encoding UTF8
+Verifier ($mj -match "'env-pousser'" -and $mj -match 'env-chiffrer\.ps1' -and $mj -match 'Initialize-EnvDepuisChiffre') 'jarvis.ps1 env-pousser branché ; 1er démarrage : .env créé depuis .env.chiffre'
+$gi2 = @(Get-Content (Join-Path $Root '.gitignore') -Encoding UTF8 | ForEach-Object { $_.Trim() })
+Verifier ($gi2 -contains '.env' -and $gi2 -contains '.env.bak' -and $gi2 -contains '.env.tmp' -and $gi2 -notcontains '.env.chiffre' -and $gi2 -notcontains '.env*') '.gitignore : .env, .env.bak, .env.tmp ; .env.chiffre n''y est pas'
+Verifier ((Get-Content (Join-Path $Root '.env.example') -Raw -Encoding UTF8) -match 'env-pousser') '.env.example explique la synchro chiffrée'
+$script:EnvIterations = 600000
+
 Write-Host '7) Intégration'
 $tt = Get-Content (Join-Path $Root 'tests\tout.ps1') -Raw -Encoding UTF8
 Verifier ($tt -match "serveur\.ps1") 'tests\tout.ps1 inclut ce test'
