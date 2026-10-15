@@ -15,11 +15,11 @@ function Effacer([string]$cle) { if ($Config.PSObject.Properties[$cle]) { $Confi
 
 Write-Host '1) Valeurs choisies dans config.json'
 $vraie = Get-Content (Join-Path $Root 'config.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-Verifier ($vraie.silence_fin_ms -eq 1500 -and $vraie.silence_commande_ms -eq 600 -and $vraie.duree_max_phrase_s -eq 30) 'config.json : silence_fin_ms = 1500, silence_commande_ms = 600, duree_max_phrase_s = 30'
+Verifier ($vraie.silence_fin_ms -eq 1500 -and $vraie.silence_commande_ms -eq 600 -and $vraie.duree_max_phrase_s -eq 20) 'config.json : silence_fin_ms = 1500, silence_commande_ms = 600, duree_max_phrase_s = 20'
 Verifier (-not $vraie.PSObject.Properties['silence_fin_secondes']) 'l''ancien réglage silence_fin_secondes (0,5 s, cause des coupures) a disparu'
 
 Write-Host '2) Lecture et bornes'
-$mc = Get-MicroConfig; Verifier ($mc.silence -eq 1.5 -and $mc.silence_courte -eq 0.6 -and $mc.duree_max -eq 30) 'valeurs de config.json : 1,5 s / 0,6 s / 30 s'
+$mc = Get-MicroConfig; Verifier ($mc.silence -eq 1.5 -and $mc.silence_courte -eq 0.6 -and $mc.duree_max -eq 20) 'valeurs de config.json : 1,5 s / 0,6 s / 20 s'
 foreach ($c in 'silence_fin_ms', 'silence_commande_ms', 'duree_max_phrase_s') { Effacer $c }
 $mc = Get-MicroConfig; Verifier ($mc.silence -eq 1.5 -and $mc.silence_courte -eq 0.6 -and $mc.duree_max -eq 30) 'sans réglage : mêmes valeurs par défaut'
 Fixer 'silence_fin_secondes' 0.5; $mc = Get-MicroConfig; Verifier ($mc.silence -eq 1.5) 'l''ancien réglage de 0,5 s est ignoré'; Effacer 'silence_fin_secondes'
@@ -35,7 +35,7 @@ foreach ($c in 'silence_fin_ms', 'silence_commande_ms', 'duree_max_phrase_s') { 
 
 Write-Host '3) Arguments passés au processus d''écoute'
 $a = Get-ArgsEcoute 'ecoute.py'
-Verifier ($a -match '--silence-fin 1\.5 --silence-courte 0\.6 --duree-max 30') 'écoute lancée avec --silence-fin 1.5 --silence-courte 0.6 --duree-max 30'
+Verifier ($a -match '--silence-fin 1\.5 --silence-courte 0\.6 --duree-max 20') 'écoute lancée avec --silence-fin 1.5 --silence-courte 0.6 --duree-max 20'
 Fixer 'silence_fin_ms' 2500; Fixer 'duree_max_phrase_s' 45; $a = Get-ArgsEcoute 'ecoute.py'; Verifier ($a -match '--silence-fin 2\.5 ' -and $a -match '--duree-max 45') 'réglages personnalisés transmis'
 Fixer 'silence_fin_ms' 1500; Fixer 'duree_max_phrase_s' 30
 $src = Get-Content (Join-Path $Root 'lib\entrees.ps1') -Raw -Encoding UTF8; Verifier ($src -match 'silence = 1\.5; silence_courte = 0\.6; duree_max = 30') 'valeurs de repli de Get-ArgsEcoute alignées'

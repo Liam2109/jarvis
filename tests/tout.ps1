@@ -38,6 +38,9 @@ $liste = @(
     @{ n = 'voix naturelle (texte, pauses, fin d''audio, test de voix)'; f = 'voix-naturelle.ps1' }
     @{ n = 'vitesse V3 (diagnostic, fin adaptative, action d''abord, accusé, flux)'; f = 'vitesse-v3.ps1' }
     @{ n = 'serveur 24/7 (dépôt, installateur en simulation, mise à jour auto)'; f = 'serveur.ps1' }
+    @{ n = 'veille + réveil vocal / claquements (PC principal, installateur en simulation)'; f = 'bureau.ps1' }
+    @{ n = 'serveur léger (aucune écoute, Ollama déchargé, français, diag-serveur)'; f = 'serveur-leger.ps1' }
+    @{ n = 'vitesse ressentie (suite filtrée, bruit, Ollama chaud sur ce PC)'; f = 'suivi.ps1' }
 )
 function Get-Instantane {
     $mem = Join-Path $racine 'memoire'
@@ -45,7 +48,7 @@ function Get-Instantane {
        memoire = (@(Get-ChildItem $mem -File -ErrorAction SilentlyContinue | Sort-Object Name | ForEach-Object { "$($_.Name):$($_.Length):$($_.LastWriteTimeUtc.Ticks)" }) -join '|')
        env = (Get-FileHash (Join-Path $racine '.env') -ErrorAction SilentlyContinue).Hash }
 }
-function Get-ProcessusJarvis { @(Get-CimInstance Win32_Process | Where-Object { $_.ProcessId -ne $PID -and $_.CommandLine -match 'Jarvis\\jarvis\.ps1|jarvis\.ps1|ecoute\.py|coffre-dialogue|jarvis-edge|JarvisOrb|ollama|pont-discord|faux-pont' -and $_.CommandLine -notmatch 'tests\\tout\.ps1' }) }
+function Get-ProcessusJarvis { @(Get-CimInstance Win32_Process | Where-Object { $_.ProcessId -ne $PID -and $_.CommandLine -match 'Jarvis\\jarvis\.ps1|jarvis\.ps1|ecoute\.py|reveil\.py|coffre-dialogue|jarvis-edge|JarvisOrb|ollama|pont-discord|faux-pont' -and $_.CommandLine -notmatch 'tests\\tout\.ps1' }) }
 
 $avant = Get-Instantane
 $procAvant = @(Get-ProcessusJarvis).Count

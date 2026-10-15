@@ -155,6 +155,31 @@ def parle_en_cours():
         return False
 
 # ---------- Dialogue : mot d'éveil, fenêtre d'ordre, diagnostic ----------
+# Hallucinations connues de Whisper sur du silence, du bruit ou le son d'une vidéo captée par le micro (fins de vidéo, sous-titres) : jamais prises pour un ordre.
+HALLUCINATIONS = (
+    r"merci (beaucoup )?d.avoir (regard|[eé]cout)", r"n.oubliez pas de vous abonner", r"abonnez.vous", r"sous.titr(es|age)", r"amara\.?org", r"[aà] (tr[eè]s )?bient[oô]t pour (une )?(nouvelle|prochaine) vid",
+    r"merci d.avoir suivi", r"on se retrouve (dans|pour) (une |la )?(prochaine|nouvelle)", r"retrouvez.nous sur", r"like et partage", r"^musique$", r"^applaudissements$",
+)
+
+
+def est_repetition(texte, n_min=3):
+    """Boucle typique d'une hallucination : la même séquence de 3 ou 4 mots répétée 2 fois, ou de 2 mots répétée 3 fois, d'affilée (« il est logo il est logo il est logo »). Un mot seul répété (« non non non ») n'en est pas une."""
+    mots = normaliser_texte(texte).split()
+    for k, reps in ((2, n_min), (3, 2), (4, 2)):      # 2 mots : 3 fois ; 3 ou 4 mots : 2 fois suffisent (« il est logo il est logo »)
+        if len(mots) < k * reps: continue
+        for i in range(0, len(mots) - k * reps + 1):
+            bloc = mots[i:i + k]
+            if len(set(bloc)) > 1 and all(mots[i + j * k:i + (j + 1) * k] == bloc for j in range(reps)): return True
+    return False
+
+
+def est_hallucination(texte):
+    """True si le texte reconnu ressemble à une hallucination de Whisper (phrase de fin de vidéo, sous-titres) ou à une boucle de mots répétés."""
+    t = normaliser_texte(texte)
+    if not t: return False
+    return any(re.search(p, t) for p in HALLUCINATIONS) or est_repetition(t)
+
+
 class Dialogue:
     """Décide, pour chaque phrase finale, ce qui est envoyé à Jarvis. Pur (aucun micro) : testé avec des phrases simulées.
     Lignes produites : ENTENDU:<texte>  DIAG:<json>  ORDRE:<texte>  ACTIVE.
@@ -162,12 +187,13 @@ class Dialogue:
     dans la fenêtre (résultat partiel), la phrase est acceptée même si elle se termine après."""
     def __init__(self, fenetre=8.0, continu=True):
         self.fenetre = fenetre; self.attend_jusqua = 0.0; self.parole_fenetre = False; self.n = 0
+        self.suivi = False                                       # la fenêtre ouverte est une SUITE de conversation (sans « Jarvis ») : ses phrases sortent en « SUIVI: » et non « ORDRE: »
         self.continu = continu; self.apres_ordre = 0.0          # conversation continue : heure du dernier ordre transmis (0 = aucun en attente de réponse)
 
     def reponse_finie(self, maintenant):
         """Jarvis vient de finir de parler : si c'était la réponse à un ordre (dans les 90 s), la fenêtre d'ordre se rouvre `fenetre` s, SANS mot d'éveil."""
         if self.continu and self.apres_ordre and maintenant - self.apres_ordre < 90:
-            self.attend_jusqua = maintenant + self.fenetre; self.parole_fenetre = False
+            self.attend_jusqua = maintenant + self.fenetre; self.parole_fenetre = False; self.suivi = True
         self.apres_ordre = 0.0
 
     def fenetre_ouverte(self, maintenant):
@@ -186,16 +212,20 @@ class Dialogue:
             return ["DIAG:" + json.dumps(diag, ensure_ascii=False)]
         sortie = ["ENTENDU:" + t]
         if ordre:                                           # « Jarvis, <ordre> » dans la même phrase
-            diag["etat"] = "ordre"; self.attend_jusqua = 0.0; self.parole_fenetre = False
+            diag["etat"] = "ordre"; self.attend_jusqua = 0.0; self.parole_fenetre = False; self.suivi = False
             self.apres_ordre = maintenant
             sortie += ["DIAG:" + json.dumps(diag, ensure_ascii=False), "ORDRE:" + ordre]
         elif ordre == "":                                   # « Jarvis » seul : la fenêtre d'ordre s'ouvre
             diag["etat"] = "fenêtre ouverte"; diag["raison"] = f"j'écoute l'ordre pendant {self.fenetre:g} s, sans répéter « Jarvis »"
-            self.attend_jusqua = maintenant + self.fenetre; self.parole_fenetre = False
+            self.attend_jusqua = maintenant + self.fenetre; self.parole_fenetre = False; self.suivi = False
             sortie += ["DIAG:" + json.dumps(diag, ensure_ascii=False), "ACTIVE"]
+        elif est_hallucination(t):                          # fin de vidéo, sous-titres, boucle de mots : jamais un ordre (la fenêtre reste ouverte)
+            diag["etat"] = "ignoré"; diag["raison"] = "hallucination probable de la reconnaissance (phrase de fin de vidéo / sous-titres / mots répétés)"
+            sortie += ["DIAG:" + json.dumps(diag, ensure_ascii=False)]
         elif self.fenetre_ouverte(maintenant) or self.parole_fenetre:
-            diag["etat"] = "ordre (fenêtre)"; diag["ordre"] = t; self.attend_jusqua = 0.0; self.parole_fenetre = False; self.apres_ordre = maintenant
-            sortie += ["DIAG:" + json.dumps(diag, ensure_ascii=False), "ORDRE:" + t]
+            suite = self.suivi
+            diag["etat"] = "suivi (fenêtre)" if suite else "ordre (fenêtre)"; diag["ordre"] = t; self.attend_jusqua = 0.0; self.parole_fenetre = False; self.apres_ordre = maintenant; self.suivi = False
+            sortie += ["DIAG:" + json.dumps(diag, ensure_ascii=False), ("SUIVI:" if suite else "ORDRE:") + t]
         else:
             diag["etat"] = "ignoré"; diag["raison"] = (dw["raison"] or "pas de mot d'éveil") + (" (fenêtre d'ordre refermée)" if self.attend_jusqua else "")
             sortie += ["DIAG:" + json.dumps(diag, ensure_ascii=False)]
@@ -290,6 +320,17 @@ class MoteurWhisper:
     nom = "faster-whisper"
     adaptatif = False; spec_texte = None; spec_brut = None; spec_complet = False; spec_fait = False; spec_ms = 0; dernier_brut = ""      # valeurs de repli (l'instance les remplace)
     spec_blocs = 5; fin_rapide = 7; voix_max_rapide = 80
+    ambiant = 0.0; bruit_adaptatif = True; marge_bruit = 12; plafond_bruit = 18      # bruit de fond (TV, ventilateur, voix au loin) : le seuil de voix monte avec lui
+    def seuil_effectif(self):
+        """Seuil de voix relevé quand le bruit de fond est fort (jamais plus de `plafond_bruit` points au-dessus du réglage) : un bruit continu ne tient plus la phrase « ouverte » ni ne déclenche de fausses phrases.
+        Le bruit de fond = le 20e centile des 5 dernières secondes de niveaux (la parole a des pauses, un bruit continu non)."""
+        if not self.bruit_adaptatif: return self.seuil
+        return min(self.seuil + self.plafond_bruit, max(self.seuil, self.ambiant + self.marge_bruit))
+    def _suivre_bruit(self, lvl):
+        h = self.__dict__.setdefault("_hist", [])
+        h.append(lvl)
+        if len(h) > 50: del h[0]
+        if len(h) >= 20: self.ambiant = float(sorted(h)[len(h) // 5])
     def __init__(self, chemin, taux, peripherique="cpu", seuil_voix=32, fin_silence=1.5, max_phrase=30.0, bloc_s=0.1, prompt="", cpu_threads=3, vad=True, grammaire="", fin_courte=0.6, fin_rapide=None, adaptatif=None):
         self.chemin = chemin; self.taux = taux; self.seuil = seuil_voix; self.bloc_s = bloc_s; self.vad = vad; self.cpu_threads = cpu_threads
         self.fin = max(1, int(round(fin_silence / bloc_s))); self.fin_silence = fin_silence; self.max_blocs = int(max_phrase / bloc_s)
@@ -375,17 +416,22 @@ class MoteurWhisper:
         if self.vad: kw["vad_parameters"] = dict(min_silence_duration_ms=300)
         try:
             segments, _info = self.modele.transcribe(audio, **kw)
-            self.dernier_brut = " ".join(s.text for s in segments)
+            self.dernier_brut = self._texte(segments)
             return normaliser_texte(self.dernier_brut)
         except Exception as e:
             if self.appareil != "cuda": raise
             self._passer_cpu(e)                                  # GPU indisponible (pilote, mémoire prise par un jeu...) : on continue sur le CPU
             segments, _info = self.modele.transcribe(audio, **kw)
-            self.dernier_brut = " ".join(s.text for s in segments)
+            self.dernier_brut = self._texte(segments)
             return normaliser_texte(self.dernier_brut)
+    @staticmethod
+    def _texte(segments):
+        """Texte des segments, sans ceux que Whisper juge très probablement SANS parole (no_speech_prob élevée ET confiance basse) : c'est là que naissent « merci d'avoir regardé cette vidéo » et autres hallucinations."""
+        return " ".join(s.text for s in segments if not (getattr(s, "no_speech_prob", 0.0) > 0.6 and getattr(s, "avg_logprob", 0.0) < -0.7))
     def bloc(self, d):
         adapt = getattr(self, "adaptatif", False)
-        if niveau_pct(d) >= self.seuil:
+        lvl = niveau_pct(d); self._suivre_bruit(lvl); seuil = self.seuil_effectif()
+        if lvl >= seuil:
             self.parle = True; self.silence = 0; self.voix += 1; self.buf.append(d); self.dernier_fort = time.time()
             if self.gram: self.gram.AcceptWaveform(d)
             if adapt: self.spec_texte = None; self.spec_complet = False; self.spec_fait = False      # la voix reprend : la transcription d'essai est jetée
@@ -461,10 +507,12 @@ def main():
     ap.add_argument("--whisper-threads", type=int, default=3); ap.add_argument("--whisper-vad", type=int, default=1); ap.add_argument("--silence-fin", type=float, default=1.5); ap.add_argument("--silence-courte", type=float, default=0.6); ap.add_argument("--silence-rapide", type=float, default=0.7); ap.add_argument("--adaptatif", type=int, default=1); ap.add_argument("--duree-max", type=float, default=30.0); ap.add_argument("--vocabulaire", default=""); ap.add_argument("--grammaire", default=""); ap.add_argument("--conversation-continue", type=int, default=1)
     ap.add_argument("--fichier"); ap.add_argument("--timeout", type=int, default=60); ap.add_argument("--continu", action="store_true")
     ap.add_argument("--micro", default=""); ap.add_argument("--seuil", type=float, default=SEUIL)
+    ap.add_argument("--bruit-adaptatif", type=int, default=1)      # seuil de voix relevé avec le bruit de fond (0 = seuil fixe)
     ap.add_argument("--liste", action="store_true"); ap.add_argument("--test-micro", type=int, default=0)
     a = ap.parse_args()
     ADAPTATIF = bool(a.adaptatif); FIN_RAPIDE = max(0.5, min(1.0, a.silence_rapide))
     SEUIL = max(0.4, min(0.95, a.seuil))
+    MoteurWhisper.bruit_adaptatif = bool(a.bruit_adaptatif)
     VARIANTES = charger_variantes(a.variantes)
     configurer_sortie(a.continu)
     if a.liste:
@@ -582,7 +630,7 @@ def main():
             dlg.infos = dict(getattr(moteur, "infos", {}) or {}, silence_cfg_ms=int(a.silence_fin * 1000), silence_courte_ms=int(a.silence_courte * 1000), silence_rapide_ms=int(FIN_RAPIDE * 1000) if ADAPTATIF else 0, duree_max_s=int(a.duree_max))
             for ligne in dlg.phrase(t, maintenant, ecoute_ordres, sourdine):
                 print(ligne, flush=True)
-                if ligne.startswith("ORDRE:") and not a.continu: return
+                if ligne.startswith(("ORDRE:", "SUIVI:")) and not a.continu: return
         else:
             dlg.partiel(p, maintenant)
             if p and p != "…" and est_stop(p) and maintenant - stop_envoye > 2:  # réaction immédiate, sans attendre la fin de phrase

@@ -21,6 +21,7 @@ function Stop-RestesJarvis {
         $cl = "$($pr.CommandLine)"; $quoi = $null
         if ($pr.Name -match '^python' -and $cl -match 'voix\\ecoute\.py') { $quoi = 'écoute' }
         elseif ($pr.Name -match '^python' -and $cl -match 'pont-discord\\pont\.py') { $quoi = 'pont Discord' }
+        elseif ($pr.Name -match '^python' -and $cl -match 'voix\\reveil\.py') { $quoi = 'écoute de veille' }
         elseif ($pr.Name -eq 'msedge.exe' -and $cl.IndexOf($edgeProfil, [StringComparison]::OrdinalIgnoreCase) -ge 0) { $quoi = 'orbe (Edge)' }
         elseif ($pr.Name -eq 'ollama.exe' -and $cl -match 'serve') { $quoi = 'Ollama' }
         elseif ($pr.Name -match '^(llama-server|ollama_llama_server)\.exe$') { $quoi = 'Ollama (modèle)' }

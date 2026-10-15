@@ -49,7 +49,7 @@ $imports = @(Get-ChildItem (Join-Path $Root 'voix'), (Join-Path $Root 'pont-disc
 Verifier (($imports -join "`n") -match 'import discord' -and ($imports -join "`n") -match 'import edge_tts' -and ($imports -join "`n") -match 'sounddevice') 'les modules importés par le code sont couverts par requirements.txt'
 
 Write-Host '3) config.json et config.local.json'
-Verifier ($vraie.mode_serveur -eq $false -and $vraie.serveur_micro -eq 'auto') 'config.json : mode_serveur = false (PC de bureau inchangé), serveur_micro = auto'
+Verifier ($vraie.mode_serveur -eq $false -and $vraie.serveur_micro -eq 'non') 'config.json : mode_serveur = false (PC de bureau inchangé), serveur_micro = non'
 $ex = Get-Content (Join-Path $Root '.env.example') -Raw -Encoding UTF8
 foreach ($k in 'DISCORD_BOT_TOKEN', 'DISCORD_USER_ID', 'ALPHAVANTAGE_KEY', 'STRIPE_RESTRICTED_KEY', 'SUPABASE_URL', 'SUPABASE_READ_KEY', 'JARVIS_STATS_TOKEN') { Verifier ($ex -match "(?m)^$k=") ".env.example contient $k" }
 $b = [pscustomobject]@{ a = 1; ollama = [pscustomobject]@{ modele = 'gros'; url = 'u' }; liste = @(1, 2) }
@@ -92,7 +92,7 @@ $script:FauxMicroServeur = $true; Verifier ((Get-MicroServeur) -eq $true) 'un mi
 $script:FauxMicroServeur = $null; Fixer 'serveur_micro' 'false'; Verifier ((Get-MicroServeur) -eq $false) 'serveur_micro = false : jamais d''écoute'
 Fixer 'serveur_micro' 'true'; Verifier ((Get-MicroServeur) -eq $true) 'serveur_micro = true : écoute forcée'
 Fixer 'serveur_micro' 'auto'
-Verifier ($mj -match '\$serveur = Test-ModeServeur' -and $mj -match 'if \(-not \$serveur\) \{ Start-Visage \}' -and $mj -match 'if \(\$serveur\) \{ if \(Get-MicroServeur\) \{ Start-Ecoute \} \}' -and $mj -match 'Initialize-Raccourcis \}') 'jarvis.ps1 : en mode serveur, ni HUD, ni raccourcis, écoute seulement s''il y a un micro'
+Verifier ($mj -match '\$serveur = Test-ModeServeur' -and $mj -match 'if \(-not \$serveur -and -not \$veilleBureau\) \{ Start-Visage' -and $mj -match 'if \(\$serveur\) \{ if \(Get-MicroServeur\) \{ Start-Ecoute \} \}' -and $mj -match 'Initialize-Raccourcis \}') 'jarvis.ps1 : en mode serveur, ni HUD, ni raccourcis, écoute seulement s''il y a un micro'
 Verifier ($mj -match 'Start-PontDiscord' -and $mj -match "-not \`$SansCoffre -and -not \`$serveur") 'jarvis.ps1 : le pont Discord démarre toujours ; pas de fenêtre du coffre en mode serveur'
 Verifier ($mj -match '-not \$script:ModeJeu -and -not \$serveur\) \{ Update-Tableau') 'pas de mise à jour du tableau de bord (HUD) en mode serveur'
 Effacer 'mode_serveur'; Verifier ((Test-ModeServeur) -eq $false) 'retour à mode_serveur = false : tout redevient normal'

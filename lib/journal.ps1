@@ -35,10 +35,10 @@ function Import-ConfigJarvis {
 function Test-ModeServeur { [bool]($Config -and $Config.PSObject.Properties['mode_serveur'] -and $Config.mode_serveur -eq $true) }
 $script:FauxMicroServeur = $null      # (tests : $true / $false)
 function Get-MicroServeur {
-    # Faux si aucun micro n'est branché (serveur_micro : "auto" par défaut | true | false). Mesuré une seule fois.
+    # Micro du serveur : serveur_micro = "non" (défaut : AUCUNE écoute, ni Whisper ni Vosk, aucune recherche de micro) | "oui" | "auto" (écoute seulement si un micro est branché). Mesuré une seule fois.
     if ($null -ne $script:FauxMicroServeur) { return [bool]$script:FauxMicroServeur }
-    $v = $(if ($Config -and $Config.PSObject.Properties['serveur_micro']) { "$($Config.serveur_micro)".Trim().ToLowerInvariant() } else { 'auto' })
-    if ($v -eq 'true') { return $true }; if ($v -eq 'false') { return $false }
+    $v = $(if ($Config -and $Config.PSObject.Properties['serveur_micro']) { "$($Config.serveur_micro)".Trim().ToLowerInvariant() } else { 'non' })
+    if ($v -in 'true', 'oui', '1', 'on') { return $true }; if ($v -ne 'auto') { return $false }      # tout sauf « auto » et « oui » : pas de micro (jamais de sondage du matériel)
     if ($null -eq $script:MicroDetecte) {
         $script:MicroDetecte = $false
         try { & python -I -c "import sounddevice as sd,sys; sys.exit(0 if any(d['max_input_channels']>0 for d in sd.query_devices()) else 1)" 2>$null; $script:MicroDetecte = ($LASTEXITCODE -eq 0) } catch { }

@@ -14,6 +14,9 @@ function Get-OllamaConfig {
     $eff = if (Get-Command Get-PrioriteEffective -ErrorAction SilentlyContinue) { Get-PrioriteEffective } else { 'normal' }       # priorité des ressources (lib\priorite.ps1)
     if ($eff -eq 'max') { $m = Get-ModelePlusGros; if ($m.modele) { $modele = $m.modele } }                                     # le plus gros modèle DÉJÀ installé qui tient dans la RAM
     if ($eff -in 'eleve', 'max') { $keep = -1 }                                                                                  # modèle gardé chaud
+    if ((Test-GardeOllamaChaud) -and -not ($o -and $o.PSObject.Properties['keep_alive'])) { $keep = '24h' }                     # ce PC : Ollama chaud en permanence (config.local.json : ollama_toujours_chaud)
+    if (Test-ModeServeur) { $keep = '5m' }                                                                                       # SERVEUR (peu de RAM) : le modèle se décharge quelques minutes après usage ; ollama.keep_alive peut le changer
+    if ($o -and $o.PSObject.Properties['keep_alive'] -and "$($o.keep_alive)".Trim() -match '^(-1|\d+[smhd]?)$') { $keep = "$($o.keep_alive)".Trim(); if ($keep -match '^-?\d+$') { $keep = [int]$keep } }      # ollama.keep_alive (config.local.json du PC principal : « 24h »)
     @{ url = $(if ($o -and $o.url) { "$($o.url)".TrimEnd('/') } else { 'http://127.0.0.1:11434' })
        modele = $modele; keep = $keep
        delai = $(if ($o -and $o.delai_secondes) { [int]$o.delai_secondes } else { 60 }) }
@@ -59,14 +62,23 @@ function Invoke-Ollama([string]$systeme, [string]$utilisateur, [int]$timeoutSec 
     $c = Get-OllamaConfig
     if (-not (Test-UrlOllamaLocale $c.url)) { return $null }
     if ($timeoutSec -le 0) { $timeoutSec = $c.delai }
-    $corps = @{ model = $c.modele; stream = $false; format = 'json'; keep_alive = $c.keep
-        options = @{ temperature = 0.1; num_ctx = 4096; num_predict = 400 }
-        messages = @(@{ role = 'system'; content = $systeme }, @{ role = 'user'; content = $utilisateur }) } | ConvertTo-Json -Depth 6 -Compress
-    try {
-        $r = Invoke-RestMethod -Uri "$($c.url)/api/chat" -Method Post -Body ([Text.Encoding]::UTF8.GetBytes($corps)) -ContentType 'application/json; charset=utf-8' -TimeoutSec $timeoutSec
-        return "$($r.message.content)"
-    } catch { Write-Journal -Action 'Cerveau local' -Resultat "échec : $(Hide-Secrets $_.Exception.Message)"; return $null }
+    for ($essai = 1; $essai -le 2; $essai++) {
+        $sys = "$systeme`n$($script:ConsigneFrancais)" + $(if ($essai -eq 2) { "`nATTENTION : ta réponse précédente contenait des caractères non français. Réponds en FRANÇAIS, avec l'alphabet latin uniquement." } else { '' })
+        $corps = @{ model = $c.modele; stream = $false; format = 'json'; keep_alive = $c.keep
+            options = @{ temperature = 0.1; num_ctx = 4096; num_predict = 400 }
+            messages = @(@{ role = 'system'; content = $sys }, @{ role = 'user'; content = $utilisateur }) } | ConvertTo-Json -Depth 6 -Compress
+        try {
+            $r = Invoke-RestMethod -Uri "$($c.url)/api/chat" -Method Post -Body ([Text.Encoding]::UTF8.GetBytes($corps)) -ContentType 'application/json; charset=utf-8' -TimeoutSec $timeoutSec
+            $txt = "$($r.message.content)"
+        } catch { Write-Journal -Action 'Cerveau local' -Resultat "échec : $(Hide-Secrets $_.Exception.Message)"; return $null }
+        if (-not (Test-TexteNonLatin $txt)) { return $txt }
+        Write-Journal -Action 'Cerveau local' -Resultat "réponse refusée : le modèle a répondu dans une autre langue (caractères chinois / non latins)$(if ($essai -eq 1) { ' - nouvel essai avec consigne renforcée' } else { ' - renvoyé à Claude' })"
+    }
+    $null      # deux réponses dans une mauvaise langue : l'appelant retombe sur Claude
 }
+# Consigne ajoutée à CHAQUE appel du modèle local (qwen répond parfois en chinois) + détection de secours.
+$script:ConsigneFrancais = "LANGUE : réponds TOUJOURS et UNIQUEMENT en français (jamais en chinois, en anglais ni dans une autre langue). Les valeurs du JSON, y compris « dit », sont en français."
+function Test-TexteNonLatin([string]$t) { [bool]($t -match '[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af\u0400-\u04ff\u0600-\u06ff]') }      # chinois, japonais, coréen, cyrillique, arabe
 
 # ---------- Quelles commandes sont « simples » ? ----------
 $script:VerbesCommande = 'ouvre|ouvrir|ferme|fermer|lis|lire|donne|cherche|trouve|règle|regle|mets|metz|note|ajoute|rappelle|supprime|déplace|deplace|lance|installe|montre|affiche|dis|résume|resume|crée|cree|envoie|écris|ecris|copie|analyse|vérifie|verifie|compare|coupe|baisse|monte|passe|liste'
@@ -189,9 +201,10 @@ function Start-OllamaChargement {
     } -ArgumentList $c.url, $corps
     Write-Journal -Action 'Cerveau local' -Resultat "préchauffage du modèle $($c.modele) lancé (keep_alive $($c.keep))"
 }
-function Start-OllamaReveil {
+function Test-GardeOllamaChaud { [bool]($Config -and -not (Test-ModeServeur) -and $Config.PSObject.Properties['ollama_toujours_chaud'] -and $Config.ollama_toujours_chaud -eq $true) }      # jamais sur le serveur
+function Start-OllamaReveil([switch]$Force) {
     # Au réveil (Alt + +) : démarre le service Ollama s'il est arrêté (sans attendre) et précharge le modèle en tâche de fond. Jamais en test, en sourdine ni en mode jeu.
-    if ((Test-ModeTest) -or $script:Actif -eq $false -or $script:ModeJeu -eq $true) { return }
+    if ((Test-ModeTest) -or (Test-ModeServeur) -or (-not $Force -and ($script:Actif -eq $false -or $script:ModeJeu -eq $true))) { return }      # serveur : jamais de préchauffage (le modèle ne se charge qu'à la demande)      # -Force : préchauffage au démarrage en veille (PC principal)
     if ("$($Config.cerveau)".Trim().ToLower() -eq 'claude') { return }
     $c = Get-OllamaConfig; if (-not (Test-UrlOllamaLocale $c.url)) { return }
     $script:OllamaCache = $null; $o = Test-Ollama

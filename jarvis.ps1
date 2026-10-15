@@ -11,6 +11,7 @@
 #   discord-apercu  écrit memoire\apercu-discord.html : aperçu des messages Discord (données fictives, rien n'est envoyé)
 #   discord-diag    liste les salons textuels que le bot Discord voit (noms et permissions seulement) et le mot-clé reconnu
 #   avtest          UN appel Alpha Vantage (recherche « thales ») pour trouver les symboles de Paris à mettre dans config.json
+#   diag-serveur    RAM par processus, temps de réponse de Claude et d'Ollama, résumé (lecture seule ; 1 appel court à Claude)
 #   priorite        priorité des ressources demandée / effective, mémoire du PC, modèle Ollama détecté (aucun téléchargement)
 #   ecoute          une écoute ponctuelle (mot d'activation) puis journalise l'ordre
 param([Parameter(Position = 0)][string]$Commande = 'run', [Parameter(Position = 1, ValueFromRemainingArguments)][string[]]$Reste, [string]$ReponseTest, [switch]$SansCoffre)
@@ -52,6 +53,8 @@ $script:ReponseTest = $ReponseTest   # crochet de test : réponse automatique au
 . (Join-Path $Root 'lib\salle-marche.ps1')
 . (Join-Path $Root 'lib\matin.ps1')
 . (Join-Path $Root 'lib\discord.ps1')
+. (Join-Path $Root 'lib\veille-reveil.ps1')
+. (Join-Path $Root 'lib\diag-serveur.ps1')
 . (Join-Path $Root 'lib\boucle.ps1')
 foreach ($f in (Get-ChildItem (Join-Path $Root 'lib\sources') -Filter '*.ps1' -ErrorAction SilentlyContinue | Where-Object { $_.Name -notlike '_*' })) { . $f.FullName }      # modules de sources de marché (aucune n'est active tant qu'elle n'est pas dans sources_validees)
 Remove-Item $script:StopFlag, $script:ParleFlag -ErrorAction SilentlyContinue
@@ -90,6 +93,7 @@ switch ($Commande.ToLower()) {
         Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue
     }
     'avtest'   { Invoke-AvTest | ForEach-Object { Write-Host $_ } }       # UN seul appel Alpha Vantage (SYMBOL_SEARCH) : quels symboles pour Paris ? Aucune clé affichée.
+    'diag-serveur' { Get-DiagServeur | ForEach-Object { Write-Host $_ } }     # RAM par processus, temps de réponse de Claude et d'Ollama, résumé (lecture seule ; 1 appel court à Claude, 2 à Ollama s'il tourne)
     'priorite' { Get-RapportPriorite | ForEach-Object { Write-Host $_ } }     # état de la priorité des ressources et modèle détecté (rien n'est téléchargé)
     'resume'   { Update-Resume; Write-Journal -Action 'Résumé quotidien généré' -Resultat 'ok' }
     'ecoute'   {
@@ -123,9 +127,11 @@ switch ($Commande.ToLower()) {
         Remove-Item $quitFlag -ErrorAction SilentlyContinue
         Write-Journal -Action 'Démarrage de Jarvis' -Resultat $(if ($SansCoffre) { 'ok (lancé avec -SansCoffre : pas de fenêtre de déverrouillage au démarrage)' } else { 'ok' })
         $serveur = Test-ModeServeur      # mode serveur : ni HUD, ni voix, ni musique, ni raccourcis, ni coffre ; micro seulement s'il y en a un ; Discord actif
-        if (-not $serveur) { Start-Visage } else { Write-Journal -Action 'Mode serveur' -Resultat "actif : aucune fenêtre, aucune voix, aucun raccourci ; micro $(if (Get-MicroServeur) { 'détecté' } else { 'absent' }) ; Discord $(if ($Config.PSObject.Properties['discord_actif'] -and $Config.discord_actif -eq $true) { 'actif' } else { 'INACTIF (discord_actif)' })" }
+        $veilleBureau = (Test-VeilleBureau)      # PC principal : démarrage en VEILLE silencieuse, ni HUD ni plein écran avant le réveil
+        if (-not $serveur -and -not $veilleBureau) { Start-Visage; $script:VisageDemarre = $true } elseif ($veilleBureau) { Write-Journal -Action 'Veille' -Resultat 'démarrage en veille silencieuse (bureau_veille) : aucune fenêtre, aucun son ; réveil par « réveille-toi Jarvis » ou double claquement' } else { Write-Journal -Action 'Mode serveur' -Resultat "actif : aucune fenêtre, aucune voix, aucun raccourci ; micro $(if (Get-MicroServeur) { 'détecté' } else { 'absent' }) ; Discord $(if ($Config.PSObject.Properties['discord_actif'] -and $Config.discord_actif -eq $true) { 'actif' } else { 'INACTIF (discord_actif)' })" }
         @{ pid = $PID; edge = $script:EdgePid; demarre = (Get-Date).ToString('o') } | ConvertTo-Json | Set-Content $pidFile -Encoding UTF8
         if ($serveur) { $problemes = @(); $script:Actif = $true } else { $problemes = Initialize-Raccourcis }          # raccourcis globaux + état actif/sourdine mémorisé (serveur : toujours actif, aucun raccourci)
+        if ($veilleBureau) { if ($script:Actif) { Set-Actif $false 'démarrage en veille (bureau)' }; Update-VeilleReveil; Start-PreChauffageBureau } elseif (Test-GardeOllamaChaud) { Start-OllamaReveil -Force }      # veille : écoute légère ; Ollama (keep_alive long), Piper et cache vocal préchauffés
         Initialize-Memoire                          # session précédente interrompue ? elle sera résumée au démarrage
         try { [void](Initialize-BriefingMatin) } catch { Write-Journal -Action 'Briefing du matin' -Resultat "indisponible : $($_.Exception.Message)" }     # affiché au tableau dès le démarrage, SANS voix (dit à la première activation de la journée)
         [void](Start-VeilleFond)                    # processus de fond léger, sans voix : seulement si marche_actif = true (même en sourdine)
@@ -165,6 +171,7 @@ switch ($Commande.ToLower()) {
                 if ($dm) { Invoke-OrdreDiscordEntree $dm; continue }
                 Update-Priorite                                          # priorité des ressources (retombe à « normal » en mode jeu / sourdine)
                 Update-Marche                                            # relevés locaux de la veille de fond : panneau Marché, alertes, seuils (aucun réseau ici)
+                Update-VeilleReveil                                      # (re)lance l'écoute de veille si elle s'est arrêtée
                 Update-PontDiscord                                       # redémarre le pont Discord s'il a planté (journal d'erreurs, délais croissants)
                 Update-Discord                                           # alertes regroupées et briefing planifié sur Discord (tout est désactivé par défaut)
                 if (((Get-Date) - $dernierCoeur).TotalMinutes -ge 5) { $dernierCoeur = Get-Date; Save-HeureArret }      # « dernière activité » (si Jarvis est arrêté de force)
@@ -177,6 +184,6 @@ switch ($Commande.ToLower()) {
                 if ($script:LignesOrphelines) { Invoke-ResumeOrphelin }
                 Start-Sleep -Milliseconds 150
             }
-        } finally { Save-HeureArret; Stop-PontDiscord; Stop-VeilleFond; Stop-CoffreDialogue; Stop-Ollama; Close-Memoire; Stop-Musiques; Stop-Ecoute; Stop-Piper; Stop-Raccourcis; Stop-Visage; Remove-Item $pidFile -ErrorAction SilentlyContinue; Write-Journal -Action 'Arrêt de Jarvis' -Resultat 'ok' }
+        } finally { Save-HeureArret; Stop-PontDiscord; Stop-EcouteVeille; Stop-VeilleFond; Stop-CoffreDialogue; Stop-Ollama; Close-Memoire; Stop-Musiques; Stop-Ecoute; Stop-Piper; Stop-Raccourcis; Stop-Visage; Remove-Item $pidFile -ErrorAction SilentlyContinue; Write-Journal -Action 'Arrêt de Jarvis' -Resultat 'ok' }
     }
 }

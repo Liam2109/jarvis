@@ -56,7 +56,7 @@ Write-Host '2) Fin de phrase adaptative : réglages et arguments de l''écoute'
 $mc = Get-MicroConfig
 Verifier ($mc.silence_rapide -eq 0.7 -and $mc.adaptatif -eq $true) 'par défaut : fermeture rapide à 0,7 s, adaptative'
 $a = Get-ArgsEcoute 'ecoute.py'
-Verifier ($a -match '--silence-fin 1\.5 --silence-courte 0\.6 --duree-max 30 --silence-rapide 0\.7 --adaptatif 1') 'arguments : silence long 1,5 s conservé, --silence-rapide 0.7, --adaptatif 1'
+Verifier ($a -match '--silence-fin 1\.5 --silence-courte 0\.6 --duree-max 20 --silence-rapide 0\.7 --adaptatif 1') 'arguments : silence long 1,5 s conservé, --silence-rapide 0.7, --adaptatif 1'
 Fixer 'silence_rapide_ms' 100; Verifier ((Get-MicroConfig).silence_rapide -eq 0.5) 'plancher de la fermeture rapide : 500 ms'
 Fixer 'silence_rapide_ms' 5000; Verifier ((Get-MicroConfig).silence_rapide -eq 1.0) 'plafond : 1000 ms'
 Fixer 'silence_rapide_ms' 800; Verifier ((Get-ArgsEcoute 'ecoute.py') -match '--silence-rapide 0\.8') 'réglable (800 ms)'

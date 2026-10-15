@@ -71,6 +71,7 @@ function Get-PhraseReveil([datetime]$now = (Get-Date)) {
 function Get-PhrasesReveilCache { @(Get-PhrasesReveil) + 'Bon après-midi, monsieur.' + 'Bonsoir, monsieur.' }
 function Start-PrechauffageTts {
     # Synthétise en arrière-plan (processus Python à priorité basse) les phrases fréquentes qui ne sont pas encore en cache.
+    if (Test-ModeServeur) { return }      # serveur : aucune parole, donc aucune synthèse
     try {
         $dir = Join-Path $script:JarvisRoot 'sounds\cache'; if (-not (Test-Path $dir)) { New-Item -ItemType Directory $dir -Force | Out-Null }
         $f = @(Get-ChildItem $dir -Filter *.mp3 -ErrorAction SilentlyContinue | Sort-Object LastWriteTime)
@@ -102,7 +103,7 @@ function Get-PiperVoix {
 function Get-PiperModele { Join-Path $script:VoixDir "models\piper\fr_FR-$(Get-PiperVoix)-medium.onnx" }
 function Test-PiperPret([switch]$Repli) {
     # -Repli : la voix en ligne (edge) a échoué ; la voix locale Piper (homme par défaut) sert de secours à la place de la voix de Windows (Hortense, seule voix installée = féminine).
-    if (Test-ModeTest) { return $false }
+    if ((Test-ModeTest) -or (Test-ModeServeur)) { return $false }      # serveur : jamais de voix locale (Piper)
     if ($Repli) { if ($Config.PSObject.Properties['voix_repli_piper'] -and $Config.voix_repli_piper -eq $false) { return $false } }
     elseif ((Get-VoixMoteur) -ne 'piper') { return $false }
     if ($script:PiperProc -and -not $script:PiperProc.HasExited) { return (Test-Path $script:PiperPret) }

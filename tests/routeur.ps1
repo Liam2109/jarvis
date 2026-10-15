@@ -152,15 +152,15 @@ import ecoute
 d = ecoute.Dialogue(8.0, True); t = 100.0
 r1 = d.phrase('jarvis baisse la musique', t); assert any(x.startswith('ORDRE:') for x in r1)
 r2 = d.phrase('et mets le volume a trente', t + 5); assert not any(x.startswith('ORDRE:') for x in r2), 'sans réponse terminée : pas de fenêtre'
-d.reponse_finie(t + 6); r3 = d.phrase('et mets le volume a trente', t + 9); assert any(x.startswith('ORDRE:') for x in r3), 'fenêtre rouverte après la réponse'
-r4 = d.phrase('encore une phrase', t + 12); assert not any(x.startswith('ORDRE:') for x in r4), 'la fenêtre se referme après un ordre'
-d.reponse_finie(t + 13); r5 = d.phrase('trop tard', t + 30); assert not any(x.startswith('ORDRE:') for x in r5), 'fenêtre de 8 s seulement'
-d2 = ecoute.Dialogue(8.0, False); d2.phrase('jarvis baisse la musique', 0.0); d2.reponse_finie(1.0); assert not any(x.startswith('ORDRE:') for x in d2.phrase('suite', 2.0)), 'désactivable'
-d3 = ecoute.Dialogue(8.0, True); d3.reponse_finie(1.0); assert not any(x.startswith('ORDRE:') for x in d3.phrase('bruit de télé', 2.0)), 'sans ordre précédent : rien'
+d.reponse_finie(t + 6); r3 = d.phrase('et mets le volume a trente', t + 9); assert any(x.startswith('SUIVI:') for x in r3) and not any(x.startswith('ORDRE:') for x in r3), 'fenêtre rouverte après la réponse'
+r4 = d.phrase('encore une phrase', t + 12); assert not any(x.startswith(('ORDRE:', 'SUIVI:')) for x in r4), 'la fenêtre se referme après un ordre'
+d.reponse_finie(t + 13); r5 = d.phrase('trop tard', t + 30); assert not any(x.startswith(('ORDRE:', 'SUIVI:')) for x in r5), 'fenêtre de 8 s seulement'
+d2 = ecoute.Dialogue(8.0, False); d2.phrase('jarvis baisse la musique', 0.0); d2.reponse_finie(1.0); assert not any(x.startswith(('ORDRE:', 'SUIVI:')) for x in d2.phrase('suite', 2.0)), 'désactivable'
+d3 = ecoute.Dialogue(8.0, True); d3.reponse_finie(1.0); assert not any(x.startswith(('ORDRE:', 'SUIVI:')) for x in d3.phrase('bruit de télé', 2.0)), 'sans ordre précédent : rien'
 print('DIALOGUE-OK')
 "@
 $sortie = & python -I -c $py 2>&1 | Out-String
-Verifier ($sortie -match 'DIALOGUE-OK') "fenêtre rouverte 8 s après la réponse, refermée ensuite, désactivable$(if ($sortie -notmatch 'DIALOGUE-OK') { ' : ' + $sortie.Trim() })"
+Verifier ($sortie -match 'DIALOGUE-OK') "fenêtre de suite rouverte 8 s après la réponse (SUIVI), refermée ensuite, désactivable$(if ($sortie -notmatch 'DIALOGUE-OK') { ' : ' + $sortie.Trim() })"
 
 Write-Host '8) Réveil : le modèle du routeur local est TOUJOURS préchargé (keep_alive 30 min), quelle que soit la priorité'
 $script:Chauds = 0; function Start-OllamaReveil { $script:Chauds++ }; function Test-PiperPret { $false }; function Test-ModeTest { $false }; function Start-Ecoute { }; function Stop-Ecoute { }; function Save-EtatJarvis($a) { }; function Invoke-Son($n) { }; function Release-GpuModeles { }; function Set-SonsSourdine($x) { }

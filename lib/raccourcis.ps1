@@ -85,20 +85,22 @@ function Set-Actif([bool]$actif, [string]$source = '') {
     if (-not $actif) {
         if ($script:SonJoueur) { try { $script:SonJoueur.Stop() } catch {} }            # aucun son en cours
         Stop-Ecoute                                                                  # micro libéré (le processus de reconnaissance s'arrête : VRAM libérée)
-        if (Get-Command Release-GpuModeles -ErrorAction SilentlyContinue) { Release-GpuModeles }      # Ollama : modèle déchargé du GPU
+        if ((Get-Command Release-GpuModeles -ErrorAction SilentlyContinue) -and -not (((Get-Command Test-VeilleBureau -ErrorAction SilentlyContinue) -and (Test-VeilleBureau)) -or ((Get-Command Test-GardeOllamaChaud -ErrorAction SilentlyContinue) -and (Test-GardeOllamaChaud)))) { Release-GpuModeles }      # Ollama : modèle déchargé du GPU (sauf sur le PC principal : veille ou ollama_toujours_chaud, il reste chaud pour un réveil instantané)
         $script:Ecoute = $null; $script:EcouteTache = $null
     } else {
         Start-Ecoute                                                                 # micro rouvert
         if (-not (Test-ModeTest) -and (Get-Command Start-OllamaReveil -ErrorAction SilentlyContinue)) { Start-OllamaReveil }
         if (-not (Test-ModeTest) -and (Get-Command Test-PiperPret -ErrorAction SilentlyContinue)) { [void](Test-PiperPret -Repli) }      # voix locale Piper (homme) chargée en secours : jamais la voix féminine de Windows si la voix en ligne tarde      # le modèle du routeur est préchargé dès le réveil (keep_alive 30 min) : pas de premier appel lent
     }
+    if ((Get-Command Test-VeilleBureau -ErrorAction SilentlyContinue) -and (Test-VeilleBureau)) { if ($actif) { Start-VisageReveil } else { Stop-VisageVeille } }      # PC principal : HUD affiché au réveil, fermé en veille
+    if (Get-Command Update-VeilleReveil -ErrorAction SilentlyContinue) { Update-VeilleReveil }      # veille : écoute légère (« réveille-toi Jarvis », double claquement) ; réveil : elle s'arrête
     Set-VisageEtat 'ecoute'                    # devient « sourdine » automatiquement si $script:Actif est faux
     Write-Journal -Action $(if ($actif) { 'Jarvis ACTIVÉ' } else { 'Jarvis en SOURDINE TOTALE (muet, sourd, micro libéré, aucun ordre exécuté)' }) -Resultat "ok ($source)"
     if ($actif) {
         $n = $script:EntreesEnAttente.Count; $script:EntreesEnAttente.Clear()
         if ($n) { Write-Journal -Action 'Alertes de la sourdine' -Resultat "$n alerte(s) gardée(s) au journal et au panneau, non dites" }
         Invoke-Son 'actif'
-        if (-not $script:BriefingEnAttente) { Invoke-AvecContexteVoix 'reponse' { Parler (Get-PhraseReveil) } }
+        if (-not $script:BriefingEnAttente) { Invoke-AvecContexteVoix 'reponse' { if ("$source" -like 'réveil*') { Parler (Get-Politesse 'reveil_ecoute') } else { Parler (Get-PhraseReveil) } } }      # réveil par la voix / les mains : « Je vous écoute. »
     }
 }
 function New-CleGlobale { New-Object JarvisCles }      # (les tests la remplacent par une fausse : aucun raccourci système réel)

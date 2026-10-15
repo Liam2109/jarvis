@@ -275,7 +275,7 @@ Verifier ((Read-LigneMicro 'MOTEUR:vosk') -and $script:MoteurVoix -eq 'vosk' -an
 $ec = Get-Content (Join-Path $Root 'voix\ecoute.py') -Raw -Encoding UTF8
 Verifier ($ec -match 'local_files_only=True' -and $ec -notmatch 'snapshot_download|hf_hub_download|pip install|urlretrieve|urlopen') 'le code ne télécharge ni n''installe rien'
 $cf = Get-Content (Join-Path $Root 'config.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-Verifier ($cf.moteur_voix -eq 'faster-whisper' -and $cf.whisper_modele -eq 'small' -and $cf.whisper_peripherique -eq 'cpu' -and $cf.fenetre_ordre_secondes -eq 8 -and $cf.comprehension_tolerante -eq $true -and $cf.diagnostic_vocal -eq $true) 'config.json : moteur_voix = faster-whisper (small, CPU), fenêtre 8 s, compréhension tolérante et diagnostic activés'
+Verifier ($cf.moteur_voix -eq 'faster-whisper' -and $cf.whisper_modele -eq 'small' -and $cf.whisper_peripherique -eq 'cuda' -and $cf.fenetre_ordre_secondes -eq 8 -and $cf.comprehension_tolerante -eq $true -and $cf.diagnostic_vocal -eq $true) 'config.json : moteur_voix = faster-whisper (small, cuda), fenêtre 8 s, compréhension tolérante et diagnostic activés'
 Verifier (-not (Test-Path (Join-Path $Root 'voix\models\vosk-model-fr-0.22'))) 'le grand modèle Vosk n''a pas été téléchargé'
 $dirs = @(Get-ChildItem (Join-Path $Root 'voix\models') -Directory | ForEach-Object { $_.Name })
 Verifier (($dirs | Sort-Object) -join ',' -eq 'faster-whisper-small,piper,vosk-model-small-fr-0.22') "voix\models ne contient que (Whisper small, Vosk petit, voix Piper autorisée) : $($dirs -join ', ')"

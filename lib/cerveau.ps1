@@ -215,6 +215,12 @@ function Invoke-OrdreCorps([string]$ordre) {
         $plan = Resolve-IntentionTolerante $ordre
         if ($plan) { $voie = 'tolérante'; $etage = 'routeur'; Parler "J'ai compris : $($plan.tolerante)." }
     }
+    if (-not $plan -and $script:OrdreSuivi -and -not ($Config.PSObject.Properties['suivi_strict'] -and $Config.suivi_strict -eq $false)) {
+        # SUITE de conversation SANS « Jarvis » : acceptée seulement si une règle ou le routeur la comprend. Sinon c'est de la parole ambiante (télé, conversation, vidéo) : ni Claude, ni réponse parlée.
+        Write-Journal -Ordre $ordre -Action 'Suite de conversation ignorée' -Resultat "ni règle ni routeur ($($script:RouteurRaison)) : parole ambiante probable, aucun appel à Claude (suivi_strict)"
+        Set-DiagOrdre 'ignoré : suite sans mot d''éveil, comprise ni par une règle ni par le routeur' 'suivi ignoré'
+        Set-VisageEtat 'ecoute'; return
+    }
     if (-not $plan -and (Get-Command Test-OrdreControlePc -ErrorAction SilentlyContinue) -and (Test-OrdreControlePc $ordre)) {
         # Une commande de contrôle du PC ne va JAMAIS à Claude : règle, puis routeur ; sinon on demande de reformuler.
         $raison = "commande du PC non comprise par la règle ni par le routeur ($($script:RouteurRaison)) : jamais envoyée à Claude"

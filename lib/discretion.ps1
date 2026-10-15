@@ -160,7 +160,8 @@ function Get-MicroConfig {
     $sr = 0.7; if ($Config.PSObject.Properties['silence_rapide_ms'] -and "$($Config.silence_rapide_ms)" -match '^\d+$') { $sr = [math]::Max(500, [math]::Min(1000, [int]$Config.silence_rapide_ms)) / 1000.0 }      # fin de phrase ADAPTATIVE : fermeture rapide (500 à 1000 ms, 700 par défaut) quand la phrase semble terminée
     $ad = -not ($Config.PSObject.Properties['fin_adaptative'] -and $Config.fin_adaptative -eq $false)
     $dm = 30; if ($Config.PSObject.Properties['duree_max_phrase_s'] -and "$($Config.duree_max_phrase_s)" -match '^\d+$') { $dm = [math]::Max(5, [math]::Min(60, [int]$Config.duree_max_phrase_s)) }
-    @{ nom = $nom; seuil = $seuil; variantes = $var; moteur = $mot; fenetre = $fen; modele_chemin = $mc2; whisper_modele = $ws; whisper_peripherique = $ap; threads = $th; vad = $vd; silence = $si; silence_courte = $sc; duree_max = $dm; silence_rapide = $sr; adaptatif = $ad }
+    $bn = -not ($Config.PSObject.Properties['bruit_adaptatif'] -and $Config.bruit_adaptatif -eq $false)      # seuil de voix relevé avec le bruit de fond (télé, ventilateur)
+    @{ bruit = $bn; nom = $nom; seuil = $seuil; variantes = $var; moteur = $mot; fenetre = $fen; modele_chemin = $mc2; whisper_modele = $ws; whisper_peripherique = $ap; threads = $th; vad = $vd; silence = $si; silence_courte = $sc; duree_max = $dm; silence_rapide = $sr; adaptatif = $ad }
 }
 function Read-LigneMicro([string]$ligne) {
     # Lignes d'information de l'écoute. Retourne $true si la ligne a été consommée.

@@ -18,11 +18,13 @@ function Get-ArgsEcoute([string]$py, [string]$MoteurForce = '') {
         " --whisper-modele $($mc.whisper_modele) --whisper-peripherique $($mc.whisper_peripherique) --whisper-threads $($mc.threads) --whisper-vad $(if ($mc.vad) { 1 } else { 0 }) --silence-fin $([string]::Format([Globalization.CultureInfo]::InvariantCulture, '{0}', $mc.silence)) --silence-courte $([string]::Format([Globalization.CultureInfo]::InvariantCulture, '{0}', $mc.silence_courte)) --duree-max $([int]$mc.duree_max) --silence-rapide $([string]::Format([Globalization.CultureInfo]::InvariantCulture, '{0}', $mc.silence_rapide)) --adaptatif $(if ($mc.adaptatif) { 1 } else { 0 })" +
         $(if (Get-Command Update-VocabulaireVoix -ErrorAction SilentlyContinue) { $v = Update-VocabulaireVoix; if ($v) { " --vocabulaire `"$v`"" } else { '' } } else { '' }) +
         $(if (-not $MoteurForce -and (Get-Command Get-GrammaireVoix -ErrorAction SilentlyContinue)) { $g = Get-GrammaireVoix; if ($g) { " --grammaire `"$g`"" } else { '' } } else { '' }) +
-        " --conversation-continue $(if ($Config.PSObject.Properties['conversation_continue'] -and $Config.conversation_continue -eq $false) { 0 } else { 1 })"
+        " --conversation-continue $(if ($Config.PSObject.Properties['conversation_continue'] -and $Config.conversation_continue -eq $false) { 0 } else { 1 })" +
+        " --bruit-adaptatif $(if ($mc.bruit -eq $false) { 0 } else { 1 })"
 }
 
 $script:EcouteMoteurForce = ''        # « vosk » pendant le mode jeu : le moteur GPU est déchargé
 function Start-Ecoute {
+    if ((Test-ModeServeur) -and -not (Get-MicroServeur)) { $script:EcouteServeurRefusee = 1 + [int]$script:EcouteServeurRefusee; return }      # mode serveur sans micro voulu : ecoute.py n'est JAMAIS lancé (ni Whisper, ni Vosk, ni recherche de micro)
     if (Test-ModeTest) { return }                        # tests : jamais le micro
     if ($script:Ecoute -and -not $script:Ecoute.HasExited) { return }
     $py = Join-Path $script:VoixDir 'ecoute.py'
@@ -75,7 +77,7 @@ function Invoke-Pump {
         if ($null -eq $ligne -and $script:Ecoute.HasExited) { $script:Ecoute = $null; $script:EcouteTache = $null; Write-Journal -Action 'Écoute vocale' -Resultat 'processus terminé' }
         else {
             if ((Get-Command Read-LigneMicro -ErrorAction SilentlyContinue) -and $ligne -and (Read-LigneMicro $ligne)) { }
-            elseif ($ligne -match '^ORDRE:(.+)$') { $script:AccuseN++; if ($Config.PSObject.Properties['accuse_sonore'] -and $Config.accuse_sonore -eq $true -and (Get-Command Invoke-Son -ErrorAction SilentlyContinue)) { Invoke-Son 'actif' }; $script:Entrees.Enqueue(@{ src = 'voix'; texte = $Matches[1].Trim(); entendu = $false; diag = [int]$script:DiagDernierId; recu_ms = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() }) }      # accusé : flash de l'orbe tout de suite (son seulement si accuse_sonore)
+            elseif ($ligne -match '^(ORDRE|SUIVI):(.+)$') { $suiviLigne = ($Matches[1] -eq 'SUIVI'); $texteLigne = $Matches[2].Trim(); $script:AccuseN++; if ($Config.PSObject.Properties['accuse_sonore'] -and $Config.accuse_sonore -eq $true -and (Get-Command Invoke-Son -ErrorAction SilentlyContinue)) { Invoke-Son 'actif' }; $script:Entrees.Enqueue(@{ src = 'voix'; texte = $texteLigne; suivi = $suiviLigne; entendu = $false; diag = [int]$script:DiagDernierId; recu_ms = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() }) }      # accusé : flash de l'orbe tout de suite (son seulement si accuse_sonore)
             elseif ($ligne -match '^ENTENDU:(.+)$') { $script:DernierEntendu = $Matches[1].Trim(); $script:DernierEntenduHeure = Get-Date; $script:Entrees.Enqueue(@{ src = 'voix'; texte = $Matches[1].Trim(); entendu = $true }) }
             elseif ($ligne -eq 'ACTIVE') { Set-VisageEtat 'ecoute'; $script:FenetreOrdreJusqua = (Get-Date).AddSeconds($(if (Get-Command Get-FenetreOrdreSecondes -ErrorAction SilentlyContinue) { Get-FenetreOrdreSecondes } else { 8 })) }      # « Jarvis » seul : l'ordre suivant est écouté sans répéter le mot
             if ($script:Ecoute) { $script:EcouteTache = $script:Ecoute.StandardOutput.ReadLineAsync() }
@@ -96,6 +98,7 @@ function Invoke-Pump {
     if (Get-Command Invoke-PumpVisage -ErrorAction SilentlyContinue) { Invoke-PumpVisage }
     if (Get-Command Invoke-PumpCoffre -ErrorAction SilentlyContinue) { Invoke-PumpCoffre }   # résultat de la fenêtre de déverrouillage (processus séparé)
     if (Get-Command Update-OllamaChargement -ErrorAction SilentlyContinue) { Update-OllamaChargement }      # fin du préchauffage du modèle local
+    if ($script:VeilleProc -and (Get-Command Invoke-PumpVeille -ErrorAction SilentlyContinue)) { Invoke-PumpVeille }      # réveil par « réveille-toi Jarvis » ou double claquement (écoute de veille)
     if ($script:DiscordPumpActif -and (Get-Command Invoke-PumpDiscord -ErrorAction SilentlyContinue)) { Invoke-PumpDiscord }      # messages, réponses ✅/❌ et « stop » venant du pont Discord
     # 4. Fin d'analyse Defender
     if ($script:JobDefender -and $script:JobDefender.State -in 'Completed', 'Failed') {

@@ -60,5 +60,6 @@ function Invoke-Entree($e) {
         return
     }
     if ($e.texte -match '(?i)^\W*(jarvis\W+)?(quitte|éteins.toi|ferme.toi|au revoir|à bientôt|arrête.toi complètement)\W*$') { $script:Quitter = $true; Invoke-AvecContexteVoix 'reponse' { Parler "À bientôt, monsieur." }; return }
-    Invoke-Ordre $e.texte
+    $script:OrdreSuivi = [bool]$e.suivi      # phrase venue de la fenêtre de SUITE de conversation (sans « Jarvis ») : filtrée dans Invoke-OrdreCorps
+    try { Invoke-Ordre $e.texte } finally { $script:OrdreSuivi = $false }
 }

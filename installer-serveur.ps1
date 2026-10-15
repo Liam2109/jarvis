@@ -105,7 +105,7 @@ function New-ConfigLocale([string]$racine, [string]$modele) {
     $f = Join-Path $racine 'config.local.json'
     if (Test-Path $f) { return 'existe' }
     if ($script:Simulation) { return 'cree' }
-    $o = [ordered]@{ mode_serveur = $true; discord_actif = $true; etat_au_demarrage = 'actif'; serveur_micro = 'auto'; moteur_voix_appareil = 'cpu'; whisper_peripherique = 'cpu'; ollama = [ordered]@{ modele = $modele } }
+    $o = [ordered]@{ mode_serveur = $true; discord_actif = $true; etat_au_demarrage = 'actif'; serveur_micro = 'non'; moteur_voix_appareil = 'cpu'; whisper_peripherique = 'cpu'; ollama = [ordered]@{ modele = $modele; keep_alive = '5m' } }
     [IO.File]::WriteAllText($f, ($o | ConvertTo-Json -Depth 4), [Text.UTF8Encoding]::new($false))
     'cree'
 }

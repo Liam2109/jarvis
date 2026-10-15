@@ -106,6 +106,12 @@ $script:PolitesseCat = @{
         neutre   = @("Dites « annule l'extinction » pour l'arrêter.")
         sec      = @("« Annule l'extinction » pour l'arrêter.")
     }
+    # Réveil par la phrase « réveille-toi Jarvis » ou le double claquement (lib\veille-reveil.ps1) : réponse BRÈVE
+    reveil_ecoute = @{
+        courtois = @('Je vous écoute.')
+        neutre   = @('Je vous écoute.')
+        sec      = @('Je vous écoute.')
+    }
     # Accusé instantané (joué dès qu'une commande qui prend un instant est comprise) et phrase d'attente avant une réponse de Claude : phrases COURTES, déjà en cache vocal
     accuse = @{
         courtois = @('Très bien, monsieur.', 'Voilà.', 'Un instant, monsieur.')
