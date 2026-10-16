@@ -47,6 +47,8 @@ for q in ("Pourquoi le ciel est-il bleu ?", "Quelle est la différence entre un 
 for q in ("ouvre chrome", "ajoute à ma to-do : lait", "mets le volume à 30", "Dois-je acheter des actions Thales ?", "Quel est le cours de Thales ?",
           "où en est Thales ?", "montre-moi les stats du SaaS", "retiens que j'aime le café", "quel est mon mot de passe ?", "supprime le fichier test.txt", "Que fait Jarvis ?"):
     verifier(not cv.est_conversation(q, ["Thales"]), "reste à Jarvis (commande, marché, mémoire ou sujet réservé) : " + q)
+for q in ("dev : pourquoi le build échoue ?", "Dev: explique-moi le code du quiz ?", "valide", "refuse 3", "as-tu les données du SaaS ?", "comment va le site ?", "où en est le SaaS ?"):
+    verifier(not cv.est_conversation(q, []) and not cv.Conversation(tmp, lambda: {}, env={}).prend(q), "reste à Jarvis (agent de développement, point SaaS) : " + q)
 verifier(not cv.est_conversation("lis https://exemple.fr/page ?", []) and not cv.est_conversation("c:\\users\\liam ?", []), "adresse ou chemin : reste à Jarvis")
 
 print("2) Flux de l'API (analyse SSE)")

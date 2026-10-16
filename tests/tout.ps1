@@ -41,6 +41,8 @@ $liste = @(
     @{ n = 'veille + réveil vocal / claquements (PC principal, installateur en simulation)'; f = 'bureau.ps1' }
     @{ n = 'serveur léger (aucune écoute, Ollama déchargé, français, diag-serveur)'; f = 'serveur-leger.ps1' }
     @{ n = 'vitesse ressentie (suite filtrée, bruit, Ollama chaud sur ce PC)'; f = 'suivi.ps1' }
+    @{ n = 'point SaaS + briefing du matin (sources branchées seulement)'; f = 'saas.ps1' }
+    @{ n = 'agent de développement du SaaS (file, branche, garde-fous, valide / refuse)'; f = 'dev-agent.ps1' }
 )
 function Get-Instantane {
     $mem = Join-Path $racine 'memoire'

@@ -224,3 +224,47 @@ Lecture : l'après est nettement plus naturel et complet (structure, exemples ch
 1. Ajouter `ANTHROPIC_API_KEY` dans `.env` : sans elle, les explications passent par `claude -p` + Sonnet (6 à 19 s). Puis `jarvis.ps1 env-pousser` et `git push` pour le serveur.
 2. Sur le serveur : `git pull` puis relance de Jarvis.
 3. Réessayer à la voix « Hey Jarvis » puis « comment ça va ». Si une phrase de conversation part encore sur une mauvaise action, dites-moi laquelle : le journal du 16/10 ne contenait pas l'échange du test.
+
+
+---
+
+# CHANTIER G — point SaaS, briefing du matin, agent de dev du SaaS (16/10, fin d'après-midi)
+
+## Lectures retenues (doutes tranchés sans vous demander)
+- « Tâche planifiée » pour le briefing du serveur : `CLAUDE.md` interdit toute tâche planifiée créée par moi, et Jarvis tourne déjà 24 h/24 sur le serveur. Le briefing est donc déclenché par la boucle de Jarvis (`Update-BriefingMatinSaas`, à `briefing_heure`, une fois par jour). `jarvis.ps1 briefing-test` permet aussi de le lancer depuis le Planificateur de tâches si vous préférez.
+- Le briefing existant (`discord_briefing_actif` / `discord_briefing_heure`, version courte du briefing vocal) reste inchangé ; quand `briefing_actif` = "oui", le nouveau le remplace pour éviter le doublon.
+- « valide » : ouvre la pull request vers main et la fusionne via l'API GitHub (c'est le seul chemin vers main, et il exige votre « valide »). `dev_fusion_valide: "non"` limite à la pull request. L'agent, lui, ne pousse jamais main.
+- Les ~30 minutes d'une tâche tournent dans un **processus séparé** (`dev-agent.ps1`) pour ne jamais bloquer la boucle de Jarvis. `arreter.ps1` ne le tue pas (une mise à jour automatique à 3 h ne doit pas interrompre une tâche) ; si Jarvis redémarre pendant une tâche, il voit le processus vivant et n'en lance pas un deuxième.
+- Le modèle de l'agent est `dev_modele` (défaut `sonnet`, alias de `claude -p`).
+- Je n'ai **jamais exécuté** l'agent pour de vrai (pas de jeton GitHub, pas de clone, pas de vrai `claude` lancé sur le dépôt). Le bout en bout est testé avec un dépôt git local et un faux `claude`.
+
+## Partie 1 — Point SaaS
+- **Pourquoi l'embed rouge « Un souci est survenu » apparaissait avec un briefing correct** : le texte du point (`Get-PhrasesBusiness`) contenait « Je n'ai pas pu lire : … » dès qu'une source manquait (Stripe sans clé, visites Vercel non branchées). `ConvertTo-EmbedReponse` applique `Get-MotifErreur` (`erreur|échec|impossible|n'ai pas pu|…`) à tout texte écrit : il y voyait une erreur. Le point ne passe plus par ce filtre (embed à champs ajouté directement) ; le vrai embed d'erreur reste pour une vraie erreur (testé). Le « Je vous écoute » parasite : venait vraisemblablement du plan de Claude pour une question formulée comme « as-tu les données… » (formule toute faite, déjà corrigée au chantier F) ; la demande est maintenant reconnue par code (`Test-DemandePointSaas`) avant tout appel à Claude ou au routeur.
+- **Embed** : champs Site (code HTTP), Quiz, E-mails, Abonnés, Chiffre d'affaires, Visites, Tâches, Veille (+ Paiements si échecs, + Météo au briefing). Bonjour / Bonsoir selon l'heure, pas de « Je vais vous lire », pas de point-virgule en chaîne ni de double point. Orange si le site est en panne ou si des paiements ont échoué.
+- Les messages d'indisponibilité évitent les mots « jeton », « token », « clé API » : le masque des secrets (`Hide-Secrets`) les remplaçait par « [SECRET] » dans le texte (« jeton refusé » devenait « jeton [SECRET] »). Remplacés par « accès refusé par Supabase (identifiant de lecture à vérifier) », etc.
+- **Mesure réelle** : `jarvis.ps1 briefing-test` a lu le site, Supabase et Stripe pour de vrai et posté un embed dans #jarvis (journal : « Point SaaS : lecture site / stats / ca »).
+
+## Sources non branchées (à fournir si vous les voulez)
+| Source | État | Variable exacte | Permissions minimales (lecture seule) |
+|---|---|---|---|
+| Vercel Analytics (visites) | **non branchée** (« Source non branchée (Vercel Analytics) ») | `VERCEL_ANALYTICS_TOKEN`, `VERCEL_TEAM_ID`, `VERCEL_PROJECT_ID` | jeton limité au projet, lecture des analyses seulement, aucun droit de déploiement ni d'écriture (à vérifier chez Vercel : l'API des analyses n'est pas disponible sur tous les forfaits) |
+| Stripe | **branché** : `STRIPE_RESTRICTED_KEY` existe dans `.env` (clé restreinte `rk_…`) | `STRIPE_RESTRICTED_KEY` | Charges : Read ; Subscriptions : Read ; rien d'autre |
+| Supabase | **branché** (fonction `jarvis_stats`) | `SUPABASE_URL`, `SUPABASE_READ_KEY`, `JARVIS_STATS_TOKEN` | fonction `jarvis_stats` seulement |
+| Météo (briefing) | **non configurée** | `meteo_latitude`, `meteo_longitude` dans `config.json` (Open-Meteo, gratuit, sans clé) | aucune clé |
+| Veille du marché | désactivée (`marche_actif: false`) | — | — |
+
+## Partie 2 — Briefing du matin
+`briefing_actif` ("non" par défaut), `briefing_heure` ("07:30"). Embed dans le salon principal (météo, site, quiz, e-mails, abonnés, chiffre d'affaires, tâches, veille), sources branchées seulement, même mise en forme que le point. `jarvis.ps1 briefing-test` le déclenche à la demande (appel direct du bot, `notifier.py --embed`).
+
+## Partie 3 — Agent de dev
+Voir le README (section « Agent de développement du SaaS »). Résumé : `dev : …` (file), `dev : maintenant`, créneau de nuit 01:00-06:00, 3 tâches et 30 minutes par tâche (configurables), dossier séparé, branche `jarvis/<date>-<slug>`, push de la branche seule (refspec explicite), environnement épuré, scan des `.env`, refus des diffs contenant une clé, jeton GitHub passé par variables d'environnement seulement, alerte Discord sur chaque échec, compte rendu en embed, « valide » / « refuse ». Désactivé par défaut.
+
+## Partie 4 — Vérification
+Nouveaux tests : `tests\saas.ps1` (61 vérifications) et `tests\dev-agent.ps1` (82, dont un dépôt git local, six scénarios de garde-fous et la preuve que `main` ne bouge pas), plus un ajout à `tests\conversation-pont.py`. Résultat de `tests\tout.ps1` : voir le message posté sur Discord.
+
+## À faire de votre côté
+1. **Token GitHub** : créer `GITHUB_TOKEN_DEV` (jeton fine-grained limité à `Liam2109/ecom-quiz` : Contents RW, Pull requests RW, Metadata R), l'ajouter dans `.env`, `jarvis.ps1 env-pousser`, puis `git push` vous-même. Sans lui, l'agent s'arrête et vous prévient.
+2. **Activer l'agent** : dans `config.local.json` du serveur : `{ "dev_agent": "oui" }` ; vérifier que `C:\Projets\ecom-quiz` peut être créé (ou changer `dev_dossier`). Prérequis sur le serveur : `git`, `node`/`npm`, `claude` connecté.
+3. **Activer le briefing** : `briefing_actif: "oui"` (et `briefing_heure`) dans `config.local.json` ; optionnel : `meteo_latitude` / `meteo_longitude`.
+4. **Sources** : Vercel Analytics (variables ci-dessus) si vous voulez les visites.
+5. `git pull` sur le serveur puis relance de Jarvis.

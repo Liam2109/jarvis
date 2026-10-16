@@ -485,6 +485,14 @@ function Invoke-CommandeDiscord([string]$texte) {
         Set-Content $script:StopFlag '1' -Encoding ASCII; $script:DiscordStopCanal = "$script:CanalDiscord"
         Write-Journal -Ordre $texte -Action "Arrêt d'urgence demandé par Discord" -Resultat 'drapeau posé'; Add-TamponDiscord "Arrêt d'urgence demandé, monsieur."; return $true
     }
+    if ((Get-Command Invoke-DevCommande -ErrorAction SilentlyContinue) -and (Invoke-DevCommande $texte)) { $script:DiscordSansHumour = $true; return $true }      # « dev : ... » : agent de développement du SaaS (désactivé par défaut)
+    if ((Get-Command Invoke-DevDecision -ErrorAction SilentlyContinue) -and (Invoke-DevDecision $texte)) { $script:DiscordSansHumour = $true; return $true }      # « valide » / « refuse » après un compte rendu de l'agent
+    if ((Get-Command Test-DemandePointSaas -ErrorAction SilentlyContinue) -and (Test-DemandePointSaas $texte)) {      # « as-tu les données du SaaS », « stats », « comment va le site »... : le point, directement (embed à champs)
+        Write-Journal -Ordre $texte -Action 'Discord : point SaaS' -Resultat 'lecture seule, sources branchées uniquement'; $script:DiscordSansHumour = $true
+        $d = Get-SaasDonnees
+        if ((Get-DiscordStyle) -eq 'embed') { Add-EmbedDiscord (New-EmbedSaas $d) } else { Add-TamponDiscord (Get-SaasTexte $d) }
+        return $true
+    }
     $plan = Get-PlanRapide $texte
     if ($plan -and "$($plan.regle)" -match '^todo_lire') { Write-Journal -Ordre $texte -Action 'Discord : to-do' -Resultat 'lue'; $script:DiscordSansHumour = $true
         if ((Get-DiscordStyle) -eq 'embed') { Add-EmbedDiscord (Get-EmbedTodoDiscord) } else { $o = @(Get-TodoOuverte); Add-TamponDiscord $(if ($o.Count) { "Tâches ouvertes : " + ($o -join ' ; ') + '.' } else { 'Aucune tâche ouverte, monsieur.' }) }
@@ -568,6 +576,7 @@ function Update-AlertesDiscord {
 # ---------- Briefing du matin dans #jarvis (si demandé ; désactivé par défaut) ----------
 function Update-BriefingDiscord {
     $c = Get-DiscordConfig
+    if ((Get-Command Get-BriefingConfig -ErrorAction SilentlyContinue) -and (Get-BriefingConfig).actif) { return $false }      # le nouveau briefing du matin (briefing_actif, lib\saas.ps1) remplace celui-ci
     if (-not $c.briefing_actif -or -not $script:DiscordPumpActif -or -not $c.salons.ContainsKey('jarvis')) { return $false }
     $now = Get-Date; $auj = $now.ToString('yyyy-MM-dd')
     $h = [datetime]::ParseExact("$auj $($c.briefing_heure)", 'yyyy-MM-dd HH:mm', $null)
@@ -598,7 +607,7 @@ function Update-Discord {
     if (-not $script:DiscordPumpActif) { return }
     $now = Get-Date; if ($now -lt $script:DiscordProchainEntretien) { return }
     $script:DiscordProchainEntretien = $now.AddSeconds(20)
-    try { [void](Update-AlertesDiscord); [void](Update-BriefingDiscord); [void](Update-SalonsManquants) } catch { Write-Journal -Action 'Discord' -Resultat ("entretien : " + (Hide-Secrets $_.Exception.Message)) }
+    try { [void](Update-AlertesDiscord); [void](Update-BriefingMatinSaas); [void](Update-BriefingDiscord); [void](Update-SalonsManquants) } catch { Write-Journal -Action 'Discord' -Resultat ("entretien : " + (Hide-Secrets $_.Exception.Message)) }
 }
 
 # ---------- Messages vocaux : PRÉVUS, désactivés par défaut (config.json discord_vocal = false) ----------

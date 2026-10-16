@@ -172,6 +172,8 @@ def est_conversation(texte, valeurs_suivies=()):
     n = _sans_jarvis(normaliser(texte))
     if not n or len(n) > 600 or "http" in n or "\\" in n or "/" in texte:
         return False
+    if re.match(r"\s*dev\s*:", texte or "", re.I) or n in ("valide", "valider", "refuse", "refuser") or re.match(r"(?:valide|refuse)(?:r)? (?:la )?(?:tache )?\d+$", n):
+        return False      # agent de développement (« dev : ... », « valide », « refuse ») : toujours traité par Jarvis
     mots = set(n.split())
     if mots & MOTS_RESERVES:
         return False

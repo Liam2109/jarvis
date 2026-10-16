@@ -54,12 +54,25 @@ def morceaux(texte, taille=1900):
     return res
 
 
+def embed_discord(chemin):
+    """Embed de Jarvis (titre, description, couleur, champs, pied) -> embed de l'API Discord, aux limites de Discord ; secrets et mentions neutralisés."""
+    e = json.loads(Path(chemin).read_text(encoding="utf-8-sig"))
+    cut = lambda t, n: str(t or "").replace("@", "@​")[:n]      # noqa: E731
+    champs = [{"name": cut(c.get("nom"), 256), "value": cut(c.get("valeur"), 1024), "inline": bool(c.get("inline"))}
+              for c in (e.get("champs") or [])[:25] if str(c.get("nom", "")).strip() and str(c.get("valeur", "")).strip()]
+    r = {"title": cut(e.get("titre"), 256), "description": cut(e.get("description"), 2000), "color": int(e.get("couleur") or 3447003), "fields": champs}
+    if str(e.get("pied", "")).strip():
+        r["footer"] = {"text": cut(e.get("pied"), 2048)}
+    return r
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--racine", required=True)
     p.add_argument("--salon", default="systeme")
     p.add_argument("--texte", default="")
     p.add_argument("--fichier", default="")
+    p.add_argument("--embed", default="", help="fichier JSON d'un embed de Jarvis (titre, description, couleur, champs, pied)")
     a = p.parse_args()
     jeton = os.environ.get("DISCORD_BOT_TOKEN", "").strip()
     if not jeton:
@@ -68,7 +81,8 @@ def main():
     texte = a.texte
     if a.fichier:
         texte = Path(a.fichier).read_text(encoding="utf-8-sig")
-    if not texte.strip():
+    embed = embed_discord(a.embed) if a.embed else None
+    if not texte.strip() and not embed:
         print("echec : rien à envoyer")
         return 2
     cid, nom = identifiant_salon(a.racine, a.salon)
@@ -76,8 +90,12 @@ def main():
         print("echec : salon « %s » introuvable (config.json discord_salons ou memoire\discord-salons.json)" % a.salon)
         return 2
     n = 0
-    for m in morceaux(texte):
-        req = urllib.request.Request("%s/channels/%d/messages" % (API, cid), data=json.dumps({"content": m, "allowed_mentions": {"parse": []}}).encode("utf-8"), method="POST",
+    envois = [{"content": m} for m in morceaux(texte)] or [{}]
+    if embed:
+        envois[-1]["embeds"] = [embed]
+    for corps in envois:
+        corps["allowed_mentions"] = {"parse": []}
+        req = urllib.request.Request("%s/channels/%d/messages" % (API, cid), data=json.dumps(corps).encode("utf-8"), method="POST",
                                      headers={"Authorization": "Bot " + jeton, "Content-Type": "application/json", "User-Agent": "DiscordBot (https://github.com/Liam2109, 1.0)"})
         try:
             urllib.request.urlopen(req, timeout=20).read()
