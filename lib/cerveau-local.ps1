@@ -43,6 +43,7 @@ function Get-ModeCerveau {
     # Mode EFFECTIF : si le local est demandé mais indisponible, on retombe sur Claude (une seule note au journal).
     $c = "$($Config.cerveau)".Trim().ToLower(); if ($c -notin 'local', 'claude', 'hybride') { $c = 'hybride' }
     if ($c -eq 'claude') { return 'claude' }
+    if ((Test-ModeServeur) -and -not ($Config.PSObject.Properties['serveur_cerveau_local'] -and $Config.serveur_cerveau_local -eq $true)) { return 'claude' }      # SERVEUR (CPU seul, peu de RAM) : jamais de routeur ni de modèle local (un 7B sur CPU = des dizaines de secondes par message) ; Claude direct. serveur_cerveau_local = true pour le permettre
     $o = Test-Ollama
     # À LA DEMANDE : le service Ollama n'est lancé qu'au premier besoin réel du cerveau local (pas au démarrage de Jarvis), au plus une fois / 5 min.
     if (-not $o.pret -and $o.installe -and -not $o.actif -and (Get-Date) -gt $script:OllamaProchainEssai -and -not (Test-ModeTest)) {

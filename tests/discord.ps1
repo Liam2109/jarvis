@@ -658,6 +658,14 @@ $nbPy = ([regex]::Matches($sortie, '(?m)^\s+OK ')).Count
 foreach ($l in ($sortie -split "`n" | Where-Object { $_ -match 'ECHEC' })) { Write-Host $l -ForegroundColor Red }
 Verifier ($code -eq 0 -and $nbPy -ge 50) "tests\discord-pont.py : $nbPy vérifications (utilisateur, salons, confirmations, jeton, vocal, arrêt avec Jarvis) — tout vert"
 
+Write-Host '14) Conversation directe du pont (API en flux, repli claude -p allégé, règles locales, notifier) — faux serveur local'
+$sortie = & python -I (Join-Path $PSScriptRoot 'conversation-pont.py') 2>&1 | Out-String; $code = $LASTEXITCODE
+$nbConv = ([regex]::Matches($sortie, '(?m)^\s+OK ')).Count
+foreach ($l in ($sortie -split "`n" | Where-Object { $_ -match 'ECHEC' })) { Write-Host $l -ForegroundColor Red }
+Verifier ($code -eq 0 -and $nbConv -ge 35) "tests\conversation-pont.py : $nbConv vérifications — tout vert"
+$nt = Get-Content (Join-Path $Root 'pont-discord\notifier.py') -Raw -Encoding UTF8; $js = Get-Content (Join-Path $Root 'jarvis.ps1') -Raw -Encoding UTF8
+Verifier ($js -match "'notifier'" -and $nt -match 'allowed_mentions' -and $nt -notmatch 'print\(\s*jeton') 'jarvis.ps1 notifier : poste dans le salon système via le bot, sans mention, jeton jamais affiché'
+
 Remove-Item Env:JARVIS_PONT_FAUX, Env:DISCORD_BOT_TOKEN, Env:DISCORD_USER_ID -ErrorAction SilentlyContinue
 Remove-Item $script:StopFlag -Force -ErrorAction SilentlyContinue
 Remove-Item $TR -Recurse -Force -ErrorAction SilentlyContinue

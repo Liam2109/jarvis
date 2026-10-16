@@ -110,6 +110,7 @@ def phrases_grammaire(variantes):
     res = []
     for v in mots:
         res.append("réveille toi " + v)
+        res.append(v + " réveille toi")
     res.append("[unk]")
     return res
 
@@ -128,6 +129,34 @@ def phrase_reveil(texte, variantes=()):
     return any(ev.est_wake(m) for m in mots)
 
 
+def phrase_reveil_stricte(resultat, variantes=(), confiance_min=0.55):
+    """Mode STRICT (reveil_phrase_stricte = oui, défaut). `resultat` : le dict d'un résultat FINAL de Vosk avec mots (SetWords) : {"text", "result":[{word, conf, start, end}]}.
+    La grammaire restreinte de Vosk force tout son vers « réveille toi Jarvis » : un « réveil » ou un « Jarvis » SEUL peut donc être décodé comme la phrase entière.
+    On exige donc : exactement les trois mots « réveille » « toi » « Jarvis » (dans cet ordre, ou « Jarvis réveille-toi »), chacun avec une confiance suffisante,
+    une durée plausible par mot, des mots enchaînés (pas de longue pause) et un énoncé d'au moins ~0,55 s. Retourne (ok, diagnostic en texte)."""
+    mots = (resultat or {}).get("result") or []
+    if len(mots) != 3:
+        return False, "%d mot(s) avec horodatage au lieu de 3 (« %s »)" % (len(mots), (resultat or {}).get("text", ""))
+    noms = [normaliser(m.get("word", "")) for m in mots]
+    ev = _ecoute()
+    if variantes:
+        ev.VARIANTES = ev.charger_variantes(",".join(variantes))
+    ordre_ok = (noms[0] in ("reveille", "reveilles") and noms[1] == "toi" and ev.est_wake(noms[2])) or (ev.est_wake(noms[0]) and noms[1] in ("reveille", "reveilles") and noms[2] == "toi")
+    if not ordre_ok:
+        return False, "mots hors phrase attendue (%s)" % " ".join(noms)
+    conf = min(float(m.get("conf", 0)) for m in mots)
+    if conf < confiance_min:
+        return False, "confiance trop basse (%.2f < %.2f)" % (conf, confiance_min)
+    if any(float(m["end"]) - float(m["start"]) < 0.06 for m in mots):
+        return False, "un mot est trop bref pour être de la parole"
+    if any(float(b["start"]) - float(a["end"]) > 0.7 for a, b in zip(mots, mots[1:])):
+        return False, "mots trop espacés (pas une seule phrase)"
+    duree = float(mots[-1]["end"]) - float(mots[0]["start"])
+    if duree < 0.55:
+        return False, "énoncé trop court (%.2f s)" % duree
+    return True, "phrase complète « %s », confiance mini %.2f, %.2f s" % (" ".join(noms), conf, duree)
+
+
 def calibrer(niveaux, marge=18, plancher=45, plafond=95):
     """Bruit ambiant -> seuil de claquement. niveaux : niveau (0-100) de chaque bloc, mesuré dans le calme. Le seuil se place au-dessus du pic ambiant (99e centile) + une marge."""
     if not niveaux:
@@ -141,7 +170,11 @@ def calibrer(niveaux, marge=18, plancher=45, plafond=95):
 class Veille:
     """Un bloc audio de 20 ms à la fois. Retourne 'claque', 'phrase' ou None. Le moteur Vosk (rec) n'est alimenté QUE s'il y a du son (économie de CPU)."""
 
-    def __init__(self, detecteur, rec=None, variantes=(), niveau_voix=30, queue_blocs=12, claquement=True, voix=True):
+    def __init__(self, detecteur, rec=None, variantes=(), niveau_voix=30, queue_blocs=12, claquement=True, voix=True, stricte=True, confiance_min=0.55):
+        self.stricte = stricte
+        self.confiance_min = confiance_min
+        self.diag = ""
+        self.rejet = ""
         self.det = detecteur
         self.rec = rec
         self.variantes = list(variantes)
@@ -151,6 +184,16 @@ class Veille:
         self.alimentes = 0              # nombre de blocs envoyés à Vosk (pour mesurer l'économie)
         self.claquement = claquement
         self.voix = voix
+
+    def _final(self, res):
+        t = res.get("text", "")
+        if not t:
+            return False
+        if not self.stricte:
+            return phrase_reveil(t, self.variantes)
+        ok, self.diag = phrase_reveil_stricte(res, self.variantes, self.confiance_min)
+        self.rejet = "" if ok else self.diag
+        return ok
 
     def bloc(self, d, niveau, parle=False):
         if parle:
@@ -166,16 +209,14 @@ class Veille:
                 self.queue -= 1
                 self.alimentes += 1
                 if self.rec.AcceptWaveform(d):
-                    t = json.loads(self.rec.Result()).get("text", "")
-                    if t and phrase_reveil(t, self.variantes):
+                    if self._final(json.loads(self.rec.Result())):
                         return "phrase"
-                else:
-                    p = json.loads(self.rec.PartialResult()).get("partial", "")
+                elif not self.stricte:
+                    p = json.loads(self.rec.PartialResult()).get("partial", "")      # (strict : jamais sur un résultat partiel, seulement sur l'énoncé terminé)
                     if p and phrase_reveil(p, self.variantes):
                         return "phrase"
                 if self.queue == 0:
-                    t = json.loads(self.rec.FinalResult()).get("text", "")      # fin du son : on finalise
-                    if t and phrase_reveil(t, self.variantes):
+                    if self._final(json.loads(self.rec.FinalResult())):      # fin du son : on finalise
                         return "phrase"
         return None
 
@@ -191,6 +232,8 @@ def main():
     ap.add_argument("--ecart-max", type=int, default=800)
     ap.add_argument("--sans-claquement", action="store_true")
     ap.add_argument("--sans-voix", action="store_true")
+    ap.add_argument("--stricte", default="oui", help="oui (défaut) : phrase complète « réveille-toi Jarvis » exigée, avec confiance et durées ; non : ancien comportement")
+    ap.add_argument("--confiance", type=float, default=0.55)
     ap.add_argument("--calibre", type=float, default=0)
     a = ap.parse_args()
     try:
@@ -228,10 +271,12 @@ def main():
             SetLogLevel(-1)
             chemin = ev.chemin_modele("vosk", a.modele_chemin)
             rec = KaldiRecognizer(Model(chemin), taux, json.dumps(phrases_grammaire(variantes), ensure_ascii=False))
+            rec.SetWords(True)      # horodatage et confiance par mot (mode strict)
         except Exception as e:
             print("ERREUR:vosk " + str(e), file=sys.stderr)      # sans Vosk : les claquements restent possibles
     det = DetecteurClaquements(seuil=a.seuil, duree_max_ms=a.claque_duree_max, ecart_min_ms=a.ecart_min, ecart_max_ms=a.ecart_max)
-    veille = Veille(det, rec, variantes, claquement=not a.sans_claquement, voix=rec is not None)
+    stricte = a.stricte.strip().lower() not in ("non", "false", "0", "off")
+    veille = Veille(det, rec, variantes, claquement=not a.sans_claquement, voix=rec is not None, stricte=stricte, confiance_min=a.confiance)
     stream.start()
     print("PRET:veille", flush=True)
     while True:
@@ -240,7 +285,11 @@ def main():
         except queue.Empty:
             continue
         r = veille.bloc(d, ev.niveau_pct(d), ev.parle_en_cours())
+        if not r and veille.rejet:
+            print("REJET:" + veille.rejet, flush=True)      # phrase entendue mais refusée (journalisée par Jarvis : aide à régler les faux déclenchements)
+            veille.rejet = ""
         if r:
+            print("DIAG:" + (veille.diag if r == "phrase" else "double claquement (seuil %s)" % a.seuil), flush=True)
             print("REVEIL:" + ("claque" if r == "claque" else "phrase"), flush=True)
             return
 

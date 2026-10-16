@@ -1,6 +1,6 @@
 ﻿# Veille avec RÉVEIL : sur le PC principal, Jarvis démarre en VEILLE silencieuse (sourdine : ni voix, ni HUD, ni plein écran, aucun ordre exécuté) et n'écoute que deux choses,
 # avec un processus léger (voix\reveil.py : Vosk petit modèle à GRAMMAIRE RESTREINTE + détecteur de claquements) :
-#   1) la phrase « réveille-toi Jarvis » ;   2) un DOUBLE CLAQUEMENT de mains (deux pics brefs espacés de 0,2 à 0,8 s ; seuil réglable : « calibre les claquements »).
+#   1) la phrase COMPLÈTE « réveille-toi Jarvis » (ou « Jarvis, réveille-toi ») ; « réveil » seul ou « Jarvis » seul ne réveillent pas (reveil_phrase_stricte = "oui", défaut) ;   2) un DOUBLE CLAQUEMENT de mains (deux pics brefs espacés de 0,2 à 0,8 s ; seuil réglable : « calibre les claquements »).
 # Faux déclenchements évités (voir voix\reveil.py) : pic isolé, son long, rafale de bruits, et tout ce qui se passe pendant que Jarvis parle.
 # Réveillé : « Je vous écoute. », écoute normale (Whisper), HUD affiché. « Jarvis, mets-toi en veille » : retour en veille (HUD fermé, écoute légère).
 # config.json (tout est désactivé par défaut ; ce PC l'active dans config.local.json) : veille_reveil, bureau_veille, reveil_phrase, claquement_actif, claquement_seuil,
@@ -22,6 +22,8 @@ function Get-ReglagesVeille {
         ecart_min       = [int](Get-ReglageVeille 'claquement_ecart_min_ms' 200 100 600)
         ecart_max       = [int](Get-ReglageVeille 'claquement_ecart_max_ms' 800 300 1500)
         duree_max       = [int](Get-ReglageVeille 'claquement_duree_max_ms' 120 40 300)
+        stricte         = -not ($Config -and $Config.PSObject.Properties['reveil_phrase_stricte'] -and "$($Config.reveil_phrase_stricte)".Trim().ToLower() -in 'non', 'false', '0', 'off')      # défaut « oui » : phrase COMPLÈTE exigée
+        confiance       = [math]::Round((Get-ReglageVeille 'reveil_confiance' 0.55 0.2 0.95), 2)
     }
 }
 function Test-VeilleBureau { [bool]($Config -and $Config.PSObject.Properties['bureau_veille'] -and $Config.bureau_veille -eq $true -and -not (Test-ModeServeur)) }
@@ -34,7 +36,8 @@ function Get-ArgsVeille([string]$py) {
     $r = Get-ReglagesVeille; $mc = Get-MicroConfig
     "-I -u `"$py`" --seuil $($r.seuil) --claque-duree-max $($r.duree_max) --ecart-min $($r.ecart_min) --ecart-max $($r.ecart_max)" + $(if ($mc.nom) { " --micro `"$($mc.nom)`"" } else { '' }) +
         $(if ($mc.variantes.Count) { " --variantes `"$($mc.variantes -join ',')`"" } else { '' }) + $(if ($mc.modele_chemin) { " --modele-chemin `"$($mc.modele_chemin)`"" } else { '' }) +
-        $(if (-not $r.claquement) { ' --sans-claquement' } else { '' }) + $(if (-not $r.phrase) { ' --sans-voix' } else { '' })
+        $(if (-not $r.claquement) { ' --sans-claquement' } else { '' }) + $(if (-not $r.phrase) { ' --sans-voix' } else { '' }) +
+        " --stricte $(if ($r.stricte) { 'oui' } else { 'non' }) --confiance $($r.confiance.ToString([Globalization.CultureInfo]::InvariantCulture))"
 }
 function Start-EcouteVeille {
     if (Test-ModeTest) { return }
@@ -67,6 +70,8 @@ function Invoke-PumpVeille {
         if ($script:VeilleProc.HasExited) { Write-Journal -Action 'Veille' -Resultat "écoute de veille arrêtée (code $($script:VeilleProc.ExitCode)) : nouvel essai dans 30 s"; $script:VeilleProc = $null; $script:VeilleTache = $null; $script:VeilleProchainEssai = (Get-Date).AddSeconds(30) }
         return
     }
+    if ($ligne -match '^REJET:(.{1,200})$') { Write-Journal -Action 'Veille' -Resultat ('phrase de réveil refusée (mode strict) : ' + (Hide-Secrets $Matches[1])); $script:VeilleTache = $script:VeilleProc.StandardOutput.ReadLineAsync(); return }
+    if ($ligne -match '^DIAG:(.{1,200})$') { $script:VeilleDernierDiag = Hide-Secrets $Matches[1]; $script:VeilleTache = $script:VeilleProc.StandardOutput.ReadLineAsync(); return }      # ce qui a déclenché le réveil (pour le journal)
     if ($ligne -match '^REVEIL:(phrase|claque)$') { Invoke-Reveil $Matches[1]; return }
     $script:VeilleTache = $script:VeilleProc.StandardOutput.ReadLineAsync()
 }
@@ -88,7 +93,8 @@ function Invoke-Reveil([string]$source) {
     # Réveil par la phrase ou le double claquement : « Je vous écoute. », écoute normale, HUD affiché.
     Stop-EcouteVeille
     if ($script:Actif -ne $false) { return }
-    Write-Journal -Action 'Réveil de Jarvis' -Resultat $(if ($source -eq 'claque') { 'double claquement de mains' } else { 'phrase « réveille-toi Jarvis »' })
+    Write-Journal -Action 'Réveil de Jarvis' -Resultat ($(if ($source -eq 'claque') { 'double claquement de mains' } else { 'phrase « réveille-toi Jarvis »' }) + $(if ($script:VeilleDernierDiag) { " — $script:VeilleDernierDiag" } else { '' }))
+    $script:VeilleDernierDiag = ''
     Set-Actif $true "réveil ($source)"
 }
 # ---------- Calibrage des claquements ----------

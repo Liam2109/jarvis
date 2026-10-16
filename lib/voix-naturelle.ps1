@@ -120,9 +120,9 @@ function Stop-AvecFondu($lecteur, [int]$fonduMs) {
 }
 
 # ---------- Vitesse V3 : réponses parlées courtes, accusé instantané, réponse en flux ----------
-function Get-ReponsesCourtes { -not ($Config -and $Config.PSObject.Properties['reponses_courtes'] -and $Config.reponses_courtes -eq $false) }      # défaut : 1 à 2 phrases à voix haute
-function Limit-DitVocal([string]$dit, [int]$maxPhrases = 2, [int]$maxCar = 240) {
-    # Réponse PARLÉE courte : 2 phrases et 240 caractères au plus ; le reste (le détail) va à l'écran ou sur Discord, sur demande (« détaille »). @{ court; complet; coupe }
+function Get-ReponsesCourtes { -not ($Config -and $Config.PSObject.Properties['reponses_courtes'] -and $Config.reponses_courtes -eq $false) }      # défaut : 2 à 3 phrases à voix haute
+function Limit-DitVocal([string]$dit, [int]$maxPhrases = 3, [int]$maxCar = 320) {
+    # Réponse PARLÉE courte : 3 phrases et 320 caractères au plus ; le reste (le détail) va à l'écran ou sur Discord, sur demande (« détaille »). @{ court; complet; coupe }
     $t = "$dit".Trim()
     $ph = @([regex]::Split($t, '(?<=[.!?…])\s+') | Where-Object { $_.Trim() })
     if ($ph.Count -le $maxPhrases -and $t.Length -le $maxCar) { return @{ court = $t; complet = $t; coupe = $false } }
@@ -177,7 +177,7 @@ function Wait-AccuseFini {
     $script:AccuseLecteur = $null
 }
 
-# ---------- Réponse de Claude en flux : on parle dès la première phrase (claude_flux = true ; désactivé par défaut) ----------
+# ---------- Réponse de Claude en flux : on parle dès la première phrase (claude_flux = true, activé par défaut ; false pour revenir à l'attente de la réponse complète) ----------
 function Get-ClaudeFlux { [bool]($Config -and $Config.PSObject.Properties['claude_flux'] -and $Config.claude_flux -eq $true) }
 function ConvertFrom-FluxClaude([string[]]$lignes) {
     # Lignes JSON de « claude -p --output-format stream-json --include-partial-messages » -> @{ texte (cumulé) ; final ; fini }. Tolérant : une ligne illisible est ignorée.

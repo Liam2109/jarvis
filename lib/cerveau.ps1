@@ -22,7 +22,7 @@ Tu ne peux rien faire toi-même : tu réponds UNIQUEMENT par un objet JSON, que 
 
 FORMAT (strict, aucun texte avant ou après, pas de bloc de code) :
 {"dit":"phrase prononcée à voix haute","langue":"fr","actions":[{"type":"...","...":"..."}]}
-- "dit" : français naturel, 1 à 2 phrases courtes, sans markdown ni symboles, s'adresse à « monsieur ». Pour une simple question ou conversation : réponds dans "dit" avec "actions":[]. Mets "langue":"en" seulement si Liam demande de parler anglais.
+- "dit" : français naturel, 2 à 3 phrases courtes au plus (la première doit se suffire à elle-même : elle est prononcée dès qu'elle est écrite), sans markdown ni symboles, s'adresse à « monsieur ». Pour une simple question ou conversation : réponds dans "dit" avec "actions":[]. Mets "langue":"en" seulement si Liam demande de parler anglais.
 - "actions" : liste ordonnée des actions à exécuter (peut être vide). N'utilise QUE les types ci-dessous. Si l'ordre est ambigu, pose une question dans "dit" avec "actions":[].
 - Pour toute demande non couverte par une action dédiée, utilise "powershell" (code + resume en français). Une confirmation de Liam est alors demandée automatiquement.
 
@@ -291,7 +291,7 @@ function Invoke-OrdreCorps([string]$ordre) {
     } elseif ($executees -gt 0 -and $echecs -eq 0 -and -not $plan.dit -and -not $plan.rapide) { Parler (Get-Politesse 'fait') }
     if ($script:DernierOrdre) { $script:DernierOrdre.total_s = ((Get-Date) - $t0).TotalSeconds }
     $script:Historique.Add("Liam : $ordre"); $script:Historique.Add("Jarvis : $($plan.dit) [actions : $((($actions | ForEach-Object { $_.type }) -join ', '))]")
-    while ($script:Historique.Count -gt 8) { $script:Historique.RemoveAt(0) }
+    while ($script:Historique.Count -gt 20) { $script:Historique.RemoveAt(0) }
     if ($lances.Count) { Set-DiagOrdre ("action lancée : " + ($lances -join ' ; ')) }
     elseif ($refus.Count) { Set-DiagOrdre ("non exécuté : " + ($refus -join ' ; ')) }
     elseif ($actions.Count -eq 0) { Set-DiagOrdre 'aucune action à lancer (réponse parlée seulement)' }

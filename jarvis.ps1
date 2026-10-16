@@ -11,6 +11,7 @@
 #   discord-apercu  écrit memoire\apercu-discord.html : aperçu des messages Discord (données fictives, rien n'est envoyé)
 #   discord-diag    liste les salons textuels que le bot Discord voit (noms et permissions seulement) et le mot-clé reconnu
 #   avtest          UN appel Alpha Vantage (recherche « thales ») pour trouver les symboles de Paris à mettre dans config.json
+#   notifier "texte"  poste un message dans le salon système de Discord avec le bot (ou le chemin d'un fichier texte) ; sans passer par le pont. Option : --salon nom
 #   diag-serveur    RAM par processus, temps de réponse de Claude et d'Ollama, résumé (lecture seule ; 1 appel court à Claude)
 #   priorite        priorité des ressources demandée / effective, mémoire du PC, modèle Ollama détecté (aucun téléchargement)
 #   ecoute          une écoute ponctuelle (mot d'activation) puis journalise l'ordre
@@ -91,6 +92,11 @@ switch ($Commande.ToLower()) {
         $d = Join-Path $env:TEMP 'jarvis-discord-diag'; New-Item -ItemType Directory $d -Force | Out-Null
         & python -I -u (Join-Path $Root 'pont-discord\pont.py') --echange $d --config (Get-ConfigPath) --diagnostic 2>&1 | ForEach-Object { Write-Host (Hide-Secrets "$_") }
         Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    'notifier' {      # poste un message (ou un fichier texte) dans le salon système de Discord, via le bot (REST direct, jeton jamais affiché)
+        $arg = @('-I', (Join-Path $Root 'pont-discord\notifier.py'), '--racine', $Root, '--salon', 'systeme')
+        if ($Texte -and (Test-Path -LiteralPath $Texte -PathType Leaf)) { $arg += @('--fichier', $Texte) } elseif ($Texte) { $arg += @('--texte', $Texte) } else { Write-Host 'Usage : jarvis.ps1 notifier "texte"  (ou un chemin de fichier texte)'; return }
+        $o = (& python @arg 2>&1 | Out-String).Trim(); Write-Host (Hide-Secrets $o); Write-Journal -Action 'Notification Discord (salon système)' -Resultat (Hide-Secrets (Short $o 200))
     }
     'avtest'   { Invoke-AvTest | ForEach-Object { Write-Host $_ } }       # UN seul appel Alpha Vantage (SYMBOL_SEARCH) : quels symboles pour Paris ? Aucune clé affichée.
     'diag-serveur' { Get-DiagServeur | ForEach-Object { Write-Host $_ } }     # RAM par processus, temps de réponse de Claude et d'Ollama, résumé (lecture seule ; 1 appel court à Claude, 2 à Ollama s'il tourne)

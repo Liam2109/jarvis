@@ -49,6 +49,8 @@ Effacer 'mode_serveur'; Fixer 'bureau_veille' $false; Verifier (-not (Test-Veill
 Fixer 'bureau_veille' $true; Verifier (Test-VeilleBureau) 'bureau_veille = true : démarrage en veille silencieuse'
 $a = Get-ArgsVeille 'C:\x\reveil.py'
 Verifier ($a -match '^-I -u "C:\\x\\reveil\.py" --seuil 72 --claque-duree-max 120 --ecart-min 200 --ecart-max 800') 'arguments du processus : seuil, durée maximale, écarts pris dans config.json'
+Verifier ($vraie.reveil_phrase_stricte -eq 'oui' -and $a -match '--stricte oui --confiance 0\.55') 'réveil strict : reveil_phrase_stricte = "oui" par défaut, transmis au processus de veille'
+Fixer 'reveil_phrase_stricte' 'non'; Verifier ((Get-ArgsVeille 'x.py') -match '--stricte non') 'reveil_phrase_stricte = "non" : ancien comportement'; Effacer 'reveil_phrase_stricte'
 Fixer 'claquement_seuil' '81,5'; Fixer 'claquement_ecart_min_ms' 50; Fixer 'claquement_ecart_max_ms' 99999
 $r = Get-ReglagesVeille; Verifier ($r.seuil -eq 82 -and $r.ecart_min -eq 100 -and $r.ecart_max -eq 1500) 'réglages bornés (seuil 81,5 -> 82 ; écarts ramenés à 100 ms et 1500 ms)'
 Fixer 'claquement_seuil' 'abc'; Verifier ((Get-ReglagesVeille).seuil -eq 72) 'seuil illisible : valeur par défaut 72'

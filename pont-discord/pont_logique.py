@@ -22,6 +22,7 @@ MORCEAU_MAX = 1900           # Discord limite un message à 2000 caractères
 SAISIE_MAX_S = 180           # « en train d'écrire » : jamais plus de 3 minutes
 EXTENSIONS_AUDIO = (".mp3", ".wav", ".ogg", ".m4a")
 TAILLE_AUDIO_MAX = 8 * 1024 * 1024
+REGLAGES_CONVERSATION = ("discord_conversation", "discord_conversation_modele", "discord_conversation_modele_cli", "discord_claude_max_par_jour", "valeurs_suivies")
 EMOJI_OUI = "✅"         # ✅
 EMOJI_NON = "❌"         # ❌
 
@@ -239,6 +240,12 @@ class ConfigJarvis:
         self.chemin = Path(chemin) if chemin else None
         self._mtime = None
         self._val = {"salons": {}, "vocal": False}      # salons = identifiants FORCÉS à la main (facultatif)
+        self.brut = {}
+
+    def reglages(self):
+        """Réglages de la conversation directe (config.json / config.local.json), relus quand le fichier change."""
+        self.valeurs()
+        return self.brut
 
     def valeurs(self):
         if not self.chemin or not self.chemin.exists():
@@ -250,7 +257,7 @@ class ConfigJarvis:
                 loc = self.chemin.with_name("config.local.json")      # réglages propres à cette machine (serveur) : prioritaires, jamais suivis par git
                 if loc.exists() and self.chemin.name == "config.json":
                     try:
-                        brut.update({k: v for k, v in json.loads(loc.read_text(encoding="utf-8-sig")).items() if k in ("discord_salons", "discord_vocal")})
+                        brut.update({k: v for k, v in json.loads(loc.read_text(encoding="utf-8-sig")).items() if k in ("discord_salons", "discord_vocal") or k in REGLAGES_CONVERSATION})
                     except (OSError, ValueError):
                         pass
                 salons = {}
@@ -259,6 +266,7 @@ class ConfigJarvis:
                     if nom in NOMS_SALONS and str(v).strip().isdigit():
                         salons[nom] = int(str(v).strip())
                 self._val = {"salons": salons, "vocal": brut.get("discord_vocal") is True}
+                self.brut = {k: brut[k] for k in REGLAGES_CONVERSATION if k in brut}
                 self._mtime = m
         except (OSError, ValueError):
             pass          # config momentanément illisible : on garde les dernières valeurs
@@ -269,7 +277,7 @@ class Pont:
     """client : objet asynchrone avec envoyer(canal_id, texte)->id, reaction(canal_id, msg_id, emoji), taper(canal_id, actif),
     envoyer_fichier(canal_id, chemin). (discord.py en vrai, un faux client dans les tests.)"""
 
-    def __init__(self, client, echange, config, user_id, secrets=(), stop_flag=None, journal_sortie=None, horloge=time.monotonic, cache_salons=None):
+    def __init__(self, client, echange, config, user_id, secrets=(), stop_flag=None, journal_sortie=None, horloge=time.monotonic, cache_salons=None, conversation=None):
         self.client = client
         self.echange = echange
         self.config = config
@@ -286,6 +294,8 @@ class Pont:
         self.decouverts = {}              # salons associés automatiquement par mot-clé
         self.manquants = list(NOMS_SALONS)
         self._repli_dit = set()
+        self.conversation = conversation      # conversation directe (API Anthropic / claude -p allégé), sans PowerShell : voir conversation.py
+        self._taches = set()
         self.arret = False
         self.connecte = False
         self._dernier_etat = -1e9
@@ -388,6 +398,14 @@ class Pont:
             self.echange.poster_entrant({"type": "reponse", "confirm_id": cid, "reponse": rep, "via": "texte"})
             self.attentes.pop(cid, None)
             return
+        if self.conversation is not None and self.conversation.prend(texte):
+            t = asyncio.ensure_future(self._conversation(int(canal_id), nom, msg_id, auteur_id, texte))      # réponse directe : aucun PowerShell, aucun Ollama
+            self._taches.add(t)
+            t.add_done_callback(self._taches.discard)
+            return
+        await self._vers_jarvis(canal_id, nom, msg_id, auteur_id, texte)
+
+    async def _vers_jarvis(self, canal_id, nom, msg_id, auteur_id, texte):
         self.echange.poster_entrant({"type": "message", "id": str(msg_id), "canal": nom, "canal_id": str(canal_id),
                                      "auteur": str(auteur_id), "texte": texte, "ts": time.time()})
         self.saisies[str(msg_id)] = (int(canal_id), self.horloge())
@@ -395,6 +413,51 @@ class Pont:
             await self.client.taper(int(canal_id), True)           # « Jarvis est en train d'écrire… » pendant qu'il réfléchit
         except Exception as e:
             self.journal("saisie impossible : %s" % type(e).__name__)
+
+    async def _conversation(self, canal_id, nom, msg_id, auteur_id, texte):
+        """Répond directement : « Je réfléchis… » aussitôt, remplacé par la réponse (modifié au fil du flux). En cas d'échec : Jarvis reprend la main comme avant."""
+        conv = self.conversation
+        place = None
+        try:
+            if not conv.est_local(texte):
+                place = await self.client.envoyer(canal_id, "💭 Je réfléchis…")
+                try:
+                    await self.client.taper(canal_id, True)
+                except Exception:
+                    pass
+            dernier = [0.0]
+
+            async def flux(cumul):
+                if place is not None and self.horloge() - dernier[0] >= 1.1 and cumul.strip():
+                    dernier[0] = self.horloge()
+                    await self.client.editer(canal_id, place, self._preparer(cumul + " …")[0])
+
+            rep = await conv.repondre(texte, flux)
+            try:
+                await self.client.taper(canal_id, False)
+            except Exception:
+                pass
+            if not rep:
+                if place is not None:
+                    await self.client.supprimer(canal_id, place)
+                await self._vers_jarvis(canal_id, nom, msg_id, auteur_id, texte)
+                return
+            morceaux = self._preparer(rep) or ["…"]
+            if place is not None:
+                await self.client.editer(canal_id, place, morceaux[0])
+            else:
+                await self.client.envoyer(canal_id, morceaux[0])
+            for suite in morceaux[1:]:
+                await self.client.envoyer(canal_id, suite)
+            self.journal("conversation directe : %s en %d ms" % (conv.dernier_mode, conv.dernier_ms))
+        except Exception as e:
+            self.journal("conversation directe impossible (%s) : message passé à Jarvis" % type(e).__name__)
+            try:
+                if place is not None:
+                    await self.client.supprimer(canal_id, place)
+            except Exception:
+                pass
+            await self._vers_jarvis(canal_id, nom, msg_id, auteur_id, texte)
 
     async def sur_reaction(self, user_id, canal_id, msg_id, emoji):
         if int(user_id) != self.user_id:

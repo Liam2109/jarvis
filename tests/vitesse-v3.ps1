@@ -124,9 +124,9 @@ $script:ReflexionAnnoncee = $false
 Write-Host '6) Réponses parlées courtes ; le détail sur demande'
 $long = "Voici la première idée, monsieur. Voici la deuxième. Et une troisième encore. Puis une quatrième, par souci de complétude. Enfin une cinquième pour conclure."
 $lim = Limit-DitVocal $long
-Verifier ($lim.coupe -and ([regex]::Split($lim.court, '(?<=[.!?…])\s+')).Count -le 2 -and $lim.court.Length -le 245 -and $lim.complet -eq $long) 'réponse longue : 2 phrases à voix haute, texte complet conservé'
+Verifier ($lim.coupe -and ([regex]::Split($lim.court, '(?<=[.!?…])\s+')).Count -le 3 -and $lim.court.Length -le 325 -and $lim.complet -eq $long) 'réponse longue : 3 phrases au plus à voix haute, texte complet conservé'
 Verifier (-not (Limit-DitVocal 'Très bien, monsieur.').coupe -and (Limit-DitVocal 'Une phrase. Deux phrases.').court -eq 'Une phrase. Deux phrases.') '1 à 2 phrases courtes : inchangées'
-$un = Limit-DitVocal ('Un mot, ' * 80); Verifier ($un.court.Length -le 245 -and $un.coupe) 'une seule phrase énorme : coupée à 240 caractères'
+$un = Limit-DitVocal ('Un mot, ' * 80); Verifier ($un.court.Length -le 325 -and $un.coupe) 'une seule phrase énorme : coupée à 320 caractères'
 $script:Dits = @(); $script:PlanCerveau = [pscustomobject]@{ dit = $long; langue = 'fr'; actions = @() }
 Invoke-Ordre 'raconte-moi plein de choses sur ta journée de travail'
 Verifier ($script:Dits.Count -eq 1 -and $script:Dits[0] -notmatch 'cinquième' -and $script:Dits[0] -match 'première') 'ordre vocal : seulement la version courte est dite'
@@ -145,8 +145,8 @@ Fixer 'reponses_courtes' $false; $script:Dits = @(); Invoke-Ordre 'raconte-moi p
 Verifier ($script:Dits[0] -match 'cinquième') 'reponses_courtes = false : réponse entière à voix haute'
 Effacer 'reponses_courtes'
 
-Write-Host '7) Réponse de Claude en flux (claude_flux ; désactivée par défaut)'
-Verifier ((Get-ClaudeFlux) -eq $false -and $vraie.claude_flux -eq $false) 'claude_flux = false par défaut : le fonctionnement actuel de Claude ne change pas'
+Write-Host '7) Réponse de Claude en flux (claude_flux ; activée par défaut)'
+Verifier ($vraie.claude_flux -eq $true) 'claude_flux = true par défaut : la première phrase est dite pendant que Claude écrit la suite'
 $sim = @(
     '{"type":"system","subtype":"init"}',
     '{"type":"stream_event","event":{"type":"content_block_delta","delta":{"type":"text_delta","text":"{\"dit\":\"Il fait beau"}}}',

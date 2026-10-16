@@ -10,10 +10,12 @@ import argparse
 import asyncio
 import os
 import sys
+from pathlib import Path
 
 ICI = os.path.dirname(os.path.abspath(__file__))
 if ICI not in sys.path:
     sys.path.insert(0, ICI)          # (python -I n'ajoute pas le dossier du script)
+from conversation import Conversation  # noqa: E402
 from pont_logique import ConfigJarvis, Echange, Pont, boucler, diagnostiquer_salons, masquer, serveurs_de_liam  # noqa: E402
 
 SORTIE_IDENTIFIANTS = 2
@@ -79,6 +81,15 @@ def main():
         async def envoyer_fichier(self, canal_id, chemin):
             await (await self._canal(canal_id)).send(file=discord.File(chemin))
 
+        async def editer(self, canal_id, msg_id, texte):
+            await (await self._canal(canal_id)).get_partial_message(msg_id).edit(content=texte)
+
+        async def supprimer(self, canal_id, msg_id):
+            try:
+                await (await self._canal(canal_id)).get_partial_message(msg_id).delete()
+            except Exception:
+                pass
+
         async def taper(self, canal_id, actif):
             t = self.saisies.pop(canal_id, None)
             if t:
@@ -91,7 +102,14 @@ def main():
                         await asyncio.Event().wait()
                 self.saisies[canal_id] = asyncio.ensure_future(en_cours())
 
-    pont = Pont(Adaptateur(), Echange(a.echange), ConfigJarvis(a.config), int(uid), secrets=secrets, stop_flag=a.stop_flag or None)
+    cfg = ConfigJarvis(a.config)
+    cle_api = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    secrets.append(cle_api)
+    racine = str(Path(a.echange).resolve().parents[1])      # memoire\discord -> memoire -> racine de Jarvis
+    conv = None if a.diagnostic else Conversation(racine, cfg.reglages, journal=lambda m: erreur(m, secrets), secrets=secrets)
+    pont = Pont(Adaptateur(), Echange(a.echange), cfg, int(uid), secrets=secrets, stop_flag=a.stop_flag or None, conversation=conv)
+    if conv is not None:
+        pont.journal("conversation directe : %s" % ("API Anthropic (streaming)" if cle_api else "claude -p allégé (ANTHROPIC_API_KEY absente)"))
 
     infos_diag = []
 

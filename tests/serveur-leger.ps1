@@ -128,6 +128,16 @@ $sd = Join-Path $TR 'is'; New-Item -ItemType Directory $sd | Out-Null
 [void](New-ConfigLocale $sd 'qwen2.5:3b'); $j = Get-Content "$sd\config.local.json" -Raw -Encoding UTF8 | ConvertFrom-Json
 Verifier ($j.serveur_micro -eq 'non' -and $j.ollama.keep_alive -eq '5m' -and $j.mode_serveur -eq $true -and $j.discord_actif -eq $true) 'installateur : serveur_micro = non, Ollama déchargé après 5 min, mode serveur, Discord actif'
 
+Write-Host '8) Réponse rapide sur le serveur : aucun routeur ni modèle local (CPU seul), Claude direct'
+Fixer 'mode_serveur' $true; Effacer 'serveur_cerveau_local'; Fixer 'cerveau' 'hybride'
+$script:OllamaCache = @{ installe = $true; actif = $true; modeles = @('qwen2.5:7b'); pret = $true; raison = '' }; $script:OllamaCacheHeure = Get-Date
+Verifier ((Get-ModeCerveau) -eq 'claude') 'mode serveur : cerveau effectif = claude, même si Ollama est prêt (aucun modèle chargé pour le routage)'
+Verifier ($null -eq (Resolve-Routeur 'quelle est la capitale de la France') -and $script:RouteurEtat -eq 'indisponible') 'mode serveur : le routeur local est sauté (aucun appel à Ollama)'
+Fixer 'serveur_cerveau_local' $true; Verifier ((Get-ModeCerveau) -eq 'hybride') 'serveur_cerveau_local = true : le cerveau local redevient possible'
+Fixer 'mode_serveur' $false; Effacer 'serveur_cerveau_local'; Verifier ((Get-ModeCerveau) -eq 'hybride') 'PC principal : cerveau hybride inchangé'
+Verifier ($vraie.serveur_cerveau_local -eq $false -and $vraie.discord_conversation -eq $true -and $vraie.claude_modele -eq 'haiku' -and $vraie.discord_conversation_modele -match 'haiku') 'config.json : modèle rapide, conversation directe Discord, cerveau local du serveur désactivé'
+$ej = Get-Content (Join-Path $Root '.env.example') -Raw -Encoding UTF8; Verifier ($ej -match 'ANTHROPIC_API_KEY=') '.env.example documente ANTHROPIC_API_KEY'
+
 Write-Host ''
 Remove-Item $TR -Recurse -Force -ErrorAction SilentlyContinue
 Verifier ((Get-ProcsEcoute) -eq $procAvant) 'aucun processus d''écoute ou de voix créé par ce test'
