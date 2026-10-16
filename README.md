@@ -234,6 +234,13 @@ Avant : une question hors règles sur Discord traversait le pont, un fichier d'�
 - **`jarvis.ps1 notifier "texte"`** (ou un chemin de fichier texte) : poste dans le salon système, via le bot (appel REST direct, sans mention, jeton jamais affiché).
 - **À faire de votre côté pour le gain maximal** : ajouter `ANTHROPIC_API_KEY=sk-ant-…` dans `.env` (console.anthropic.com, facturation à l'usage), puis `jarvis.ps1 env-pousser` pour la copier chiffrée vers le serveur. Les mesures avant / après sont dans `JOURNAL-NUIT.md`. Test : `tests\conversation-pont.py` (dans `tests\discord.ps1`).
 
+### Conversation naturelle (voix et Discord)
+- **Conversation courante en local, instantanée et variée** : « comment ça va », « ça va ? », « quoi de neuf », « tu fais quoi », « tu es là », « qui es-tu », « bonne nuit », « bonne journée », « merci »… (avec « hey Jarvis » avant ou « Jarvis » après) reçoivent une réponse immédiate parmi plusieurs formulations, jamais deux fois la même de suite (catalogue `lib\politesse.ps1`, côté Discord `pont-discord\conversation.py`). Ces phrases ne vont **jamais** au routeur ni au point SaaS. Le routeur refuse aussi une action « business » si la phrase ne parle ni de business, ni de SaaS, ni de site.
+- **Pas de routeur Ollama devant une question ouverte** (« pourquoi… », « explique… ») : Claude répond directement (1 à 3 s gagnées).
+- **Discord : texte simple pour la conversation.** La pastille ✅ et les embeds ne confirment plus que l'exécution d'une **action**. Avant, tout message dont la première phrase ressemblait à un « fait » du catalogue (« Très bien, monsieur… ») recevait ✅.
+- **Longueur adaptative** : plus de limite fixe de 2 à 3 phrases. Réponse courte pour une question simple, développée et structurée pour une explication. Voix : `dit` (parlé, sans emoji ni mise en forme) et `detail` (écran / Discord, structuré).
+- **Modèles** (`config.json`) : `conversation_modele_rapide` (`claude-haiku-5-5`, questions courtes, ≈ 0,0005 $ l'échange) et `conversation_modele` (`claude-sonnet-5-5`, explications et questions ouvertes, ≈ 0,01 $ l'échange). Mettre `claude-opus-5-5` dans `conversation_modele` pour la meilleure qualité (≈ 0,02 $ l'échange). Sans clé API, le repli `claude -p` utilise `conversation_modele_cli` (haiku) et `conversation_modele_cli_capable` (sonnet, 7 à 19 s sur une explication).
+
 ## Discord (bot privé : parler à Jarvis depuis le téléphone)
 Un petit bot Discord **à vous seul** relie Jarvis à votre serveur privé. Tout est **désactivé par défaut** (`"discord_actif": false`) et gratuit : règles, puis routeur local, puis Claude seulement si nécessaire.
 
@@ -263,7 +270,7 @@ Un petit bot Discord **à vous seul** relie Jarvis à votre serveur privé. Tout
 
 **Texte simple** (style « texte », et réponses ordinaires) : messages courts, une idée par ligne, puces pour les énumérations, **gras** sur l'essentiel, 1 500 caractères au plus ; emojis rares ✅ (action faite) ⚠️ (refus) 📈 📉 🕒 🧠 📝 🔔 ; les confirmations restent courtes, avec ✅ / ❌.
 
-**Touche d'humour (discrète, réglable)** : `config.json` → `"humour_pourcent": 10` (défaut) : environ 10 % des réponses écrites de Discord reçoivent une courte remarque pince-sans-rire en italique, tirée du catalogue `humour` de `lib\politesse.ps1` (jamais la même deux fois de suite ; ton « sec » : aucune). **`0` désactive.** Jamais sur une erreur, un refus, une alerte, un arrêt d'urgence, un sujet financier (cours, SaaS, revenus, briefing, conseil) ni après la confirmation d'une action sensible. Ce réglage ne change ni le ton des alertes ni la voix (les blagues ne sont jamais prononcées).
+**Touche d'humour (discrète, réglable)** : `config.json` → `"humour_taux": 10` (défaut ; ancien nom `humour_pourcent` toujours lu) : environ 10 % des réponses de **conversation décontractée** reçoivent une courte remarque. Jamais sur une action, un statut, un tableau, une erreur, un refus, l'argent, la bourse, une tâche, une alerte ou la sécurité. `0` = jamais.
 
 **Alertes sortantes (salon système)** : seulement pour un **problème** (processus suspect) ou un **seuil dépassé** (variation du marché, position notée), jamais de bavardage. Limite `discord_alertes_max_par_heure` (**6**) : au-delà, les alertes sont **regroupées en un seul message** dès que la limite le permet ; la même alerte (aux chiffres près) n'est pas renvoyée dans l'heure. `0` = aucune alerte sur Discord.
 

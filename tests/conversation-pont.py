@@ -40,7 +40,7 @@ print("1) Règles locales et décision (aucun réseau)")
 verifier(cv.reponse_locale("Quelle heure est-il ?", midi) == "Il est 14 h 05, monsieur.", "heure : réponse instantanée")
 verifier("vendredi 16 octobre 2026" in cv.reponse_locale("Quel jour sommes-nous ?", midi), "date : réponse instantanée")
 verifier(cv.reponse_locale("Bonsoir Jarvis", midi).startswith("Bonsoir"), "salutation du soir")
-verifier(cv.reponse_locale("merci", midi) == "Je vous en prie, monsieur.", "remerciement")
+verifier(cv.reponse_locale("merci", midi) in cv.MERCI, "remerciement")
 verifier(cv.reponse_locale("Pourquoi le ciel est-il bleu ?", midi) is None, "une vraie question n'est pas une règle locale")
 for q in ("Pourquoi le ciel est-il bleu ?", "Quelle est la différence entre un SSD et un disque dur ?", "Donne-moi une idée de nom pour une boutique", "Explique-moi la TVA"):
     verifier(cv.est_conversation(q, ["Thales"]), "conversation directe : " + q)
@@ -65,7 +65,7 @@ appels = {"api": 0, "cli": 0}
 
 async def api_ok(texte, systeme, sur_texte, cfg):
     appels["api"] += 1
-    assert "monsieur" in systeme and "conseil" in systeme and "2 à 3 phrases" in systeme
+    assert "monsieur" in systeme and "conseil" in systeme and "Adapte la longueur" in systeme and "aucun emoji" in systeme
     if sur_texte:
         await sur_texte("Parce que ")
         await sur_texte("Parce que la lumière se diffuse.")
@@ -141,7 +141,7 @@ else:
         await site.start()
         port = site._server.sockets[0].getsockname()[1]
         cv.URL_API = "http://127.0.0.1:%d/v1/messages" % port
-        cc = cv.Conversation(tmp, lambda: {"discord_claude_max_par_jour": 99, "discord_conversation_modele": "modele-test"}, env={"ANTHROPIC_API_KEY": FAUSSE_CLE}, horloge=lambda: midi)
+        cc = cv.Conversation(tmp, lambda: {"discord_claude_max_par_jour": 99, "conversation_modele": "modele-test", "conversation_modele_rapide": "modele-test"}, env={"ANTHROPIC_API_KEY": FAUSSE_CLE}, horloge=lambda: midi)
         cumuls = []
 
         async def sur2(x):
@@ -151,7 +151,26 @@ else:
         return rep, cumuls, cc
     rep, cumuls, cc = asyncio.run(bout_en_bout())
     verifier(rep == "Bonjour monsieur, tout va bien." and cumuls[0] == "Bonjour " and len(cumuls) == 3 and cc.dernier_mode == "api", "streaming réel : 3 fragments reçus au fil de l'eau")
-    verifier(vus["cle"] == FAUSSE_CLE and vus["corps"]["model"] == "modele-test" and vus["corps"]["stream"] is True and vus["corps"]["max_tokens"] <= 400 and vus["corps"]["messages"][-1]["role"] == "user", "requête : clé en en-tête, modèle configurable, stream, réponse courte")
+    verifier(vus["cle"] == FAUSSE_CLE and vus["corps"]["model"] == "modele-test" and vus["corps"]["stream"] is True and vus["corps"]["max_tokens"] >= 1000 and "thinking" not in vus["corps"] and vus["corps"]["messages"][-1]["role"] == "user", "requête : clé en en-tête, modèle configurable, stream, réponse courte")
+
+print("4 bis) Naturel : variété, modèle selon la question, humour, pas de pastille")
+vus_rep = set()
+for _ in range(40):
+    vus_rep.add(cv.reponse_locale("comment ça va ?", midi))
+verifier(len(vus_rep) >= 4, "« comment ça va » : %d formulations différentes sur 40 essais" % len(vus_rep))
+suite = [cv.reponse_locale("tu fais quoi", midi) for _ in range(30)]
+verifier(all(a != b for a, b in zip(suite, suite[1:])), "jamais la même formulation deux fois de suite")
+for q, attendu in (("Quelle est la capitale de la France ?", "rapide"), ("Explique-moi comment fonctionne la TVA", "capable"), ("Quelle différence entre un SSD et un disque dur ?", "capable"), ("Il fait quoi un SSD ?", "rapide")):
+    verifier(cv.choisir_modele(q, {"conversation_modele": "grand", "conversation_modele_rapide": "petit"}) == {"rapide": "petit", "capable": "grand"}[attendu], "modèle %s pour : %s" % (attendu, q))
+verifier(cv.parametres_reflexion("claude-haiku-5-5") == {"thinking": {"type": "disabled"}} and cv.parametres_reflexion("claude-sonnet-5-5") == {"thinking": {"type": "between_tools"}} and cv.parametres_reflexion("claude-opus-5-5") == {}, "réflexion longue coupée pour la conversation (Haiku 5.5 : disabled ; Sonnet 5.5 : between_tools)")
+verifier("humour" in cv.prompt_systeme(midi, "", True) and "Pas d'humour" in cv.prompt_systeme(midi, "", False), "humour : consigne présente seulement quand le tirage le permet")
+verifier(all(cv.SUJETS_SERIEUX.search(cv.normaliser(q)) for q in ("J'ai une erreur de paiement", "Que penses-tu de la bourse ?", "ajoute une tâche", "alerte sécurité")) and not cv.SUJETS_SERIEUX.search(cv.normaliser("Raconte-moi une histoire")), "humour interdit sur erreurs, argent, bourse, tâches, alertes, sécurité")
+sp = cv.prompt_systeme(midi)
+verifier("emoji" in sp and "robotique" in sp and "2 à 3 phrases" not in sp, "prompt : naturel, sans pastille, sans limite fixe de phrases")
+BATTERIE = ["Hey Jarvis", "Comment ça va ?", "Merci beaucoup", "Tu fais quoi ?", "Bonne nuit", "Explique-moi la TVA", "Pourquoi le ciel est bleu ?", "Quelle différence entre un SSD et un disque dur ?", "À ton avis, je devrais apprendre Python ?", "Donne-moi une idée de nom pour ma boutique"]
+res = {q: ("local" if cv.reponse_locale(q, midi) else ("conversation" if cv.est_conversation(q, []) else "JARVIS")) for q in BATTERIE}
+verifier(all(v != "JARVIS" for v in res.values()), "batterie de 10 phrases : toutes traitées en conversation (locale ou directe), aucune prise pour une commande")
+verifier(sum(1 for v in res.values() if v == "local") == 5, "5 réponses locales instantanées, 5 questions pour le modèle")
 
 print("5) Dans le pont (faux client Discord)")
 

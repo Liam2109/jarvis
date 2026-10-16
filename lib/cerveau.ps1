@@ -22,7 +22,8 @@ Tu ne peux rien faire toi-même : tu réponds UNIQUEMENT par un objet JSON, que 
 
 FORMAT (strict, aucun texte avant ou après, pas de bloc de code) :
 {"dit":"phrase prononcée à voix haute","langue":"fr","actions":[{"type":"...","...":"..."}]}
-- "dit" : français naturel, 2 à 3 phrases courtes au plus (la première doit se suffire à elle-même : elle est prononcée dès qu'elle est écrite), sans markdown ni symboles, s'adresse à « monsieur ». Pour une simple question ou conversation : réponds dans "dit" avec "actions":[]. Mets "langue":"en" seulement si Liam demande de parler anglais.
+- "dit" : la réponse À DIRE à voix haute, en français naturel et chaleureux, comme un majordome cultivé qui parle (jamais une formule toute faite répétée, « monsieur » avec mesure : pas dans chaque phrase). Sans markdown, sans emoji, sans liste, sans symboles : des phrases faites pour être entendues. Longueur adaptée à la question : une ou deux phrases pour une question simple ; pour une explication ou une question ouverte, quatre ou cinq phrases claires qui vont à l'essentiel (la première se suffit à elle-même : elle est prononcée dès qu'elle est écrite). Pour une simple question ou conversation : réponds dans "dit" avec "actions":[]. Mets "langue":"en" seulement si Liam demande de parler anglais.
+- "detail" (facultatif, seulement pour une explication ou une réponse longue) : la version COMPLÈTE pour l'écran ou Discord, claire et bien structurée (paragraphes courts, puces ou **gras** légers si utile). "dit" en est la version courte parlée ; ne répète pas mot pour mot.
 - "actions" : liste ordonnée des actions à exécuter (peut être vide). N'utilise QUE les types ci-dessous. Si l'ordre est ambigu, pose une question dans "dit" avec "actions":[].
 - Pour toute demande non couverte par une action dédiée, utilise "powershell" (code + resume en français). Une confirmation de Liam est alors demandée automatiquement.
 
@@ -177,6 +178,7 @@ function Invoke-UneAction($a, [string]$ordre, [string]$question = '') {
     }
     if (Test-Stop) { $script:DernierRefus = 'arrêt d''urgence en cours'; return $null }
     try { $r = & $script:Actions["$($a.type)".ToLower()].run $a } catch { $r = Rep $false "erreur : $($_.Exception.Message)" }
+    if ($r -and $r.ok) { $script:DiscordNbActions = 1 + [int]$script:DiscordNbActions }      # (Discord : une action exécutée = pastille ✅ permise ; sinon c'est de la conversation)
     Write-Journal -Ordre $ordre -Action $desc -Resultat $(if ($r.ok) { "ok : $($r.texte)" } else { "échec : $($r.texte)" })
     if (Get-Command Add-Conv -ErrorAction SilentlyContinue) { Add-Conv 'action' $(if ($r.ok) { "$($r.texte)" } else { "Échec : $($r.texte)" }) }
     return $r
@@ -243,8 +245,12 @@ function Invoke-OrdreCorps([string]$ordre) {
     Write-Journal -Ordre $ordre -Action 'Cerveau' -Resultat ("{0} en {1:N2} s{2}" -f $voieTxt, $planS, $(if ($plan -and $plan.regle) { " (règle : $($plan.regle))" }))
     if (Test-Stop) { return }
     if (-not $plan) { Set-DiagOrdre 'erreur : aucune intention trouvée et cerveau injoignable' 'aucune'; Parler "Je n'ai pas pu joindre mon cerveau, monsieur. Veuillez réessayer."; return }
+    if ($plan.PSObject.Properties['detail'] -and "$($plan.detail)".Trim()) { $plan.detail = Protect-Conseil "$($plan.detail)".Trim() } else { try { $plan.PSObject.Properties.Remove('detail') } catch {} }
     $plan.dit = Protect-Conseil "$($plan.dit)"     # filet : aucun conseil ni prédiction ne sort, même du cerveau
     $script:DernierDitComplet = "$($plan.dit)"
+    if ($plan.PSObject.Properties['detail'] -and "$($plan.detail)".Trim()) {      # deux versions : "dit" (parlée, courte) et "detail" (écran / Discord, complète et structurée)
+        if ($script:CanalDiscord) { $plan.dit = "$($plan.detail)" } elseif (Get-Command Add-Conv -ErrorAction SilentlyContinue) { Add-Conv 'action' "Détail : $($plan.detail)" }
+    }
     if ($plan.dit -and -not $plan.rapide -and -not $script:CanalDiscord -and -not $script:DitPartiel -and (Get-Command Limit-DitVocal -ErrorAction SilentlyContinue) -and (Get-ReponsesCourtes)) {      # réponse PARLÉE courte (1 à 2 phrases) ; le détail : « détaille »
         $lim = Limit-DitVocal "$($plan.dit)"; if ($lim.coupe) { $plan.dit = $lim.court; if (Get-Command Add-Conv -ErrorAction SilentlyContinue) { Add-Conv 'action' "Détail : $($lim.complet)" } }
     }

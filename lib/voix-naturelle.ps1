@@ -52,7 +52,7 @@ function Format-TexteVoix([string]$t) {
     # Rend un texte écrit agréable à DIRE : chiffres, pourcentages, euros, dates et heures en toutes lettres ; puces et listes en phrases ; virgules, points et pauses aux bons endroits ;
     # phrases très longues coupées. Idempotent ; une phrase déjà propre reste identique (le cache vocal des phrases fixes continue de servir).
     if (-not $t) { return $t }
-    $t = $t -replace '[\*`#]+', ''
+    $t = $t -replace '[\*`#]+', '' -replace '[\uD800-\uDBFF][\uDC00-\uDFFF]', '' -replace '[☀-➿⭐⭕️‍]', '' -replace '\s{2,}', ' '      # version DITE : jamais d'emoji ni de mise en forme
     $lignes = @($t -split '\r?\n' | ForEach-Object { ($_ -replace '^\s*(?:[•–\-]|\d+[.)])\s+', '').Trim() } | Where-Object { $_ })
     if ($lignes.Count -gt 1) { $lignes = @($lignes | ForEach-Object { if ($_ -match '[.!?…:;,]$') { $_ } else { "$_." } }) }
     $t = ($lignes -join ' ')

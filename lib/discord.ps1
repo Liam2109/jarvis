@@ -267,6 +267,7 @@ function Get-NatureDiscord([string]$texte) {
     if ($t -match $script:MotifGrave) { return 'grave' }
     if ($t -match $script:MotifRefus) { return 'refus' }
     $premiere = ($t -split "`n")[0].Trim()
+    if ($script:DiscordConversation -eq $true) { return 'neutre' }      # pas de pastille ✅ sur une simple réponse de conversation : elle ne confirme que l'exécution d'une ACTION
     if ($premiere -and ((Test-PhrasePolitesse 'fait' $premiere) -or (Test-PhrasePolitesse 'fait_action' $premiere) -or (Test-PhrasePolitesse 'silencieux' $premiere))) { return 'fait' }
     'neutre'
 }
@@ -309,9 +310,15 @@ function New-EmbedDiscord([string]$titre, [string]$description = '', [int]$coule
 }
 function Add-EmbedDiscord($e) { if ($e) { [void]$script:DiscordEmbeds.Add($e) } }
 function Get-PiedDiscord([string]$source = '', $date = (Get-Date)) { $d = $date.ToString('dd/MM/yyyy HH:mm'); if ($source) { "Source $source · relevé du $d" } else { (Get-EmojiDiscord 'heure') + " Jarvis · $d" } }
-function Get-HumourPourcent { $p = 10; if ($Config.PSObject.Properties['humour_pourcent'] -and "$($Config.humour_pourcent)" -match '^\d+$') { $p = [math]::Min(100, [int]$Config.humour_pourcent) }; $p }
+function Get-HumourPourcent {
+    # humour_taux (défaut 10) : part des réponses de CONVERSATION décontractée qui reçoivent une touche d'humour (0 = jamais). Ancien nom accepté : humour_pourcent.
+    $p = 10
+    foreach ($k in 'humour_pourcent', 'humour_taux') { if ($Config.PSObject.Properties[$k] -and "$($Config.$k)" -match '^\d+$') { $p = [math]::Min(100, [int]$Config.$k); break } }
+    $p
+}
 function Test-HumourPermis([string]$ordre, [string]$reponse) {
     # Jamais sur les erreurs, refus, alertes, sujets financiers ni après une confirmation d'action sensible.
+    if ($script:DiscordConversation -eq $false) { return $false }      # l'humour n'existe que dans la conversation décontractée : jamais autour d'une action, d'un statut ou d'un tableau
     if ($script:DiscordSansHumour -or $script:DiscordConfirmeDansOrdre -or $script:DiscordPlafondAtteint -or (Test-Stop)) { return $false }
     $tout = "$ordre`n$reponse"
     if ($tout -match $script:MotifGrave -or $tout -match $script:MotifRefus) { return $false }
@@ -500,7 +507,7 @@ function Invoke-CommandeDiscord([string]$texte) {
 }
 function Invoke-OrdreDiscord([string]$texte, [string]$canal = 'jarvis', [string]$replyTo = '') {
     # Traite UN ordre de Liam venu de Discord et lui répond par écrit. Même compréhension que la voix (règle, routeur local, Claude), ton majordome.
-    $script:CanalDiscord = $canal; $script:DiscordReplyTo = $replyTo; $script:DiscordPlafondAtteint = $false
+    $script:CanalDiscord = $canal; $script:DiscordReplyTo = $replyTo; $script:DiscordPlafondAtteint = $false; $script:DiscordNbActions = 0; $script:DiscordConversation = $null
     $script:DiscordTampon = New-Object System.Collections.Generic.List[string]; $script:DiscordEmbeds.Clear(); $script:DiscordHumour = ''; $script:DiscordSansHumour = $false; $script:DiscordConfirmeDansOrdre = $false
     try {
         Write-Journal -Ordre "[Discord #$canal] $texte" -Action 'Ordre reçu par Discord' -Resultat 'traitement'
@@ -514,9 +521,10 @@ function Invoke-OrdreDiscord([string]$texte, [string]$canal = 'jarvis', [string]
     } finally {
         if ($script:DiscordPlafondAtteint) { Add-TamponDiscord (Get-Politesse 'refus' @{ raison = "mon plafond quotidien d'appels à Claude est atteint ($((Get-DiscordConfig).claude_max)) ; les commandes simples restent disponibles" }) }
         if (-not $script:DiscordTampon.Count -and -not $script:DiscordEmbeds.Count -and -not (Test-Stop)) { Add-TamponDiscord (Get-Politesse 'fait') }
+        $script:DiscordConversation = ([int]$script:DiscordNbActions -eq 0 -and -not $script:DiscordEmbeds.Count)      # aucune action exécutée, aucun embed : de la conversation (texte simple, sans pastille)
         try { $rep = (($script:DiscordTampon -join ' ') + ' ' + (($script:DiscordEmbeds | ForEach-Object { "$($_.titre)" }) -join ' ')); $script:DiscordHumour = Get-HumourDiscord $texte $rep } catch { $script:DiscordHumour = '' }
         Send-TamponDiscord
-        $script:CanalDiscord = $null; $script:DiscordReplyTo = ''; $script:DiscordTampon = $null; $script:DiscordEmbeds.Clear()
+        $script:CanalDiscord = $null; $script:DiscordReplyTo = ''; $script:DiscordTampon = $null; $script:DiscordEmbeds.Clear(); $script:DiscordConversation = $null
     }
 }
 function Invoke-OrdreDiscordEntree($d) { Invoke-OrdreDiscord "$($d.texte)" "$($d.canal)" "$($d.id)" }

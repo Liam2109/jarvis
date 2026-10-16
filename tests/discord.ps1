@@ -384,7 +384,8 @@ Verifier (-not $m.embed -and $m.texte -match 'urgence') 'un arrêt d''urgence re
 $script:CanalDiscord = $null; $script:DiscordTampon = $null
 # aucune blague sur erreurs, refus, tâches (même à 100 %)
 Fixer 'humour_pourcent' 100; $script:HumourAlea = { 0 }
-Vider; Invoke-OrdreDiscord 'statut' 'jarvis'; Verifier ((Messages)[0].texte -match '^\*') 'statut : une blague est possible (100 % réglé)'
+Vider; Invoke-OrdreDiscord 'merci' 'jarvis'; Verifier ((Messages)[0].texte -match '\*[^*]+\*$') 'conversation décontractée (« merci ») : une blague est possible (100 % réglé)'
+Vider; Invoke-OrdreDiscord 'statut' 'jarvis'; Verifier ((Messages)[0].texte -eq '') 'statut (embed, pas de la conversation) : jamais de blague, même à 100 %'
 Vider; Invoke-OrdreDiscord 'lis ma to-do' 'jarvis'; Verifier ((Messages)[0].texte -eq '') 'to-do : jamais de blague'
 Fixer 'humour_pourcent' 10; $script:HumourAlea = { 99 }
 # aperçu HTML
@@ -437,7 +438,11 @@ Verifier ($rep -eq 0) 'jamais deux fois la même blague d''affilée (60 tirages)
 $script:PolitesseFixe = $true
 # de bout en bout : blague seulement sur une réponse permise, ajoutée après la mise en forme
 Vider; Invoke-OrdreDiscord 'statut' 'jarvis'; $m = @(Messages)
-Verifier ($m[0].texte -match '^\*.+\*$' -and $m[0].embed.titre -match 'Statut') 'statut : embed + remarque en italique'
+Verifier ($m[0].texte -eq '' -and $m[0].embed.titre -match 'Statut') 'statut : embed seul, sans remarque (l''humour est réservé à la conversation)'
+Vider; Invoke-OrdreDiscord 'comment ça va' 'jarvis'; $m = @(Messages)
+Verifier ($m[0].texte -notmatch [char]0x2705 -and $m[0].texte -notmatch '^\W*\S?\s*Très bien, monsieur\.' -and -not $m[0].embed) 'conversation (« comment ça va ») : texte simple, sans pastille ✅ ni embed'
+Vider; Invoke-OrdreDiscord 'bonne nuit' 'jarvis'; Verifier ((Messages)[0].texte -notmatch [char]0x2705) 'conversation (« bonne nuit ») : aucune pastille ✅'
+Vider; Invoke-OrdreDiscord 'ajoute lire un livre à ma to-do' 'jarvis'; Verifier ((Messages)[0].texte -match [char]0x2705 -or (Messages)[0].texte -match 'Ajouté') 'ajout d''une tâche (ACTION exécutée) : la confirmation reste affichée'
 Vider; Invoke-OrdreDiscord 'où en est Thales ?' 'jarvis'; Verifier ((Messages)[0].texte -eq '') 'cours : embed seul, jamais de blague'
 Vider; Invoke-OrdreDiscord 'lis ma to-do' 'jarvis'; Verifier ((Messages)[0].texte -eq '') 'liste des tâches (100 % réglé) : embed seul, jamais de blague'
 Vider; Invoke-OrdreDiscord 'ajoute ranger le garage à ma to-do' 'jarvis'; Verifier ((Messages)[0].texte -notmatch '\*[^*]+\*$') 'ajout d''une tâche (100 % réglé) : aucune blague'

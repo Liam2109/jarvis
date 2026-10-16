@@ -72,6 +72,42 @@ $script:PolitesseCat = @{
         neutre   = @('Bien.', "D'accord.")
         sec      = @('Bien.', 'OK.')
     }
+    # Conversation courante (réponses locales instantanées, plusieurs formulations, jamais la même deux fois de suite)
+    va_bien = @{
+        courtois = @("Très bien, monsieur, je vous remercie. Et vous, comment allez-vous ?", "Au mieux, monsieur. Et de votre côté, la journée se passe bien ?", "Tout va bien de mon côté, monsieur. J'espère qu'il en va de même pour vous.", "En pleine forme, monsieur, si l'on peut le dire d'un assistant. Et vous ?", "Très bien, merci de demander, monsieur. Que puis-je faire pour vous ?")
+        neutre   = @('Tout va bien, merci. Et vous ?', 'Très bien. Et vous ?')
+        sec      = @('Ça va. Et vous ?', 'Bien.')
+    }
+    quoi_de_neuf = @{
+        courtois = @("Rien de particulier à signaler, monsieur : tout est calme de mon côté. Et de votre côté ?", "Pas de grande nouvelle pour l'instant, monsieur. Souhaitez-vous que je fasse un point ?", "Tout est tranquille, monsieur. Si vous le voulez, je peux vous résumer l'état du SaaS ou de votre liste de tâches.")
+        neutre   = @('Rien de particulier.', 'Tout est calme.')
+        sec      = @('Rien à signaler.', 'RAS.')
+    }
+    que_fais_tu = @{
+        courtois = @("Je veille, monsieur, en attendant vos instructions.", "Je me tiens prêt, monsieur : un ordre, une question, et je m'en occupe.", "Pas grand-chose pour l'instant, monsieur, je reste à votre écoute.")
+        neutre   = @("J'attends vos instructions.", 'Je suis en veille active.')
+        sec      = @("J'attends.", 'Rien.')
+    }
+    presence = @{
+        courtois = @("Je suis là, monsieur.", "Toujours là, monsieur. Je vous écoute.", "Bien présent, monsieur. Que puis-je faire pour vous ?", "Je vous entends parfaitement, monsieur.")
+        neutre   = @('Je suis là.', 'Je vous entends.')
+        sec      = @('Là.', 'Oui.')
+    }
+    identite = @{
+        courtois = @("Je suis Jarvis, monsieur, votre assistant personnel : je m'occupe de votre ordinateur, de vos rappels et de votre activité, à votre service.", "Jarvis, monsieur, pour vous servir. Votre assistant, sur cet ordinateur comme sur Discord.")
+        neutre   = @('Je suis Jarvis, votre assistant.')
+        sec      = @('Jarvis.')
+    }
+    bonne_nuit = @{
+        courtois = @("Bonne nuit, monsieur. Reposez-vous bien.", "Bonne nuit, monsieur. À demain.", "Faites de beaux rêves, monsieur. Je veille sur le reste.", "Bonne nuit, monsieur.")
+        neutre   = @('Bonne nuit.')
+        sec      = @('Bonne nuit.')
+    }
+    bonne_journee = @{
+        courtois = @("Merci, monsieur, à vous aussi.", "Bonne journée à vous également, monsieur.", "Je vous la souhaite excellente, monsieur.")
+        neutre   = @('À vous aussi.')
+        sec      = @('Merci, vous aussi.')
+    }
     # Remerciement
     merci = @{
         courtois = @('Avec plaisir, monsieur.', "Je vous en prie, monsieur.", "C'est un plaisir, monsieur.")

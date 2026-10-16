@@ -84,11 +84,24 @@ function Act([string]$type, [hashtable]$p = @{}) { $o = [ordered]@{ type = $type
 # ---------- Les règles ----------
 $P = "^(?:jarvis[\s,]+)?(?:s'il (?:te|vous) plait[\s,]+)?(?:(?:peux tu|pourrais tu|veux tu|voudrais tu|tu peux|est ce que tu peux|peux vous|pouvez vous)\s+)?"
 $FIN = "(?:[\s,]+(?:s'il (?:te|vous) plait|stp|svp|merci))?[\s.!?]*$"
+# Conversation courante : « hey Jarvis, comment ça va ? », « comment ça va Jarvis », « ça va aujourd'hui ? »... (texte déjà normalisé : sans accents ni tirets)
+$CC_PRE = "^(?:(?:hey|he|ok|oh|eh|dis|dit|salut|bonjour|bonsoir|coucou|alors)[\s,]+)*(?:jarvis[\s,]+)?(?:dis moi[\s,]+)?"
+$CC_SUF = "(?:[\s,]+(?:jarvis|monsieur|mon vieux))?(?:[\s,]+(?:aujourd'hui|ce soir|ce matin|en ce moment|maintenant|alors|aussi|bien|du coup))*(?:[\s,]+(?:jarvis|monsieur))?(?:[\s,]+(?:s'il (?:te|vous) plait|stp|svp))?[\s.!?]*$"
 $script:ReglesRapides = @(
     @{ nom = 'salutation'; re = "^(?:jarvis[\s,]+)?(?<s>bonjour|bonsoir|salut|coucou|hello|hey|bonne nuit)(?: jarvis| monsieur)?$FIN"
-       build = { param($m, $o, $n) $h = (Get-Date).Hour; $r = if ($m.Groups['s'].Value -eq 'bonne nuit') { 'Bonne nuit, monsieur.' } elseif ($h -ge 18 -or $h -lt 5) { 'Bonsoir, monsieur.' } else { 'Bonjour, monsieur.' }; New-PlanRapide $r @() $null 'salutation' } }
-    @{ nom = 'comment_vas_tu'; re = "$P(?:comment (?:vas|va|allez) (?:tu|vous)|comment tu vas|comment ca va|ca va(?: bien)?|tu vas bien|tout va bien|la forme)$FIN"
-       build = { param($m, $o, $n) New-PlanRapide 'Très bien, monsieur, merci. Tout est en ordre de mon côté. Et vous ?' @() $null 'comment_vas_tu' } }
+       build = { param($m, $o, $n) $h = (Get-Date).Hour; $r = if ($m.Groups['s'].Value -eq 'bonne nuit') { (Get-Politesse 'bonne_nuit') } elseif ($h -ge 18 -or $h -lt 5) { 'Bonsoir, monsieur.' } else { 'Bonjour, monsieur.' }; New-PlanRapide $r @() $null 'salutation' } }
+    @{ nom = 'comment_vas_tu'; re = "$CC_PRE(?:et toi |et vous )?(?:comment (?:vas|va|allez|te portes|vous portez|te sens) (?:tu|vous)|comment tu (?:vas|te sens|te portes)|comment ca va|comment ca se passe|ca va(?: bien)?(?: toi| et toi| et vous)?|tu vas bien|vous allez bien|tout va bien|la forme|ca roule)$CC_SUF"
+       build = { param($m, $o, $n) New-PlanRapide (Get-Politesse 'va_bien') @() $null 'comment_vas_tu' } }
+    @{ nom = 'quoi_de_neuf'; re = "$CC_PRE(?:quoi de neuf|quoi de beau|il y a du nouveau|du nouveau|des nouvelles)$CC_SUF"
+       build = { param($m, $o, $n) New-PlanRapide (Get-Politesse 'quoi_de_neuf') @() $null 'quoi_de_neuf' } }
+    @{ nom = 'que_fais_tu'; re = "$CC_PRE(?:tu fais quoi(?: de beau)?|qu'est ce que tu fais|que fais tu|tu es en train de faire quoi|t'es en train de faire quoi|vous faites quoi)$CC_SUF"
+       build = { param($m, $o, $n) New-PlanRapide (Get-Politesse 'que_fais_tu') @() $null 'que_fais_tu' } }
+    @{ nom = 'presence'; re = "$CC_PRE(?:tu es la|t'es la|es tu la|tu es toujours la|tu m'entends|tu m'ecoutes|y a quelqu'un|tu es reveille|tu dors)$CC_SUF"
+       build = { param($m, $o, $n) New-PlanRapide (Get-Politesse 'presence') @() $null 'presence' } }
+    @{ nom = 'identite'; re = "$CC_PRE(?:qui es tu|qui tu es|tu es qui|comment tu t'appelles|comment t'appelles tu|c'est quoi ton nom|quel est ton nom)$CC_SUF"
+       build = { param($m, $o, $n) New-PlanRapide (Get-Politesse 'identite') @() $null 'identite' } }
+    @{ nom = 'bonne_journee'; re = "$CC_PRE(?:bonne (?:journee|soiree|fin de journee|fin de soiree)|bon apres midi)$CC_SUF"
+       build = { param($m, $o, $n) New-PlanRapide (Get-Politesse 'bonne_journee') @() $null 'bonne_journee' } }
     @{ nom = 'politesse'; re = "^(?:jarvis[\s,]+)?(?<p>merci(?: beaucoup| bien)?|ok|okay|d'accord|parfait|super|tres bien|bien recu|c'est bon|nickel|genial|compris|entendu)(?: jarvis| monsieur)?$FIN"
        build = { param($m, $o, $n) $r = if ($m.Groups['p'].Value -like 'merci*') { Get-Politesse 'merci' } else { Get-Politesse 'calme' }; New-PlanRapide $r @() $null 'politesse' } }
     @{ nom = 'annuler'; re = "^(?:jarvis[\s,]+)?(?:annule(?: tout| ca| cela)?|laisse tomber|oublie ca|non merci|finalement non|stop|arrete ca)$FIN"
@@ -346,6 +359,13 @@ function Resolve-VariantesOrdre([string]$o) {
     $o = $o -replace '(?i)\bma liste(?! de)\b', 'ma to-do'
     $o = $o -replace '(?i)\bscreen[\s-]?shot\b', "capture d'écran"
     $o
+}
+function Test-QuestionOuverte([string]$ordre) {
+    # $true pour une question ouverte / explicative (« pourquoi le ciel est bleu ? », « explique-moi la TVA ») qui n'a aucune chance d'être une commande : le routeur local (Ollama) est inutile, Claude répond directement.
+    $n = (ConvertTo-OrdreNorm "$ordre").Trim() -replace '^(?:(?:hey|ok|dis|eh|oh)[\s,]+)*(?:jarvis[\s,]+)+', ''
+    if (-not $n -or $n.Length -gt 400) { return $false }
+    if ($n -match '\b(ouvr\w*|ferm\w*|volume|musique|lance\w*|demarr\w*|fenetre|ecran|chrome|youtube|spotify|todo|tache|taches|rappel\w*|note|notes|dossier|fichier|saas|stripe|supabase|business|stats|cours|bourse|action|actions|mode|sourdine|veille|capture|clavier|souris|ordinateur|pc|appli\w*|programme|site|onglet|briefing|marche|mot de passe|coffre|ajoute|supprime|efface|installe)\b') { return $false }
+    [bool]($n -match '^(?:pourquoi|comment (?!va\b|vas\b|allez\b|ca\b|tu vas|tu te)|qu est ce (?:que|qui|qu)|c est quoi|quest ce|explique|expliquemoi|raconte|dis moi (?:pourquoi|comment|ce que|ce qu|si)|quel(?:le)?s? (?:est|sont|etait)|quelle est la difference|quelle difference|combien|que penses tu|qu en penses tu|a ton avis|ton avis|peux tu m expliquer|tu peux m expliquer|que veut dire|que signifie|donne moi (?:une|un|des) (?:idee|exemple|explication)|aide moi a comprendre|est ce que (?:tu|c est|il|elle|on|les|le|la)\b)')
 }
 function Get-PlanRapide([string]$ordre) {
     # Retourne un plan, ou $null si aucune règle ne reconnaît l'ordre AVEC CERTITUDE.

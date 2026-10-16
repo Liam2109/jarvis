@@ -120,6 +120,9 @@ function Resolve-Routeur([string]$ordre) {
     $script:RouteurEtat = 'desactive'; $script:RouteurRaison = 'sauté : routeur_intention = false dans config.json'
     if ($Config.PSObject.Properties['routeur_intention'] -and $Config.routeur_intention -eq $false) { return $null }
     $o = "$ordre".Trim(); if (-not $o -or $o.Length -gt 700) { $script:RouteurEtat = 'indisponible'; $script:RouteurRaison = 'sauté : phrase vide ou trop longue'; return $null }
+    if ((Get-Command Test-QuestionOuverte -ErrorAction SilentlyContinue) -and (Test-QuestionOuverte $o)) {      # question ouverte : le modèle local ne servirait qu'à perdre 1 à 3 s avant Claude
+        $script:RouteurEtat = 'indisponible'; $script:RouteurRaison = 'sauté : question ouverte (Claude répond directement, aucun appel à Ollama)'; return $null
+    }
     if ((Get-ModeCerveau) -eq 'claude') {
         $script:RouteurEtat = 'indisponible'
         $oll = Test-Ollama
@@ -143,6 +146,11 @@ function Resolve-Routeur([string]$ordre) {
     if ($conf -lt $seuil) { $script:RouteurRaison = ("confiance basse {0:N2} < {1:N2} en {2} ms" -f $conf, $seuil, $ms); $script:RouteurEtat = 'confiance basse'; Write-Journal -Ordre $o -Action 'Routeur' -Resultat ("confiance {0:N2} < {1:N2} ({2} ms) : Claude" -f $conf, $seuil, $ms); return $null }
     $liste = @($p.actions | Where-Object { $_ })
     if ($liste.Count -lt 1 -or $liste.Count -gt 4) { $script:RouteurEtat = 'invalide'; Write-Journal -Ordre $o -Action 'Routeur' -Resultat "nombre d'actions invalide ($($liste.Count)) : Claude"; return $null }
+    $typesBiz = @($liste | ForEach-Object { "$($_.type)".ToLower() } | Where-Object { $_ -in 'point_saas', 'business_etat', 'etat_site' })
+    if ($typesBiz.Count -and (ConvertTo-OrdreNorm $o) -notmatch 'business|saas|site|boutique|produit|abonn|chiffre|stat|revenu|stripe|supabase|point|etat|activite|quiz|vente|client|trouve ton') {      # « comment ça va » n'est jamais une demande sur le SaaS
+        $script:RouteurRaison = "refusé : l'action « $($typesBiz[0]) » ne correspond à aucun mot de la phrase en $ms ms"; $script:RouteurEtat = 'invalide'
+        Write-Journal -Ordre $o -Action 'Routeur' -Resultat "action business sans rapport avec la phrase ($($typesBiz[0])) : Claude répond"; return $null
+    }
     $acts = @()
     foreach ($a in $liste) {
         $v = Test-ParametresRouteur $a

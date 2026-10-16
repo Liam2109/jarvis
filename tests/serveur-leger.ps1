@@ -135,7 +135,7 @@ Verifier ((Get-ModeCerveau) -eq 'claude') 'mode serveur : cerveau effectif = cla
 Verifier ($null -eq (Resolve-Routeur 'quelle est la capitale de la France') -and $script:RouteurEtat -eq 'indisponible') 'mode serveur : le routeur local est sauté (aucun appel à Ollama)'
 Fixer 'serveur_cerveau_local' $true; Verifier ((Get-ModeCerveau) -eq 'hybride') 'serveur_cerveau_local = true : le cerveau local redevient possible'
 Fixer 'mode_serveur' $false; Effacer 'serveur_cerveau_local'; Verifier ((Get-ModeCerveau) -eq 'hybride') 'PC principal : cerveau hybride inchangé'
-Verifier ($vraie.serveur_cerveau_local -eq $false -and $vraie.discord_conversation -eq $true -and $vraie.claude_modele -eq 'haiku' -and $vraie.discord_conversation_modele -match 'haiku') 'config.json : modèle rapide, conversation directe Discord, cerveau local du serveur désactivé'
+Verifier ($vraie.serveur_cerveau_local -eq $false -and $vraie.discord_conversation -eq $true -and $vraie.claude_modele -eq 'haiku' -and $vraie.conversation_modele_rapide -match 'haiku' -and $vraie.conversation_modele -match 'sonnet') 'config.json : modèle rapide, conversation directe Discord, cerveau local du serveur désactivé'
 $ej = Get-Content (Join-Path $Root '.env.example') -Raw -Encoding UTF8; Verifier ($ej -match 'ANTHROPIC_API_KEY=') '.env.example documente ANTHROPIC_API_KEY'
 
 Write-Host ''

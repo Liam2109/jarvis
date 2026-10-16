@@ -51,7 +51,7 @@ foreach ($c in @(@('comment vas-tu', 'comment_vas_tu'), @('ça va', 'comment_vas
     $p = Get-PlanRapide $c[0]; $nom = if ($p) { $p.regle } else { '(aucune)' }; Verifier ($p -and $nom -eq $c[1]) "« $($c[0]) » -> $nom (attendu $($c[1]))" }
 Verifier (-not (Get-PlanRapide 'normal')) '« normal » seul n''est pas une priorité des ressources'
 Ordre 'normal liste de tâches'; Verifier ($script:Exec -contains 'todo_lire' -and $script:AppelsGetPlan -eq 0 -and $script:AppelsModele -eq 0) '« normal liste de tâches » : lit la to-do, sans cerveau ni routeur'
-Ordre 'comment vas-tu'; Verifier ($script:Dits[-1] -match '^Très bien, monsieur' -and $script:AppelsGetPlan -eq 0 -and $script:AppelsModele -eq 0) "« comment vas-tu » : réponse locale instantanée « $($script:Dits[-1]) »"
+Ordre 'comment vas-tu'; Verifier ($script:Dits[-1] -match 'monsieur' -and $script:Dits[-1] -in (Get-VariantesPolitesse 'va_bien') -and $script:AppelsGetPlan -eq 0 -and $script:AppelsModele -eq 0) "« comment vas-tu » : réponse locale instantanée « $($script:Dits[-1]) »"
 Verifier ((ConvertTo-ChiffresFr 'mets la musique à soixante-dix pour cent') -eq 'mets la musique à 70 pour cent' -and (ConvertTo-ChiffresFr 'à quatre-vingt-dix') -eq 'à 90' -and (ConvertTo-ChiffresFr 'à vingt et un') -eq 'à 21' -and (ConvertTo-ChiffresFr 'à cent pour cent') -eq 'à 100 pour cent' -and (ConvertTo-ChiffresFr 'à cent cinquante') -eq 'à cent cinquante') 'nombres en lettres -> chiffres (0 à 100 seulement, « pour cent » intact)'
 
 Write-Host '2) Corpus de 60 phrases : règles, routeur (modèle simulé), repli Claude, sécurité'

@@ -32,7 +32,10 @@ $r = Ordre 'tu peux monter un petit peu le son là'
 Verifier ($r.etage -eq 'routeur' -and $script:AppelsOllama -eq 1 -and $script:AppelsGetPlan -eq 0 -and $script:Sequence -contains 'volume' -and $r.routeur -match '^ok en \d+ ms') 'commande reformulée : le routeur la comprend, Claude n''est PAS appelé'
 $script:Ollama = & $json 'conversation' 0.9 @()
 $r = Ordre 'pourquoi le ciel est bleu'
-Verifier ($script:AppelsOllama -eq 1 -and $script:AppelsGetPlan -eq 1 -and $r.etage -eq 'claude' -and $r.routeur -match '^conversation en \d+ ms') 'question ouverte : routeur « conversation » puis Claude'
+Verifier ($script:AppelsOllama -eq 0 -and $script:AppelsGetPlan -eq 1 -and $r.etage -eq 'claude' -and $r.routeur -match 'question ouverte') 'question ouverte : le routeur Ollama est sauté, Claude répond directement (1 à 3 s gagnées)'
+$script:Ollama = & $json 'conversation' 0.9 @()
+$r = Ordre 'je suis un peu fatigué ce soir'
+Verifier ($script:AppelsOllama -eq 1 -and $script:AppelsGetPlan -eq 1 -and $r.etage -eq 'claude' -and $r.routeur -match '^conversation en \d+ ms') 'phrase ambiguë (pas une question ouverte) : routeur « conversation » puis Claude'
 $script:Ollama = & $json 'incertain' 0.2 @()
 $r = Ordre 'explique-moi comment marche le routeur'
 Verifier ($script:AppelsGetPlan -eq 1 -and $r.routeur -match '^incertain') 'question ouverte « incertain » : Claude'

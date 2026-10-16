@@ -22,7 +22,8 @@ MORCEAU_MAX = 1900           # Discord limite un message à 2000 caractères
 SAISIE_MAX_S = 180           # « en train d'écrire » : jamais plus de 3 minutes
 EXTENSIONS_AUDIO = (".mp3", ".wav", ".ogg", ".m4a")
 TAILLE_AUDIO_MAX = 8 * 1024 * 1024
-REGLAGES_CONVERSATION = ("discord_conversation", "discord_conversation_modele", "discord_conversation_modele_cli", "discord_claude_max_par_jour", "valeurs_suivies")
+REGLAGES_CONVERSATION = ("discord_conversation", "conversation_modele", "conversation_modele_rapide", "conversation_modele_cli", "conversation_modele_cli_capable", "discord_conversation_modele", "discord_conversation_modele_cli",
+                         "discord_claude_max_par_jour", "valeurs_suivies", "humour_taux", "humour_pourcent")
 EMOJI_OUI = "✅"         # ✅
 EMOJI_NON = "❌"         # ❌
 
