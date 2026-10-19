@@ -158,6 +158,15 @@ def preparer_embed(e, secrets=()):
     return r if (r["titre"] or r["description"] or r["champs"]) else None
 
 
+CARTES = {"reponse": ("Réponse", 0x3498DB), "fait": ("C'est fait", 0x2ECC71), "attention": ("Attention", 0xE67E22), "probleme": ("Problème", 0xE74C3C)}
+
+
+def carte(nature, texte, secrets=()):
+    """Message de Jarvis -> carte : la couleur et le titre portent le sens (réponse bleue, fait vert, attention orange, problème rouge), aucun emoji."""
+    titre, couleur = CARTES[nature]
+    return preparer_embed({"titre": titre, "description": texte, "couleur": couleur}, secrets)
+
+
 def decouper(texte, taille=MORCEAU_MAX):
     texte = str(texte).strip()
     if not texte:
@@ -386,18 +395,23 @@ class Pont:
         if not texte:
             return
         if len(texte) > LONGUEUR_MAX:
-            await self._ecrire_poliment(canal_id, "Ce message est trop long, monsieur (%d caractères au plus)." % LONGUEUR_MAX)
+            await self._ecrire_poliment(canal_id, "Ce message est trop long, monsieur (%d caractères au plus)." % LONGUEUR_MAX, "attention")
             return
         if est_arret_urgence(texte):
             self._lever_stop()
             self.echange.poster_entrant({"type": "stop", "canal": nom, "id": str(msg_id), "auteur": str(auteur_id)})
-            await self._ecrire_poliment(canal_id, "Arrêt d'urgence demandé, monsieur.")
+            await self._ecrire_poliment(canal_id, "Arrêt d'urgence demandé, monsieur.", "attention")
             return
         rep = interpreter_reponse(texte)
         cid = self._attente_du_salon(nom) if rep else None
         if cid:
             self.echange.poster_entrant({"type": "reponse", "confirm_id": cid, "reponse": rep, "via": "texte"})
             self.attentes.pop(cid, None)
+            return
+        if self.conversation is not None and self.conversation.est_diag(texte):
+            t = asyncio.ensure_future(self._diagnostic(int(canal_id)))      # « diag » : appels de test et temps mesurés
+            self._taches.add(t)
+            t.add_done_callback(self._taches.discard)
             return
         if self.conversation is not None and self.conversation.prend(texte):
             t = asyncio.ensure_future(self._conversation(int(canal_id), nom, msg_id, auteur_id, texte))      # réponse directe : aucun PowerShell, aucun Ollama
@@ -415,13 +429,33 @@ class Pont:
         except Exception as e:
             self.journal("saisie impossible : %s" % type(e).__name__)
 
+    async def _carte_envoyer(self, canal_id, texte, nature="reponse"):
+        return await self.client.envoyer(canal_id, "", embed=carte(nature, texte, self.secrets))
+
+    async def _carte_editer(self, canal_id, msg_id, texte, nature="reponse"):
+        await self.client.editer(canal_id, msg_id, "", embed=carte(nature, texte, self.secrets))      # la carte « Je réfléchis… » est modifiée au fil du flux
+
+    async def _diagnostic(self, canal_id):
+        place = None
+        try:
+            place = await self._carte_envoyer(canal_id, "Diagnostic en cours (quelques appels de test)…")
+            nature = "reponse"
+            try:
+                rapport = await asyncio.wait_for(self.conversation.diagnostic(), 170)
+            except Exception as e:
+                rapport, nature = "Le diagnostic a échoué (%s)." % type(e).__name__, "probleme"
+            self.journal("diagnostic demandé : " + rapport.replace("\n", " | ")[:400])
+            await self._carte_editer(canal_id, place, self._preparer(rapport)[0], nature)
+        except Exception as e:
+            self.journal("diagnostic impossible (%s)" % type(e).__name__)
+
     async def _conversation(self, canal_id, nom, msg_id, auteur_id, texte):
         """Répond directement : « Je réfléchis… » aussitôt, remplacé par la réponse (modifié au fil du flux). En cas d'échec : Jarvis reprend la main comme avant."""
         conv = self.conversation
         place = None
         try:
             if not conv.est_local(texte):
-                place = await self.client.envoyer(canal_id, "💭 Je réfléchis…")
+                place = await self._carte_envoyer(canal_id, "Je réfléchis…")
                 try:
                     await self.client.taper(canal_id, True)
                 except Exception:
@@ -431,9 +465,19 @@ class Pont:
             async def flux(cumul):
                 if place is not None and self.horloge() - dernier[0] >= 1.1 and cumul.strip():
                     dernier[0] = self.horloge()
-                    await self.client.editer(canal_id, place, self._preparer(cumul + " …")[0])
+                    await self._carte_editer(canal_id, place, self._preparer(cumul + " …")[0])
 
-            rep = await conv.repondre(texte, flux)
+            async def lent():
+                # 15 s sans un mot de réponse : on le dit sur Discord au lieu de rester silencieux
+                await asyncio.sleep(getattr(conv, "delai_lent_s", 15))
+                if place is not None and dernier[0] == 0.0:
+                    await self._carte_editer(canal_id, place, "Je suis un peu lent, je regarde…", "attention")
+
+            tache_lent = asyncio.ensure_future(lent())
+            try:
+                rep = await conv.repondre(texte, flux)
+            finally:
+                tache_lent.cancel()
             try:
                 await self.client.taper(canal_id, False)
             except Exception:
@@ -444,13 +488,19 @@ class Pont:
                 await self._vers_jarvis(canal_id, nom, msg_id, auteur_id, texte)
                 return
             morceaux = self._preparer(rep) or ["…"]
+            t_envoi = self.horloge()
             if place is not None:
-                await self.client.editer(canal_id, place, morceaux[0])
+                await self._carte_editer(canal_id, place, morceaux[0])
             else:
-                await self.client.envoyer(canal_id, morceaux[0])
+                await self._carte_envoyer(canal_id, morceaux[0])
             for suite in morceaux[1:]:
-                await self.client.envoyer(canal_id, suite)
-            self.journal("conversation directe : %s en %d ms" % (conv.dernier_mode, conv.dernier_ms))
+                await self._carte_envoyer(canal_id, suite)
+            envoi_ms = int((self.horloge() - t_envoi) * 1000)
+            mes = getattr(conv, "mesures", None) or {}
+            detail = ""
+            if mes.get("mode") and conv.dernier_mode in ("chaud", "cli"):
+                detail = " (%s%s : démarrage %s ms, première sortie %s ms, fin %s ms)" % (mes.get("mode"), "" if mes.get("chaud", True) else " à froid", mes.get("demarrage_ms"), mes.get("premiere_ms"), mes.get("fin_ms"))
+            self.journal("conversation directe : %s en %d ms%s, envoi Discord %d ms" % (conv.dernier_mode, conv.dernier_ms, detail, envoi_ms))
         except Exception as e:
             self.journal("conversation directe impossible (%s) : message passé à Jarvis" % type(e).__name__)
             try:
@@ -480,9 +530,9 @@ class Pont:
                 self.journal("drapeau d'arrêt non écrit : %s" % type(e).__name__)
 
     # ---------- Jarvis -> Discord ----------
-    async def _ecrire_poliment(self, canal_id, texte):
+    async def _ecrire_poliment(self, canal_id, texte, nature="reponse"):
         try:
-            await self.client.envoyer(int(canal_id), texte)
+            await self.client.envoyer(int(canal_id), "", embed=carte(nature, texte, self.secrets))
         except Exception as e:
             self.journal("envoi impossible : %s" % type(e).__name__)
 

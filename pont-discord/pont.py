@@ -64,14 +64,19 @@ def main():
         async def _canal(self, canal_id):
             return client.get_channel(canal_id) or await client.fetch_channel(canal_id)
 
+        @staticmethod
+        def _embed(embed):
+            if not embed:
+                return None
+            e = discord.Embed(title=embed["titre"] or None, description=embed["description"] or None, colour=discord.Colour(embed["couleur"]))
+            for c in embed["champs"]:
+                e.add_field(name=c["nom"], value=c["valeur"], inline=c["inline"])
+            if embed["pied"]:
+                e.set_footer(text=embed["pied"])
+            return e
+
         async def envoyer(self, canal_id, texte, embed=None, mention=None):
-            e = None
-            if embed:
-                e = discord.Embed(title=embed["titre"] or None, description=embed["description"] or None, colour=discord.Colour(embed["couleur"]))
-                for c in embed["champs"]:
-                    e.add_field(name=c["nom"], value=c["valeur"], inline=c["inline"])
-                if embed["pied"]:
-                    e.set_footer(text=embed["pied"])
+            e = self._embed(embed)
             am = discord.AllowedMentions(users=[discord.Object(id=int(mention))]) if mention else discord.AllowedMentions.none()      # une seule mention possible : Liam
             return (await (await self._canal(canal_id)).send(texte or None, embed=e, allowed_mentions=am)).id
 
@@ -81,8 +86,11 @@ def main():
         async def envoyer_fichier(self, canal_id, chemin):
             await (await self._canal(canal_id)).send(file=discord.File(chemin))
 
-        async def editer(self, canal_id, msg_id, texte):
-            await (await self._canal(canal_id)).get_partial_message(msg_id).edit(content=texte)
+        async def editer(self, canal_id, msg_id, texte, embed=None):
+            if embed:
+                await (await self._canal(canal_id)).get_partial_message(msg_id).edit(content=texte or None, embed=self._embed(embed))
+            else:
+                await (await self._canal(canal_id)).get_partial_message(msg_id).edit(content=texte)
 
         async def supprimer(self, canal_id, msg_id):
             try:
@@ -142,8 +150,10 @@ def main():
         pont.connecte = True
         pont.journal("connecté à Discord")
         await decouvrir()
+        if conv is not None:
+            asyncio.ensure_future(conv.prechauffer())      # le processus claude chaud démarre maintenant, pas au moment de la première question
         if a.diagnostic:
-            d = diagnostiquer_salons(infos_diag)
+            d =diagnostiquer_salons(infos_diag)
             print("Salons textuels visibles par le bot (%d) :" % len(d["salons"]))
             for x in d["salons"]:
                 print("  - %s  [normalisé : %s]  voir=%s écrire=%s historique=%s  -> %s" % (x["nom"], x["normalise"], x["voir"], x["ecrire"], x["historique"], x["cle"] or "(aucun mot-clé)"))
@@ -201,6 +211,8 @@ def main():
             for t in (fin, tache):
                 t.cancel()
             await asyncio.gather(fin, tache, return_exceptions=True)
+            if conv is not None:
+                await conv.arreter()                # ferme le processus claude chaud
 
     try:
         asyncio.run(lancer())

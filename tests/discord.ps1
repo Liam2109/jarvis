@@ -30,6 +30,7 @@ function Pomper { $script:DiscordProchainPump = [datetime]::MinValue; Invoke-Pum
 function Journal { $f = Join-Path $TR ('logs\journal-{0}.md' -f (Get-Date -Format 'yyyy-MM-dd')); if (Test-Path $f) { Get-Content $f -Raw -Encoding UTF8 } else { '' } }
 function Todo { Get-Content "$TR\memoire\todo.md" -Raw -Encoding UTF8 }
 function Messages([string]$type = 'message') { @(Sortants | Where-Object { $_.type -eq $type }) }
+function Corps($m) { "$($m.texte)" + $(if ($m.embed) { "$($m.embed.description)" } else { '' }) }      # texte d'un message, ou description de sa carte
 function Processus-FauxPont { @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -match 'faux-pont\.py' }) }
 
 # ----- bouchons : rien de réel ne part (réseau, PC, Claude) -----
@@ -252,7 +253,7 @@ Verifier ($e.titre -match 'Tes tâches' -and $e.description -match "☐ 1 · App
 Vider; Invoke-OrdreDiscord "j'ai fini acheter du pain" 'business'
 Verifier ((Todo) -match '\[[xX]\] acheter du pain' -and (Todo) -match '\[ \] Appeler le comptable') 'terminer une tâche : cochée, les autres intactes'
 Vider; Invoke-OrdreDiscord 'stats du SaaS' 'jarvis'
-Verifier ((Messages)[0].texte -match 'Le site répond' -and (Messages)[0].texte -match 'Deux nouveaux abonnés') '« stats du SaaS » : lecture seule (bouchon des chiffres)'
+Verifier ((Corps (Messages)[0]) -match 'Le site répond' -and (Corps (Messages)[0]) -match 'Deux nouveaux abonnés') '« stats du SaaS » : lecture seule (bouchon des chiffres)'
 # où en est X : lecture seule, avec source et date
 $cours = @{ nom = 'Thales'; symbole = 'HO'; prix = 150.2; devise = 'EUR'; variation_pct = 1.5; date = (Get-Date).ToString('o'); source = 'Alpha Vantage' }
 function Get-RaisonMarche { '' }
@@ -261,22 +262,22 @@ Set-Salons $S_JARVIS $S_TODO $S_ALERTES '100400000000000001'; Vider; Invoke-Ordr
 $msg = @(Messages)
 $e = $msg[0].embed
 $ch = @($e.champs | ForEach-Object { "$($_.nom)=$($_.valeur)" }) -join ' | '
-Verifier ($msg.Count -eq 1 -and $e.titre -match 'Thales' -and $e.description -match 'En hausse de 1,5 % aujourd''hui' -and $ch -match 'Dernier cours=150,2 euros' -and $ch -match "Aujourd'hui=\+1,5 %" -and $e.pied -match 'Source : Alpha Vantage · \d\d/\d\d' -and $e.description -notmatch '```') '« où en est Thales » : phrase explicative, champs Dernier cours / Aujourd''hui, pied « Source : Alpha Vantage · jour/mois »' 
-Verifier ($e.couleur -eq 3066993 -and $e.titre.StartsWith([char]::ConvertFromUtf32(0x1F4C8))) '…vert et 📈 pour une hausse'
+Verifier ($msg.Count -eq 1 -and $e.titre -match 'Thales' -and $e.description -match 'En hausse aujourd''hui : \+1,5 %' -and $ch -match 'Dernier cours=150,2 euros' -and $ch -match "Aujourd'hui=\+1,5 %" -and $e.pied -match 'Source : Alpha Vantage · \d\d/\d\d' -and $e.description -notmatch '```') '« où en est Thales » : phrase explicative, champs Dernier cours / Aujourd''hui, pied « Source : Alpha Vantage · jour/mois »' 
+Verifier ($e.couleur -eq 3066993 -and $e.titre -notmatch '[\uD83C-\uDBFF☀-➿️]') '…vert, sans emoji : le sens est dans le signe +'
 Verifier ($msg[0].canal -eq 'marche') 'réponse dans le salon « marche » d''où vient la demande'
 Verifier (@(Messages 'confirmation').Count -eq 0 -and $msg[0].texte -notmatch '(?i)acheter|vendre|conseil') 'lecture seule : aucune confirmation, aucun conseil d''achat ou de vente'
 Set-Salons $S_JARVIS $S_TODO $S_ALERTES ''
 Vider; Invoke-OrdreDiscord 'dois-je acheter Thales ?' 'jarvis'
-Verifier ((Messages)[0].texte -match '(?i)conseil|ne donne|verdict') 'une question d''achat : refus de conseil (règle existante conservée)'
+Verifier ((Corps (Messages)[0]) -match '(?i)conseil|ne donne|verdict') 'une question d''achat : refus de conseil (règle existante conservée)'
 Vider; Invoke-OrdreDiscord 'ok merci' 'jarvis'
-Verifier ((Messages)[0].texte -match '\S') 'un simple remerciement : une réponse polie (règles locales, aucun appel IA)'
+Verifier ((Corps (Messages)[0]) -match '\S') 'un simple remerciement : une réponse polie (règles locales, aucun appel IA)'
 Vider; Invoke-OrdreDiscord 'stop' 'jarvis'
-Verifier ((Test-Stop) -and (Messages)[0].texte -match 'Arrêt d''urgence') '« stop » en texte : arrêt d''urgence demandé'
+Verifier ((Test-Stop) -and (Corps (Messages)[0]) -match 'Arrêt d''urgence') '« stop » en texte : arrêt d''urgence demandé'
 Remove-Item $script:StopFlag -Force -ErrorAction SilentlyContinue
 # sourdine : réponse écrite seulement, aucune action
 Vider; $script:Actif = $false; $avant = Todo
 Invoke-OrdreDiscord 'ajoute ranger le bureau à ma to-do' 'business'
-Verifier ((Todo) -eq $avant -and (Messages)[0].texte -match '(?i)sourdine') 'Jarvis en sourdine : aucune action exécutée, le dit'
+Verifier ((Todo) -eq $avant -and (Corps (Messages)[0]) -match '(?i)sourdine') 'Jarvis en sourdine : aucune action exécutée, le dit'
 $script:Actif = $true
 
 Write-Host '5 bis) Présentation : lignes courtes, puces, gras, embeds, emojis rares'
@@ -291,22 +292,22 @@ Verifier ($t -match '\*\*\+3,2 %\*\*' -and $t -match '\*\*150,2 euros\*\*') 'l''
 Verifier ((Format-GrasDiscord '**déjà gras** 3 %') -eq '**déjà gras** 3 %') 'une ligne déjà en gras n''est pas retouchée'
 $long = Format-ReponseDiscord @(1..200 | ForEach-Object { "Phrase numéro $_." })
 Verifier ($long.Length -le 1510 -and $long.EndsWith('…')) 'pas de pavé : 1500 caractères au plus, coupé proprement'
-Verifier ((Format-ReponseDiscord @("C'est fait.")).StartsWith($E_OK + ' ')) 'action faite : ✅ en tête'
-Verifier ((Format-ReponseDiscord @('Mon plafond quotidien est atteint.')).StartsWith($E_WARN + ' ')) 'refus poli / annulation : ⚠️ en tête'
+Verifier ((Format-ReponseDiscord @("C'est fait.")) -eq "C'est fait." -and (Format-ReponseDiscord @('Mon plafond quotidien est atteint.')) -eq 'Mon plafond quotidien est atteint.') 'réponse mise en forme : aucun emoji ajouté en tête'
+Verifier ((ConvertTo-EmbedReponse @('Mon plafond quotidien est atteint.')).titre -eq 'Attention') 'refus poli / annulation : carte Attention'
 $g = Format-ReponseDiscord @('Une erreur est survenue, monsieur.'); $g2 = Format-ReponseDiscord @("Arrêt d'urgence demandé, monsieur.")
 $emo = '[' + [char]0x2600 + '-' + [char]0x27BF + [char]0xD800 + '-' + [char]0xDFFF + ']'
 Verifier ($g -notmatch $emo -and $g2 -notmatch $emo) 'erreur grave, arrêt d''urgence : AUCUN emoji'
-$tous = (Format-ReponseDiscord @("C'est fait.", 'Autre chose.', 'Encore.')); Verifier ((@([regex]::Matches($tous, $emo)).Count) -le 2) 'un emoji au plus par message (✅ = 1 caractère, ⚠️ = 2)'
+$tous = (Format-ReponseDiscord @("C'est fait.", 'Autre chose.', 'Encore.')); Verifier ((@([regex]::Matches($tous, $emo)).Count) -eq 0) 'aucun emoji dans le texte d''une réponse'
 # embeds
 Vider; Invoke-OrdreDiscord 'statut' 'jarvis'
 $e = (Messages)[0].embed
 
-Verifier ($e.titre.StartsWith([char]::ConvertFromUtf32(0x1F9E0)) -and $e.description -notmatch '```' -and @($e.champs).Count -ge 3 -and @($e.champs).Count -le 6) 'statut : titre 🧠, aucun bloc de code, 3 à 6 champs' 
+Verifier ($e.titre -eq 'Jarvis · statut' -and $e.description -notmatch '```' -and @($e.champs).Count -ge 3 -and @($e.champs).Count -le 6) 'statut : titre sans emoji, aucun bloc de code, 3 à 6 champs' 
 $script:Actif = $false; Vider; Invoke-OrdreDiscord 'statut' 'jarvis'; $script:Actif = $true
 Verifier ((Messages)[0].embed.couleur -eq 15105570) 'statut en sourdine : orange'
 Vider; $cours.variation_pct = -2.4; Invoke-OrdreDiscord 'où en est Thales ?' 'jarvis'
 $e = (Messages)[0].embed
-Verifier ($e.couleur -eq 15158332 -and $e.titre.StartsWith([char]::ConvertFromUtf32(0x1F4C9)) -and $e.description -match 'En baisse de 2,4 %' -and (@($e.champs | ForEach-Object { $_.valeur }) -join ' ') -match '−2,4 %') 'baisse : rouge, 📉, phrase « En baisse de 2,4 % », variation signée dans un champ' 
+Verifier ($e.couleur -eq 15158332 -and $e.titre -notmatch '[\uD83C-\uDBFF☀-➿️]' -and $e.description -match 'En baisse .*−2,4 %' -and (@($e.champs | ForEach-Object { $_.valeur }) -join ' ') -match '−2,4 %') 'baisse : rouge, 📉, phrase « En baisse de 2,4 % », variation signée dans un champ' 
 Vider; $cours.variation_pct = 0; Invoke-OrdreDiscord 'où en est Thales ?' 'jarvis'
 Verifier ((Messages)[0].embed.couleur -eq 9807270) 'variation nulle : gris'
 $cours.variation_pct = 1.5
@@ -327,7 +328,7 @@ $tousEmbeds = @($apercu | Where-Object { $_.embed } | ForEach-Object { $_.embed 
 $total = { param($e) $n = "$($e.titre)".Length + "$($e.description)".Length + "$($e.pied)".Length; foreach ($c in @($e.champs)) { $n += "$($c.nom)".Length + "$($c.valeur)".Length }; $n }
 Verifier (($tousEmbeds | Where-Object { $_.titre.Length -gt 256 -or $_.description.Length -gt 2000 -or @($_.champs).Count -gt 6 -or (& $total $_) -gt 6000 -or ($_.champs | Where-Object { $_.valeur.Length -gt 1024 -or $_.nom.Length -gt 256 }) }).Count -eq 0) 'limites : titre 256, description 2000, champs 1024, 6 champs au plus, 6000 caractères au total'
 Verifier (@($tousEmbeds | Where-Object { ("$($_.description)" + (@($_.champs) | ForEach-Object { $_.valeur }) -join ' ') -match '```' }).Count -eq 0) 'aucun bloc de code, aucun tableau en espaces dans les modèles'
-Verifier (@($tousEmbeds | Where-Object { $_.titre -match '^[A-Za-z0-9]' }).Count -eq 0) 'chaque titre commence par une icône'
+Verifier (@($tousEmbeds | Where-Object { $_.titre -notmatch '^[\p{L}0-9]' }).Count -eq 0) 'aucun titre ne commence par un emoji'
 $st = $apercu[0].embed
 $chs = @($st.champs | ForEach-Object { "$($_.nom)=$($_.valeur)" }) -join ' | '
 Verifier ($st.titre -match 'Jarvis · statut' -and $chs -match 'Cerveau=Local \+ cloud' -and $chs -match 'Discord=Connecté' -and $chs -match 'Tâches=4 tâches ouvertes' -and $chs -match 'Appels à Claude aujourd.hui=3 sur 20\n█' -and $st.couleur -eq 3066993) 'statut : « Local + cloud », « Connecté », « 4 tâches ouvertes », « 3 sur 20 » avec barre █░, vert'
@@ -341,18 +342,18 @@ Verifier ($lt.Count -eq 11 -and $lt[0] -match '^☐ 1 · ' -and $lt[10] -eq '…
 Verifier ((New-EmbedTodo @(@{ texte = 'fini'; fait = $true })).description -match '^☑ 1 · fini$') 'tâche terminée : ☑'
 Verifier ((New-EmbedTodo @()).description -match 'Aucune tâche' -and (New-EmbedTodo @()).couleur -eq 3066993) 'to-do vide : message clair'
 $mb = $apercu[4].embed; $cm = @($mb.champs | ForEach-Object { "$($_.nom)=$($_.valeur)" }) -join ' | '
-Verifier ($mb.titre.StartsWith([char]::ConvertFromUtf32(0x1F4C9)) -and $mb.couleur -eq 15158332 -and $mb.description -eq 'En baisse de 3,2 % sur la semaine.' -and $cm -match 'Dernier cours=150,2 EUR' -and $cm -match 'Aujourd.hui=−0,8 %' -and $cm -match '1 semaine=−3,2 %' -and $cm -match '1 mois=\+1,1 %' -and $mb.pied -match '^Source : Alpha Vantage · \d\d/\d\d$') 'marché en baisse : 📉, rouge, « En baisse de 3,2 % sur la semaine », champs jour / semaine / mois signés, pied source + jour/mois'
+Verifier ($mb.titre -notmatch '[\uD83C-\uDBFF☀-➿️]' -and $mb.couleur -eq 15158332 -and $mb.description -eq 'En baisse sur la semaine : −3,2 %.' -and $cm -match 'Dernier cours=150,2 EUR' -and $cm -match 'Aujourd.hui=−0,8 %' -and $cm -match '1 semaine=−3,2 %' -and $cm -match '1 mois=\+1,1 %' -and $mb.pied -match '^Source : Alpha Vantage · \d\d/\d\d$') 'marché en baisse : 📉, rouge, « En baisse de 3,2 % sur la semaine », champs jour / semaine / mois signés, pied source + jour/mois'
 $mh = $apercu[5].embed
-Verifier ($mh.titre.StartsWith([char]::ConvertFromUtf32(0x1F4C8)) -and $mh.couleur -eq 3066993 -and $mh.description -eq "En hausse de 1,5 % aujourd'hui.") 'marché en hausse : 📈, vert, phrase sur la période disponible'
+Verifier ($mh.titre -notmatch '[\uD83C-\uDBFF☀-➿️]' -and $mh.couleur -eq 3066993 -and $mh.description -eq "En hausse aujourd'hui : +1,5 %.") 'marché en hausse : 📈, vert, phrase sur la période disponible'
 Verifier ((New-EmbedMarche @{ nom = 'X'; prix = 10; devise = 'EUR'; var_jour = 0; var_sem = $null; var_mois = $null; source = 'S'; date = (Get-Date) }).couleur -eq 9807270) 'marché stable : gris'
 Verifier ($apercu[6].embed.couleur -eq 15105570 -and $apercu[6].embed.description -match 'Que faire') 'marché sans données : orange, « Que faire »'
 Verifier ((New-EmbedMarcheVide 'X' 'clé ALPHAVANTAGE_KEY absente').description -match 'ALPHAVANTAGE_KEY' -and (New-EmbedMarcheVide 'X' 'désactivée').description -match 'marche_actif') 'sans données : la bonne consigne selon la cause (clé ou marche_actif)'
 $br = $apercu[7].embed; $cb = @($br.champs | ForEach-Object { $_.nom }) -join ' | '
-Verifier ($br.titre -match 'Briefing du matin' -and $br.titre.StartsWith([char]::ConvertFromUtf32(0x2600)) -and $cb -match 'SaaS' -and $cb -match 'Marché' -and $cb -match 'À faire' -and $br.description -match '\n\n' -and ($br.description -split "`n`n").Count -le 4 -and $br.description -notmatch '(?i)acheter|vendre|conseil') 'briefing : ☀️, 4 phrases au plus séparées par une ligne vide, champs SaaS / Marché / À faire, aucun verdict'
+Verifier ($br.titre -match 'Briefing du matin' -and $br.titre -notmatch '[\uD83C-\uDBFF☀-➿️]' -and $cb -match 'SaaS' -and $cb -match 'Marché' -and $cb -match 'À faire' -and $br.description -match '\n\n' -and ($br.description -split "`n`n").Count -le 4 -and $br.description -notmatch '(?i)acheter|vendre|conseil') 'briefing : ☀️, 4 phrases au plus séparées par une ligne vide, champs SaaS / Marché / À faire, aucun verdict'
 Verifier ($apercu[8].texte -match '✅' -and -not $apercu[8].embed) 'confirmation : texte court avec ✅ / ❌, sans embed'
 $al = $apercu[9].embed; $ag = $apercu[10].embed
-Verifier ($al.titre -match '^⚠️ Alerte' -and $al.couleur -eq 15105570 -and $al.description -match 'Que faire' -and $ag.couleur -eq 15158332) 'alertes : titre ⚠️, orange (seuil) ou rouge (processus suspect), une phrase qui dit quoi faire'
-Verifier ($apercu[11].embed.couleur -eq 15158332 -and $apercu[11].embed.titre -match '^⚠️' -and $apercu[11].embed.description -match 'Que faire' -and $apercu[12].embed.couleur -eq 15105570) 'erreur : rouge ; refus : orange ; titre ⚠️ et « Que faire »'
+Verifier ($al.titre -eq 'Alerte' -and $al.couleur -eq 15105570 -and $al.description -match 'Que faire' -and $ag.couleur -eq 15158332) 'alertes : titre ⚠️, orange (seuil) ou rouge (processus suspect), une phrase qui dit quoi faire'
+Verifier ($apercu[11].embed.couleur -eq 15158332 -and $apercu[11].embed.titre -notmatch '[\uD83C-\uDBFF☀-➿️]' -and $apercu[11].embed.description -match 'Que faire' -and $apercu[12].embed.couleur -eq 15105570) 'erreur : rouge ; refus : orange ; titre ⚠️ et « Que faire »'
 $e6 = New-EmbedDiscord 'T' ('x' * 2500) 1 @(1..8 | ForEach-Object { @{ nom = "N$_"; valeur = ('v' * 900) } }) 'p'
 Verifier ((& $total $e6) -le 6000 -and $e6.description.Length -le 2000) 'une réponse énorme est ramenée sous 6000 caractères'
 # style « texte »
@@ -373,18 +374,22 @@ Verifier ((Get-DiscordStyle) -eq 'embed' -and $vraie.discord_style -eq 'embed') 
 # erreurs et refus : embed rouge / orange
 Vider; $script:CanalDiscord = 'jarvis'; $script:DiscordTampon = New-Object System.Collections.Generic.List[string]
 Add-TamponDiscord "Je n'ai pas pu joindre mon cerveau, monsieur. Veuillez réessayer."; Send-TamponDiscord; $m = @(Messages)[0]
-Verifier ($m.embed.couleur -eq 15158332 -and $m.embed.titre -match '^⚠️ Un souci' -and $m.embed.description -match 'Que faire') 'une erreur écrite devient un embed rouge avec « Que faire »'
+Verifier ($m.embed.couleur -eq 15158332 -and $m.embed.titre -eq 'Problème' -and $m.embed.description -match 'Que faire') 'une erreur écrite devient un embed rouge avec « Que faire »'
 Add-TamponDiscord "Cela ne se fait pas depuis Discord, monsieur."; Vider; Send-TamponDiscord
 $script:DiscordTampon = New-Object System.Collections.Generic.List[string]; Vider
 Add-TamponDiscord "Mon plafond quotidien est atteint, monsieur."; Send-TamponDiscord; $m = @(Messages)[0]
-Verifier ($m.embed.couleur -eq 15105570 -and $m.embed.titre -match '^⚠️ Je ne peux pas') 'un refus devient un embed orange'
+Verifier ($m.embed.couleur -eq 15105570 -and $m.embed.titre -eq 'Attention') 'un refus devient un embed orange'
 $script:DiscordTampon = New-Object System.Collections.Generic.List[string]; Vider
 Add-TamponDiscord "Arrêt d'urgence demandé, monsieur."; Send-TamponDiscord; $m = @(Messages)[0]
-Verifier (-not $m.embed -and $m.texte -match 'urgence') 'un arrêt d''urgence reste un texte simple (ce n''est pas une erreur)'
+Verifier ($m.embed.titre -eq 'Attention' -and $m.embed.couleur -eq 15105570 -and $m.embed.description -match 'urgence' -and -not $m.embed.description.Contains('Que faire')) 'un arrêt d''urgence est une carte Attention (orange), sans « Que faire » (ce n''est pas une erreur)'
+$script:DiscordConversation = $true; $r4 = ConvertTo-EmbedReponse @('Le ciel est bleu.'); $script:DiscordConversation = $false; $f4 = ConvertTo-EmbedReponse @('Voilà, monsieur.')      # (conversation : jamais « C''est fait », qui ne confirme qu''une ACTION)
+Verifier ($r4.titre -eq 'Réponse' -and $r4.couleur -eq 3447003) "carte Réponse bleue (obtenu : $($r4.titre) / $($r4.couleur))"
+Verifier ($f4.titre -eq "C'est fait" -and $f4.couleur -eq 3066993) "carte C'est fait verte (obtenu : $($f4.titre) / $($f4.couleur))"
+Verifier ((Get-EmojiDiscord 'ok') -eq '' -and (Get-EmojiModele 'hausse') -eq '') 'aucun emoji de tête (Get-EmojiDiscord / Get-EmojiModele)'
 $script:CanalDiscord = $null; $script:DiscordTampon = $null
 # aucune blague sur erreurs, refus, tâches (même à 100 %)
 Fixer 'humour_pourcent' 100; $script:HumourAlea = { 0 }
-Vider; Invoke-OrdreDiscord 'merci' 'jarvis'; Verifier ((Messages)[0].texte -match '\*[^*]+\*$') 'conversation décontractée (« merci ») : une blague est possible (100 % réglé)'
+Vider; Invoke-OrdreDiscord 'merci' 'jarvis'; Verifier ((Corps (Messages)[0]) -match '\*[^*]+\*$') 'conversation décontractée (« merci ») : une blague est possible (100 % réglé)'
 Vider; Invoke-OrdreDiscord 'statut' 'jarvis'; Verifier ((Messages)[0].texte -eq '') 'statut (embed, pas de la conversation) : jamais de blague, même à 100 %'
 Vider; Invoke-OrdreDiscord 'lis ma to-do' 'jarvis'; Verifier ((Messages)[0].texte -eq '') 'to-do : jamais de blague'
 Fixer 'humour_pourcent' 10; $script:HumourAlea = { 99 }
@@ -440,9 +445,9 @@ $script:PolitesseFixe = $true
 Vider; Invoke-OrdreDiscord 'statut' 'jarvis'; $m = @(Messages)
 Verifier ($m[0].texte -eq '' -and $m[0].embed.titre -match 'Statut') 'statut : embed seul, sans remarque (l''humour est réservé à la conversation)'
 Vider; Invoke-OrdreDiscord 'comment ça va' 'jarvis'; $m = @(Messages)
-Verifier ($m[0].texte -notmatch [char]0x2705 -and $m[0].texte -notmatch '^\W*\S?\s*Très bien, monsieur\.' -and -not $m[0].embed) 'conversation (« comment ça va ») : texte simple, sans pastille ✅ ni embed'
-Vider; Invoke-OrdreDiscord 'bonne nuit' 'jarvis'; Verifier ((Messages)[0].texte -notmatch [char]0x2705) 'conversation (« bonne nuit ») : aucune pastille ✅'
-Vider; Invoke-OrdreDiscord 'ajoute lire un livre à ma to-do' 'jarvis'; Verifier ((Messages)[0].texte -match [char]0x2705 -or (Messages)[0].texte -match 'Ajouté') 'ajout d''une tâche (ACTION exécutée) : la confirmation reste affichée'
+Verifier ($m[0].embed.titre -eq 'Réponse' -and $m[0].embed.couleur -eq 3447003 -and $m[0].embed.description -notmatch [char]0x2705) 'conversation (« comment ça va ») : carte Réponse bleue, sans pastille ✅'
+Vider; Invoke-OrdreDiscord 'bonne nuit' 'jarvis'; Verifier ((Messages)[0].embed.titre -eq 'Réponse' -and (Messages)[0].embed.description -notmatch [char]0x2705) 'conversation (« bonne nuit ») : carte Réponse, aucune pastille ✅'
+Vider; Invoke-OrdreDiscord 'ajoute lire un livre à ma to-do' 'jarvis'; Verifier ((Corps (Messages)[0]) -match [char]0x2705 -or (Corps (Messages)[0]) -match 'Ajouté') 'ajout d''une tâche (ACTION exécutée) : la confirmation reste affichée'
 Vider; Invoke-OrdreDiscord 'où en est Thales ?' 'jarvis'; Verifier ((Messages)[0].texte -eq '') 'cours : embed seul, jamais de blague'
 Vider; Invoke-OrdreDiscord 'lis ma to-do' 'jarvis'; Verifier ((Messages)[0].texte -eq '') 'liste des tâches (100 % réglé) : embed seul, jamais de blague'
 Vider; Invoke-OrdreDiscord 'ajoute ranger le garage à ma to-do' 'jarvis'; Verifier ((Messages)[0].texte -notmatch '\*[^*]+\*$') 'ajout d''une tâche (100 % réglé) : aucune blague'
@@ -475,7 +480,7 @@ Verifier ($cf.Count -eq 1 -and $cf[0].canal -eq 'jarvis' -and $cf[0].texte -matc
 Verifier ($script:Appels.veille -eq 1 -and $script:DerniereConfirmation -eq 'oui') '« oui » : l''action est exécutée'
 Vider; $script:SimRep = 'non'; $script:Appels.veille = 0
 Invoke-OrdreDiscord 'mets le PC en veille' 'jarvis'
-Verifier ($script:Appels.veille -eq 0 -and $script:DerniereConfirmation -eq 'non' -and (Messages)[0].texte -match '\S') '« non » : rien n''est exécuté, annulation polie'
+Verifier ($script:Appels.veille -eq 0 -and $script:DerniereConfirmation -eq 'non' -and (Corps (Messages)[0]) -match '\S') '« non » : rien n''est exécuté, annulation polie'
 Vider; $script:SimRep = $null; $t0 = Get-Date
 Invoke-OrdreDiscord 'mets le PC en veille' 'jarvis'
 Verifier ($script:Appels.veille -eq 0 -and $script:DerniereConfirmation -eq 'delai' -and ((Get-Date) - $t0).TotalSeconds -lt 10) 'sans réponse dans le délai : annulation, rien n''est exécuté'

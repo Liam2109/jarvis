@@ -52,7 +52,7 @@ class FauxClient:
             self.embeds.append((canal_id, texte, embed))
         if mention is not None:
             self.mentions.append((canal_id, texte, mention))
-        self.envoyes.append((canal_id, texte))
+        self.envoyes.append((canal_id, texte or (embed or {}).get("description", "")))      # une carte : on lit sa description
         return self.n
 
     async def reaction(self, canal_id, msg_id, emoji):

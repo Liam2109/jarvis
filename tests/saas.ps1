@@ -96,7 +96,7 @@ $script:SimStats = @{ dispo = $false; raison = 'Supabase : jeton refusé' }; $sc
 $script:DiscordEmbeds.Clear(); $script:DiscordTampon.Clear(); [void](Invoke-CommandeDiscord 'stats')
 $eb = $script:DiscordEmbeds[0]
 Verifier ($eb.titre -notmatch 'souci' -and $eb.couleur -ne $script:CouleurRouge) 'sources manquantes : embed du point normal (jamais l''embed rouge « Un souci est survenu »)'
-$vrai = ConvertTo-EmbedReponse @('Une erreur est survenue : disque plein.'); Verifier ($vrai -and $vrai.titre -match 'souci' -and $vrai.couleur -eq $script:CouleurRouge) 'le vrai embed d''erreur existe toujours pour une vraie erreur'
+$vrai = ConvertTo-EmbedReponse @('Une erreur est survenue : disque plein.'); Verifier ($vrai -and $vrai.titre -eq 'Problème' -and $vrai.couleur -eq $script:CouleurRouge) 'le vrai embed d''erreur existe toujours pour une vraie erreur'
 $ancien = ConvertTo-EmbedReponse @("Sur les 24 dernières heures : 3 e-mails. Je n'ai pas pu lire : Stripe, clé absente.")
 Verifier ($null -ne $ancien) 'cause trouvée : l''ancien texte du point contenait « Je n''ai pas pu lire », reconnu à tort comme erreur par ConvertTo-EmbedReponse (le point ne passe plus par là)'
 $script:DiscordTampon = $null; $script:DiscordEmbeds.Clear()

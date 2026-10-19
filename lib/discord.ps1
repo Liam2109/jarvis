@@ -256,13 +256,13 @@ $script:HumourAlea = { Get-Random -Minimum 0 -Maximum 100 }       # (les tests l
 $script:CouleurVerte = 3066993; $script:CouleurRouge = 15158332; $script:CouleurBleue = 3447003; $script:CouleurOrange = 15105570; $script:CouleurGrise = 9807270
 $script:MessageMaxCar = 1500
 function Get-EmojiDiscord([string]$nom) {
-    # Les seuls emojis employés (peu, bien choisis) : ✅ ⚠️ 📈 📉 🕒 🧠
-    switch ($nom) { 'ok' { [char]::ConvertFromUtf32(0x2705) } 'alerte' { [char]::ConvertFromUtf32(0x26A0) + [char]::ConvertFromUtf32(0xFE0F) } 'hausse' { [char]::ConvertFromUtf32(0x1F4C8) } 'baisse' { [char]::ConvertFromUtf32(0x1F4C9) } 'heure' { [char]::ConvertFromUtf32(0x1F552) } 'cerveau' { [char]::ConvertFromUtf32(0x1F9E0) } default { '' } }
+    # Plus aucun emoji de tête (titres, champs, pieds, réponses) : le titre et la barre de couleur portent le sens. (Les ✅/❌ des confirmations restent : ce sont des réactions.)
+    ''
 }
 $script:MotifGrave = '(?i)erreur|[ée]chec|impossible|n.ai pas pu|urgence|injoignable|incompris|pas compris|panne|plantage|introuvable|ne trouve pas|attention|alerte'
 $script:MotifRefus = '(?i)refus|ne se fait pas|plafond|annul|sans r[ée]ponse|je ne peux|pas autoris'
 function Get-NatureDiscord([string]$texte) {
-    # 'grave' (aucun emoji, aucune blague) | 'refus' (⚠️, aucune blague) | 'fait' (✅) | 'neutre'
+    # 'grave' (aucune blague) | 'refus' (aucune blague) | 'fait' | 'neutre'
     $t = "$texte"
     if ($t -match $script:MotifGrave) { return 'grave' }
     if ($t -match $script:MotifRefus) { return 'refus' }
@@ -277,7 +277,7 @@ function Format-GrasDiscord([string]$t) {
     [regex]::Replace($t, '(?<![\*\w])([+\-−]?\d+(?:[  ]\d{3})*(?:[,.]\d+)?\s?(?:%|€|euros?|dollars?|EUR|USD))(?![\*\w])', '**$1**')
 }
 function Format-ReponseDiscord([string[]]$lignes) {
-    # Une idée par ligne, puces pour les énumérations, pas de pavé (1500 caractères au plus), un emoji au plus, au début.
+    # Une idée par ligne, puces pour les énumérations, pas de pavé (1500 caractères au plus), aucun emoji.
     $out = New-Object System.Collections.Generic.List[string]
     foreach ($l in @($lignes)) {
         $l = "$l".Trim(); if (-not $l) { continue }
@@ -292,14 +292,12 @@ function Format-ReponseDiscord([string[]]$lignes) {
         foreach ($ph in @($l -split '(?<=[.!?…])\s+(?=[A-ZÀ-ÖØ-Þ«"])')) { if ($ph.Trim()) { $out.Add((Format-GrasDiscord $ph.Trim())) } }
     }
     if (-not $out.Count) { return '' }
-    $nat = Get-NatureDiscord ($out -join "`n")
-    if ($nat -eq 'fait') { $out[0] = (Get-EmojiDiscord 'ok') + ' ' + $out[0] } elseif ($nat -eq 'refus') { $out[0] = (Get-EmojiDiscord 'alerte') + ' ' + $out[0] }
     $txt = ''; foreach ($x in $out) { if (($txt.Length + $x.Length + 1) -gt $script:MessageMaxCar) { $txt = $txt.TrimEnd() + "`n…"; break }; $txt += $x + "`n" }
     $txt.TrimEnd()
 }
 function New-EmbedDiscord([string]$titre, [string]$description = '', [int]$couleur = 3447003, $champs = @(), [string]$pied = '') {
     # Embed (titre, description, champs, couleur, pied) : secrets masqués, jamais de conseil financier, longueurs bornées.
-    $net = { param($x, $max) $y = Hide-Secrets "$x"; if (Get-Command Protect-Conseil -ErrorAction SilentlyContinue) { $y = Protect-Conseil $y }; if ($y.Length -gt $max) { $y.Substring(0, $max - 1) + '…' } else { $y } }
+    $net = { param($x, $max) $y = (Hide-Secrets "$x").Trim(); if (Get-Command Protect-Conseil -ErrorAction SilentlyContinue) { $y = Protect-Conseil $y }; if ($y.Length -gt $max) { $y.Substring(0, $max - 1) + '…' } else { $y } }
     $ch = @(); foreach ($c in @($champs)) { if ($c -and "$($c.nom)".Trim() -and "$($c.valeur)".Trim()) { $ch += @{ nom = (& $net $c.nom 256); valeur = (& $net $c.valeur 1024); inline = [bool]$c.inline } } }
     $e = @{ titre = (& $net $titre 256); description = (& $net $description 2000); couleur = $couleur; champs = @($ch | Select-Object -First 25); pied = (& $net $pied 2048) }
     # Limite de Discord : 6000 caractères au total (titre, description, noms et valeurs de champs, pied) : les derniers champs sautent d'abord.
@@ -339,9 +337,8 @@ function Send-TamponDiscord {
     $embeds = @($script:DiscordEmbeds); $script:DiscordEmbeds.Clear()
     $hum = "$script:DiscordHumour"; $script:DiscordHumour = ''
     if (-not $lignes.Count -and -not $embeds.Count -and -not $hum) { return }
-    if ((Get-DiscordStyle) -eq 'embed' -and $lignes.Count -and -not $embeds.Count -and -not $hum) {      # erreur ou refus : embed rouge / orange qui dit quoi faire
-        $ep = ConvertTo-EmbedReponse $lignes
-        if ($ep) { $embeds = @($ep); $lignes = @() }
+    if ((Get-DiscordStyle) -eq 'embed' -and $lignes.Count -and -not $embeds.Count) {      # toute réponse écrite est une carte : Réponse, C'est fait, Attention ou Problème
+        $embeds = @(ConvertTo-EmbedReponse $lignes $hum); $lignes = @(); $hum = ''
     }
     $txt = Format-ReponseDiscord $lignes
     if ($hum) { $txt = ($txt + "`n" + $hum).Trim() }

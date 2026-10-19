@@ -2,9 +2,11 @@
 aucune clé réelle, dossiers temporaires. Sortie « OK ... » / « ECHEC ... » ; code 0 si tout est vert."""
 import asyncio
 import json
+import os
 import shutil
 import sys
 import tempfile
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -18,6 +20,7 @@ try:
     sys.stdout.reconfigure(errors="replace")
 except AttributeError:
     pass
+sys.unraisablehook = lambda *a: None      # (les faux claude tués laissent des transports asyncio non fermés : bruit sur stderr que PowerShell 5.1 prend pour une erreur)
 echecs = 0
 LIAM = 111111111111111111
 FAUSSE_CLE = "sk-ant-FAUSSE-cle-de-test-0123456789abcdef"
@@ -180,15 +183,18 @@ print("5) Dans le pont (faux client Discord)")
 class Faux:
     def __init__(self):
         self.ev = []
+        self.cartes = []      # (titre, couleur) de chaque carte envoyée ou modifiée
         self.n = 9000
 
     async def envoyer(self, canal_id, texte, embed=None, mention=None):
         self.n += 1
-        self.ev.append(("envoi", self.n, texte))
+        self.cartes.append((embed["titre"], embed["couleur"]) if embed else None)
+        self.ev.append(("envoi", self.n, texte or (embed or {}).get("description", "")))      # une carte : on lit sa description
         return self.n
 
-    async def editer(self, canal_id, msg_id, texte):
-        self.ev.append(("edition", msg_id, texte))
+    async def editer(self, canal_id, msg_id, texte, embed=None):
+        self.cartes.append((embed["titre"], embed["couleur"]) if embed else None)
+        self.ev.append(("edition", msg_id, texte or (embed or {}).get("description", "")))
 
     async def supprimer(self, canal_id, msg_id):
         self.ev.append(("suppr", msg_id))
@@ -217,6 +223,7 @@ QUOTA.unlink(missing_ok=True)
 f, e, p, d = banc(cv.Conversation(tmp, lambda: CFG, env={"ANTHROPIC_API_KEY": FAUSSE_CLE}, transport_api=api_ok, transport_cli=cli_ok, horloge=lambda: midi))
 asyncio.run(scenario(p, "Pourquoi le ciel est-il bleu ?", 1))
 verifier(f.ev[0][0] == "envoi" and "réfléchis" in f.ev[0][2] and f.ev[-1] == ("edition", f.ev[0][1], "Parce que la lumière se diffuse."), "« Je réfléchis… » aussitôt, remplacé par la réponse (même message)")
+verifier(f.cartes and all(c == ("Réponse", 0x3498DB) for c in f.cartes), "« Je réfléchis… », flux et réponse : une seule carte « Réponse » bleue, modifiée sur place, sans emoji")
 verifier(list(e.entrant.glob("*.json")) == [], "aucun fichier envoyé à Jarvis (donc aucun PowerShell, aucun routeur)")
 asyncio.run(scenario(p, "Quelle heure est-il ?", 2))
 verifier(f.ev[-1][0] == "envoi" and f.ev[-1][2].startswith("Il est 14 h") and not any("réfléchis" in str(x) for x in f.ev[-2:]), "heure : réponse directe, sans « Je réfléchis »")
@@ -236,6 +243,106 @@ QUOTA.unlink(missing_ok=True)
 f, e, p, d = banc(cv.Conversation(tmp, lambda: CFG, env={}, transport_api=api_vide, transport_cli=cli_vide, horloge=lambda: midi))
 asyncio.run(scenario(p, "Pourquoi le ciel est-il bleu ?", 4))
 verifier(("suppr", f.ev[0][1]) in f.ev and len(list(e.entrant.glob("*.json"))) == 1, "aucune voie disponible : « Je réfléchis… » retiré, Jarvis reprend la main")
+shutil.rmtree(d, ignore_errors=True)
+
+print("5) Processus claude chaud (faux claude local), repli, délai, « diag », « je suis un peu lent »")
+faux = tmp / "fauxclaude"
+faux.mkdir()
+(faux / "fake_claude.py").write_text(
+    "import sys, json, os, time\n"
+    "if '--help' in sys.argv:\n    print('  --safe-mode'); sys.exit(0)\n"
+    "open(os.environ.get('FAUX_ARGS', os.devnull), 'a').write(' '.join(sys.argv[1:]) + ' | KEY=' + str('ANTHROPIC_API_KEY' in os.environ) + '\\n')\n"
+    "if '--input-format' not in sys.argv:\n    sys.stdin.read(); print('simple ok'); sys.exit(0)\n"
+    "for l in sys.stdin:\n"
+    "    t = json.loads(l)['message']['content']\n"
+    "    if 'MORT' in t: sys.exit(3)\n"
+    "    if 'LENT' in t: time.sleep(30)\n"
+    "    print(json.dumps({'type': 'stream_event', 'event': {'type': 'content_block_delta', 'delta': {'type': 'text_delta', 'text': 'pid%d ' % os.getpid()}}}), flush=True)\n"
+    "    print(json.dumps({'type': 'result', 'result': 'pid%d ok' % os.getpid(), 'is_error': False}), flush=True)\n", encoding="utf-8")
+(faux / "claude.cmd").write_text('@"%s" "%%~dp0fake_claude.py" %%*\r\n' % sys.executable, encoding="utf-8")
+ancien_path = os.environ["PATH"]
+os.environ["PATH"] = str(faux) + os.pathsep + ancien_path
+os.environ["FAUX_ARGS"] = str(faux / "args.txt")
+os.environ["ANTHROPIC_API_KEY"] = FAUSSE_CLE
+
+
+async def chaud():
+    j = []
+    pc = cv.ProcessusChaud("haiku", journal=j.append, delai_s=3)
+    flux = []
+
+    async def sur(t):
+        flux.append(t)
+    r1 = await pc.demander("une", sur)
+    pid1 = pc.p.pid
+    r2 = await pc.demander("deux")
+    verifier(r1.endswith("ok") and r2.endswith("ok") and r1 == r2 and pc.p.pid == pid1 and pc.mesures["chaud"] is True and flux, "même processus pour les deux questions (chaud), texte transmis au fil du flux")
+    try:
+        await pc.demander("MORT")
+        verifier(False, "mort du processus : exception attendue")
+    except RuntimeError:
+        verifier(pc.p is None, "mort du processus : exception, processus nettoyé")
+    r3 = await pc.demander("trois")
+    verifier(r3.endswith("ok") and pc.mesures["chaud"] is False, "relancé automatiquement après sa mort")
+    t0 = time.monotonic()
+    try:
+        await pc.demander("LENT")
+        verifier(False, "délai dépassé : exception attendue")
+    except asyncio.TimeoutError:
+        verifier(time.monotonic() - t0 < 8 and pc.p is None, "délai maximal respecté (processus tué)")
+    await pc.arreter()
+    args = (faux / "args.txt").read_text(encoding="utf-8")
+    verifier("--tools  " in args or '--tools "" ' in args or "--tools" in args, "arguments journalisés par le faux claude")
+    verifier("--model haiku" in args and "--safe-mode" in args and "--strict-mcp-config" in args and "--no-session-persistence" in args and "--input-format stream-json" in args, "Haiku, mode sûr, aucun MCP, aucune session, entrée en streaming")
+    verifier("KEY=False" in args and "KEY=True" not in args, "la clé API n'est jamais transmise à claude (abonnement uniquement)")
+    # Conversation : chaud en panne -> appel simple, jamais de silence
+    async def chaud_ko(texte, sur_texte, cfg):
+        raise RuntimeError("chaud mort")
+    jr = []
+    c = cv.Conversation(tmp, lambda: {"discord_claude_max_par_jour": 99}, env={}, journal=jr.append, transport_cli=cli_ok, transport_chaud=chaud_ko, horloge=lambda: midi)
+    rep = await c.repondre("Pourquoi le ciel est-il bleu ?")
+    verifier(rep == "Réponse du repli." and c.dernier_mode == "cli" and any("repli sur un appel simple" in x for x in jr), "processus chaud en échec : repli sur l'appel simple")
+    c2 = cv.Conversation(tmp, lambda: {"discord_claude_max_par_jour": 99}, env={}, horloge=lambda: midi)
+    rep = await c2.repondre("Pourquoi le ciel est-il bleu ?")
+    verifier(rep.endswith("ok") and c2.dernier_mode == "chaud" and c2.mesures.get("mode") == "chaud", "Conversation : voie chaude réelle (faux claude)")
+    rapport = await c2.diagnostic()
+    verifier("Processus chaud, 1er appel" in rapport and "Processus chaud, 2e appel" in rapport and "Appel simple" in rapport and "ÉCHEC" not in rapport, "diag : rapport avec démarrage, première sortie et fin")
+    await c2.arreter()
+
+
+asyncio.run(chaud())
+os.environ["PATH"] = ancien_path
+os.environ.pop("ANTHROPIC_API_KEY", None)
+verifier(cv.Conversation(tmp, lambda: {}).est_diag("diag") and cv.Conversation(tmp, lambda: {}).est_diag("Jarvis, diag !") and not cv.Conversation(tmp, lambda: {}).est_diag("diag du serveur ?"), "« diag » reconnu seul (pas dans une phrase)")
+
+
+class ConvTest:
+    delai_lent_s = 0.05
+    dernier_mode, dernier_ms, mesures = "chaud", 1, {}
+
+    def est_diag(self, t):
+        return t == "diag"
+
+    def prend(self, t):
+        return t != "diag"
+
+    def est_local(self, t):
+        return False
+
+    async def diagnostic(self):
+        return "RAPPORT-DIAG"
+
+    async def repondre(self, texte, sur):
+        await asyncio.sleep(0.4)
+        return "Enfin."
+
+
+f, e, p, d = banc(ConvTest())
+asyncio.run(scenario(p, "diag", 10))
+verifier(any(x[0] == "edition" and x[2] == "RAPPORT-DIAG" for x in f.ev) and list(e.entrant.glob("*.json")) == [], "Discord « diag » : rapport renvoyé, rien transmis à Jarvis")
+asyncio.run(scenario(p, "Pourquoi ?", 11))
+verifier(any(x[0] == "edition" and "un peu lent" in x[2] for x in f.ev) and f.ev[-1][2] == "Enfin.", "sans réponse après le délai : « je suis un peu lent, je regarde », puis la vraie réponse")
+verifier(("Attention", 0xE67E22) in f.cartes and f.cartes[-1] == ("Réponse", 0x3498DB), "« un peu lent » : carte Attention orange, puis retour à la carte Réponse bleue")
 shutil.rmtree(d, ignore_errors=True)
 shutil.rmtree(tmp, ignore_errors=True)
 print()

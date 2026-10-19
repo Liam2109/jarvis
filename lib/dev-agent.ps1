@@ -184,7 +184,7 @@ function Send-DevNotif([string]$salon, [string]$texte, $embed = $null) {
     if ($texte.Trim()) { $a += @('--texte', $texte) }
     try { $o = (& python @a 2>&1 | Out-String).Trim(); Write-Journal -Action 'Agent de dev : message Discord' -Resultat (Short (Hide-Secrets $o) 160) } finally { if ($tmp) { Remove-Item $tmp -Force -ErrorAction SilentlyContinue } }
 }
-function Send-DevAlerte([string]$texte) { Write-Journal -Ordre 'dev' -Action 'Agent de dev : ALERTE' -Resultat (Short (Hide-Secrets $texte) 200); Send-DevNotif 'systeme' ((Get-EmojiDiscord 'alerte') + " Agent de développement : $texte") }
+function Send-DevAlerte([string]$texte) { Write-Journal -Ordre 'dev' -Action 'Agent de dev : ALERTE' -Resultat (Short (Hide-Secrets $texte) 200); Send-DevNotif 'systeme' "Agent de développement : $texte" }
 
 # ---------- Processus (git, npm, claude) ----------
 function Join-ArgsWin([string[]]$a) { ($a | ForEach-Object { $x = "$_"; if ($x -eq '' -or $x -match '[\s"]') { '"' + ($x -replace '(\\*)"', '$1$1\"' -replace '(\\+)$', '$1$1') + '"' } else { $x } }) -join ' ' }

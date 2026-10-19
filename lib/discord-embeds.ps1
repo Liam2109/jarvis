@@ -5,8 +5,7 @@
 # config.json « discord_style » : "embed" (défaut) ou "texte" (texte simple, comme avant). Jamais de blague sur les tâches, les erreurs, les refus ni la finance (voir Test-HumourPermis).
 function Get-DiscordStyle { if ($Config.PSObject.Properties['discord_style'] -and "$($Config.discord_style)".Trim().ToLowerInvariant() -eq 'texte') { 'texte' } else { 'embed' } }
 function Get-EmojiModele([string]$nom) {
-    switch ($nom) { 'note' { [char]::ConvertFromUtf32(0x1F4DD) } 'cloche' { [char]::ConvertFromUtf32(0x1F514) } 'soleil' { [char]::ConvertFromUtf32(0x2600) + [char]::ConvertFromUtf32(0xFE0F) }
-        'vide' { [char]::ConvertFromUtf32(0x2610) } 'coche' { [char]::ConvertFromUtf32(0x2611) } default { Get-EmojiDiscord $nom } }
+    switch ($nom) { 'vide' { [char]::ConvertFromUtf32(0x2610) } 'coche' { [char]::ConvertFromUtf32(0x2611) } default { Get-EmojiDiscord $nom } }
 }
 function Get-BarreDiscord([int]$n, [int]$max, [int]$larg = 10) {
     $max = [math]::Max(1, $max); $p = [math]::Max(0, [math]::Min($larg, [int][math]::Round($larg * $n / $max, [MidpointRounding]::AwayFromZero)))
@@ -16,10 +15,8 @@ function Get-MotNombre([int]$n, [string]$un, [string]$plusieurs, [string]$aucun 
     if ($n -le 0 -and $aucun) { return $aucun }; if ($n -eq 1) { return "1 $un" }; "$n $plusieurs"
 }
 function Format-SignePct($x) { $fr = [Globalization.CultureInfo]::GetCultureInfo('fr-FR'); $v = [double]$x; $(if ($v -gt 0) { '+' } elseif ($v -lt 0) { '−' } else { '' }) + ([math]::Abs($v)).ToString('0.##', $fr) + ' %' }
-function Get-IconeVariation($x) { if ($null -eq $x) { return (Get-EmojiModele 'heure') }; if ([double]$x -gt 0.0499) { Get-EmojiModele 'hausse' } elseif ([double]$x -lt -0.0499) { Get-EmojiModele 'baisse' } else { Get-EmojiModele 'heure' } }
 function Get-PhraseVariation($x, [string]$periode) {
-    $fr = [Globalization.CultureInfo]::GetCultureInfo('fr-FR'); $a = ([math]::Abs([double]$x)).ToString('0.##', $fr)
-    if ([math]::Abs([double]$x) -lt 0.05) { return "Stable $periode." }; if ([double]$x -gt 0) { "En hausse de $a % $periode." } else { "En baisse de $a % $periode." }
+    if ([math]::Abs([double]$x) -lt 0.05) { return "Stable $periode." }; if ([double]$x -gt 0) { "En hausse $periode : $(Format-SignePct $x)." } else { "En baisse $periode : $(Format-SignePct $x)." }
 }
 
 # ---------- 1) STATUT ----------
@@ -58,18 +55,16 @@ function New-EmbedTodo($taches) {
 function New-EmbedMarche($d) {
     # $d : nom, prix, devise, var_jour, var_sem, var_mois (nombres ou $null), source, date (datetime)
     $ref = $(if ($null -ne $d.var_sem) { @($d.var_sem, 'sur la semaine') } elseif ($null -ne $d.var_jour) { @($d.var_jour, "aujourd'hui") } elseif ($null -ne $d.var_mois) { @($d.var_mois, 'sur le mois') } else { $null })
-    $couleur = $script:CouleurGrise; $icone = ''
-    if ($ref) { if ([double]$ref[0] -gt 0.0499) { $couleur = $script:CouleurVerte; $icone = (Get-EmojiModele 'hausse') + ' ' } elseif ([double]$ref[0] -lt -0.0499) { $couleur = $script:CouleurRouge; $icone = (Get-EmojiModele 'baisse') + ' ' } }
+    $couleur = $script:CouleurGrise
+    if ($ref) { if ([double]$ref[0] -gt 0.0499) { $couleur = $script:CouleurVerte } elseif ([double]$ref[0] -lt -0.0499) { $couleur = $script:CouleurRouge } }
     $fr = [Globalization.CultureInfo]::GetCultureInfo('fr-FR')
     $champs = @(@{ nom = ((Get-EmojiModele 'heure') + ' Dernier cours'); valeur = ((([double]$d.prix).ToString('0.####', $fr) + " $($d.devise)").Trim()); inline = $true })
     foreach ($p in @(@('var_jour', "Aujourd'hui"), @('var_sem', '1 semaine'), @('var_mois', '1 mois'))) {
-        if ($null -ne $d[$p[0]]) { $champs += @{ nom = ((Get-IconeVariation $d[$p[0]]) + ' ' + $p[1]); valeur = (Format-SignePct $d[$p[0]]); inline = $true } }
+        if ($null -ne $d[$p[0]]) { $champs += @{ nom = $p[1]; valeur = (Format-SignePct $d[$p[0]]); inline = $true } }
     }
     $desc = $(if ($ref) { Get-PhraseVariation $ref[0] $ref[1] } else { 'Cours relevé, sans variation disponible.' })
     $pied = "Source : $($d.source) · " + ([datetime]$d.date).ToString('dd/MM')
-    $e = New-EmbedDiscord ($icone + "$($d.nom)") $desc $couleur $champs $pied
-    if ($e.titre -eq "$($d.nom)" -and $icone -eq '') { $e.titre = (Get-EmojiModele 'heure') + ' ' + "$($d.nom)" }
-    $e
+    New-EmbedDiscord "$($d.nom)" $desc $couleur $champs $pied
 }
 function New-EmbedMarcheVide([string]$nom, [string]$raison) {
     $que = $(if ($raison -match '(?i)d[ée]sactiv') { 'Mettez « marche_actif » à true dans config.json, puis relancez Jarvis.' } elseif ($raison -match '(?i)cl[ée]|ALPHAVANTAGE') { 'Ajoutez la clé ALPHAVANTAGE_KEY dans le fichier .env, puis relancez Jarvis.' } elseif ($raison -match '(?i)relev') { 'Patientez quelques minutes : la veille du marché fait son premier relevé.' } else { 'Vérifiez « marche_actif » dans config.json et la clé ALPHAVANTAGE_KEY dans .env.' })
@@ -99,12 +94,16 @@ function New-EmbedAlertesGroupees($alertes) {
     New-EmbedDiscord ((Get-EmojiModele 'cloche') + " Alertes regroupées ($($a.Count))") ($l -join "`n") $script:CouleurOrange @() (Get-PiedDiscord)
 }
 function Get-MotifErreur { '(?i)erreur|[ée]chec|impossible|n.ai pas pu|injoignable|panne|plantage' }
-function ConvertTo-EmbedReponse([string[]]$lignes) {
-    # Une réponse écrite qui est une erreur ou un refus devient un embed rouge / orange avec « Que faire ». Autre réponse : $null (texte normal).
-    $t = (@($lignes) -join ' ')
-    if ($t -match (Get-MotifErreur)) { return (New-EmbedProbleme 'Un souci est survenu' ((@($lignes) | Where-Object { "$_".Trim() }) -join ' ') "Réessayez dans un instant ; si cela continue, consultez le journal de Jarvis." $true) }
-    if ($t -match $script:MotifRefus -or $t -match '(?i)compris|reformul') { return (New-EmbedProbleme 'Je ne peux pas faire cela' ((@($lignes) | Where-Object { "$_".Trim() }) -join ' ') "Dites-moi autre chose, ou faites-le directement à votre clavier." $false) }
-    $null
+function ConvertTo-EmbedReponse([string[]]$lignes, [string]$humour = '') {
+    # Toute réponse écrite devient une carte : Problème (rouge), Attention (orange), C'est fait (vert) ou Réponse (bleu). Le titre et la couleur portent le sens, aucun emoji.
+    $phrase = (@($lignes) | Where-Object { "$_".Trim() }) -join ' '
+    if ($phrase -match (Get-MotifErreur)) { return (New-EmbedProbleme 'Problème' $phrase "Réessayez dans un instant ; si cela continue, consultez le journal de Jarvis." $true) }
+    if ($phrase -match $script:MotifRefus -or $phrase -match '(?i)compris|reformul') { return (New-EmbedProbleme 'Attention' $phrase "Dites-moi autre chose, ou faites-le directement à votre clavier." $false) }
+    $corps = Format-ReponseDiscord $lignes; $nat = Get-NatureDiscord $corps
+    if ($nat -eq 'grave' -or $nat -eq 'refus') { return (New-EmbedProbleme 'Attention' $phrase '' $false) }
+    if ($humour) { $corps += "`n$humour" }
+    if ($nat -eq 'fait') { return (New-EmbedDiscord "C'est fait" $corps $script:CouleurVerte @() (Get-PiedDiscord)) }
+    New-EmbedDiscord 'Réponse' $corps $script:CouleurBleue @() (Get-PiedDiscord)
 }
 
 # ---------- Aperçu : memoire\apercu-discord.html (données fictives, rien n'est envoyé à Discord) ----------
@@ -135,8 +134,12 @@ function Get-ModelesApercu {
         @{ nom = '5 · Confirmation (texte court, sans embed)'; texte = "Mettre le PC en veille, monsieur ?`n(✅ ou ❌, ou répondez « oui » / « non » — 60 s)" },
         @{ nom = '6 · Alerte — seuil de marché'; embed = (New-EmbedAlerte "Thales bouge de plus de 3 % aujourd'hui : en baisse de 3,4 %." 'marche:thales:2026-10-15' $false) },
         @{ nom = '6 · Alerte — processus suspect'; embed = (New-EmbedAlerte 'Un programme inconnu (update.exe) tourne depuis le dossier Téléchargements.' 'menace' $true) },
-        @{ nom = '6 · Erreur'; embed = (New-EmbedProbleme 'Un souci est survenu' "Je n'ai pas pu joindre mon cerveau, monsieur." "Réessayez dans un instant ; si cela continue, consultez le journal de Jarvis." $true) },
-        @{ nom = '6 · Refus'; embed = (New-EmbedProbleme 'Je ne peux pas faire cela' 'Cela ne se fait pas depuis Discord, monsieur.' 'Dites-moi autre chose, ou faites-le directement à votre clavier.' $false) }
+        @{ nom = '6 · Erreur'; embed = (New-EmbedProbleme 'Problème' "Je n'ai pas pu joindre mon cerveau, monsieur." "Réessayez dans un instant ; si cela continue, consultez le journal de Jarvis." $true) },
+        @{ nom = '6 · Refus'; embed = (New-EmbedProbleme 'Attention' 'Cela ne se fait pas depuis Discord, monsieur.' 'Dites-moi autre chose, ou faites-le directement à votre clavier.' $false) },
+        @{ nom = '7 · Carte Réponse (bleu)'; embed = (New-EmbedDiscord 'Réponse' 'Le ciel est bleu parce que l''atmosphère diffuse davantage la lumière bleue.' $script:CouleurBleue @() (Get-PiedDiscord)) },
+        @{ nom = '7 · Carte C''est fait (vert)'; embed = (New-EmbedDiscord "C'est fait" 'Tâche ajoutée à votre liste : lire un livre.' $script:CouleurVerte @() (Get-PiedDiscord)) },
+        @{ nom = '7 · Carte Attention (orange)'; embed = (New-EmbedProbleme 'Attention' 'Votre plafond quotidien d''appels à Claude est presque atteint.' '' $false) },
+        @{ nom = '7 · Carte Problème (rouge)'; embed = (New-EmbedProbleme 'Problème' 'Je n''ai pas pu joindre mon cerveau, monsieur.' 'Réessayez dans un instant ; si cela continue, consultez le journal de Jarvis.' $true) }
     )
 }
 function New-ApercuDiscord {
