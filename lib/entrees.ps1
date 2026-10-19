@@ -62,6 +62,7 @@ function Release-GpuModeles {
 function Invoke-ArretUrgence {
     Write-Journal -Ordre 'Jarvis stop' -Action "ARRÊT D'URGENCE : toute action en cours est coupée" -Resultat 'exécuté'
     $script:Entrees.Clear()
+    if (Get-Command Stop-ClaudeChaud -ErrorAction SilentlyContinue) { Stop-ClaudeChaud }      # le claude chaud est tué ; il repart proprement à la demande suivante
     if (Get-Command Invoke-ArretUrgenceDiscord -ErrorAction SilentlyContinue) { try { Invoke-ArretUrgenceDiscord } catch { Write-Journal -Action 'Pont Discord' -Resultat "arrêt d'urgence : $($_.Exception.Message)" } }      # le pont Discord est coupé aussi (« réactive Discord » pour le relancer)
     if ($script:JobDefender) { Stop-Job $script:JobDefender -ErrorAction SilentlyContinue; Remove-Job $script:JobDefender -Force -ErrorAction SilentlyContinue; $script:JobDefender = $null }
 }

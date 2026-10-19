@@ -145,6 +145,7 @@ switch ($Commande.ToLower()) {
         Initialize-Memoire                          # session précédente interrompue ? elle sera résumée au démarrage
         try { [void](Initialize-BriefingMatin) } catch { Write-Journal -Action 'Briefing du matin' -Resultat "indisponible : $($_.Exception.Message)" }     # affiché au tableau dès le démarrage, SANS voix (dit à la première activation de la journée)
         [void](Start-VeilleFond)                    # processus de fond léger, sans voix : seulement si marche_actif = true (même en sourdine)
+        if (-not $serveur -and -not $veilleBureau) { Start-PrechauffageClaude }      # claude chaud démarré dès le lancement (hors serveur léger et veille)
         [void](Start-PontDiscord)                   # pont Discord (processus séparé) : seulement si discord_actif = true ; identifiants manquants = désactivé poliment, sans planter
         if ($serveur) { if (Get-MicroServeur) { Start-Ecoute } }
         elseif ($script:Actif) { Start-Ecoute; Start-PrechauffageTts; $script:TtsPrechauffe = $true; if ((Get-VoixMoteur) -eq 'piper') { [void](Test-PiperPret) } }     # en sourdine : micro fermé, aucune synthèse ; tout démarre à Alt + +
@@ -195,6 +196,6 @@ switch ($Commande.ToLower()) {
                 if ($script:LignesOrphelines) { Invoke-ResumeOrphelin }
                 Start-Sleep -Milliseconds 150
             }
-        } finally { Save-HeureArret; Stop-PontDiscord; Stop-EcouteVeille; Stop-VeilleFond; Stop-CoffreDialogue; Stop-Ollama; Close-Memoire; Stop-Musiques; Stop-Ecoute; Stop-Piper; Stop-Raccourcis; Stop-Visage; Remove-Item $pidFile -ErrorAction SilentlyContinue; Write-Journal -Action 'Arrêt de Jarvis' -Resultat 'ok' }
+        } finally { Save-HeureArret; Stop-PontDiscord; Stop-EcouteVeille; Stop-VeilleFond; Stop-CoffreDialogue; Stop-Ollama; Close-Memoire; Stop-Musiques; Stop-Ecoute; Stop-Piper; Stop-ClaudeChaud; Stop-Raccourcis; Stop-Visage; Remove-Item $pidFile -ErrorAction SilentlyContinue; Write-Journal -Action 'Arrêt de Jarvis' -Resultat 'ok' }
     }
 }

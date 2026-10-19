@@ -180,6 +180,13 @@ $script:AppelsOrale = 0; $script:FauxPressePapiers = ''; Ordre 'résume mon pres
 $script:FaussesFenetres = @(@{ hwnd = 1; pid = 999991; proc = 'chrome'; titre = 'Tableau de bord - Google Chrome' }, @{ hwnd = 3; pid = 999993; proc = 'msedge'; titre = 'JarvisOrb-1a2b3c4d' }, @{ hwnd = 5; pid = 999995; proc = 'Bitwarden'; titre = 'Bitwarden' })
 Verifier ((Get-ContenuAResumer 'ecran') -match 'Tableau de bord' -and (Get-ContenuAResumer 'ecran') -notmatch 'JarvisOrb|Bitwarden') 'écran : titres des fenêtres ouvertes, sans l''orbe ni les applications protégées'
 $script:AppelsOrale = 0; Ordre 'résume mon écran'; Verifier ($script:AppelsOrale -eq 1 -and $script:Dits[-1] -match '^Résumé :') 'résumé de l''écran par le cerveau'
+$script:Actions['todo_lire'].run = { param($a) Rep $true '2 tâche(s) ouverte(s).' $script:DonneesTest }
+$script:PlanCerveau = [pscustomobject]@{ dit = ''; langue = 'fr'; actions = @([pscustomobject]@{ type = 'todo_lire' }) }
+$script:DonneesTest = "- payer la TVA`n- envoyer la facture"; $script:AppelsOrale = 0; Ordre 'fais le point zorglub'
+Verifier ($script:AppelsOrale -eq 0 -and $script:Dits[-1] -match 'payer la TVA, - envoyer la facture') 'données courtes : réponse formatée par le code, aucun appel IA'
+$script:AppelsOrale = 0; Ordre 'explique le point zorglub'; Verifier ($script:AppelsOrale -eq 1) 'données courtes mais demande d''explication : l''IA reste utilisée'
+$script:DonneesTest = 'x' * 400; $script:AppelsOrale = 0; Ordre 'fais le point zorglub'; Verifier ($script:AppelsOrale -eq 1) 'données longues : l''IA formule la réponse'
+$script:PlanCerveau = $null
 
 Write-Host '10) Demande à Claude Code (essai à blanc par défaut)'
 $a = (Get-PlanRapide 'demande à Claude Code de lister les fichiers du dossier projets').actions[0]

@@ -14,8 +14,25 @@ function Find-ClaudeCmd {
     $script:ClaudeCmd
 }
 
-function Get-PromptSysteme {
+$script:ClaudeSafe = $null
+function Test-ClaudeSafeMode {
+    # --safe-mode (aucun plugin, hook, MCP, CLAUDE.md, skill chargé) n'existe que dans les versions récentes de claude : vérifié une seule fois par `claude --help`.
+    if ($null -ne $script:ClaudeSafe) { return $script:ClaudeSafe }
+    $script:ClaudeSafe = $false
+    $cmd = Find-ClaudeCmd
+    if ($cmd -and -not ($Config -and $Config.PSObject.Properties['claude_safe_mode'] -and $Config.claude_safe_mode -eq $false)) {
+        try { $aide = (& $cmd --help 2>$null) -join "`n"; $script:ClaudeSafe = [bool]($aide -match '--safe-mode') } catch { }
+    }
+    $script:ClaudeSafe
+}
+
+function Get-ContexteCerveau {
+    # Partie qui change à chaque appel (date, dossiers, mémoire) : dans le prompt système (appel simple) ou dans le message utilisateur (processus chaud, prompt système fixe).
     $dossiers = "Bureau = $([Environment]::GetFolderPath('Desktop')) ; Documents = $([Environment]::GetFolderPath('MyDocuments')) ; Téléchargements = $env:USERPROFILE\Downloads"
+    "CONTEXTE : $(Get-Date -Format 'dddd d MMMM yyyy, HH:mm'). Dossiers : $dossiers. Profil : $env:USERPROFILE.`n$(if (Get-Command Get-ContexteMemoire -ErrorAction SilentlyContinue) { Get-ContexteMemoire })"
+}
+
+function Get-PromptSysteme([switch]$SansContexte) {
     @"
 Tu es le CERVEAU de Jarvis, l'assistant personnel vocal de Liam (micro-entrepreneur, LM MULTI-SERVICES, qui vend « Trouve ton produit » sur tonproduit.shop). Jarvis tourne sur son PC Windows 10 et s'adresse à lui par « monsieur ».
 Tu ne peux rien faire toi-même : tu réponds UNIQUEMENT par un objet JSON, que le programme Jarvis exécute ensuite lui-même. Si tu écris autre chose que du JSON, rien ne se passe.
@@ -41,33 +58,108 @@ RÈGLES ABSOLUES :
 6. Si Liam demande de l'aide pour accomplir une tâche, utilise guide_demarrer (3 à 10 étapes courtes, une action par étape) : Jarvis les donne une par une. Pour « note que... » utilise note_ajouter ; pour « rappelle-moi... » utilise rappel_ajouter (quand = date et heure précises calculées d'après le contexte) ; pour « oublie tout » utilise oublie_tout ; « résume ce qu'on a fait » = resume_jour ; « qu'est-ce qu'il reste à faire » = reste_a_faire.
 7. Ne mets jamais de mot de passe, clé, numéro de carte ou donnée bancaire dans "dit" ni dans les actions.
 
-CONTEXTE : $(Get-Date -Format 'dddd d MMMM yyyy, HH:mm'). Dossiers : $dossiers. Profil : $env:USERPROFILE.
-$(if (Get-Command Get-ContexteMemoire -ErrorAction SilentlyContinue) { Get-ContexteMemoire })
+$(if (-not $SansContexte) { Get-ContexteCerveau })
 "@
 }
 
-function Invoke-Claude([string]$systeme, [string]$utilisateur, [int]$timeoutSec = 120, [scriptblock]$pendant = $null) {
+# ---------- Processus claude chaud : un seul `claude -p` en flux JSON, gardé ouvert (le démarrage de claude ne se paie plus à chaque ordre) ----------
+# Prompt système FIXE (la date et la mémoire passent dans le message). Renouvelé toutes les $script:ChaudToursMax demandes ; s'il meurt ou dépasse le délai : repli sur l'appel simple.
+$script:Chaud = $null; $script:ChaudTours = 0; $script:ChaudToursMax = 10
+function Stop-ClaudeChaud {
+    $c = $script:Chaud; $script:Chaud = $null
+    if ($c) { try { if (-not $c.p.HasExited) { Start-Process taskkill -ArgumentList '/T', '/F', '/PID', $c.p.Id -WindowStyle Hidden -Wait } } catch { }; Remove-Item $c.sys -Force -ErrorAction SilentlyContinue }
+}
+function Start-ClaudeChaud([string]$sys) {
+    $cle = $sys.GetHashCode()
+    if ($script:Chaud -and -not $script:Chaud.p.HasExited -and $script:Chaud.cle -eq $cle -and $script:ChaudTours -lt $script:ChaudToursMax) { return $false }
+    Stop-ClaudeChaud
+    $f = Join-Path $env:TEMP ('jarvis-sys-{0}-{1}.txt' -f $PID, [DateTime]::Now.Ticks)      # (même motif que le chaud de Discord : arreter.ps1 le nettoie)
+    [IO.File]::WriteAllText($f, $sys, (New-Object Text.UTF8Encoding $false))
+    $m = if ($Config.claude_modele) { " --model $($Config.claude_modele)" } else { '' }
+    if (Test-ClaudeSafeMode) { $m += ' --safe-mode' }
+    $psi = New-Object Diagnostics.ProcessStartInfo 'cmd.exe', "/c `"`"$(Find-ClaudeCmd)`" -p$m --input-format stream-json --output-format stream-json --verbose --include-partial-messages --tools `"`" --strict-mcp-config --disable-slash-commands --no-session-persistence --system-prompt-file `"$f`"`""
+    $psi.UseShellExecute = $false; $psi.CreateNoWindow = $true; $psi.WorkingDirectory = $script:DossierNeutre
+    $psi.RedirectStandardInput = $true; $psi.RedirectStandardOutput = $true; $psi.RedirectStandardError = $true; $psi.StandardOutputEncoding = [Text.Encoding]::UTF8
+    foreach ($k in 'ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN') { if ($psi.EnvironmentVariables.ContainsKey($k)) { $psi.EnvironmentVariables.Remove($k) } }      # abonnement Claude uniquement
+    $p = [Diagnostics.Process]::Start($psi); $p.BeginErrorReadLine()      # (stderr vidé sans gestionnaire : le tube ne bloque jamais)
+    $script:Chaud = @{ p = $p; sys = $f; cle = $cle }; $script:ChaudTours = 0
+    $true
+}
+function Start-PrechauffageClaude {
+    # Au lancement de Jarvis : le claude chaud démarre déjà (la 1re demande est à chaud). Échec ou claude_chaud = false : rien, l'appel simple prend le relais comme avant.
+    if (-not (Find-ClaudeCmd) -or ($Config.PSObject.Properties['claude_chaud'] -and $Config.claude_chaud -eq $false)) { return }
+    try { if (-not (Test-Path $script:DossierNeutre)) { New-Item -ItemType Directory $script:DossierNeutre | Out-Null }; [void](Start-ClaudeChaud (Get-PromptSysteme -SansContexte)); Write-Journal -Action 'Cerveau' -Resultat 'claude chaud préchauffé au démarrage' }
+    catch { Stop-ClaudeChaud; Write-Journal -Action 'Cerveau' -Resultat "préchauffage du claude chaud impossible ($($_.Exception.Message)) : appel simple" }
+}
+function Invoke-ClaudeChaud([string]$sys, [string]$msg, [int]$timeoutSec, [scriptblock]$pendant) {
+    # @{ ok; texte } | @{ stop = $true } (arrêt d'urgence : processus tué, relancé proprement à la demande suivante) | @{ ok = $false } (repli sur l'appel simple)
+    $t0 = Get-Date; $msPremiere = $null
+    try {
+        $froid = Start-ClaudeChaud $sys; $c = $script:Chaud; $script:ChaudTours++
+        $oct = (New-Object Text.UTF8Encoding $false).GetBytes(((@{ type = 'user'; message = @{ role = 'user'; content = $msg } } | ConvertTo-Json -Compress -Depth 5)) + "`n")
+        $c.p.StandardInput.BaseStream.Write($oct, 0, $oct.Length); $c.p.StandardInput.BaseStream.Flush()      # (octets UTF-8 : l'encodage d'entrée de .NET Framework serait la page OEM)
+        if ($pendant) { try { & $pendant } catch { } }
+        $flux = [bool]($script:SurPhraseClaude -and (Get-Command Get-ClaudeFlux -ErrorAction SilentlyContinue) -and (Get-ClaudeFlux)); $phraseDite = $false
+        $fin = $t0.AddSeconds([math]::Min($timeoutSec, 60)); $lignes = New-Object Collections.Generic.List[string]
+        $lecture = $c.p.StandardOutput.ReadLineAsync()
+        while ($true) {
+            if (Test-Stop) { Stop-ClaudeChaud; return @{ stop = $true } }
+            if ($lecture.IsCompleted) {
+                $l = $lecture.Result
+                if ($null -eq $l) { throw 'processus claude arrêté' }
+                $lignes.Add($l)
+                if ($null -eq $msPremiere -and $l -match '^\{\s*"type"\s*:\s*"(stream_event|assistant)"') { $msPremiere = [int]((Get-Date) - $t0).TotalMilliseconds }
+                if ($l -notmatch '^\{\s*"type"\s*:\s*"stream_event"') { $o = try { $l | ConvertFrom-Json } catch { $null }; if ($o -and $o.type -eq 'result') { $r = $o; break } }      # (la ligne « result » du vrai claude ne commence pas par « type » : on lit son JSON)
+                if ($flux -and -not $phraseDite -and $l -match 'text_delta') { $ph = Get-PremierePhraseDit ((ConvertFrom-FluxClaude $lignes.ToArray()).texte); if ($ph) { $phraseDite = $true; & $script:SurPhraseClaude $ph } }
+                $lecture = $c.p.StandardOutput.ReadLineAsync(); continue
+            }
+            if ((Get-Date) -gt $fin) { throw 'délai dépassé' }
+            Invoke-Pump; Start-Sleep -Milliseconds 40
+        }
+        if ($r.is_error -or -not "$($r.result)".Trim()) { throw 'réponse en erreur ou vide' }
+        $ms = [int]((Get-Date) - $t0).TotalMilliseconds
+        Write-Journal -Action 'Cerveau' -Resultat ("claude chaud ({0}, tour {1}/{2}) : première sortie {3} ms, fin {4} ms" -f $(if ($froid) { 'démarré à froid' } else { 'déjà chaud' }), $script:ChaudTours, $script:ChaudToursMax, $(if ($null -ne $msPremiere) { $msPremiere } else { $ms }), $ms)
+        return @{ ok = $true; texte = "$($r.result)" }
+    } catch {
+        Write-Journal -Action 'Cerveau' -Resultat ("claude chaud indisponible ($($_.Exception.Message)) : repli sur l'appel simple"); Stop-ClaudeChaud
+        return @{ ok = $false }
+    }
+}
+
+function Invoke-Claude([string]$systeme, [string]$utilisateur, [int]$timeoutSec = 120, [scriptblock]$pendant = $null, [string]$contexte = '') {
     # Retourne le texte de la réponse de claude -p, ou $null en cas d'échec / arrêt d'urgence.
     # $pendant : bloc exécuté PENDANT que Claude travaille (ex. « Je réfléchis, monsieur ») : la parole ne rallonge pas l'attente.
     if ($script:CanalDiscord -and (Get-Command Use-QuotaClaudeDiscord -ErrorAction SilentlyContinue) -and -not (Use-QuotaClaudeDiscord)) { return $null }      # ordre venu de Discord : plafond quotidien d'appels à Claude
     $cmd = Find-ClaudeCmd
     if (-not $cmd) { Write-Journal -Action 'Cerveau' -Resultat 'échec : claude introuvable'; return $null }
     if (-not (Test-Path $script:DossierNeutre)) { New-Item -ItemType Directory $script:DossierNeutre | Out-Null }
+    if ($contexte) {      # $systeme = partie FIXE du prompt, $contexte = date + mémoire : processus chaud (sauf claude_chaud = false) ; sinon, ou en repli, appel simple avec le prompt complet
+        if (-not ($Config -and $Config.PSObject.Properties['claude_chaud'] -and $Config.claude_chaud -eq $false)) {
+            $h = Invoke-ClaudeChaud $systeme "$contexte`n`n$utilisateur" $timeoutSec $pendant
+            if ($h.stop) { return $null }; if ($h.ok) { return $h.texte }
+        }
+        $systeme = "$systeme`n$contexte"
+    }
     $id = [guid]::NewGuid().ToString('N'); $b = Join-Path $env:TEMP "jarvis-$id"
     $utf8 = New-Object Text.UTF8Encoding $false
     [IO.File]::WriteAllText("$b.sys", $systeme, $utf8); [IO.File]::WriteAllText("$b.in", $utilisateur, $utf8)
     $modele = if ($Config.claude_modele) { " --model $($Config.claude_modele)" } else { '' }
     $flux = [bool]($script:SurPhraseClaude -and (Get-Command Get-ClaudeFlux -ErrorAction SilentlyContinue) -and (Get-ClaudeFlux))      # réponse en flux : la 1re phrase est dite dès qu'elle est écrite (claude_flux = true)
+    if (Test-ClaudeSafeMode) { $modele += ' --safe-mode' }
     if ($flux) { $modele += ' --output-format stream-json --verbose --include-partial-messages' }
     $ligne = "/c `"`"$cmd`" -p$modele --tools `"`" --strict-mcp-config --disable-slash-commands --no-session-persistence --system-prompt-file `"$b.sys`" < `"$b.in`" > `"$b.out`" 2> `"$b.err`"`""
     $psi = New-Object Diagnostics.ProcessStartInfo 'cmd.exe', $ligne
     $psi.UseShellExecute = $false; $psi.CreateNoWindow = $true; $psi.WorkingDirectory = $script:DossierNeutre
+    foreach ($k in 'ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN') { if ($psi.EnvironmentVariables.ContainsKey($k)) { $psi.EnvironmentVariables.Remove($k) } }      # abonnement Claude uniquement : jamais de facturation à l'API
+    $tLancement = Get-Date
     $p = [Diagnostics.Process]::Start($psi)
+    $msDemarrage = [int]((Get-Date) - $tLancement).TotalMilliseconds; $msPremiere = $null
     $fin = (Get-Date).AddSeconds($timeoutSec); $res = $null
     try {
         if ($pendant) { try { & $pendant } catch {} }
         $dejaLu = 0; $phraseDite = $false
         while (-not $p.HasExited) {
+            if ($null -eq $msPremiere -and (Test-Path "$b.out") -and (Get-Item "$b.out").Length -gt 0) { $msPremiere = [int]((Get-Date) - $tLancement).TotalMilliseconds }
             if ($flux -and -not $phraseDite -and (Test-Path "$b.out")) {
                 try {
                     $fs = [IO.File]::Open("$b.out", 'Open', 'Read', 'ReadWrite'); $sr = New-Object IO.StreamReader($fs, $utf8); $tout = $sr.ReadToEnd(); $sr.Close(); $fs.Close()
@@ -79,6 +171,8 @@ function Invoke-Claude([string]$systeme, [string]$utilisateur, [int]$timeoutSec 
             if ((Get-Date) -gt $fin) { Start-Process taskkill -ArgumentList '/T', '/F', '/PID', $p.Id -WindowStyle Hidden; Write-Journal -Action 'Cerveau' -Resultat 'échec : délai dépassé'; return $null }
             Invoke-Pump; Start-Sleep -Milliseconds 40
         }
+        $msFin = [int]((Get-Date) - $tLancement).TotalMilliseconds
+        Write-Journal -Action 'Cerveau' -Resultat ("claude -p : démarrage du processus {0} ms, première sortie {1} ms, fin {2} ms (prompt {3} caractères, safe-mode {4})" -f $msDemarrage, $(if ($null -ne $msPremiere) { $msPremiere } else { $msFin }), $msFin, $systeme.Length, (Test-ClaudeSafeMode))
         if (Test-Path "$b.out") { $res = [IO.File]::ReadAllText("$b.out", $utf8) }
         if ($flux -and $res) { $fl = ConvertFrom-FluxClaude @($res -split "`n"); if ($fl.final) { $res = $fl.final } elseif ($fl.texte) { $res = $fl.texte } }      # (flux : le texte final du résultat ; repli sur le texte cumulé)
         if (-not $res -or -not $res.Trim()) { $e = if (Test-Path "$b.err") { [IO.File]::ReadAllText("$b.err", $utf8) } else { '' }; Write-Journal -Action 'Cerveau' -Resultat ("échec : réponse vide. " + (Hide-Secrets (Short $e 300))); return $null }
@@ -116,9 +210,9 @@ function Get-Plan([string]$ordre) {
         if ($mode -eq 'local') { Write-Journal -Ordre $ordre -Action 'Cerveau' -Resultat 'échec : le cerveau local n''a pas donné de plan valide (mode local strict)'; return $null }
         Write-Journal -Ordre $ordre -Action 'Cerveau' -Resultat 'escalade vers Claude : plan local absent, douteux ou demande trop complexe'
     }
-    $sys = Get-PromptSysteme
+    $sys = Get-PromptSysteme -SansContexte; $ctx = Get-ContexteCerveau
     for ($essai = 1; $essai -le 2; $essai++) {
-        $r = Invoke-Claude $sys $user 120 $(if ($essai -eq 1) { { Annoncer-Reflexion } })
+        $r = Invoke-Claude $sys $user 120 $(if ($essai -eq 1) { { Annoncer-Reflexion } }) $ctx
         if ($null -eq $r) { return $null }
         $plan = ConvertFrom-ReponseJson $r
         if ($plan) { return $plan }
@@ -292,7 +386,8 @@ function Invoke-OrdreCorps([string]$ordre) {
     }
     if ($donnees.Count) {
         Set-VisageEtat 'reflechit'
-        $rep = Get-ReponseOrale $ordre (($resultats + $donnees) -join "`n")
+        $rep = if (($donnees -join '').Length -le 300 -and $ordre -notmatch 'r[ée]sum|expliqu|analys|traduis|que dit|dis-moi ce' -and -not @($actions | Where-Object { $_.type -notin 'todo_lire', 'lister_processus' }).Count) { Hide-Secrets (($rbruts | ForEach-Object { "$($_.texte)" + $(if ($_.donnees) { ' : ' + ("$($_.donnees)" -replace '\s*\r?\n\s*', ', ') }) }) -join ' ') }      # listes de Jarvis (to-do, processus), courtes, simple lecture : réponse formatée par le code, aucun appel IA (Ollama ou Claude)
+        else { Get-ReponseOrale $ordre (($resultats + $donnees) -join "`n") }
         if ($rep) { Parler $rep } else { Parler (($resultats -join ' ')) }
     } elseif ($executees -gt 0 -and $echecs -eq 0 -and -not $plan.dit -and -not $plan.rapide) { Parler (Get-Politesse 'fait') }
     if ($script:DernierOrdre) { $script:DernierOrdre.total_s = ((Get-Date) - $t0).TotalSeconds }

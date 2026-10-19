@@ -43,6 +43,7 @@ $liste = @(
     @{ n = 'vitesse ressentie (suite filtrée, bruit, Ollama chaud sur ce PC)'; f = 'suivi.ps1' }
     @{ n = 'point SaaS + briefing du matin (sources branchées seulement)'; f = 'saas.ps1' }
     @{ n = 'agent de développement du SaaS (file, branche, garde-fous, valide / refuse)'; f = 'dev-agent.ps1' }
+    @{ n = 'claude chaud (Invoke-Claude : démarrage unique, repli, arrêt d''urgence)'; f = 'chaud.ps1' }
 )
 function Get-Instantane {
     $mem = Join-Path $racine 'memoire'
