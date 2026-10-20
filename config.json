@@ -76,6 +76,7 @@
   "dev_push": "non",
   "dev_modele": "sonnet",
   "veille_train": "non",
+  "veille_mail": "non",
   "discord_claude_max_par_jour": 20,
   "discord_vocal": false,
   "discord_style": "embed",

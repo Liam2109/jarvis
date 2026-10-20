@@ -10,6 +10,7 @@
 #   env-pousser     chiffre .env (mot de passe demandé, masqué) -> .env.chiffre, le commite SEUL et affiche « git push » (vous poussez vous-même)
 #   discord-apercu  écrit memoire\apercu-discord.html : aperçu des messages Discord (données fictives, rien n'est envoyé)
 #   discord-diag    liste les salons textuels que le bot Discord voit (noms et permissions seulement) et le mot-clé reconnu
+#   gmail-autoriser autorise Gmail en lecture seule pour la veille e-mail « annonces-train » (une fois ; voir README)
 #   briefing-test   poste le briefing du matin (embed) dans le salon principal, maintenant, via le bot (sources branchées seulement)
 #   avtest          UN appel Alpha Vantage (recherche « thales ») pour trouver les symboles de Paris à mettre dans config.json
 #   notifier "texte"  poste un message dans le salon système de Discord avec le bot (ou le chemin d'un fichier texte) ; sans passer par le pont. Option : --salon nom
@@ -58,6 +59,7 @@ $script:ReponseTest = $ReponseTest   # crochet de test : réponse automatique au
 . (Join-Path $Root 'lib\saas.ps1')
 . (Join-Path $Root 'lib\dev-agent.ps1')
 . (Join-Path $Root 'lib\veille-train.ps1')
+. (Join-Path $Root 'lib\veille-mail.ps1')
 . (Join-Path $Root 'lib\veille-reveil.ps1')
 . (Join-Path $Root 'lib\diag-serveur.ps1')
 . (Join-Path $Root 'lib\boucle.ps1')
@@ -102,6 +104,7 @@ switch ($Commande.ToLower()) {
         if ($Texte -and (Test-Path -LiteralPath $Texte -PathType Leaf)) { $arg += @('--fichier', $Texte) } elseif ($Texte) { $arg += @('--texte', $Texte) } else { Write-Host 'Usage : jarvis.ps1 notifier "texte"  (ou un chemin de fichier texte)'; return }
         $o = (& python @arg 2>&1 | Out-String).Trim(); Write-Host (Hide-Secrets $o); Write-Journal -Action 'Notification Discord (salon système)' -Resultat (Hide-Secrets (Short $o 200))
     }
+    'gmail-autoriser' { Invoke-GmailAutoriser }      # autorisation Gmail en LECTURE SEULE pour la veille e-mail (une fois) : ouvre la page Google, enregistre le jeton chiffré par Windows, n'affiche aucun secret
     'briefing-test' { Write-Host (Invoke-BriefingTest) }      # construit le briefing du matin MAINTENANT (sources branchées seulement) et le poste dans le salon principal via le bot
     'avtest'   { Invoke-AvTest | ForEach-Object { Write-Host $_ } }       # UN seul appel Alpha Vantage (SYMBOL_SEARCH) : quels symboles pour Paris ? Aucune clé affichée.
     'diag-serveur' { Get-DiagServeur | ForEach-Object { Write-Host $_ } }     # RAM par processus, temps de réponse de Claude et d'Ollama, résumé (lecture seule ; 1 appel court à Claude, 2 à Ollama s'il tourne)
@@ -186,7 +189,8 @@ switch ($Commande.ToLower()) {
                 Update-VeilleReveil                                      # (re)lance l'écoute de veille si elle s'est arrêtée
                 Update-PontDiscord                                       # redémarre le pont Discord s'il a planté (journal d'erreurs, délais croissants)
                 [void](Update-DevAgent)                                  # agent de développement du SaaS (désactivé par défaut : dev_agent) : démarre la prochaine tâche à l'heure du créneau
-                [void](Update-VeilleTrain)                               # veille « annonces-train » (désactivée par défaut : veille_train) : un passage par heure dans un processus séparé
+                [void](Update-VeilleMail)                                 # veille « annonces-train » par e-mails d'alerte Gmail (désactivée par défaut : veille_mail) : un passage toutes les 10 minutes, lecture seule
+                [void](Update-VeilleTrain)                             # veille « annonces-train » (désactivée par défaut : veille_train) : un passage par heure dans un processus séparé
                 Update-Discord                                           # alertes regroupées et briefing planifié sur Discord (tout est désactivé par défaut)
                 if (((Get-Date) - $dernierCoeur).TotalMinutes -ge 5) { $dernierCoeur = Get-Date; Save-HeureArret }      # « dernière activité » (si Jarvis est arrêté de force)
                 Update-ModeJeu                                           # jeu / plein écran / heures : lecture seule du premier plan, toutes les 3 s

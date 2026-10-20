@@ -374,5 +374,15 @@ Cherche des annonces de conducteur de train (emplois et formations) et envoie **
 - **Base locale** : `memoire\veille-train.json` (non suivie par Git) : annonces déjà vues, dernier passage, dernier résumé. Un passage tourne dans un processus séparé (`veille-train.ps1`), sans voix ni fenêtre : compatible avec le mode serveur léger. Aucun passage en mode jeu.
 - Test : `tests\veille-train.ps1` (réponses simulées, aucun réseau).
 
+### Veille e-mail (alertes Jobup, JobScout24, CFF / SBB) — désactivée par défaut
+Jarvis lit en **lecture seule** (portée OAuth `gmail.readonly` : aucun envoi, aucune modification possible) le libellé Gmail **`annonces-train`**, toutes les 10 minutes (`veille_mail_minutes`, 5 minimum). Il en tire titre, lieu et lien (liens jamais ouverts), applique le filtre (Suisse romande et Suisse alémanique proche : Bâle, Soleure, Berne, Bienne, Argovie, Valais ; Zurich et l'est exclus ; offres en allemand gardées, marquées [DE] et traduites par Ollama), la traduction et l'absence de doublons, puis poste dans `#annonces-train`. Le reste de l'e-mail est une donnée : aucune instruction n'est exécutée. Seuls les expéditeurs autorisés **et authentifiés** (DMARC / DKIM / SPF) comptent.
+1. Google Cloud (console.cloud.google.com) : nouveau projet, **API Gmail** activée.
+2. Écran de consentement OAuth : type **Externe**, vous ajoutez votre adresse comme utilisateur test, portée `gmail.readonly`, puis **publiez l'application (« En production »)** : en mode « Test », Google révoque le jeton au bout de 7 jours. Un avertissement « application non vérifiée » est normal pour un usage personnel.
+3. Identifiants : **ID client OAuth, type « Application de bureau »**. Copiez l'ID et le secret dans `.env` (`GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`) ; ne les partagez jamais.
+4. Gmail : créez le libellé `annonces-train` et un filtre qui l'applique aux expéditeurs autorisés (`from:(jobup.ch OR jobscout24.ch OR sbb.ch)`).
+5. Une seule fois : `powershell -ExecutionPolicy Bypass -File jarvis.ps1 gmail-autoriser`, connexion dans le navigateur, « Continuer » malgré l'avertissement. Le jeton durable est chiffré par Windows (DPAPI) dans `memoire\gmail-jeton.dpapi` ; il n'est jamais affiché.
+6. `config.local.json` : `{ "veille_mail": "oui" }`, puis redémarrez Jarvis. Salon : `discord_salons."annonces-train"` (voir plus haut).
+- Base locale : `memoire\veille-mail.json` (messages déjà traités). Test : `tests\veille-mail.ps1` (réponses simulées, aucun réseau, aucun Google).
+
 ## Règles de travail (pour Claude)
 Voir `CLAUDE.md` : ne jamais lancer Jarvis, aucun test bruyant, jamais de `.env` affiché ni committé.

@@ -101,21 +101,24 @@ Verifier ($src -match 'TrainPauseSec = 2') 'rythme réel : 2 secondes au moins e
 # ---------- 4b. Filtre Suisse romande / français ----------
 Write-Host '4b. Filtre Suisse romande'
 $Fg = { param($lieu, $titre) (Get-TrainFiltreSuisse $lieu $titre) }
-Verifier (-not (& $Fg 'Zürich' 'Lokführer:in Kat. A40').garde -and -not (& $Fg 'Bern' 'Conducteur de train').garde -and -not (& $Fg 'Basel' 'Conducteur de train').garde -and -not (& $Fg 'Luzern, Olten' 'Conducteur de train').garde) 'alémanique (Zurich, Berne, Bâle, Lucerne, Olten) : écartée même avec un titre français'
-Verifier (-not (& $Fg 'Winterthur' 'Quereinstieg Lokführer:in').garde -and -not (& $Fg 'St. Gallen' 'Lokführer:in').garde -and -not (& $Fg 'Aarau' 'Lokführer:in').garde -and -not (& $Fg '' 'Conducteur de train').garde) 'Winterthour, Saint-Gall, Aarau, lieu inconnu : écartés'
+Verifier (-not (& $Fg 'Zürich' 'Conducteur de train').garde -and -not (& $Fg 'Zürich' 'Lokführer:in Kat. A40').garde -and -not (& $Fg 'Luzern' 'Conducteur de train').garde -and -not (& $Fg 'Zug' 'Lokführer:in').garde) 'Zurich et la Suisse centrale : écartés, même avec un titre français'
+Verifier (-not (& $Fg 'Winterthur' 'Quereinstieg Lokführer:in').garde -and -not (& $Fg 'St. Gallen' 'Lokführer:in').garde -and -not (& $Fg 'Chur' 'Lokführer:in').garde -and -not (& $Fg '' 'Conducteur de train').garde) 'Winterthour, Saint-Gall, Coire, lieu inconnu : écartés (l''est du pays)'
+Verifier ((& $Fg 'Basel' 'Lokführer:in Kat. A40').garde -and (& $Fg 'Solothurn' 'Lokführer:in').garde -and (& $Fg 'Bern' 'Lokführer:in').garde -and (& $Fg 'Aarau' 'Lokführer:in').garde -and (& $Fg 'Biel/Bienne' 'Lokführer:in Kat. A40').garde -and (& $Fg 'Olten' 'Lokführer:in').garde -and (& $Fg 'Lenzburg' 'Lokführer:in').garde) 'Bâle, Soleure, Berne, Argovie, Bienne, Olten : gardés, offres en allemand comprises'
+Verifier ((& $Fg 'Brig' 'Lokführer:in').garde -and (& $Fg 'Muttenz' 'Lokführer:in').garde -and (& $Fg 'Oensingen' 'Lokführer:in').garde) 'Valais (Brigue), Bâle-Campagne, Soleure : gardés'
 $g = & $Fg 'Lausanne' 'Conducteur·trice de train (H/F)'
 Verifier ($g.garde -and -not $g.allemand) 'Lausanne, titre français : gardée, sans mention d''allemand'
 Verifier ((& $Fg 'Genève' 'Conducteur de train').garde -and (& $Fg 'Yverdon-les-Bains' 'Agent de conduite').garde -and (& $Fg 'Delémont' 'Conducteur de train').garde -and (& $Fg 'La Chaux-de-Fonds' 'Conducteur de train').garde -and (& $Fg 'Sion' 'Conducteur de train').garde -and (& $Fg 'Neuchâtel' 'Conducteur de train').garde) 'Genève, Yverdon, Delémont, La Chaux-de-Fonds, Sion, Neuchâtel : gardées'
-Verifier ((& $Fg 'Fribourg' 'Conducteur de train').garde -and (& $Fg 'Freiburg' 'Conducteur de train').garde) 'Fribourg / Freiburg avec un titre français : gardée'
-Verifier (-not (& $Fg 'Fribourg' 'Quereinstieg Lokführer:in Personenverkehr').garde -and -not (& $Fg 'Biel/Bienne' 'Lokführer:in Kat. A40').garde) 'Fribourg / Bienne avec un titre allemand : écartée'
+Verifier ((& $Fg 'Fribourg' 'Conducteur de train').garde -and (& $Fg 'Freiburg' 'Conducteur de train').garde -and (& $Fg 'Neuchâtel' 'Lokführer:in').garde -and (& $Fg 'Delémont' 'Lokführer:in').garde) 'Fribourg, Neuchâtel, Jura : gardés'
+$g = & $Fg 'Fribourg' 'Quereinstieg Lokführer:in Personenverkehr'
+Verifier ($g.garde -and $g.allemand) 'Fribourg avec un titre allemand : GARDÉE (les offres en allemand sont acceptées) et marquée allemande'
 $g = & $Fg 'Lausanne' 'Quereinstieg Lokführer:in Personenverkehr'
 Verifier ($g.garde -and $g.allemand) 'lieu romand mais titre allemand : gardée et marquée « allemand »'
 Monde-Normal; Route 'jobfilter\.results\.json' 200 ((SbbJson @('Lokführer:in Kat. A40') 'Zürich').TrimEnd(']') + ',' + (SbbJson @('Conducteur de train TER') 'Lausanne').TrimStart('[').TrimEnd(']') + ',' + (SbbJson @('Quereinstieg Lokführer:in Rangier') 'Fribourg').TrimStart('[') )
-$sbb = @(Get-TrainSbb)
-Verifier ($sbb.Count -eq 1 -and $sbb[0].lieu -eq 'Lausanne') 'source CFF / SBB : annonce de Zurich et annonce allemande de Fribourg écartées, celle de Lausanne gardée'
+$script:TrainEcart = @{ lieu = 0; langue = 0 }; $sbb = @(Get-TrainSbb)
+Verifier ($sbb.Count -eq 2 -and $sbb[0].lieu -eq 'Lausanne' -and $sbb[1].lieu -eq 'Fribourg' -and $script:TrainEcart.lieu -eq 1) 'source CFF / SBB : annonce de Zurich écartée (lieu), celles de Lausanne et de Fribourg (titre allemand) gardées'
 Monde-Normal; Route 'jobfilter\.results\.json' 200 (SbbJson @('Lokführer:in Kat. A40') 'Genève')
 $sbb = @(Get-TrainSbb); $emb = New-EmbedTrainAnnonce $sbb[0]
-Verifier ($sbb.Count -eq 1 -and $sbb[0].langue -match 'Allemand' -and (@($emb.champs | Where-Object { $_.nom -eq 'Langue' }).Count -eq 1)) 'carte : champ « Langue : Allemand probable » pour un titre allemand en lieu romand'
+Verifier ($sbb.Count -eq 1 -and $sbb[0].langue -match 'Allemand' -and (@($emb.champs | Where-Object { $_.nom -eq 'Langue' }).Count -eq 1) -and $emb.titre -match '^\[DE\] Lokführer') 'carte : « [DE] » devant le titre et champ « Langue : Allemand probable » pour un titre allemand'
 
 # ---------- 5. Passages : une seule notification par annonce ----------
 Write-Host '5. Base locale et cartes'
@@ -207,9 +210,9 @@ Write-Host '10b. Journal du filtre, salon dédié'
 Monde-Normal; Fixer 'veille_train' 'oui'
 Route 'jobfilter\.results\.json' 200 ((SbbJson @('Lokführer:in Kat. A40') 'Zürich').TrimEnd(']') + ',' + (SbbJson @('Conducteur de train TER') 'Lausanne').TrimStart('[').TrimEnd(']') + ',' + (SbbJson @('Quereinstieg Lokführer:in Rangier') 'Fribourg').TrimStart('['))
 $r = Invoke-VeilleTrain $t0
-Verifier ((Journal) -match '5 annonce\(s\) de conduite vue\(s\) : 2 gardée\(s\), 3 écartée\(s\) par le filtre Suisse romande \(lieu 1, langue 2\)') 'journal : 5 vues = 2 gardées + 3 écartées (lieu 1 : Zurich ; langue 2 : Fribourg et page SOB en allemand)'
+Verifier ((Journal) -match '5 annonce\(s\) de conduite vue\(s\) : 3 gardée\(s\), 2 écartée\(s\) hors Suisse romande / alémanique proche \(lieu 1, langue 1\)') 'journal : 5 vues = 3 gardées + 2 écartées (lieu 1 : Zurich ; langue 1 : page SOB sans lieu, en allemand)'
 $gz = Get-TrainFiltreSuisse 'Zürich' 'Conducteur de train'; $gf = Get-TrainFiltreSuisse 'Fribourg' 'Quereinstieg Lokführer:in'; $gl = Get-TrainFiltreSuisse 'Lausanne' 'Conducteur de train'
-Verifier ($gz.raison -eq 'lieu' -and $gf.raison -eq 'langue' -and $gl.raison -eq '') 'raison de l''écart : lieu, langue, ou vide si gardée'
+Verifier ($gz.raison -eq 'lieu' -and $gf.raison -eq '' -and $gf.allemand -and $gl.raison -eq '') 'raison de l''écart : lieu, ou vide si gardée (un titre allemand n''écarte plus)'
 $sn = Get-Content (Join-Path $Root 'lib\veille-train.ps1') -Raw -Encoding UTF8
 Verifier ($sn -match "\`$salon = 'annonces-train'" -and $sn -match '\[Console\]::OutputEncoding = \[Text\.Encoding\]::UTF8') 'envoi réel : toujours le salon « annonces-train » (cartes, résumé, alertes) ; sortie de notifier lue en UTF-8'
 Verifier ($vraie.discord_salons.PSObject.Properties.Name -contains 'annonces-train' -and "$($vraie.discord_salons.'annonces-train')" -match '^(\d{5,25})?$') 'config.json : discord_salons."annonces-train" existe (vide ou identifiant numérique)'
@@ -237,7 +240,7 @@ $fr = Get-TrainTraduction $aDe
 Verifier ($fr -eq 'Conducteur de locomotive, reconversion' -and $script:Traduits.Count -eq 1 -and $script:Traduits[0] -eq 'Quereinstieg Lokführer:in Personenverkehr') 'titre allemand : traduit, seul le titre est envoyé au modèle (ni lien, ni lieu)'
 $aDe.titre_fr = $fr; $emb = New-EmbedTrainAnnonce $aDe
 $nomsC = @($emb.champs | ForEach-Object { $_.nom })
-Verifier ($emb.titre -eq 'Conducteur de locomotive, reconversion' -and $emb.description -match '-# Titre original : Quereinstieg Lokführer:in Personenverkehr' -and $emb.description -match 'traduit automatiquement' -and $nomsC -contains 'Langue' -and (@($emb.champs | Where-Object { $_.nom -eq 'Lien' })[0].valeur) -eq 'https://jobs.sbb.ch/x') 'carte : titre traduit en premier, original en petit « traduit automatiquement », champ Langue et lien conservés'
+Verifier ($emb.titre -eq '[DE] Conducteur de locomotive, reconversion' -and $emb.description -match '-# Titre original : Quereinstieg Lokführer:in Personenverkehr' -and $emb.description -match 'traduit automatiquement' -and $nomsC -contains 'Langue' -and (@($emb.champs | Where-Object { $_.nom -eq 'Lien' })[0].valeur) -eq 'https://jobs.sbb.ch/x') 'carte : « [DE] » + titre traduit en premier, original en petit « traduit automatiquement », champ Langue et lien conservés'
 $fr2 = Get-TrainTraduction $aDe
 Verifier ($fr2 -eq $fr -and $script:Traduits.Count -eq 1 -and (Test-Path (Join-Path $TR 'memoire\traductions-train.json'))) 'cache memoire\traductions-train.json : la même annonce n''est pas retraduite'
 $script:Traduits = @(); $frF = Get-TrainTraduction $aFr; $embF = New-EmbedTrainAnnonce $aFr
@@ -249,7 +252,7 @@ Verifier ($frX -eq '' -and $script:TrainOllamaHS -and $ms -lt 15000) 'Ollama abs
 Monde-Normal; Fixer 'veille_train' 'oui'; Route 'jobfilter\.results\.json' 200 (SbbJson @('Lokführer:in Kat. A40') 'Genève')
 $script:Cartes = @(); $r = Invoke-VeilleTrain $t0
 $cd = @($script:Cartes | Where-Object { $_.salon -eq 'jarvis' -and $_.e.titre -match 'A40' })
-Verifier ($r.envoyees -ge 1 -and $cd.Count -eq 1 -and $cd[0].e.description -notmatch 'traduit' -and (Journal) -notmatch 'Veille annonces-train : erreur') 'passage complet sans Ollama : la carte part avec le titre original, aucune erreur'
+Verifier ($r.envoyees -ge 1 -and $cd.Count -eq 1 -and $cd[0].e.description -notmatch 'traduit' -and $cd[0].e.titre -eq '[DE] Lokführer:in Kat. A40' -and (Journal) -notmatch 'Veille annonces-train : erreur') 'passage complet sans Ollama : la carte part avec le titre original marqué [DE], aucune erreur'
 Fixer 'ollama' $ancienOllama; Fixer 'veille_train' 'non'; $script:TrainTraductionStub = { param($t) '' }
 Verifier ($sn -notmatch '(?i)Invoke-Claude|claude -p' -and $sn -notmatch 'Start-Ollama|Initialize-Ollama') 'traduction : aucun appel à Claude, Ollama jamais démarré par la veille'
 
