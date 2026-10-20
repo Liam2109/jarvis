@@ -10,6 +10,7 @@
 #   env-pousser     chiffre .env (mot de passe demandé, masqué) -> .env.chiffre, le commite SEUL et affiche « git push » (vous poussez vous-même)
 #   discord-apercu  écrit memoire\apercu-discord.html : aperçu des messages Discord (données fictives, rien n'est envoyé)
 #   discord-diag    liste les salons textuels que le bot Discord voit (noms et permissions seulement) et le mot-clé reconnu
+#   veille-mail-test [--faux] [--discord]  un passage complet de la veille e-mail MAINTENANT, en simulation (rien posté ni écrit) ; --faux : 6 faux mails ; --discord : réel
 #   gmail-autoriser autorise Gmail en lecture seule pour la veille e-mail « annonces-train » (une fois ; voir README)
 #   briefing-test   poste le briefing du matin (embed) dans le salon principal, maintenant, via le bot (sources branchées seulement)
 #   avtest          UN appel Alpha Vantage (recherche « thales ») pour trouver les symboles de Paris à mettre dans config.json
@@ -104,6 +105,7 @@ switch ($Commande.ToLower()) {
         if ($Texte -and (Test-Path -LiteralPath $Texte -PathType Leaf)) { $arg += @('--fichier', $Texte) } elseif ($Texte) { $arg += @('--texte', $Texte) } else { Write-Host 'Usage : jarvis.ps1 notifier "texte"  (ou un chemin de fichier texte)'; return }
         $o = (& python @arg 2>&1 | Out-String).Trim(); Write-Host (Hide-Secrets $o); Write-Journal -Action 'Notification Discord (salon système)' -Resultat (Hide-Secrets (Short $o 200))
     }
+    'veille-mail-test' { $rt = Invoke-VeilleMailTest (Get-VeilleMailTestOptions $Reste); foreach ($l in $rt.lignes) { Write-Host $l }; if ($rt.code) { exit $rt.code } }      # test de bout en bout de la veille e-mail (simulation par défaut ; --faux : faux mails ; --discord : réel)
     'gmail-autoriser' { Invoke-GmailAutoriser }      # autorisation Gmail en LECTURE SEULE pour la veille e-mail (une fois) : ouvre la page Google, enregistre le jeton chiffré par Windows, n'affiche aucun secret
     'briefing-test' { Write-Host (Invoke-BriefingTest) }      # construit le briefing du matin MAINTENANT (sources branchées seulement) et le poste dans le salon principal via le bot
     'avtest'   { Invoke-AvTest | ForEach-Object { Write-Host $_ } }       # UN seul appel Alpha Vantage (SYMBOL_SEARCH) : quels symboles pour Paris ? Aucune clé affichée.

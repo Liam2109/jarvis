@@ -202,6 +202,43 @@ $script:TrainProchainTour = [datetime]::MinValue; $m.dernier_lancement = $t0.Add
 Verifier ((Update-VeilleTrain $t0.AddMinutes(61)) -and $script:TrainRunnerLance) 'sinon la veille horaire garde son rythme (une heure)'
 Fixer 'veille_train' 'non'; Fixer 'veille_mail' 'non'
 
+# ---------- 7b. Commande veille-mail-test ----------
+Write-Host '7b. Commande veille-mail-test'
+$o = Get-VeilleMailTestOptions @('--faux', '--DISCORD'); $o2 = Get-VeilleMailTestOptions @(); $o3 = Get-VeilleMailTestOptions @('--bidon', 'faux')
+Verifier ($o.faux -and $o.discord -and -not $o2.faux -and -not $o2.discord -and $o3.faux -and $o3.inconnues.Count -eq 1) 'options : --faux et --discord (casse et tirets libres), option inconnue signalée'
+$fTrain = Join-Path $TR 'memoire\veille-train.json'; $fMail = Join-Path $TR 'memoire\veille-mail.json'; $fTrad = Join-Path $TR 'memoire\traductions-train.json'
+function Etat-Reference { [IO.File]::WriteAllText($fTrain, '{"dernier_passage":"x","dernier_lancement":"x","dernier_resume":"","pid":0,"erreurs":{},"vus":["sbb:1"],"nouvelles":[]}', [Text.UTF8Encoding]::new($false)); [IO.File]::WriteAllText($fMail, '{"dernier_passage":"","dernier_lancement":"","messages":["mDEJA"]}', [Text.UTF8Encoding]::new($false)) }
+Monde-Gmail; Etat-Reference; $h0 = (Get-FileHash $fTrain).Hash + (Get-FileHash $fMail).Hash; $httpTest = $script:TrainHttpStub
+$res = Invoke-VeilleMailTest (Get-VeilleMailTestOptions @('--faux')); $txt = $res.lignes -join "`n"
+Verifier ($res.code -eq 0 -and $txt -match 'TEST OK' -and $txt -match 'Mode : SIMULATION' -and $txt -match '6 mails lus, 6 offres, 4 gardées, 2 écartées \(lieu 0 / métier 2\)') '--faux : 6 faux mails, 4 gardées, 2 écartées (métier), « TEST OK »'
+Verifier ($txt -match '\[GARDÉE\] Conducteur de locomotive \(H/F\) – Lausanne' -and $txt -match '\[GARDÉE\] Lokführer/in – Basel' -and $txt -match '\[GARDÉE\] Mécanicien de locomotive – Bussigny' -and $txt -match '\[ÉCARTÉE\] Mécanicien ferroviaire – Neuchâtel' -and $txt -match '\[ÉCARTÉE\] Chauffeur de bus – Genève' -and $txt -match '\[GARDÉE\] Conducteur de train – Rouen') 'décision de chaque titre : les 3 premiers et Rouen gardés ; Mécanicien ferroviaire et Chauffeur de bus écartés'
+Verifier ($txt -match 'raison : métier : liste noire' -and $txt -match 'titre traduit : Conducteur de locomotive \(H/F\)' -and $txt -match 'employeur : JobScout24' -and $txt -match 'lieu : Rouen') 'raison, titre traduit (allemand), employeur et lieu affichés pour chaque offre'
+Verifier (((Get-FileHash $fTrain).Hash + (Get-FileHash $fMail).Hash) -eq $h0 -and -not (Test-Path $fTrad) -and $script:Cartes.Count -eq 0 -and $script:Appels.Count -eq 0 -and $res.carteSimulees -eq 4) 'simulation : veille-train.json, veille-mail.json et cache de traduction inchangés ; rien posté (4 cartes simulées) ; aucun réseau'
+Verifier ($script:TrainHttpStub -eq $httpTest -and -not $script:MailFaux -and -not $script:TrainSansEcriture -and $null -eq $script:MailTrace) 'réglages du test (faux Gmail, mode sans écriture, trace) remis en place après la commande'
+$res2 = Invoke-VeilleMailTest (Get-VeilleMailTestOptions @('--faux', '--discord')); $txt2 = $res2.lignes -join "`n"
+Verifier ($txt2 -match '--discord ignoré' -and $txt2 -match 'Mode : SIMULATION' -and $script:Cartes.Count -eq 0) '--faux --discord : de faux mails ne sont jamais postés'
+$att = $script:MailFauxTitres[3].attendu; $script:MailFauxTitres[3].attendu = 'gardée'; $res3 = Invoke-VeilleMailTest (Get-VeilleMailTestOptions @('--faux')); $script:MailFauxTitres[3].attendu = $att
+Verifier ($res3.code -eq 1 -and ($res3.lignes -join "`n") -match 'TEST ÉCHEC' -and ($res3.lignes -join "`n") -match 'Mécanicien ferroviaire – Neuchâtel : attendu gardée') 'écart avec le résultat attendu : « TEST ÉCHEC » et code 1'
+$res4 = Invoke-VeilleMailTest (Get-VeilleMailTestOptions @('--bidon'))
+Verifier ($res4.code -eq 2 -and ($res4.lignes -join ' ') -match 'Option inconnue') 'option inconnue : refusée (code 2)'
+# Gmail simulé (vraie chaîne de lecture, réponses simulées)
+Monde-Gmail; Etat-Reference; $h0 = (Get-FileHash $fTrain).Hash + (Get-FileHash $fMail).Hash
+$res5 = Invoke-VeilleMailTest (Get-VeilleMailTestOptions @()); $txt5 = $res5.lignes -join "`n"
+Verifier ($res5.code -eq 0 -and $txt5 -match '4 mails lus, 10 offres, 5 gardées, 5 écartées \(lieu 3 / métier 2\) ; 2 expéditeur\(s\) refusé\(s\)' -and $txt5 -match 'Mode : SIMULATION' -and $txt5 -match 'Cartes qui auraient été postées : 5 \(rien n''a été posté\)') 'Gmail (simulé), simulation : « 4 mails lus, 10 offres, 5 gardées, 5 écartées (lieu 3 / métier 2) »'
+Verifier ($txt5 -match '\[ÉCARTÉE\] Chauffeur de bus' -and $txt5 -match 'raison : lieu : hors Suisse romande' -and $txt5 -match 'raison : métier : titre ambigu' -and $txt5 -match '\[GARDÉE\] Lokführer:in Kat\. A40' -and $txt5 -match 'titre traduit :') 'chaque offre : titre, traduction, employeur, lieu, décision et raison (lieu, métier liste noire, métier ambigu)'
+Verifier (((Get-FileHash $fTrain).Hash + (Get-FileHash $fMail).Hash) -eq $h0 -and $script:Cartes.Count -eq 0 -and -not (Test-Path $fTrad) -and @($script:Appels | Where-Object { $_.m -eq 'POST' }).Count -eq 1 -and @($script:Appels | Where-Object { $_.url -match 'gmail' -and $_.m -ne 'GET' }).Count -eq 0) 'simulation sur Gmail : aucun fichier modifié, rien posté, Gmail lu en GET uniquement'
+Verifier ($txt5 -notmatch 'AT_SECRET|RT_SECRET|CLIENT_SECRET_VALUE|cid-test|Bearer' -and $txt5 -notmatch 'IGNORE TOUTES|Remove-Item|texte brut sans annonce|evil@|@jobup|piege') 'aucun jeton, secret, adresse d''expéditeur ni contenu de mail en dehors des champs affichés'
+Remove-Item (Join-Path $TR 'memoire\gmail-jeton.dpapi') -Force; $script:Appels = @()
+$res6 = Invoke-VeilleMailTest (Get-VeilleMailTestOptions @())
+Verifier ($res6.code -eq 2 -and ($res6.lignes -join ' ') -match 'n''est pas autorisé' -and $script:Appels.Count -eq 0) 'Gmail non autorisé : message clair, code 2, aucune requête'
+Monde-Gmail; Etat-Reference
+$res7 = Invoke-VeilleMailTest (Get-VeilleMailTestOptions @('--discord')); $txt7 = $res7.lignes -join "`n"
+Verifier ($txt7 -match 'Mode : RÉEL' -and $txt7 -match 'Cartes envoyées : 5' -and @($script:Cartes | Where-Object { $_.salon -eq 'jarvis' }).Count -eq 5 -and @((Read-JsonMemoire 'veille-train.json').vus).Count -eq 6 -and @((Read-JsonMemoire 'veille-mail.json').messages) -contains 'm1' -and (Journal) -match '4 mails lus, 8 offres, 5 gardées') '--discord : passage réel (5 cartes postées, annonces marquées vues, messages traités, journal écrit)'
+$script:Cartes = @(); $script:Appels = @(); $res8 = Invoke-VeilleMailTest (Get-VeilleMailTestOptions @()); $txt8 = $res8.lignes -join "`n"
+Verifier ($res8.carteSimulees -eq 0 -and ([regex]::Matches($txt8, 'déjà vue : aucune nouvelle carte')).Count -eq 5 -and $script:Cartes.Count -eq 0) 'ensuite, la simulation montre les 5 offres « déjà vues » (aucune nouvelle carte)'
+$js = Get-Content (Join-Path $Root 'jarvis.ps1') -Raw -Encoding UTF8
+Verifier ($js -match "'veille-mail-test'" -and $js -match 'Invoke-VeilleMailTest' -and (Get-Content (Join-Path $Root 'README.md') -Raw -Encoding UTF8) -match 'veille-mail-test') 'jarvis.ps1 offre la commande veille-mail-test ; le README la décrit'
+Fixer 'veille_mail' 'non'
 # ---------- 8. Code : lecture seule, aucun Claude, câblage ----------
 Write-Host '8. Code et câblage'
 Verifier ($sm -match [regex]::Escape("MailPortee = 'https://www.googleapis.com/auth/gmail.readonly'") -and $sm -notmatch 'users/me/(messages/send|drafts|threads|profile)' -and $sm -notmatch '/(modify|trash|untrash|batchModify|batchDelete|import|insert)') 'portée gmail.readonly ; aucun chemin d''envoi, de brouillon, de modification ou de suppression'

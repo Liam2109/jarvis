@@ -8,6 +8,7 @@
 
 $script:MailProchainTour = [datetime]::MinValue; $script:MailRunnerLance = $false; $script:MailAvertiAutorisation = $false
 $script:MailLibelle = 'annonces-train'
+$script:MailFaux = $false; $script:MailTrace = $null; $script:MailTraceId = @{}      # commande veille-mail-test : faux Gmail, trace des décisions (null = désactivée)
 $script:MailDelaiSec = 60; $script:MailAttenteRetry = 5      # appels Gmail : 60 s ; si le premier expire (aucune réponse), une nouvelle tentative après 5 s
 $script:MailPortee = 'https://www.googleapis.com/auth/gmail.readonly'
 $script:MailExpediteurs = '(^|\.)(jobup\.ch|jobscout24\.ch|sbb\.ch)$'
@@ -97,6 +98,7 @@ function Invoke-GmailHttp([string]$url, [string]$methode = 'GET', [string]$corps
     $r
 }
 function Get-GmailAccessToken {
+    if ($script:MailFaux) { return 'faux-jeton' }      # commande veille-mail-test --faux : aucun vrai jeton
     $id = Get-EnvPropre 'GMAIL_CLIENT_ID'; $sec = Get-EnvPropre 'GMAIL_CLIENT_SECRET'; $rt = Get-GmailJeton
     if (-not $id -or -not $sec -or -not $rt) { throw 'Gmail non autorisé : renseignez GMAIL_CLIENT_ID / GMAIL_CLIENT_SECRET dans .env puis lancez jarvis.ps1 gmail-autoriser' }
     Add-MailSecret $id; Add-MailSecret $sec; Add-MailSecret $rt
@@ -175,22 +177,30 @@ function Get-TrainFiltreMail([string]$lieu, [string]$titre) {
     if ((ConvertTo-TrainNorm $lieu) -match $script:TrainNormand) { return @{ garde = $true; allemand = $false; raison = '' } }
     Get-TrainFiltreSuisse $lieu $titre
 }
+function Add-MailTrace([string]$titre, [string]$employeur, [string]$lieu, [string]$decision, [string]$raison, [string]$id = '') {
+    if ($null -eq $script:MailTrace) { return }
+    $x = [ordered]@{ titre = (Short $titre 120); employeur = $employeur; lieu = $lieu; decision = $decision; raison = $raison; id = $id; titre_fr = ''; etat = '' }
+    [void]$script:MailTrace.Add($x); if ($id) { $script:MailTraceId[$id] = $x }
+}
+function Set-MailTraceEtat($a, [string]$etat) { if ($null -ne $script:MailTrace -and $script:MailTraceId.ContainsKey("$($a.id)")) { $x = $script:MailTraceId["$($a.id)"]; if ($etat) { $x.etat = $etat }; $x.titre_fr = "$($a.titre_fr)" } }
 function Get-MailAnnonces([string]$html, [string]$domaine, [string]$date) {
     # Les LIENS dont le texte parle de conduite de train ; le lieu est cherché dans le texte qui suit le lien (jusqu'à l'annonce suivante). Retourne les annonces GARDÉES ; les écartées sont comptées (Add-TrainEcart).
     $employeur = Get-MailEmployeur $domaine; $out = @(); $vus = @{}
     $ancres = @([regex]::Matches($html, '(?is)<a\s[^>]*?href\s*=\s*["'']([^"'']+)["''][^>]*>(.*?)</a>') | ForEach-Object { [pscustomobject]@{ fin = $_.Index + $_.Length; debut = $_.Index; href = $_.Groups[1].Value; titre = (ConvertTo-MailTexte $_.Groups[2].Value) } })
     $cand = @($ancres | Where-Object { $_.titre.Length -ge 6 -and $_.titre.Length -le 200 } | ForEach-Object { $_ | Add-Member -NotePropertyName metier -NotePropertyValue (Get-MailMetier $_.titre) -PassThru } | Where-Object { $_.metier -ne 'rien' })
     for ($i = 0; $i -lt $cand.Count; $i++) {
-        $a = $cand[$i]; if ($a.metier -ne 'garde') { $script:MailEcartMetier++; continue }      # liste noire ou titre ambigu : jamais envoyé, compté au journal
+        $a = $cand[$i]
         $finCtx = $(if ($i + 1 -lt $cand.Count) { $cand[$i + 1].debut } else { $html.Length }); $finCtx = [math]::Min($finCtx, $a.fin + 1500)
         $ctx = $(if ($finCtx -gt $a.fin) { ConvertTo-MailTexte $html.Substring($a.fin, $finCtx - $a.fin) } else { '' })
-        $lieu = Get-MailLieu "$($a.titre) $ctx"
+        $lieu = Get-MailLieu "$($a.titre) $ctx"; $emp = Get-MailEmployeurTexte "$($a.titre) $ctx" $employeur
+        if ($a.metier -ne 'garde') { $script:MailEcartMetier++; Add-MailTrace $a.titre $emp $lieu 'écartée' $(if ($a.metier -eq 'noire') { 'métier : liste noire' } else { 'métier : titre ambigu' }); continue }      # liste noire ou titre ambigu : jamais envoyé, compté au journal
         $f = Get-TrainFiltreMail $lieu $a.titre
-        if (-not $f.garde) { Add-TrainEcart $f.raison; continue }
+        if (-not $f.garde) { Add-TrainEcart $f.raison; Add-MailTrace $a.titre $emp $lieu 'écartée' 'lieu : hors Suisse romande / alémanique proche (ou lieu non reconnu)'; continue }
         $sha = [Security.Cryptography.SHA1]::Create(); $h = (($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes((ConvertTo-TrainNorm $a.titre) + '|' + (ConvertTo-TrainNorm $lieu))) | ForEach-Object { $_.ToString('x2') }) -join ''); $sha.Dispose()
         $ident = $h.Substring(0, 16); if ($vus.ContainsKey($ident)) { continue }; $vus[$ident] = $true
-        $n = New-TrainAnnonce 'mail' $ident $a.titre (Get-MailEmployeurTexte "$($a.titre) $ctx" $employeur) $lieu $date ([Net.WebUtility]::HtmlDecode($a.href).Trim())
+        $n = New-TrainAnnonce 'mail' $ident $a.titre $emp $lieu $date ([Net.WebUtility]::HtmlDecode($a.href).Trim())
         if ($f.allemand) { $n.langue = 'Allemand probable (titre en allemand)' }
+        Add-MailTrace $a.titre $emp $lieu 'gardée' $(if ($f.allemand) { 'conducteur reconnu, lieu accepté, titre en allemand ([DE])' } else { 'conducteur reconnu, lieu accepté' }) $n.id
         $out += $n
     }
     $out
@@ -205,11 +215,13 @@ function Get-MailEtat {
 function Save-MailEtat($m) { Save-JsonMemoire 'veille-mail.json' ([ordered]@{ dernier_passage = $m.dernier_passage; dernier_lancement = $m.dernier_lancement; messages = @($m.messages | Select-Object -Last 500) }) }
 
 # ---------- Un passage ----------
-function Invoke-VeilleMail([datetime]$now = (Get-Date)) {
+function Invoke-VeilleMail([datetime]$now = (Get-Date), [switch]$Simulation, [switch]$Faux) {
     # Retourne @{ lus; nouvelles; envoyees; erreur }. Une erreur Gmail = une carte « attention » par jour, jamais de plantage.
     $e = Get-TrainEtat; $m = Get-MailEtat; $jour = $now.ToString('yyyy-MM-dd')
-    $e.pid = $PID; Save-TrainEtat $e      # même verrou que la veille horaire : un seul passage à la fois (les dates de la veille horaire ne bougent pas)
-    $m.dernier_lancement = $now.ToString('o'); Save-MailEtat $m
+    if ($Faux) { $e = @{ vus = @(); nouvelles = @(); dernier_passage = ''; dernier_lancement = ''; dernier_resume = ''; erreurs = @{}; pid = 0 }; $m = @{ dernier_passage = ''; dernier_lancement = ''; messages = @() } }      # faux mails : état vierge, rien du vrai état
+    if ($Simulation) { $m.messages = @() }      # simulation : relit tous les messages récents (rien n'est marqué traité)
+    $vusAvant = @($e.vus)
+    if (-not $Simulation) { $e.pid = $PID; Save-TrainEtat $e; $m.dernier_lancement = $now.ToString('o'); Save-MailEtat $m }      # même verrou que la veille horaire : un seul passage à la fois (les dates de la veille horaire ne bougent pas)
     $script:TrainEcart = @{ lieu = 0; langue = 0 }; $script:TrainOllamaHS = $false; $script:MailEcartMetier = 0
     $lus = 0; $refuses = 0; $gardees = 0; $nouvelles = 0; $envoyees = 0; $erreur = ''; $deja = @{}
     try {
@@ -226,13 +238,14 @@ function Invoke-VeilleMail([datetime]$now = (Get-Date)) {
             $date = ''; try { $date = [DateTimeOffset]::FromUnixTimeMilliseconds([long]"$($msg.internalDate)").LocalDateTime.ToString('yyyy-MM-dd') } catch {}
             $corps = Get-GmailCorps $msg.payload
             $annonces = @(Get-MailAnnonces $corps.html (Get-MailDomaine $from) $date); $gardees += $annonces.Count
+            foreach ($a in $annonces) { if ($vusAvant -contains $a.id) { Set-MailTraceEtat $a 'déjà vue : aucune nouvelle carte' } }
             $toutEnvoye = $true
             foreach ($a in @($annonces | Where-Object { $e.vus -notcontains $_.id -and -not $deja.ContainsKey($_.id) })) {
                 $nouvelles++
-                if ($envoyees -ge $script:TrainMaxCartes) { $toutEnvoye = $false; break }
+                if ($envoyees -ge $script:TrainMaxCartes) { $toutEnvoye = $false; Set-MailTraceEtat $a 'nouvelle : en attente (plafond de 8 cartes par passage)'; break }
                 $deja[$a.id] = $true
                 try { $fr = Get-TrainTraduction $a; if ($fr) { $a.titre_fr = $fr } } catch {}      # sans traduction : titre original
-                if (Send-TrainNotif 'jarvis' (New-EmbedTrainAnnonce $a)) { $envoyees++; $e.vus += $a.id; $a.vu_le = $now.ToString('o'); $e.nouvelles += $a } else { $toutEnvoye = $false }
+                if (Send-TrainNotif 'jarvis' (New-EmbedTrainAnnonce $a)) { $envoyees++; $e.vus += $a.id; $a.vu_le = $now.ToString('o'); $e.nouvelles += $a; Set-MailTraceEtat $a $(if ($Simulation) { 'nouvelle : carte simulée (rien posté)' } else { 'nouvelle : carte envoyée dans #annonces-train' }) } else { $toutEnvoye = $false; Set-MailTraceEtat $a 'nouvelle : envoi refusé, réessai au passage suivant' }
             }
             if ($toutEnvoye) { $m.messages += "$($ref.id)" }      # un message n'est « traité » que si toutes ses nouvelles annonces sont parties
         }
@@ -241,13 +254,12 @@ function Invoke-VeilleMail([datetime]$now = (Get-Date)) {
         if ($e.erreurs['E-mail (Gmail)'] -ne $jour) { if (Send-TrainNotif 'systeme' (New-EmbedTrainAttention 'E-mail (Gmail)' $erreur)) { $e.erreurs['E-mail (Gmail)'] = $jour } }      # une carte par jour
     }
     $e.nouvelles = @($e.nouvelles | Where-Object { try { ($now - [datetime]$_.vu_le).TotalDays -lt 7 } catch { $false } })
-    $e.pid = 0; Save-TrainEtat $e
-    $m.dernier_passage = $now.ToString('o'); Save-MailEtat $m
     $ecL = [int]$script:TrainEcart.lieu; $ecG = [int]$script:TrainEcart.langue
-    if ($lus -or $erreur -or $envoyees -or $script:MailEcartMetier) {      # rien à dire = rien dans le journal (un passage toutes les 10 minutes)
+    if (-not $Simulation) { $e.pid = 0; Save-TrainEtat $e; $m.dernier_passage = $now.ToString('o'); Save-MailEtat $m }
+    if (-not $Simulation -and ($lus -or $erreur -or $envoyees -or $script:MailEcartMetier)) {      # rien à dire = rien dans le journal (un passage toutes les 10 minutes)
         Write-Journal -Action 'Veille e-mail' -Resultat "$(Format-Pluriel $lus 'mail lu' 'mails lus'), $(Format-Pluriel ($gardees + $ecL + $ecG) 'offre' 'offres'), $(Format-Pluriel $gardees 'gardée' 'gardées') ($($ecL + $ecG) écartée(s) hors Suisse romande / alémanique proche) ; $($script:MailEcartMetier) écartée(s) : métier$(if ($refuses) { " ; $refuses expéditeur(s) refusé(s) (non autorisé ou non authentifié)" }) ; $nouvelles nouvelle(s), $envoyees carte(s)$(if ($erreur) { ', erreur : ' + $erreur })"
     }
-    @{ lus = $lus; nouvelles = $nouvelles; envoyees = $envoyees; erreur = $erreur }
+    @{ lus = $lus; nouvelles = $nouvelles; envoyees = $envoyees; erreur = $erreur; gardees = $gardees; refuses = $refuses }
 }
 
 # ---------- Boucle de Jarvis (légère : aucun réseau ici) ----------
@@ -272,4 +284,85 @@ function Update-VeilleMail([datetime]$now = (Get-Date)) {
     $s = Join-Path $script:RacineReelle 'veille-train.ps1'; if (-not (Test-Path $s)) { return $false }
     $m.dernier_lancement = $now.ToString('o'); Save-MailEtat $m
     try { [void](Start-Process powershell -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', "`"$s`"", '-Mail' -WindowStyle Hidden -PassThru); $true } catch { Write-Journal -Action 'Veille e-mail' -Resultat 'lancement impossible'; $false }
+}
+
+# ---------- Commande de test de bout en bout : jarvis.ps1 veille-mail-test [--faux] [--discord] ----------
+# Un passage complet MAINTENANT. Par défaut : SIMULATION (rien n'est posté sur Discord ; rien n'est écrit dans memoire\veille-train.json, veille-mail.json ni le cache de traduction).
+#   --discord : passage RÉEL (cartes postées dans #annonces-train, annonces marquées vues) ; --faux : 6 faux mails (aucun Gmail, aucun jeton, jamais de Discord) et comparaison au résultat attendu.
+# N'affiche que : titre (et titre traduit), employeur, lieu, décision, raison. Jamais de jeton, de secret ni d'autre contenu de mail.
+$script:MailFauxTitres = @(
+    @{ titre = 'Conducteur de locomotive (H/F) – Lausanne'; de = 'Jobup <alerte@jobup.ch>'; attendu = 'gardée'; raison = '' }
+    @{ titre = 'Lokführer/in – Basel'; de = 'JobScout24 <alerts@jobscout24.ch>'; attendu = 'gardée'; raison = '' }
+    @{ titre = 'Mécanicien de locomotive – Bussigny'; de = 'Jobup <alerte@jobup.ch>'; attendu = 'gardée'; raison = '' }
+    @{ titre = 'Mécanicien ferroviaire – Neuchâtel'; de = 'JobScout24 <alerts@jobscout24.ch>'; attendu = 'écartée'; raison = 'métier' }
+    @{ titre = 'Chauffeur de bus – Genève'; de = 'Jobup <alerte@jobup.ch>'; attendu = 'écartée'; raison = 'métier' }
+    @{ titre = 'Conducteur de train – Rouen'; de = 'JobScout24 <alerts@jobscout24.ch>'; attendu = 'gardée'; raison = '' }
+)
+function ConvertTo-GmailBase64([string]$s) { [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($s)).Replace('+', '-').Replace('/', '_').TrimEnd('=') }
+function New-MailFauxServeur {
+    # Faux serveur Gmail (remplace le réseau) : un message par faux titre, libellé « FAUX », expéditeurs jobup / jobscout24 correctement authentifiés.
+    $msgs = @{}; $i = 0
+    foreach ($f in $script:MailFauxTitres) {
+        $i++; $dom = $(if ($f.de -match 'jobup') { 'jobup.ch' } else { 'jobscout24.ch' })
+        $html = "<html><body><a href=`"https://exemple.invalid/offre/faux$i`">$([Net.WebUtility]::HtmlEncode($f.titre))</a></body></html>"
+        $msgs["faux$i"] = ConvertTo-Json -Depth 10 @{ id = "faux$i"; labelIds = @('FAUX'); internalDate = '1792500000000'; payload = @{ mimeType = 'text/html'; headers = @(@{ name = 'From'; value = $f.de }, @{ name = 'Authentication-Results'; value = "mx.google.com; dkim=pass header.d=$dom; dmarc=pass header.from=$dom" }); body = @{ data = (ConvertTo-GmailBase64 $html) } } }
+    }
+    $liste = ConvertTo-Json -Compress @{ messages = @(1..$msgs.Count | ForEach-Object { @{ id = "faux$_" } }) }
+    {
+        param($url, $methode, $corps, $entetes)
+        if ($url -match 'users/me/labels$') { return @{ code = 200; texte = '{"labels":[{"id":"FAUX","name":"annonces-train"}]}' } }
+        if ($url -match 'users/me/messages\?labelIds') { return @{ code = 200; texte = $liste } }
+        if ($url -match 'users/me/messages/(faux\d+)\?') { return @{ code = 200; texte = $msgs[$Matches[1]] } }
+        @{ code = 404; texte = 'introuvable' }
+    }.GetNewClosure()
+}
+function Get-VeilleMailTestOptions($arguments) {
+    # Accepte --discord / --faux (ou -discord, discord) ; tout le reste est signalé.
+    $o = @{ discord = $false; faux = $false; inconnues = @() }
+    foreach ($a in @($arguments)) { $x = "$a".Trim().ToLowerInvariant().TrimStart('-'); if (-not $x) { continue }; if ($x -eq 'discord') { $o.discord = $true } elseif ($x -eq 'faux') { $o.faux = $true } else { $o.inconnues += "$a" } }
+    $o
+}
+function Invoke-VeilleMailTest($opt) {
+    # Retourne @{ code; ok; lignes } : le code appelant affiche les lignes. code 0 = fait (et TEST OK avec --faux), 1 = TEST ÉCHEC, 2 = impossible.
+    $L = New-Object Collections.ArrayList; $add = { param($x) [void]$L.Add((Hide-Secrets "$x")) }
+    if (@($opt.inconnues).Count) { & $add "Option inconnue : $(@($opt.inconnues) -join ' '). Usage : jarvis.ps1 veille-mail-test [--faux] [--discord]"; return @{ code = 2; ok = $false; lignes = @($L) } }
+    $faux = [bool]$opt.faux; $reel = [bool]$opt.discord -and -not $faux
+    & $add ('Veille e-mail annonces-train : test de bout en bout — source : ' + $(if ($faux) { '6 FAUX mails (aucun Gmail, aucun jeton)' } else { 'Gmail, lecture seule, libellé annonces-train' }))
+    & $add ('Mode : ' + $(if ($reel) { 'RÉEL (--discord) : cartes postées dans #annonces-train, annonces marquées vues' } else { "SIMULATION : rien n'est posté sur Discord, rien n'est écrit dans memoire\veille-train.json ni veille-mail.json (ni cache de traduction)" }))
+    if ($opt.discord -and $faux) { & $add '--discord ignoré avec --faux : de faux mails ne sont jamais postés.' }
+    if (-not $faux -and -not (Test-MailAutorise)) { & $add 'Gmail n''est pas autorisé : renseignez GMAIL_CLIENT_ID / GMAIL_CLIENT_SECRET dans .env puis lancez jarvis.ps1 gmail-autoriser (ou essayez --faux).'; return @{ code = 2; ok = $false; lignes = @($L) } }
+    if ($reel) { $e0 = Get-TrainEtat; if (Test-TrainProcessusVivant $e0.pid) { & $add 'Un passage de la veille est en cours : réessayez dans une minute.'; return @{ code = 2; ok = $false; lignes = @($L) } } }
+    $sv = @{ http = $script:TrainHttpStub; notif = $script:TrainNotifStub; faux = $script:MailFaux; sans = $script:TrainSansEcriture; trace = $script:MailTrace; tid = $script:MailTraceId; pause = $script:TrainPauseSec }
+    $cartes = New-Object Collections.ArrayList; $script:CartesSimulees = $cartes
+    try {
+        $script:MailTrace = New-Object Collections.ArrayList; $script:MailTraceId = @{}
+        if ($faux) { $script:TrainHttpStub = New-MailFauxServeur; $script:MailFaux = $true; $script:TrainPauseSec = 0 }
+        if (-not $reel) { $script:TrainSansEcriture = $true; $script:TrainNotifStub = { param($salon, $embed) [void]$script:CartesSimulees.Add(@{ salon = $salon; titre = "$($embed.titre)" }); $true } }
+        $r = Invoke-VeilleMail -Simulation:(-not $reel) -Faux:$faux
+        $trace = @($script:MailTrace)
+    } finally { $script:TrainHttpStub = $sv.http; $script:TrainNotifStub = $sv.notif; $script:MailFaux = $sv.faux; $script:TrainSansEcriture = $sv.sans; $script:MailTrace = $sv.trace; $script:MailTraceId = $sv.tid; $script:TrainPauseSec = $sv.pause }
+    $gard = @($trace | Where-Object { $_.decision -eq 'gardée' }).Count; $ecM = @($trace | Where-Object { $_.raison -like 'métier*' }).Count; $ecL = @($trace | Where-Object { $_.raison -like 'lieu*' }).Count
+    & $add ''
+    & $add ("$(Format-Pluriel $r.lus 'mail lu' 'mails lus'), $(Format-Pluriel $trace.Count 'offre' 'offres'), $(Format-Pluriel $gard 'gardée' 'gardées'), $(Format-Pluriel ($ecL + $ecM) 'écartée' 'écartées') (lieu $ecL / métier $ecM)" + $(if ($r.refuses) { " ; $($r.refuses) expéditeur(s) refusé(s)" }))
+    & $add ($(if ($reel) { "Cartes envoyées : $($r.envoyees)" } else { "Cartes qui auraient été postées : $($cartes.Count) (rien n'a été posté)" }))
+    if ($r.erreur) { & $add "Erreur : $($r.erreur)" }
+    $n = 0
+    foreach ($x in $trace) {
+        $n++; & $add ''
+        & $add ("{0,2}. [{1}] {2}" -f $n, $x.decision.ToUpper(), $x.titre)
+        if ($x.titre_fr) { & $add "      titre traduit : $($x.titre_fr)" }
+        & $add ("      employeur : {0} · lieu : {1}" -f $(if ($x.employeur) { $x.employeur } else { '?' }), $(if ($x.lieu) { $x.lieu } else { '(non reconnu)' }))
+        & $add ("      raison : $($x.raison)" + $(if ($x.etat) { " · $($x.etat)" }))
+    }
+    $code = 0
+    if ($faux) {
+        $diff = @(); foreach ($a in $script:MailFauxTitres) {
+            $x = @($trace | Where-Object { $_.titre -eq $a.titre }) | Select-Object -First 1
+            if (-not $x) { $diff += "absent : $($a.titre)" } elseif ($x.decision -ne $a.attendu) { $diff += "$($a.titre) : attendu $($a.attendu), obtenu $($x.decision) ($($x.raison))" } elseif ($a.raison -and $x.raison -notlike "$($a.raison)*") { $diff += "$($a.titre) : raison attendue « $($a.raison) », obtenue « $($x.raison) »" }
+        }
+        if ($trace.Count -ne $script:MailFauxTitres.Count) { $diff += "$($trace.Count) offres vues au lieu de $($script:MailFauxTitres.Count)" }
+        & $add ''
+        if ($diff.Count) { $code = 1; & $add 'TEST ÉCHEC'; foreach ($d in $diff) { & $add "  - $d" } } else { & $add 'TEST OK (attendu : 3 premiers gardés, Mécanicien ferroviaire et Chauffeur de bus écartés pour métier, Rouen gardé)' }
+    }
+    @{ code = $code; ok = ($code -eq 0); lignes = @($L); trace = $trace; carteSimulees = $cartes.Count }
 }
