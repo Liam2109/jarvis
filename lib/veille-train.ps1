@@ -39,8 +39,10 @@ function Test-TrainAllemand([string]$titre) { $n = ConvertTo-TrainNorm $titre; (
 function Get-TrainFiltreSuisse([string]$lieu, [string]$titre) {
     # @{ garde; allemand } : garde = lieu romand (et titre non allemand si le lieu est seulement bilingue).
     $l = ConvertTo-TrainNorm $lieu; $fr = $l -match $script:TrainRomand; $bi = $l -match $script:TrainBilingue; $de = Test-TrainAllemand $titre
-    @{ garde = ($fr -or ($bi -and -not $de)); allemand = $de }
+    $garde = ($fr -or ($bi -and -not $de))
+    @{ garde = $garde; allemand = $de; raison = $(if ($garde) { '' } elseif ($bi) { 'langue' } else { 'lieu' }) }      # raison de l'écart : lieu hors liste blanche, ou lieu bilingue avec un titre allemand
 }
+function Add-TrainEcart([string]$raison) { if (-not $script:TrainEcart) { $script:TrainEcart = @{ lieu = 0; langue = 0 } }; $script:TrainEcart[$raison]++ }
 
 # ---------- Réseau poli (bouchon en test) ----------
 function Wait-TrainPoli { if ($script:TrainPauseSec -gt 0) { $r = $script:TrainPauseSec - ((Get-Date) - $script:TrainDernierReq).TotalSeconds; if ($r -gt 0) { Start-Sleep -Milliseconds ([int]($r * 1000)) } }; $script:TrainDernierReq = Get-Date }
@@ -95,7 +97,7 @@ function Get-TrainSbb {
         if (-not (Test-TrainAnnonce "$($j.title)")) { continue }
         $lieu = $(if ($j.attributes.'100') { @($j.attributes.'100') -join ', ' } else { '' })
         $d = ''; if ("$($j.start_date)" -match '^\d{4}-\d{2}-\d{2}') { $d = $Matches[0] }
-        $f = Get-TrainFiltreSuisse $lieu "$($j.title)"; if (-not $f.garde) { continue }
+        $f = Get-TrainFiltreSuisse $lieu "$($j.title)"; if (-not $f.garde) { Add-TrainEcart $f.raison; continue }
         $a = New-TrainAnnonce 'sbb' "$($j.id)" "$($j.title)" 'CFF / SBB' $lieu $d "$($j.links.directlink)"
         if ($f.allemand) { $a.langue = 'Allemand probable (titre en allemand)' }
         $out += $a
@@ -132,7 +134,8 @@ function Get-TrainPage([string]$cle, [string]$url, [string]$employeur) {
     $html = Get-TrainTexte $url; $out = @()
     foreach ($m in [regex]::Matches($html, '(?is)<a\s[^>]*href="([^"]+)"[^>]*>(.*?)</a>')) {
         $txt = ([Net.WebUtility]::HtmlDecode(($m.Groups[2].Value -replace '<[^>]+>', ' ')) -replace '\s+', ' ').Trim()
-        if (-not $txt -or -not (Test-TrainAnnonce $txt) -or (Test-TrainAllemand $txt)) { continue }      # lieu inconnu : un titre allemand est écarté
+        if (-not $txt -or -not (Test-TrainAnnonce $txt)) { continue }
+        if (Test-TrainAllemand $txt) { Add-TrainEcart 'langue'; continue }      # lieu inconnu : un titre allemand est écarté
         $lien = ''; try { $lien = ([uri]::new([uri]$url, [Net.WebUtility]::HtmlDecode($m.Groups[1].Value))).AbsoluteUri } catch {}
         $out += New-TrainAnnonce $cle $lien $txt $employeur 'Suisse' '' $lien
     }
@@ -179,13 +182,15 @@ function New-EmbedTrainAttention([string]$source, [string]$raison) {
 function Send-TrainNotif([string]$salon, $embed) {
     # Vrai si Discord a accepté la carte. Même mécanisme que l'agent de dev (notifier.py, REST direct, sans mention).
     if ($script:TrainNotifStub) { return [bool](& $script:TrainNotifStub $salon $embed) }
-    $tmp = Join-Path $env:TEMP ('jarvis-train-' + [guid]::NewGuid().ToString('N').Substring(0, 8) + '.json')
+    $salon = 'annonces-train'      # toutes les cartes de la veille (annonces, résumé, alertes) vont dans ce salon ; non réglé = repli de notifier.py sur « jarvis »
+    $tmp = Join-Path $env:TEMP ('jarvis-train-' + [guid]::NewGuid().ToString('N').Substring(0, 8) + '.json'); $encPrec = $null
     try {
+        try { $encPrec = [Console]::OutputEncoding; [Console]::OutputEncoding = [Text.Encoding]::UTF8 } catch {}      # notifier.py écrit en UTF-8 : sans cela « envoyé » devient « envoyÚ »
         [IO.File]::WriteAllText($tmp, ($embed | ConvertTo-Json -Depth 6), [Text.UTF8Encoding]::new($false))
         $o = (& python -I (Join-Path $script:RacineReelle 'pont-discord\notifier.py') --racine $script:RacineReelle --salon $salon --embed $tmp 2>&1 | Out-String).Trim()
         Write-Journal -Action 'Veille annonces-train : Discord' -Resultat (Short (Hide-Secrets $o) 120)
         $o -match '^ok'
-    } catch { $false } finally { Remove-Item $tmp -Force -ErrorAction SilentlyContinue }
+    } catch { $false } finally { if ($encPrec) { try { [Console]::OutputEncoding = $encPrec } catch {} }; Remove-Item $tmp -Force -ErrorAction SilentlyContinue }
 }
 
 # ---------- Un passage ----------
@@ -193,7 +198,7 @@ function Invoke-VeilleTrain([datetime]$now = (Get-Date)) {
     # Retourne @{ nouvelles; envoyees; erreurs; resume }. Une source en erreur n'arrête pas les autres.
     $e = Get-TrainEtat; $c = Get-TrainConfig; $jour = $now.ToString('yyyy-MM-dd')
     $e.pid = $PID; $e.dernier_lancement = $now.ToString('o'); Save-TrainEtat $e
-    $trouvees = @(); $erreurs = @(); $muettes = @()
+    $trouvees = @(); $erreurs = @(); $muettes = @(); $script:TrainEcart = @{ lieu = 0; langue = 0 }
     foreach ($s in Get-TrainSources) {
         try {
             $r = & $s.f
@@ -224,7 +229,8 @@ function Invoke-VeilleTrain([datetime]$now = (Get-Date)) {
         if (Send-TrainNotif 'jarvis' (New-EmbedTrainResume $veille $muettes)) { $e.dernier_resume = $jour; $resume = $true }
     }
     $e.dernier_passage = $now.ToString('o'); $e.pid = 0; Save-TrainEtat $e
-    Write-Journal -Action 'Veille annonces-train' -Resultat "$($trouvees.Count) annonce(s) de conduite vue(s), $($nouvelles.Count) nouvelle(s), $envoyees carte(s)$(if ($erreurs.Count) { ', sources en erreur : ' + ($erreurs -join ', ') })"
+    $ecL = [int]$script:TrainEcart.lieu; $ecG = [int]$script:TrainEcart.langue
+    Write-Journal -Action 'Veille annonces-train' -Resultat "$($trouvees.Count + $ecL + $ecG) annonce(s) de conduite vue(s) : $($trouvees.Count) gardée(s), $($ecL + $ecG) écartée(s) par le filtre Suisse romande (lieu $ecL, langue $ecG) ; $($nouvelles.Count) nouvelle(s), $envoyees carte(s)$(if ($erreurs.Count) { ', sources en erreur : ' + ($erreurs -join ', ') })"
     @{ nouvelles = $nouvelles.Count; envoyees = $envoyees; erreurs = $erreurs; resume = $resume }
 }
 

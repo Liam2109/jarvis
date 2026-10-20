@@ -67,6 +67,10 @@ def embed_discord(chemin):
 
 
 def main():
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")      # lu en UTF-8 par Jarvis (sinon « envoyé » devient « envoyÚ »)
+    except Exception:
+        pass
     p = argparse.ArgumentParser()
     p.add_argument("--racine", required=True)
     p.add_argument("--salon", default="systeme")

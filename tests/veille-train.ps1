@@ -201,6 +201,30 @@ Verifier ((Get-Content (Join-Path $Root 'jarvis.ps1') -Raw -Encoding UTF8) -matc
 $pass = Get-Content (Join-Path $Root 'veille-train.ps1') -Raw -Encoding UTF8
 Verifier ($pass -notmatch '(?i)Start-Visage|Parler|Start-Ecoute|Start-Piper|Start-Ollama' -and $src -notmatch '(?i)Parler |Start-Ecoute|Start-Piper|Start-Ollama|Start-Visage') 'compatible serveur léger : aucune voix, aucun micro, aucune fenêtre, aucun Ollama'
 
+# ---------- 10b. Journal du filtre, salon dédié, accent ----------
+Write-Host '10b. Journal du filtre, salon dédié'
+Monde-Normal; Fixer 'veille_train' 'oui'
+Route 'jobfilter\.results\.json' 200 ((SbbJson @('Lokführer:in Kat. A40') 'Zürich').TrimEnd(']') + ',' + (SbbJson @('Conducteur de train TER') 'Lausanne').TrimStart('[').TrimEnd(']') + ',' + (SbbJson @('Quereinstieg Lokführer:in Rangier') 'Fribourg').TrimStart('['))
+$r = Invoke-VeilleTrain $t0
+Verifier ((Journal) -match '5 annonce\(s\) de conduite vue\(s\) : 2 gardée\(s\), 3 écartée\(s\) par le filtre Suisse romande \(lieu 1, langue 2\)') 'journal : 5 vues = 2 gardées + 3 écartées (lieu 1 : Zurich ; langue 2 : Fribourg et page SOB en allemand)'
+$gz = Get-TrainFiltreSuisse 'Zürich' 'Conducteur de train'; $gf = Get-TrainFiltreSuisse 'Fribourg' 'Quereinstieg Lokführer:in'; $gl = Get-TrainFiltreSuisse 'Lausanne' 'Conducteur de train'
+Verifier ($gz.raison -eq 'lieu' -and $gf.raison -eq 'langue' -and $gl.raison -eq '') 'raison de l''écart : lieu, langue, ou vide si gardée'
+$sn = Get-Content (Join-Path $Root 'lib\veille-train.ps1') -Raw -Encoding UTF8
+Verifier ($sn -match "\`$salon = 'annonces-train'" -and $sn -match '\[Console\]::OutputEncoding = \[Text\.Encoding\]::UTF8') 'envoi réel : toujours le salon « annonces-train » (cartes, résumé, alertes) ; sortie de notifier lue en UTF-8'
+Verifier ($vraie.discord_salons.PSObject.Properties.Name -contains 'annonces-train' -and "$($vraie.discord_salons.'annonces-train')" -match '^(\d{5,25})?$') 'config.json : discord_salons."annonces-train" existe (vide ou identifiant numérique)'
+$pl = Get-Content (Join-Path $Root 'pont-discord\pont_logique.py') -Raw -Encoding UTF8
+Verifier ($pl -match 'NOMS_SALONS = \("jarvis", "systeme", "marche", "business"\)' -and $pl -notmatch 'annonces-train') 'le pont n''écoute pas ce salon : seules les 4 clés habituelles reçoivent des ordres'
+$cfgT = '{"discord_salons":{"jarvis":"111111","annonces-train":"222222"}}'; [IO.File]::WriteAllText("$TR\config.json", $cfgT, [Text.UTF8Encoding]::new($false))
+$py = "import sys; sys.path.insert(0, r'$Root\pont-discord'); import notifier; print(notifier.identifiant_salon(r'$TR', 'annonces-train'))"
+$o1 = "$(& python -I -c $py)"
+[IO.File]::WriteAllText("$TR\config.json", '{"discord_salons":{"annonces-train":""}}', [Text.UTF8Encoding]::new($false)); [IO.File]::WriteAllText("$TR\memoire\discord-salons.json", '{"salons":{"jarvis":"111111"}}', [Text.UTF8Encoding]::new($false)); $o2 = "$(& python -I -c $py)"
+Verifier ($o1 -match '222222' -and $o2 -match '111111') 'notifier.py : salon « annonces-train » réglé = ce salon ; non réglé = repli sur « jarvis » (cache du pont)'
+Remove-Item "$TR\config.json", "$TR\memoire\discord-salons.json" -Force
+$ancienEnc = [Console]::OutputEncoding; $ancienJeton = $env:DISCORD_BOT_TOKEN
+try { [Console]::OutputEncoding = [Text.Encoding]::UTF8; $env:DISCORD_BOT_TOKEN = 'jeton-de-test'; $o3 = "$(& python -I (Join-Path $Root 'pont-discord\notifier.py') --racine $TR --salon annonces-train)" } finally { [Console]::OutputEncoding = $ancienEnc; if ($null -ne $ancienJeton) { $env:DISCORD_BOT_TOKEN = $ancienJeton } else { Remove-Item Env:DISCORD_BOT_TOKEN -ErrorAction SilentlyContinue } }
+Verifier ($o3 -match 'rien à envoyer') 'notifier.py écrit en UTF-8 (accents intacts, aucun envoi, aucun réseau)'
+Fixer 'veille_train' 'non'
+
 # ---------- 11. Secrets ----------
 Write-Host '11. Secrets'
 $env:FRANCETRAVAIL_ID = 'PAR_test_0123456789abcdef'; $env:FRANCETRAVAIL_SECRET = $SECRET
