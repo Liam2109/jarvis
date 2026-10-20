@@ -46,12 +46,13 @@ function Add-TrainEcart([string]$raison) { if (-not $script:TrainEcart) { $scrip
 
 # ---------- Réseau poli (bouchon en test) ----------
 function Wait-TrainPoli { if ($script:TrainPauseSec -gt 0) { $r = $script:TrainPauseSec - ((Get-Date) - $script:TrainDernierReq).TotalSeconds; if ($r -gt 0) { Start-Sleep -Milliseconds ([int]($r * 1000)) } }; $script:TrainDernierReq = Get-Date }
-function Invoke-TrainHttp([string]$url, [string]$methode = 'GET', [string]$corps = '', [hashtable]$entetes = @{}) {
+function Invoke-TrainHttp([string]$url, [string]$methode = 'GET', [string]$corps = '', [hashtable]$entetes = @{}, [int]$timeoutSec = 30) {
     # @{ code; texte } ; code 0 = erreur réseau (texte = raison). Jamais d'exception.
+    $script:TrainDernierTimeout = $timeoutSec      # (lu par les tests)
     if ($script:TrainHttpStub) { return (& $script:TrainHttpStub $url $methode $corps $entetes) }
     Wait-TrainPoli
     try {
-        $a = @{ Uri = $url; Method = $methode; UseBasicParsing = $true; TimeoutSec = 30; Headers = (@{ 'User-Agent' = $script:TrainUA; 'Accept-Language' = 'fr,de;q=0.8' } + $entetes) }
+        $a = @{ Uri = $url; Method = $methode; UseBasicParsing = $true; TimeoutSec = $timeoutSec; Headers = (@{ 'User-Agent' = $script:TrainUA; 'Accept-Language' = 'fr,de;q=0.8' } + $entetes) }
         if ($corps) { $a.Body = $corps; $a.ContentType = 'application/x-www-form-urlencoded' }
         $r = Invoke-WebRequest @a
         $ms = New-Object IO.MemoryStream; $r.RawContentStream.CopyTo($ms)

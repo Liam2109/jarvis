@@ -91,10 +91,11 @@ Verifier ($pk.verifier.Length -ge 43 -and $pk.challenge -eq $ch -and $url -match
 
 # ---------- 3b. Métier : seulement conducteur de train / locomotive ----------
 Write-Host '3b. Métier'
-$vrais = 'Conducteur de train (H/F)', 'Conductrice de locomotive', 'Agent de conduite TER', 'Mécanicien de locomotive', 'Mécanicienne de train', 'Lokführer:in Kat. A40', 'Lokführerin 80-100%', 'Triebfahrzeugführer/in', 'Locotrain conducteur de manoeuvre', 'Quereinstieg Lokführer:in', 'Conducteur de ligne', 'Conducteur de manœuvre', 'Mécanicien ferroviaire', 'Conducteur·trice de véhicule moteur cat. B100', 'CONDUCTEUR DE TRAIN TER', 'Conducteur de métro'
-$noirs = 'Chauffeur de bus', 'Chauffeur poids lourd', 'Cariste', 'Agent de nettoyage', 'Mécanicien auto', 'Mécanicien d''atelier', 'Électricien de réseau', 'Informaticien système', 'Vendeur / Vendeuse', 'Contrôleur de train', 'Chef de gare', 'Chauffeur de bus et conducteur de train', 'Lokführer:in und Nettoyage Bahnhof'
+$vrais = 'Conducteur de train (H/F)', 'Conductrice de locomotive', 'Agent de conduite TER', 'Mécanicien de locomotive', 'Mécanicienne de train', 'Lokführer:in Kat. A40', 'Lokführerin 80-100%', 'Triebfahrzeugführer/in', 'Locotrain conducteur de manoeuvre', 'Quereinstieg Lokführer:in', 'Conducteur de ligne', 'Conducteur de manœuvre', 'Conducteur·trice de véhicule moteur cat. B100', 'CONDUCTEUR DE TRAIN TER', 'Conducteur de métro'
+$noirs = 'Chauffeur de bus', 'Chauffeur poids lourd', 'Cariste', 'Agent de nettoyage', 'Mécanicien auto', 'Mécanicien d''atelier', 'Électricien de réseau', 'Informaticien système', 'Vendeur / Vendeuse', 'Contrôleur de train', 'Chef de gare', 'Chauffeur de bus et conducteur de train', 'Lokführer:in und Nettoyage Bahnhof', 'Mécanicien ferroviaire', 'Mécanicienne ferroviaire', 'Agent de maintenance ferroviaire', 'Opérateur ferroviaire', 'Agent de voie', 'Monteur de lignes de contact', 'Monteuse', 'Mechaniker Bahn', 'Gleisbau Fachmann', 'Fahrzeugmechaniker EFZ', 'Conducteur de train et monteur'
 $ambigus = 'Conducteur de travaux', 'Conducteur d''engins', 'Conducteur de bus', 'Conducteur de camion', 'Conducteur (H/F)', 'Conducteur de machines'
 $riens = 'Voir toutes les offres', 'Postuler maintenant', 'Se désabonner', 'Chef de projet'
+Verifier ((Get-MailMetier 'Mécanicien de locomotive') -eq 'garde' -and (Get-MailMetier 'Lokführer:in') -eq 'garde' -and (Get-MailMetier 'Conducteur de train') -eq 'garde' -and (Get-MailMetier 'Mécanicien ferroviaire') -eq 'noire') '« mécanicien de locomotive » reste un conducteur (garde) ; « mécanicien ferroviaire » est exclu (noire)'
 Verifier (@($vrais | Where-Object { (Get-MailMetier $_) -ne 'garde' }).Count -eq 0) "liste blanche : $($vrais.Count) intitulés de conducteur / locomotive / Lokführer reconnus (sans accents, insensible à la casse)"
 Verifier (@($noirs | Where-Object { (Get-MailMetier $_) -ne 'noire' }).Count -eq 0) "liste noire prioritaire : $($noirs.Count) intitulés écartés, même si la liste blanche correspond"
 Verifier (@($ambigus | Where-Object { (Get-MailMetier $_) -ne 'ambigu' }).Count -eq 0) "titres ambigus (conducteur de bus, de camion, de travaux...) : $($ambigus.Count) écartés et comptés"
@@ -156,6 +157,24 @@ Monde-Gmail; $script:NotifOk = $false; $r = Invoke-VeilleMail $t0
 Verifier ($r.envoyees -eq 0 -and @((Get-TrainEtat).vus).Count -eq 0 -and @((Get-MailEtat).messages) -notcontains 'm1') 'Discord indisponible : annonces non marquées vues, message non traité (réessai au passage suivant)'
 $script:NotifOk = $true; $script:Cartes = @(); $r = Invoke-VeilleMail ($t0.AddMinutes(10))
 Verifier ($r.envoyees -eq 5) 'au passage suivant, les 5 cartes partent'
+
+# ---------- 6b. Gmail : délai de 60 s et une nouvelle tentative après 5 s ----------
+Write-Host '6b. Délai et nouvelle tentative'
+$attenteDefaut = $script:MailAttenteRetry; $delaiDefaut = $script:MailDelaiSec; $script:MailAttenteRetry = 0      # (pas d'attente réelle dans le test)
+Verifier ($attenteDefaut -eq 5 -and $delaiDefaut -eq 60) 'réglages : 60 s par appel Gmail, nouvelle tentative après 5 s'
+$stubBase = $script:TrainHttpStub; $script:Pannes = @{}
+$script:TrainHttpStub = { param($url, $m, $corps, $h) $script:Appels += @{ url = $url; m = $m; h = $h; corps = $corps }; foreach ($k in @($script:Pannes.Keys)) { if ($url -match $k -and $script:Pannes[$k] -gt 0) { $script:Pannes[$k]--; return @{ code = 0; texte = 'Le délai de l''opération a expiré.' } } }; foreach ($r in $script:Routes) { if ($url -match $r.re) { return @{ code = $r.code; texte = $r.texte } } }; @{ code = 404; texte = 'introuvable' } }
+Monde-Gmail; $script:Pannes['oauth2'] = 1; $r = Invoke-VeilleMail $t0
+Verifier ($r.lus -eq 4 -and -not $r.erreur -and @($script:Appels | Where-Object { $_.url -match 'oauth2' }).Count -eq 2 -and $script:TrainDernierTimeout -eq 60) 'jeton : le premier appel expire, la nouvelle tentative réussit (2 appels, délai de 60 s), le passage se déroule normalement'
+Monde-Gmail; $script:Pannes['users/me/labels'] = 1; $r = Invoke-VeilleMail $t0
+Verifier ($r.lus -eq 4 -and -not $r.erreur -and @($script:Appels | Where-Object { $_.url -match 'users/me/labels' }).Count -eq 2) 'lecture Gmail : même nouvelle tentative pour un appel GET qui expire'
+Monde-Gmail; $script:Pannes['oauth2'] = 5; $r = Invoke-VeilleMail $t0
+Verifier ($r.erreur -match 'HTTP 0' -and @($script:Appels | Where-Object { $_.url -match 'oauth2' }).Count -eq 2 -and (Get-TrainEtat).pid -eq 0) 'deux délais de suite : erreur claire après 2 appels exactement (pas de boucle), verrou libéré'
+Monde-Gmail; $script:Pannes = @{}; Route 'oauth2\.googleapis\.com/token' 500 'erreur serveur'; $r = Invoke-VeilleMail $t0
+Verifier ($r.erreur -match 'HTTP 500' -and @($script:Appels | Where-Object { $_.url -match 'oauth2' }).Count -eq 1) 'réponse HTTP (500) : aucune nouvelle tentative, seulement quand rien n''a répondu'
+$script:TrainHttpStub = $stubBase; $script:Appels = @(); [void](Invoke-TrainHttp 'https://exemple.test/')
+Verifier ($script:TrainDernierTimeout -eq 30 -and $sm -match 'MailAttenteRetry -gt 0\) \{ Start-Sleep' -and $sm -match '\$false\s+# code d''autorisation') 'les autres sources gardent 30 s ; échange du code d''autorisation (usage unique) jamais rejoué'
+$script:MailAttenteRetry = $attenteDefaut
 
 # ---------- 7. Planification ----------
 Write-Host '7. Planification'

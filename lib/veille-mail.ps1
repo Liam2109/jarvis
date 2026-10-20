@@ -8,6 +8,7 @@
 
 $script:MailProchainTour = [datetime]::MinValue; $script:MailRunnerLance = $false; $script:MailAvertiAutorisation = $false
 $script:MailLibelle = 'annonces-train'
+$script:MailDelaiSec = 60; $script:MailAttenteRetry = 5      # appels Gmail : 60 s ; si le premier expire (aucune réponse), une nouvelle tentative après 5 s
 $script:MailPortee = 'https://www.googleapis.com/auth/gmail.readonly'
 $script:MailExpediteurs = '(^|\.)(jobup\.ch|jobscout24\.ch|sbb\.ch)$'
 # Rouen / Normandie (liste blanche de lieux, comme pour la Suisse romande ; texte normalisé sans accents)
@@ -18,8 +19,8 @@ $script:MailLieuxAffiches = @{ 'geneve' = 'Genève'; 'delemont' = 'Delémont'; '
 
 # ---------- Métier : seulement CONDUCTEUR de train / locomotive (liste blanche sur le titre, liste noire prioritaire, titre ambigu écarté et compté) ----------
 $script:MailEcartMetier = 0
-$script:MailMetierNoire = '\b(chauffeur(?:se)? (?:de )?(?:bus|car|autocar|autobus|poids lourds?|pl)|cariste|nettoyage|nettoyeur|nettoyeuse|mecanicien(?:ne)? auto(?:mobile)?|mecanicien(?:ne)? d atelier|electricien(?:ne)?|informaticien(?:ne)?|vendeur|vendeuse|controleur|controleuse|chef(?:fe)? de gare)\b'
-$script:MailMetierFort = '\bagents? de conduite\b|\bmecanicien(?:ne)?s? (?:de (?:locomotive|train)|ferroviaire)\b|\blokfuhrer(?:in)?\b|\blokfuehrer\b|\btriebfahrzeugfuhrer(?:in)?\b|\btriebfahrzeugfuehrer\b|\blocotrain\b|\bconduct(?:eur|rice)s? de (?:ligne|lignes|manoeuvres?|man uvres?)\b'
+$script:MailMetierNoire = '\b(chauffeur(?:se)? (?:de )?(?:bus|car|autocar|autobus|poids lourds?|pl)|cariste|monteurs?|monteuses?|agents? de voie|agents? de maintenance ferroviaires?|operat(?:eur|rice)s? ferroviaires?|mecanicien(?:ne)?s? ferroviaires?|mechaniker(?:in)? bahn|gleisbau\w*|fahrzeugmechaniker(?:in)?|nettoyage|nettoyeur|nettoyeuse|mecanicien(?:ne)? auto(?:mobile)?|mecanicien(?:ne)? d atelier|electricien(?:ne)?|informaticien(?:ne)?|vendeur|vendeuse|controleur|controleuse|chef(?:fe)? de gare)\b'
+$script:MailMetierFort = '\bagents? de conduite\b|\bmecanicien(?:ne)?s? de (?:locomotive|train)\b|\blokfuhrer(?:in)?\b|\blokfuehrer\b|\btriebfahrzeugfuhrer(?:in)?\b|\btriebfahrzeugfuehrer\b|\blocotrain\b|\bconduct(?:eur|rice)s? de (?:ligne|lignes|manoeuvres?|man uvres?)\b'
 $script:MailMetierContexteRail = '\b(trains?|lignes?|locomotives?|rail|ferroviaire|metros?|rer|tramways?|vehicules? moteurs?|manoeuvres?|man uvres?|cff|sbb|bls|sob|transilien|ter)\b'
 function Get-MailMetier([string]$titre) {
     # 'garde' | 'noire' (liste noire, prioritaire) | 'ambigu' (conducteur sans contexte ferroviaire : bus, camion, travaux...) | 'rien' (pas une offre de conduite).
@@ -77,7 +78,7 @@ function Invoke-GmailAutoriser {
     if (-not $code -or $etatRecu -ne $etat) { Write-Host 'Réponse invalide (code ou état incorrect) : rien n''est enregistré.'; return }
     Add-MailSecret $code
     $e = { param($x) [uri]::EscapeDataString($x) }
-    $r = Invoke-TrainHttp 'https://oauth2.googleapis.com/token' 'POST' ("code=$(& $e $code)&client_id=$(& $e $id)&client_secret=$(& $e $sec)&redirect_uri=$(& $e $redirect)&grant_type=authorization_code&code_verifier=$(& $e $pk.verifier)")
+    $r = Invoke-GmailHttp 'https://oauth2.googleapis.com/token' 'POST' ("code=$(& $e $code)&client_id=$(& $e $id)&client_secret=$(& $e $sec)&redirect_uri=$(& $e $redirect)&grant_type=authorization_code&code_verifier=$(& $e $pk.verifier)") @{} $false      # code d'autorisation à usage unique : jamais de réessai
     if ($r.code -ne 200) { Write-Host "Google a refusé l'échange (HTTP $($r.code)) : $(Short (Hide-Secrets $r.texte) 160)"; return }
     $o = $r.texte | ConvertFrom-Json; $portees = @("$($o.scope)" -split '\s+')
     if (-not $o.refresh_token) { Write-Host 'Google n''a pas donné de jeton durable : relancez la commande (consentement demandé à nouveau).'; return }
@@ -89,18 +90,24 @@ function Invoke-GmailAutoriser {
 }
 
 # ---------- Gmail : lecture seule (GET uniquement ; le seul POST est l'échange de jeton) ----------
+function Invoke-GmailHttp([string]$url, [string]$methode = 'GET', [string]$corps = '', [hashtable]$entetes = @{}, [bool]$reessai = $true) {
+    # Un seul réessai, seulement si le premier appel n'a reçu AUCUNE réponse (code 0 : délai dépassé, réseau) ; jamais pour une réponse HTTP (401, 403, 404, 500...).
+    $r = Invoke-TrainHttp $url $methode $corps $entetes $script:MailDelaiSec
+    if ($reessai -and $r.code -eq 0) { if ($script:MailAttenteRetry -gt 0) { Start-Sleep -Seconds $script:MailAttenteRetry }; $r = Invoke-TrainHttp $url $methode $corps $entetes $script:MailDelaiSec }
+    $r
+}
 function Get-GmailAccessToken {
     $id = Get-EnvPropre 'GMAIL_CLIENT_ID'; $sec = Get-EnvPropre 'GMAIL_CLIENT_SECRET'; $rt = Get-GmailJeton
     if (-not $id -or -not $sec -or -not $rt) { throw 'Gmail non autorisé : renseignez GMAIL_CLIENT_ID / GMAIL_CLIENT_SECRET dans .env puis lancez jarvis.ps1 gmail-autoriser' }
     Add-MailSecret $id; Add-MailSecret $sec; Add-MailSecret $rt
     $e = { param($x) [uri]::EscapeDataString($x) }
-    $r = Invoke-TrainHttp 'https://oauth2.googleapis.com/token' 'POST' ("client_id=$(& $e $id)&client_secret=$(& $e $sec)&refresh_token=$(& $e $rt)&grant_type=refresh_token")
+    $r = Invoke-GmailHttp 'https://oauth2.googleapis.com/token' 'POST' ("client_id=$(& $e $id)&client_secret=$(& $e $sec)&refresh_token=$(& $e $rt)&grant_type=refresh_token")
     if ($r.code -ne 200) { throw "accès Gmail refusé (HTTP $($r.code)) : relancez jarvis.ps1 gmail-autoriser" }
     $tok = "$(($r.texte | ConvertFrom-Json).access_token)"; if (-not $tok) { throw 'accès Gmail : réponse vide' }
     Add-MailSecret $tok; $tok
 }
 function Invoke-GmailGet([string]$chemin, [string]$tok) {
-    $r = Invoke-TrainHttp ("https://gmail.googleapis.com/gmail/v1/users/me/$chemin") 'GET' '' @{ Authorization = "Bearer $tok"; Accept = 'application/json' }
+    $r = Invoke-GmailHttp ("https://gmail.googleapis.com/gmail/v1/users/me/$chemin") 'GET' '' @{ Authorization = "Bearer $tok"; Accept = 'application/json' }
     if ($r.code -ne 200) { throw "Gmail HTTP $($r.code) $(Short (Hide-Secrets $r.texte) 100)" }
     $r.texte | ConvertFrom-Json
 }
