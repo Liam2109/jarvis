@@ -163,16 +163,56 @@ function Save-TrainEtat($e) {
 }
 
 # ---------- Cartes Discord (ton « info » : bleu ; « attention » : orange) ----------
+# ---------- Traduction du titre allemand (Ollama local déjà lancé ; jamais Claude, Ollama n'est jamais démarré ici) ----------
+function Get-TrainOllama {
+    $o = $null; if ($Config -and $Config.PSObject.Properties['ollama']) { $o = $Config.ollama }
+    $url = $(if ($o -and $o.url) { "$($o.url)".TrimEnd('/') } else { 'http://127.0.0.1:11434' })
+    if ($url -notmatch '^http://(127\.0\.0\.1|localhost):\d{2,5}$') { return $null }      # service local seulement
+    $keep = $(if ($o -and $o.PSObject.Properties['keep_alive'] -and "$($o.keep_alive)" -match '^\d+[smhd]$') { "$($o.keep_alive)" } elseif ($Config -and $Config.PSObject.Properties['ollama_toujours_chaud'] -and $Config.ollama_toujours_chaud -eq $true) { '24h' } else { '5m' })      # ne raccourcit pas le « chaud » du PC principal
+    @{ url = $url; modele = $(if ($o -and $o.modele) { "$($o.modele)" } else { 'qwen2.5:7b' }); keep = $keep }
+}
+function Invoke-TrainTraduction([string]$titre) {
+    # Titre traduit en français, ou '' si Ollama est absent, trop lent ou répond n'importe quoi : la carte garde alors le titre original, sans erreur.
+    if ($script:TrainTraductionStub) { return [string](& $script:TrainTraductionStub $titre) }
+    if ($script:TrainOllamaHS) { return '' }
+    $c = Get-TrainOllama; if (-not $c) { return '' }
+    try {
+        $corps = @{ model = $c.modele; stream = $false; keep_alive = $c.keep; options = @{ temperature = 0; num_predict = 60 }; messages = @(
+            @{ role = 'system'; content = "Tu traduis des titres d'offres d'emploi ferroviaires de l'allemand vers le français. Réponds uniquement par la traduction, courte, sur une seule ligne, sans guillemets ni explication. Ne traduis pas les noms de lieux ni d'entreprises." },
+            @{ role = 'user'; content = $titre }) } | ConvertTo-Json -Depth 6 -Compress
+        $w = Invoke-WebRequest -Uri "$($c.url)/api/chat" -Method Post -Body ([Text.Encoding]::UTF8.GetBytes($corps)) -ContentType 'application/json; charset=utf-8' -TimeoutSec 60 -UseBasicParsing
+        $ms = New-Object IO.MemoryStream; $w.RawContentStream.CopyTo($ms); $r = [Text.Encoding]::UTF8.GetString($ms.ToArray()) | ConvertFrom-Json
+        $t = (("$($r.message.content)" -split "`r?`n" | Where-Object { $_.Trim() } | Select-Object -First 1) -replace '^[\s"«»''“”]+|[\s"«»''“”]+$', '').Trim()
+        if ($t.Length -ge 3 -and $t.Length -le 160 -and $t -ne $titre) { return $t }
+        ''
+    } catch { $script:TrainOllamaHS = $true; '' }      # Ollama éteint ou trop lent : plus d'essai pendant ce passage
+}
+function Get-TrainTraduction($a) {
+    # Seulement pour un titre allemand ; résultat gardé dans memoire\traductions-train.json (300 titres au plus) pour ne jamais retraduire la même annonce.
+    if (-not (Test-TrainAllemand "$($a.titre)")) { return '' }
+    $h = [ordered]@{}; $cache = Read-JsonMemoire 'traductions-train.json'
+    if ($cache) { foreach ($p in $cache.PSObject.Properties) { $h[$p.Name] = $p.Value } }
+    $k = "$($a.id)"
+    if ($h.Contains($k) -and "$($h[$k].titre)" -eq "$($a.titre)" -and "$($h[$k].fr)") { return "$($h[$k].fr)" }
+    $fr = Invoke-TrainTraduction "$($a.titre)"; if (-not $fr) { return '' }
+    $h[$k] = [ordered]@{ titre = "$($a.titre)"; fr = $fr }
+    $cles = @($h.Keys); if ($cles.Count -gt 300) { foreach ($x in $cles[0..($cles.Count - 301)]) { $h.Remove($x) } }
+    Save-JsonMemoire 'traductions-train.json' $h
+    $fr
+}
 function New-EmbedTrainAnnonce($a) {
     $champs = @(@{ nom = 'Employeur'; valeur = $a.employeur; inline = $true }, @{ nom = 'Lieu'; valeur = $a.lieu; inline = $true }, @{ nom = 'Type'; valeur = $a.type; inline = $true },
         @{ nom = $(if ($a.date) { 'Date' } else { 'Repérée le' }); valeur = $(if ($a.date) { ([datetime]$a.date).ToString('dd/MM/yyyy') } else { (Get-Date).ToString('dd/MM/yyyy') }); inline = $true })
     if ($a.langue) { $champs += @{ nom = 'Langue'; valeur = $a.langue; inline = $true } }
     if ($a.lien) { $champs += @{ nom = 'Lien'; valeur = $a.lien; inline = $false } }
-    New-EmbedDiscord $a.titre "Nouvelle annonce de conduite de train ($($a.type.ToLower()))." $script:CouleurBleue $champs (Get-PiedDiscord 'annonces-train')
+    $fr = $(if ($a -is [hashtable]) { $a['titre_fr'] } else { $a.titre_fr })
+    $desc = "Nouvelle annonce de conduite de train ($($a.type.ToLower()))."
+    if ($fr) { $desc += "`n-# Titre original : $($a.titre) · traduit automatiquement" }      # petit texte Discord sous le titre traduit
+    New-EmbedDiscord $(if ($fr) { $fr } else { $a.titre }) $desc $script:CouleurBleue $champs (Get-PiedDiscord 'annonces-train')
 }
 function New-EmbedTrainResume($nouvelles, $sourcesMuettes = @()) {
     $n = @($nouvelles); $desc = $(if ($n.Count) { "$($n.Count) nouvelle$(if ($n.Count -gt 1) { 's' }) annonce$(if ($n.Count -gt 1) { 's' }) depuis hier." } else { 'Aucune nouvelle annonce depuis hier.' })
-    $champs = @(); if ($n.Count) { $champs += @{ nom = 'Annonces'; valeur = (@($n | Select-Object -First 10 | ForEach-Object { "• $($_.titre) · $($_.employeur) · $($_.lieu)" }) -join "`n"); inline = $false } }
+    $champs = @(); if ($n.Count) { $champs += @{ nom = 'Annonces'; valeur = (@($n | Select-Object -First 10 | ForEach-Object { "• $(if ($_.titre_fr) { $_.titre_fr } else { $_.titre }) · $($_.employeur) · $($_.lieu)" }) -join "`n"); inline = $false } }
     if (@($sourcesMuettes).Count) { $champs += @{ nom = 'Sources en panne'; valeur = (@($sourcesMuettes) -join ', '); inline = $false } }
     New-EmbedDiscord 'Annonces conducteur de train · résumé du matin' $desc $script:CouleurBleue $champs (Get-PiedDiscord 'annonces-train')
 }
@@ -198,7 +238,7 @@ function Invoke-VeilleTrain([datetime]$now = (Get-Date)) {
     # Retourne @{ nouvelles; envoyees; erreurs; resume }. Une source en erreur n'arrête pas les autres.
     $e = Get-TrainEtat; $c = Get-TrainConfig; $jour = $now.ToString('yyyy-MM-dd')
     $e.pid = $PID; $e.dernier_lancement = $now.ToString('o'); Save-TrainEtat $e
-    $trouvees = @(); $erreurs = @(); $muettes = @(); $script:TrainEcart = @{ lieu = 0; langue = 0 }
+    $trouvees = @(); $erreurs = @(); $muettes = @(); $script:TrainEcart = @{ lieu = 0; langue = 0 }; $script:TrainOllamaHS = $false
     foreach ($s in Get-TrainSources) {
         try {
             $r = & $s.f
@@ -215,6 +255,7 @@ function Invoke-VeilleTrain([datetime]$now = (Get-Date)) {
     foreach ($a in $nouvelles) {
         $n++
         if ($n -gt $script:TrainMaxCartes) { break }
+        try { $fr = Get-TrainTraduction $a; if ($fr) { $a.titre_fr = $fr } } catch {}      # jamais d'erreur : sans traduction, titre original
         if (Send-TrainNotif 'jarvis' (New-EmbedTrainAnnonce $a)) { $envoyees++; $e.vus += $a.id; $a.vu_le = $now.ToString('o'); $e.nouvelles += $a }
     }
     $reste = @($nouvelles | Select-Object -Skip $script:TrainMaxCartes)

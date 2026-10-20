@@ -21,6 +21,7 @@ $hashConfig = (Get-FileHash (Join-Path $Root 'config.json')).Hash
 $script:Appels = @(); $script:Cartes = @(); $script:NotifOk = $true; $script:Routes = @()
 $script:TrainPauseSec = 0
 $script:TrainHttpStub = { param($url, $m, $corps, $h) $script:Appels += @{ url = $url; m = $m; h = $h; corps = $corps }; foreach ($r in $script:Routes) { if ($url -match $r.re) { return @{ code = $r.code; texte = $r.texte } } }; @{ code = 404; texte = 'introuvable' } }
+$script:TrainTraductionStub = { param($t) '' }      # jamais le vrai Ollama dans les tests (rend '' = pas de traduction) ; la section 10c le remplace
 $script:TrainNotifStub = { param($salon, $embed) $script:Cartes += @{ salon = $salon; e = $embed }; $script:NotifOk }
 function Route([string]$re, [int]$code, [string]$texte) { $script:Routes = @(@{ re = $re; code = $code; texte = $texte }) + @($script:Routes) }
 function Reset-Mondes { $script:Appels = @(); $script:Cartes = @(); $script:Routes = @(); $script:NotifOk = $true; $script:TrainRobots = @{}; Remove-Item (Join-Path $TR 'memoire\veille-train.json') -Force -ErrorAction SilentlyContinue }
@@ -224,6 +225,33 @@ $ancienEnc = [Console]::OutputEncoding; $ancienJeton = $env:DISCORD_BOT_TOKEN
 try { [Console]::OutputEncoding = [Text.Encoding]::UTF8; $env:DISCORD_BOT_TOKEN = 'jeton-de-test'; $o3 = "$(& python -I (Join-Path $Root 'pont-discord\notifier.py') --racine $TR --salon annonces-train)" } finally { [Console]::OutputEncoding = $ancienEnc; if ($null -ne $ancienJeton) { $env:DISCORD_BOT_TOKEN = $ancienJeton } else { Remove-Item Env:DISCORD_BOT_TOKEN -ErrorAction SilentlyContinue } }
 Verifier ($o3 -match 'rien à envoyer') 'notifier.py écrit en UTF-8 (accents intacts, aucun envoi, aucun réseau)'
 Fixer 'veille_train' 'non'
+
+# ---------- 10c. Traduction automatique des titres allemands (Ollama simulé) ----------
+Write-Host '10c. Traduction du titre allemand'
+$script:Traduits = @(); $script:TrainOllamaHS = $false
+$script:TrainTraductionStub = { param($t) $script:Traduits += $t; 'Conducteur de locomotive, reconversion' }
+Reset-Mondes; Remove-Item (Join-Path $TR 'memoire\traductions-train.json') -Force -ErrorAction SilentlyContinue
+$aDe = New-TrainAnnonce 'sbb' '900' 'Quereinstieg Lokführer:in Personenverkehr' 'CFF / SBB' 'Lausanne' '2026-10-14' 'https://jobs.sbb.ch/x'; $aDe.langue = 'Allemand probable (titre en allemand)'
+$aFr = New-TrainAnnonce 'sbb' '901' 'Conducteur de train TER' 'CFF / SBB' 'Lausanne' '2026-10-14' 'https://jobs.sbb.ch/y'
+$fr = Get-TrainTraduction $aDe
+Verifier ($fr -eq 'Conducteur de locomotive, reconversion' -and $script:Traduits.Count -eq 1 -and $script:Traduits[0] -eq 'Quereinstieg Lokführer:in Personenverkehr') 'titre allemand : traduit, seul le titre est envoyé au modèle (ni lien, ni lieu)'
+$aDe.titre_fr = $fr; $emb = New-EmbedTrainAnnonce $aDe
+$nomsC = @($emb.champs | ForEach-Object { $_.nom })
+Verifier ($emb.titre -eq 'Conducteur de locomotive, reconversion' -and $emb.description -match '-# Titre original : Quereinstieg Lokführer:in Personenverkehr' -and $emb.description -match 'traduit automatiquement' -and $nomsC -contains 'Langue' -and (@($emb.champs | Where-Object { $_.nom -eq 'Lien' })[0].valeur) -eq 'https://jobs.sbb.ch/x') 'carte : titre traduit en premier, original en petit « traduit automatiquement », champ Langue et lien conservés'
+$fr2 = Get-TrainTraduction $aDe
+Verifier ($fr2 -eq $fr -and $script:Traduits.Count -eq 1 -and (Test-Path (Join-Path $TR 'memoire\traductions-train.json'))) 'cache memoire\traductions-train.json : la même annonce n''est pas retraduite'
+$script:Traduits = @(); $frF = Get-TrainTraduction $aFr; $embF = New-EmbedTrainAnnonce $aFr
+Verifier (-not $frF -and $script:Traduits.Count -eq 0 -and $embF.titre -eq 'Conducteur de train TER' -and $embF.description -notmatch 'traduit') 'titre français : inchangé, aucun appel au modèle, aucune mention'
+$script:TrainTraductionStub = $null; $ancienOllama = $Config.ollama; Fixer 'ollama' ([pscustomobject]@{ url = 'http://127.0.0.1:59999'; modele = 'qwen2.5:7b' }); $script:TrainOllamaHS = $false
+$aDe2 = New-TrainAnnonce 'sbb' '902' 'Lokführer:in Kat. B100' 'CFF / SBB' 'Lausanne' '2026-10-14' ''
+$sw = [Diagnostics.Stopwatch]::StartNew(); $frX = Get-TrainTraduction $aDe2; $ms = $sw.ElapsedMilliseconds
+Verifier ($frX -eq '' -and $script:TrainOllamaHS -and $ms -lt 15000) 'Ollama absent : pas de traduction, pas d''exception, plus d''essai pendant le passage'
+Monde-Normal; Fixer 'veille_train' 'oui'; Route 'jobfilter\.results\.json' 200 (SbbJson @('Lokführer:in Kat. A40') 'Genève')
+$script:Cartes = @(); $r = Invoke-VeilleTrain $t0
+$cd = @($script:Cartes | Where-Object { $_.salon -eq 'jarvis' -and $_.e.titre -match 'A40' })
+Verifier ($r.envoyees -ge 1 -and $cd.Count -eq 1 -and $cd[0].e.description -notmatch 'traduit' -and (Journal) -notmatch 'Veille annonces-train : erreur') 'passage complet sans Ollama : la carte part avec le titre original, aucune erreur'
+Fixer 'ollama' $ancienOllama; Fixer 'veille_train' 'non'; $script:TrainTraductionStub = { param($t) '' }
+Verifier ($sn -notmatch '(?i)Invoke-Claude|claude -p' -and $sn -notmatch 'Start-Ollama|Initialize-Ollama') 'traduction : aucun appel à Claude, Ollama jamais démarré par la veille'
 
 # ---------- 11. Secrets ----------
 Write-Host '11. Secrets'
