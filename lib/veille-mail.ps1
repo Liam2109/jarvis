@@ -1,4 +1,4 @@
-﻿# Veille « annonces-train » par E-MAIL : lit les e-mails d'alerte d'emploi (Jobup, JobScout24, CFF / SBB) rangés par vous dans le libellé Gmail « annonces-train »,
+﻿# Veille « annonces-train » par E-MAIL : lit les e-mails d'alerte d'emploi (Jobup, JobScout24, CFF / SBB, Indeed, SNCF, France Travail) rangés par vous dans le libellé Gmail « annonces-train »,
 # en extrait titre, employeur, lieu et lien, applique le même filtre (Suisse romande et Suisse alémanique proche ; offres en allemand gardées et traduites), la même traduction et la même absence de doublons que la veille horaire, et poste les cartes dans #annonces-train.
 # DÉSACTIVÉE par défaut (veille_mail = "non"). Un passage toutes les 10 minutes (veille_mail_minutes, 5 au moins), dans le processus séparé veille-train.ps1 -Mail.
 # SÉCURITÉ : LECTURE SEULE (portée OAuth gmail.readonly : aucun envoi, aucune modification, aucune suppression possible) ; seul le libellé annonces-train est lu ; seuls les expéditeurs autorisés ET authentifiés (DMARC / DKIM / SPF) comptent.
@@ -11,7 +11,7 @@ $script:MailLibelle = 'annonces-train'
 $script:MailFaux = $false; $script:MailTrace = $null; $script:MailTraceId = @{}      # commande veille-mail-test : faux Gmail, trace des décisions (null = désactivée)
 $script:MailDelaiSec = 60; $script:MailAttenteRetry = 5      # appels Gmail : 60 s ; si le premier expire (aucune réponse), une nouvelle tentative après 5 s
 $script:MailPortee = 'https://www.googleapis.com/auth/gmail.readonly'
-$script:MailExpediteurs = '(^|\.)(jobup\.ch|jobscout24\.ch|sbb\.ch)$'
+$script:MailExpediteurs = '(^|\.)(jobup\.ch|jobscout24\.ch|sbb\.ch|indeed\.com|sncf\.fr|sncf\.com|francetravail\.fr)$'
 # Rouen / Normandie (liste blanche de lieux, comme pour la Suisse romande ; texte normalisé sans accents)
 $script:TrainNormand = '\b(rouen|normandie|le havre|caen|cherbourg|dieppe|evreux|elbeuf|sotteville|quevilly|mont saint aignan|barentin|yvetot|lisieux|oissel|montivilliers|fecamp|bernay|vernon|louviers|pont audemer|saint etienne du rouvray|darnetal|gisors|serquigny|alencon|saint lo|granville|avranches|coutances|flers|argentan|honfleur|deauville|bolbec|lillebonne|gonfreville|harfleur)\b'
 
@@ -150,10 +150,10 @@ function Test-MailExpediteur([string]$from, [string]$auth) {
     $false
 }
 function Get-MailEmployeur([string]$d) {
-    if ($d -match 'jobup') { return 'Jobup (alerte e-mail)' }; if ($d -match 'jobscout24') { return 'JobScout24 (alerte e-mail)' }; if ($d -match 'sbb\.ch') { return 'CFF / SBB (alerte e-mail)' }
+    if ($d -match 'jobup') { return 'Jobup (alerte e-mail)' }; if ($d -match 'jobscout24') { return 'JobScout24 (alerte e-mail)' }; if ($d -match 'sbb\.ch') { return 'CFF / SBB (alerte e-mail)' }; if ($d -match 'indeed') { return 'Indeed (alerte e-mail)' }; if ($d -match 'sncf') { return 'SNCF (alerte e-mail)' }; if ($d -match 'francetravail') { return 'France Travail (alerte e-mail)' }
     'Alerte e-mail'
 }
-$script:MailEmployeursConnus = [ordered]@{ 'cff|sbb|ffs' = 'CFF / SBB'; 'bls' = 'BLS'; 'sob' = 'SOB'; 'thurbo' = 'Thurbo'; 'tpf' = 'TPF'; 'travys' = 'TRAVYS'; 'transn' = 'transN'; 'mbc' = 'MBC'; 'rbs' = 'RBS'; 'zentralbahn' = 'Zentralbahn'; 'aare seeland mobil|asm' = 'ASM'; 'blt' = 'BLT'; 'tpg' = 'TPG'; 'tl' = 'TL'; 'chemins de fer du jura|cj' = 'Chemins de fer du Jura'; 'mob' = 'MOB'; 'bob' = 'BOB'; 'matterhorn gotthard' = 'Matterhorn Gotthard Bahn'; 'rhaetische|rhb' = 'RhB' }
+$script:MailEmployeursConnus = [ordered]@{ 'cff|sbb|ffs' = 'CFF / SBB'; 'sncf' = 'SNCF'; 'ratp' = 'RATP'; 'transilien' = 'Transilien'; 'bls' = 'BLS'; 'sob' = 'SOB'; 'thurbo' = 'Thurbo'; 'tpf' = 'TPF'; 'travys' = 'TRAVYS'; 'transn' = 'transN'; 'mbc' = 'MBC'; 'rbs' = 'RBS'; 'zentralbahn' = 'Zentralbahn'; 'aare seeland mobil|asm' = 'ASM'; 'blt' = 'BLT'; 'tpg' = 'TPG'; 'tl' = 'TL'; 'chemins de fer du jura|cj' = 'Chemins de fer du Jura'; 'mob' = 'MOB'; 'bob' = 'BOB'; 'matterhorn gotthard' = 'Matterhorn Gotthard Bahn'; 'rhaetische|rhb' = 'RhB' }
 function Get-MailEmployeurTexte([string]$texte, [string]$defaut) {
     # Employeur lu dans le texte de l'offre (compagnies ferroviaires connues) ; sinon l'étiquette de l'expéditeur.
     $n = ConvertTo-TrainNorm $texte; foreach ($k in $script:MailEmployeursConnus.Keys) { if ($n -match ('\b(' + $k + ')\b')) { return $script:MailEmployeursConnus[$k] } }

@@ -66,10 +66,11 @@ Fixer 'veille_mail_minutes' '1'; Verifier ((Get-MailConfig).minutes -eq 5) 'inte
 # ---------- 2. Expéditeurs autorisés et authentifiés ----------
 Write-Host '2. Expéditeurs'
 Verifier ((Test-MailExpediteur 'Jobup <a@jobup.ch>' $AUTH_OK) -and (Test-MailExpediteur 'x@jobup.ch' 'mx; dkim=pass header.d=jobup.ch') -and (Test-MailExpediteur 'JobScout24 <a@mail.jobscout24.ch>' 'mx; dkim=pass header.d=jobscout24.ch') -and (Test-MailExpediteur 'CFF <noreply@sbb.ch>' 'mx; spf=pass smtp.mailfrom=bounce.sbb.ch')) 'Jobup, JobScout24, CFF / SBB : acceptés quand l''authentification réussit pour ce domaine'
-Verifier (-not (Test-MailExpediteur 'Indeed <alert@indeed.com>' 'mx; dkim=pass header.d=indeed.com; dmarc=pass header.from=indeed.com') -and -not (Test-MailExpediteur 'SNCF <x@sncf.fr>' 'mx; dmarc=pass header.from=sncf.fr') -and -not (Test-MailExpediteur 'noreply@francetravail.fr' 'mx; dmarc=pass header.from=francetravail.fr')) 'Indeed, SNCF, France Travail : refusés (liste blanche = jobup.ch, jobscout24.ch, sbb.ch)'
+Verifier ((Test-MailExpediteur 'Indeed <alert@indeed.com>' 'mx; dkim=pass header.d=indeed.com; dmarc=pass header.from=indeed.com') -and (Test-MailExpediteur 'Indeed Suisse <alert@ch.indeed.com>' 'mx; dkim=pass header.d=indeed.com') -and (Test-MailExpediteur 'Indeed France <alert@fr.indeed.com>' 'mx; spf=pass smtp.mailfrom=bounce.indeed.com') -and (Test-MailExpediteur 'SNCF <ne-pas-repondre@sncf.fr>' 'mx; dmarc=pass header.from=sncf.fr') -and (Test-MailExpediteur 'SNCF <x@emploi.sncf.com>' 'mx; dkim=pass header.d=sncf.com') -and (Test-MailExpediteur 'France Travail <ne-pas-repondre@francetravail.fr>' 'mx; dmarc=pass header.from=francetravail.fr')) 'Indeed (com, ch., fr.), SNCF (sncf.fr, sncf.com), France Travail : acceptés quand l''authentification réussit'
+Verifier (-not (Test-MailExpediteur 'Indeed <alert@indeed.com>' 'mx; dkim=fail header.d=indeed.com; spf=none') -and -not (Test-MailExpediteur 'Indeed <alert@indeed.com>' 'mx; dmarc=pass header.from=evil.example') -and -not (Test-MailExpediteur 'x@indeed.com.evil.example' 'mx; dmarc=pass header.from=indeed.com.evil.example') -and -not (Test-MailExpediteur 'x@francetravail.fr.evil.example' 'mx; dkim=pass header.d=francetravail.fr.evil.example') -and -not (Test-MailExpediteur 'x@sncf.fr' 'mx; dkim=pass header.d=sendgrid.net') -and -not (Test-MailExpediteur 'x@indeed.fr' 'mx; dmarc=pass header.from=indeed.fr')) 'Indeed / SNCF / France Travail : toujours refusés sans authentification valable pour CE domaine, avec un domaine imitateur, ou hors liste (indeed.fr)'
 Verifier (-not (Test-MailExpediteur '"alerte@jobup.ch" <evil@evil.example>' 'mx; dmarc=pass header.from=evil.example') -and (Get-MailDomaine '"alerte@jobup.ch" <evil@evil.example>') -eq 'evil.example') 'faux nom affiché « alerte@jobup.ch » : refusé (c''est l''adresse réelle qui compte)'
 Verifier (-not (Test-MailExpediteur 'Indeed <alert@indeed.com>' 'mx; dkim=fail header.d=indeed.com; spf=none') -and -not (Test-MailExpediteur 'x@jobup.ch' 'mx; dkim=pass header.d=sendgrid.net') -and -not (Test-MailExpediteur 'x@jobup.ch' '')) 'non authentifié, signé par un autre domaine, ou sans résultat : refusé'
-Verifier (-not (Test-MailExpediteur 'x@sncf-evil.com' 'mx; dmarc=pass header.from=sncf-evil.com') -and -not (Test-MailExpediteur 'x@gmail.com' 'mx; dmarc=pass header.from=gmail.com')) 'domaine hors liste (sncf-evil.com, gmail.com) : refusé'
+Verifier (-not (Test-MailExpediteur 'x@sncf-evil.com' 'mx; dmarc=pass header.from=sncf-evil.com') -and -not (Test-MailExpediteur 'x@gmail.com' 'mx; dmarc=pass header.from=gmail.com') -and -not (Test-MailExpediteur 'x@ratp.fr' 'mx; dmarc=pass header.from=ratp.fr')) 'domaine hors liste (sncf-evil.com, gmail.com, ratp.fr) : refusé'
 
 # ---------- 3. Extraction et filtre ----------
 Write-Host '3. Extraction et filtre'
@@ -253,6 +254,34 @@ Verifier ($res8.carteSimulees -eq 0 -and ([regex]::Matches($txt8, 'déjà vue : 
 $js = Get-Content (Join-Path $Root 'jarvis.ps1') -Raw -Encoding UTF8
 Verifier ($js -match "'veille-mail-test'" -and $js -match 'Invoke-VeilleMailTest' -and (Get-Content (Join-Path $Root 'README.md') -Raw -Encoding UTF8) -match 'veille-mail-test') 'jarvis.ps1 offre la commande veille-mail-test ; le README la décrit'
 Fixer 'veille_mail' 'non'
+# ---------- 7c. Indeed France (Rouen), Indeed Suisse, SNCF, France Travail ----------
+Write-Host '7c. Indeed, SNCF, France Travail'
+$AUTH_IND = 'mx.google.com; dkim=pass header.i=@indeed.com header.s=s1; spf=pass smtp.mailfrom=indeed.com; dmarc=pass (p=REJECT) header.from=indeed.com'
+$HTML_IFR = '<html><body><a href="https://fr.indeed.com/rc/clk?jk=aaa111">Conducteur de train H/F</a><div>SNCF Voyageurs</div><div>Rouen (76)</div>' +
+    '<a href="https://fr.indeed.com/rc/clk?jk=aaa222">Conducteur de ligne</a><div>RATP</div><div>Paris (75)</div>' +
+    '<a href="https://fr.indeed.com/rc/clk?jk=aaa333">Chauffeur poids lourd</a><div>Transports Dupont</div><div>Rouen (76)</div></body></html>'
+$HTML_ICH = '<html><body><a href="https://ch.indeed.com/rc/clk?jk=bbb111">Conducteur de locomotive (H/F)</a><div>CFF SA</div><div>Lausanne VD</div>' +
+    '<a href="https://ch.indeed.com/rc/clk?jk=bbb222">Lokf&uuml;hrer/in</a><div>SBB AG</div><div>Basel BS</div>' +
+    '<a href="https://ch.indeed.com/rc/clk?jk=bbb333">Lokf&uuml;hrer/in</a><div>SBB AG</div><div>Z&uuml;rich ZH</div></body></html>'
+$HTML_SNCF = '<html><body><a href="https://emploi.sncf.com/offre/9">Conducteur de train TER (H/F)</a><span>Caen (14)</span></body></html>'
+$HTML_FT = '<html><body><a href="https://candidat.francetravail.fr/offres/recherche/detail/1">Agent de conduite</a><span>Le Havre - 76</span></body></html>'
+$script:TrainEcart = @{ lieu = 0; langue = 0 }; $script:MailEcartMetier = 0
+$ifr = @(Get-MailAnnonces $HTML_IFR 'indeed.com' '2026-10-20')
+Verifier ($ifr.Count -eq 1 -and $ifr[0].lieu -eq 'Rouen' -and $ifr[0].employeur -eq 'SNCF' -and $ifr[0].lien -eq 'https://fr.indeed.com/rc/clk?jk=aaa111' -and $script:TrainEcart.lieu -eq 1 -and $script:MailEcartMetier -eq 1) 'Indeed France : « Conducteur de train » à Rouen GARDÉ (employeur SNCF) ; Paris écarté (lieu) ; Chauffeur poids lourd écarté (métier)'
+$script:TrainEcart = @{ lieu = 0; langue = 0 }; $script:MailEcartMetier = 0
+$ich = @(Get-MailAnnonces $HTML_ICH 'indeed.com' '2026-10-20')
+Verifier ($ich.Count -eq 2 -and ($ich | Where-Object { $_.lieu -eq 'Lausanne' -and $_.employeur -eq 'CFF / SBB' }) -and ($ich | Where-Object { $_.lieu -eq 'Basel' -and $_.langue -match 'Allemand' }) -and $script:TrainEcart.lieu -eq 1) 'Indeed Suisse : Lausanne (CFF) et Bâle (allemand) GARDÉS ; Zurich écarté (lieu)'
+Verifier (@(Get-MailAnnonces $HTML_SNCF 'sncf.fr' '').Count -eq 1 -and (@(Get-MailAnnonces $HTML_SNCF 'sncf.fr' ''))[0].lieu -eq 'Caen' -and @(Get-MailAnnonces $HTML_FT 'francetravail.fr' '').Count -eq 1 -and (@(Get-MailAnnonces $HTML_FT 'francetravail.fr' ''))[0].lieu -eq 'Le Havre') 'SNCF (Caen) et France Travail (Le Havre) : Normandie gardée'
+Monde-Gmail; $script:Cartes = @()
+Route 'users/me/messages\?labelIds' 200 '{"messages":[{"id":"i1"},{"id":"i2"},{"id":"i3"},{"id":"i4"},{"id":"i5"}]}'
+Route 'messages/i1\?' 200 (Msg 'i1' 'Indeed France <alert@fr.indeed.com>' $AUTH_IND $HTML_IFR)
+Route 'messages/i2\?' 200 (Msg 'i2' 'Indeed Suisse <alert@ch.indeed.com>' $AUTH_IND $HTML_ICH)
+Route 'messages/i3\?' 200 (Msg 'i3' 'SNCF <ne-pas-repondre@sncf.fr>' 'mx.google.com; dkim=pass header.d=sncf.fr; dmarc=pass header.from=sncf.fr' $HTML_SNCF)
+Route 'messages/i4\?' 200 (Msg 'i4' 'France Travail <ne-pas-repondre@francetravail.fr>' 'mx.google.com; spf=pass smtp.mailfrom=francetravail.fr; dmarc=pass header.from=francetravail.fr' $HTML_FT)
+Route 'messages/i5\?' 200 (Msg 'i5' 'Indeed <alert@indeed.com.evil.example>' 'mx.google.com; dmarc=pass header.from=indeed.com.evil.example' $HTMLX)
+$r = Invoke-VeilleMail $t0; $cj = @($script:Cartes | Where-Object { $_.salon -eq 'jarvis' }); $lieux = ($cj | ForEach-Object { (@($_.e.champs | Where-Object { $_.nom -eq 'Lieu' })[0].valeur) }) -join ','
+Verifier ($r.lus -eq 5 -and $r.envoyees -eq 5 -and $cj.Count -eq 5 -and $r.refuses -eq 1 -and $lieux -match 'Rouen' -and $lieux -match 'Lausanne' -and $lieux -match 'Basel' -and $lieux -match 'Caen' -and $lieux -match 'Le Havre' -and $lieux -notmatch 'Paris|Zürich|Zurich') 'passage complet : 5 mails lus (Indeed FR, Indeed CH, SNCF, France Travail, faux Indeed refusé), 5 cartes : Rouen, Lausanne, Bâle, Caen, Le Havre'
+Verifier ((Journal) -match '5 mails lus, 7 offres, 5 gardées \(2 écartée\(s\) hors Suisse romande / alémanique proche\) ; 1 écartée\(s\) : métier ; 1 expéditeur\(s\) refusé\(s\)' -and @($script:Appels | Where-Object { $_.m -eq 'POST' }).Count -eq 1 -and @($script:Appels | Where-Object { $_.url -match 'gmail' -and $_.m -ne 'GET' }).Count -eq 0) 'journal exact ; Gmail toujours lu en GET uniquement (un seul POST : le jeton)'
 # ---------- 8. Code : lecture seule, aucun Claude, câblage ----------
 Write-Host '8. Code et câblage'
 Verifier ($sm -match [regex]::Escape("MailPortee = 'https://www.googleapis.com/auth/gmail.readonly'") -and $sm -notmatch 'users/me/(messages/send|drafts|threads|profile)' -and $sm -notmatch '/(modify|trash|untrash|batchModify|batchDelete|import|insert)') 'portée gmail.readonly ; aucun chemin d''envoi, de brouillon, de modification ou de suppression'
