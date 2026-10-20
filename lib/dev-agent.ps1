@@ -6,6 +6,7 @@
 # aucune clé Stripe live / Supabase de production : l'environnement de l'agent est épuré, les fichiers .env du dépôt sont scannés, et la tâche s'arrête si elle en réclame ; GITHUB_TOKEN_DEV vient de .env (chiffré dans le dépôt),
 # n'est jamais écrit sur disque ni affiché (passé à git par variables d'environnement) ; 30 minutes par tâche au plus ; tout est journalisé ; une alerte Discord part au moindre échec.
 
+if (-not (Get-Command Short -ErrorAction SilentlyContinue)) { function Short([string]$s, [int]$n = 4000) { if ($s -and $s.Length -gt $n) { $s.Substring(0, $n) + '…' } else { $s } } }      # (le processus dev-agent.ps1 ne charge pas actions.ps1)
 function Get-DevConfig {
     $oui = @('oui', 'true', '1', 'on', 'yes')
     $int = { param($k, $def, $min, $max) $v = $def; if ($Config.PSObject.Properties[$k] -and "$($Config.$k)" -match '^\d+$') { $v = [math]::Max($min, [math]::Min($max, [int]$Config.$k)) }; $v }
