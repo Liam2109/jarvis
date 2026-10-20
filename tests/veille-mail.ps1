@@ -216,11 +216,25 @@ Verifier ($txt -match 'raison : métier : liste noire' -and $txt -match 'titre t
 Verifier (((Get-FileHash $fTrain).Hash + (Get-FileHash $fMail).Hash) -eq $h0 -and -not (Test-Path $fTrad) -and $script:Cartes.Count -eq 0 -and $script:Appels.Count -eq 0 -and $res.carteSimulees -eq 4) 'simulation : veille-train.json, veille-mail.json et cache de traduction inchangés ; rien posté (4 cartes simulées) ; aucun réseau'
 Verifier ($script:TrainHttpStub -eq $httpTest -and -not $script:MailFaux -and -not $script:TrainSansEcriture -and $null -eq $script:MailTrace) 'réglages du test (faux Gmail, mode sans écriture, trace) remis en place après la commande'
 $res2 = Invoke-VeilleMailTest (Get-VeilleMailTestOptions @('--faux', '--discord')); $txt2 = $res2.lignes -join "`n"
-Verifier ($txt2 -match '--discord ignoré' -and $txt2 -match 'Mode : SIMULATION' -and $script:Cartes.Count -eq 0) '--faux --discord : de faux mails ne sont jamais postés'
+Verifier ($txt2 -match '--discord ignoré' -and $txt2 -match 'Mode : SIMULATION' -and $script:Cartes.Count -eq 0) '--faux --discord : de faux mails ne sont jamais postés (seul --faux-discord poste des cartes [TEST])'
 $att = $script:MailFauxTitres[3].attendu; $script:MailFauxTitres[3].attendu = 'gardée'; $res3 = Invoke-VeilleMailTest (Get-VeilleMailTestOptions @('--faux')); $script:MailFauxTitres[3].attendu = $att
 Verifier ($res3.code -eq 1 -and ($res3.lignes -join "`n") -match 'TEST ÉCHEC' -and ($res3.lignes -join "`n") -match 'Mécanicien ferroviaire – Neuchâtel : attendu gardée') 'écart avec le résultat attendu : « TEST ÉCHEC » et code 1'
 $res4 = Invoke-VeilleMailTest (Get-VeilleMailTestOptions @('--bidon'))
 Verifier ($res4.code -eq 2 -and ($res4.lignes -join ' ') -match 'Option inconnue') 'option inconnue : refusée (code 2)'
+# --faux-discord : les 4 cartes des offres gardées sont postées avec [TEST], sans rien écrire
+Monde-Gmail; Etat-Reference; $h0 = (Get-FileHash $fTrain).Hash + (Get-FileHash $fMail).Hash; $script:Cartes = @(); $script:Appels = @()
+$resF = Invoke-VeilleMailTest (Get-VeilleMailTestOptions @('--faux-discord')); $txtF = $resF.lignes -join "`n"
+$post = @($script:Cartes | Where-Object { $_.salon -eq 'jarvis' }); $titresF = ($post | ForEach-Object { $_.e.titre }) -join ' | '
+Verifier ($resF.code -eq 0 -and $txtF -match 'TEST OK' -and $txtF -match 'SIMULATION D''ENVOI' -and $txtF -match 'Cartes \[TEST\] postées dans #annonces-train : 4' -and $txtF -match 'nouvelle : carte \[TEST\] postée') '--faux-discord : 6 faux mails, filtre appliqué, 4 cartes [TEST] postées, « TEST OK »'
+Verifier ($post.Count -eq 4 -and @($post | Where-Object { $_.e.titre -notmatch '^\[TEST\] ' }).Count -eq 0 -and @($post | Where-Object { $_.e.description -notmatch '^Carte de test, ignorer' }).Count -eq 0) 'chaque carte : « [TEST] » au début du titre et « Carte de test, ignorer » dans la description'
+Verifier ($titresF -match 'Lausanne' -and $titresF -match 'Bussigny' -and $titresF -match 'Rouen' -and $titresF -match '\[DE\] Conducteur de locomotive' -and $titresF -notmatch 'ferroviaire|Chauffeur de bus|Neuchâtel|Genève') 'seules les offres gardées sont postées (Lausanne, Bâle [DE] traduit, Bussigny, Rouen) ; les 2 écartées ne le sont pas'
+Verifier (((Get-FileHash $fTrain).Hash + (Get-FileHash $fMail).Hash) -eq $h0 -and -not (Test-Path $fTrad) -and $script:Appels.Count -eq 0 -and @($post | ForEach-Object { $_.e.titre } | Sort-Object -Unique).Count -eq 4) 'rien écrit (veille-train.json, veille-mail.json, cache) ; aucun réseau Gmail ; chaque carte postée une seule fois'
+$resFd = Invoke-VeilleMailTest (Get-VeilleMailTestOptions @('--faux-discord', '--discord'))
+Verifier (($resFd.lignes -join ' ') -match '--discord ignoré' -and $resFd.code -eq 0) '--faux-discord --discord : --discord ignoré'
+$script:Cartes = @(); $script:NotifOk = $false; $resNo = Invoke-VeilleMailTest (Get-VeilleMailTestOptions @('--faux-discord')); $script:NotifOk = $true
+Verifier ($script:Cartes.Count -eq 4 -and $resNo.carteSimulees -eq 0 -and $resNo.code -eq 1 -and ($resNo.lignes -join "`n") -match '4 cartes attendues, 0 postées') 'Discord refuse : un seul essai par carte (4 appels, aucun nouvel essai), « TEST ÉCHEC »'
+$script:Cartes = @(); $resPl = Invoke-VeilleMailTest (Get-VeilleMailTestOptions @('--faux'))
+Verifier ($script:Cartes.Count -eq 0 -and $resPl.code -eq 0) '--faux seul : toujours rien de posté'
 # Gmail simulé (vraie chaîne de lecture, réponses simulées)
 Monde-Gmail; Etat-Reference; $h0 = (Get-FileHash $fTrain).Hash + (Get-FileHash $fMail).Hash
 $res5 = Invoke-VeilleMailTest (Get-VeilleMailTestOptions @()); $txt5 = $res5.lignes -join "`n"

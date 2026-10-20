@@ -10,7 +10,7 @@
 #   env-pousser     chiffre .env (mot de passe demandé, masqué) -> .env.chiffre, le commite SEUL et affiche « git push » (vous poussez vous-même)
 #   discord-apercu  écrit memoire\apercu-discord.html : aperçu des messages Discord (données fictives, rien n'est envoyé)
 #   discord-diag    liste les salons textuels que le bot Discord voit (noms et permissions seulement) et le mot-clé reconnu
-#   veille-mail-test [--faux] [--discord]  un passage complet de la veille e-mail MAINTENANT, en simulation (rien posté ni écrit) ; --faux : 6 faux mails ; --discord : réel
+#   veille-mail-test [--faux] [--faux-discord] [--discord]  un passage complet de la veille e-mail MAINTENANT, en simulation (rien posté ni écrit) ; --faux : 6 faux mails ; --discord : réel
 #   gmail-autoriser autorise Gmail en lecture seule pour la veille e-mail « annonces-train » (une fois ; voir README)
 #   briefing-test   poste le briefing du matin (embed) dans le salon principal, maintenant, via le bot (sources branchées seulement)
 #   avtest          UN appel Alpha Vantage (recherche « thales ») pour trouver les symboles de Paris à mettre dans config.json

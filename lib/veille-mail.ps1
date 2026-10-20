@@ -245,7 +245,7 @@ function Invoke-VeilleMail([datetime]$now = (Get-Date), [switch]$Simulation, [sw
                 if ($envoyees -ge $script:TrainMaxCartes) { $toutEnvoye = $false; Set-MailTraceEtat $a 'nouvelle : en attente (plafond de 8 cartes par passage)'; break }
                 $deja[$a.id] = $true
                 try { $fr = Get-TrainTraduction $a; if ($fr) { $a.titre_fr = $fr } } catch {}      # sans traduction : titre original
-                if (Send-TrainNotif 'jarvis' (New-EmbedTrainAnnonce $a)) { $envoyees++; $e.vus += $a.id; $a.vu_le = $now.ToString('o'); $e.nouvelles += $a; Set-MailTraceEtat $a $(if ($Simulation) { 'nouvelle : carte simulée (rien posté)' } else { 'nouvelle : carte envoyée dans #annonces-train' }) } else { $toutEnvoye = $false; Set-MailTraceEtat $a 'nouvelle : envoi refusé, réessai au passage suivant' }
+                if (Send-TrainNotif 'jarvis' (New-EmbedTrainAnnonce $a)) { $envoyees++; $e.vus += $a.id; $a.vu_le = $now.ToString('o'); $e.nouvelles += $a; Set-MailTraceEtat $a $(if ($Simulation -and $script:MailTestPoste) { 'nouvelle : carte [TEST] postée dans #annonces-train' } elseif ($Simulation) { 'nouvelle : carte simulée (rien posté)' } else { 'nouvelle : carte envoyée dans #annonces-train' }) } else { $toutEnvoye = $false; Set-MailTraceEtat $a 'nouvelle : envoi refusé, réessai au passage suivant' }
             }
             if ($toutEnvoye) { $m.messages += "$($ref.id)" }      # un message n'est « traité » que si toutes ses nouvelles annonces sont parties
         }
@@ -317,19 +317,19 @@ function New-MailFauxServeur {
     }.GetNewClosure()
 }
 function Get-VeilleMailTestOptions($arguments) {
-    # Accepte --discord / --faux (ou -discord, discord) ; tout le reste est signalé.
-    $o = @{ discord = $false; faux = $false; inconnues = @() }
-    foreach ($a in @($arguments)) { $x = "$a".Trim().ToLowerInvariant().TrimStart('-'); if (-not $x) { continue }; if ($x -eq 'discord') { $o.discord = $true } elseif ($x -eq 'faux') { $o.faux = $true } else { $o.inconnues += "$a" } }
+    # Accepte --discord / --faux / --faux-discord (ou -faux, faux...) ; tout le reste est signalé.
+    $o = @{ discord = $false; faux = $false; fauxDiscord = $false; inconnues = @() }
+    foreach ($a in @($arguments)) { $x = "$a".Trim().ToLowerInvariant().TrimStart('-'); if (-not $x) { continue }; if ($x -eq 'discord') { $o.discord = $true } elseif ($x -eq 'faux') { $o.faux = $true } elseif ($x -eq 'faux-discord') { $o.fauxDiscord = $true } else { $o.inconnues += "$a" } }
     $o
 }
 function Invoke-VeilleMailTest($opt) {
     # Retourne @{ code; ok; lignes } : le code appelant affiche les lignes. code 0 = fait (et TEST OK avec --faux), 1 = TEST ÉCHEC, 2 = impossible.
     $L = New-Object Collections.ArrayList; $add = { param($x) [void]$L.Add((Hide-Secrets "$x")) }
-    if (@($opt.inconnues).Count) { & $add "Option inconnue : $(@($opt.inconnues) -join ' '). Usage : jarvis.ps1 veille-mail-test [--faux] [--discord]"; return @{ code = 2; ok = $false; lignes = @($L) } }
-    $faux = [bool]$opt.faux; $reel = [bool]$opt.discord -and -not $faux
-    & $add ('Veille e-mail annonces-train : test de bout en bout — source : ' + $(if ($faux) { '6 FAUX mails (aucun Gmail, aucun jeton)' } else { 'Gmail, lecture seule, libellé annonces-train' }))
-    & $add ('Mode : ' + $(if ($reel) { 'RÉEL (--discord) : cartes postées dans #annonces-train, annonces marquées vues' } else { "SIMULATION : rien n'est posté sur Discord, rien n'est écrit dans memoire\veille-train.json ni veille-mail.json (ni cache de traduction)" }))
-    if ($opt.discord -and $faux) { & $add '--discord ignoré avec --faux : de faux mails ne sont jamais postés.' }
+    if (@($opt.inconnues).Count) { & $add "Option inconnue : $(@($opt.inconnues) -join ' '). Usage : jarvis.ps1 veille-mail-test [--faux] [--faux-discord] [--discord]"; return @{ code = 2; ok = $false; lignes = @($L) } }
+    $poste = [bool]$opt.fauxDiscord; $faux = [bool]$opt.faux -or $poste; $reel = [bool]$opt.discord -and -not $faux
+    & $add ('Veille e-mail annonces-train : test de bout en bout — source : ' + $(if ($faux) { '6 FAUX mails (aucun Gmail, aucun jeton)' + $(if ($poste) { ' — option --faux-discord' } else { '' }) } else { 'Gmail, lecture seule, libellé annonces-train' }))
+    & $add ('Mode : ' + $(if ($poste) { "SIMULATION D'ENVOI : seules les cartes des offres GARDÉES sont postées dans #annonces-train, avec « [TEST] » dans le titre et « Carte de test, ignorer » ; rien n'est écrit dans memoire\veille-train.json ni veille-mail.json (aucune annonce marquée vue)" } elseif ($reel) { 'RÉEL (--discord) : cartes postées dans #annonces-train, annonces marquées vues' } else { "SIMULATION : rien n'est posté sur Discord, rien n'est écrit dans memoire\veille-train.json ni veille-mail.json (ni cache de traduction)" }))
+    if ($opt.discord -and $faux) { & $add '--discord ignoré avec --faux / --faux-discord : seules les cartes [TEST] de --faux-discord peuvent être postées.' }
     if (-not $faux -and -not (Test-MailAutorise)) { & $add 'Gmail n''est pas autorisé : renseignez GMAIL_CLIENT_ID / GMAIL_CLIENT_SECRET dans .env puis lancez jarvis.ps1 gmail-autoriser (ou essayez --faux).'; return @{ code = 2; ok = $false; lignes = @($L) } }
     if ($reel) { $e0 = Get-TrainEtat; if (Test-TrainProcessusVivant $e0.pid) { & $add 'Un passage de la veille est en cours : réessayez dans une minute.'; return @{ code = 2; ok = $false; lignes = @($L) } } }
     $sv = @{ http = $script:TrainHttpStub; notif = $script:TrainNotifStub; faux = $script:MailFaux; sans = $script:TrainSansEcriture; trace = $script:MailTrace; tid = $script:MailTraceId; pause = $script:TrainPauseSec }
@@ -337,14 +337,27 @@ function Invoke-VeilleMailTest($opt) {
     try {
         $script:MailTrace = New-Object Collections.ArrayList; $script:MailTraceId = @{}
         if ($faux) { $script:TrainHttpStub = New-MailFauxServeur; $script:MailFaux = $true; $script:TrainPauseSec = 0 }
-        if (-not $reel) { $script:TrainSansEcriture = $true; $script:TrainNotifStub = { param($salon, $embed) [void]$script:CartesSimulees.Add(@{ salon = $salon; titre = "$($embed.titre)" }); $true } }
+        if (-not $reel) {
+            $script:TrainSansEcriture = $true; $script:MailTestPoste = $poste; $script:MailTestBase = $sv.notif; $script:MailTestPostes = @{}
+            if ($poste) {      # --faux-discord : les cartes des offres gardées sont VRAIMENT postées (une fois chacune, jamais de nouvel essai), marquées [TEST] ; les alertes ne sont jamais postées
+                $script:TrainNotifStub = { param($salon, $embed)
+                    if ($salon -ne 'jarvis') { return $true }
+                    $cle = "$($embed.titre)"; if ($script:MailTestPostes.ContainsKey($cle)) { return $true }; $script:MailTestPostes[$cle] = $true
+                    $e2 = @{}; foreach ($k in $embed.Keys) { $e2[$k] = $embed[$k] }; $e2['titre'] = "[TEST] $($embed.titre)"; $e2['description'] = "Carte de test, ignorer.`n$($embed.description)"
+                    $stub = $script:TrainNotifStub; $script:TrainNotifStub = $script:MailTestBase      # nul = vrai envoi ; en test : le collecteur du test
+                    try { $ok = [bool](Send-TrainNotif 'jarvis' $e2) } finally { $script:TrainNotifStub = $stub }
+                    if ($ok) { [void]$script:CartesSimulees.Add(@{ salon = 'annonces-train'; titre = $e2['titre'] }) }
+                    $ok
+                }
+            } else { $script:TrainNotifStub = { param($salon, $embed) [void]$script:CartesSimulees.Add(@{ salon = $salon; titre = "$($embed.titre)" }); $true } }
+        }
         $r = Invoke-VeilleMail -Simulation:(-not $reel) -Faux:$faux
         $trace = @($script:MailTrace)
-    } finally { $script:TrainHttpStub = $sv.http; $script:TrainNotifStub = $sv.notif; $script:MailFaux = $sv.faux; $script:TrainSansEcriture = $sv.sans; $script:MailTrace = $sv.trace; $script:MailTraceId = $sv.tid; $script:TrainPauseSec = $sv.pause }
+    } finally { $script:TrainHttpStub = $sv.http; $script:TrainNotifStub = $sv.notif; $script:MailFaux = $sv.faux; $script:TrainSansEcriture = $sv.sans; $script:MailTrace = $sv.trace; $script:MailTraceId = $sv.tid; $script:TrainPauseSec = $sv.pause; $script:MailTestPoste = $false }
     $gard = @($trace | Where-Object { $_.decision -eq 'gardée' }).Count; $ecM = @($trace | Where-Object { $_.raison -like 'métier*' }).Count; $ecL = @($trace | Where-Object { $_.raison -like 'lieu*' }).Count
     & $add ''
     & $add ("$(Format-Pluriel $r.lus 'mail lu' 'mails lus'), $(Format-Pluriel $trace.Count 'offre' 'offres'), $(Format-Pluriel $gard 'gardée' 'gardées'), $(Format-Pluriel ($ecL + $ecM) 'écartée' 'écartées') (lieu $ecL / métier $ecM)" + $(if ($r.refuses) { " ; $($r.refuses) expéditeur(s) refusé(s)" }))
-    & $add ($(if ($reel) { "Cartes envoyées : $($r.envoyees)" } else { "Cartes qui auraient été postées : $($cartes.Count) (rien n'a été posté)" }))
+    & $add ($(if ($poste) { "Cartes [TEST] postées dans #annonces-train : $($cartes.Count) (offres gardées uniquement ; rien écrit, aucune annonce marquée vue)" } elseif ($reel) { "Cartes envoyées : $($r.envoyees)" } else { "Cartes qui auraient été postées : $($cartes.Count) (rien n'a été posté)" }))
     if ($r.erreur) { & $add "Erreur : $($r.erreur)" }
     $n = 0
     foreach ($x in $trace) {
@@ -360,6 +373,7 @@ function Invoke-VeilleMailTest($opt) {
             $x = @($trace | Where-Object { $_.titre -eq $a.titre }) | Select-Object -First 1
             if (-not $x) { $diff += "absent : $($a.titre)" } elseif ($x.decision -ne $a.attendu) { $diff += "$($a.titre) : attendu $($a.attendu), obtenu $($x.decision) ($($x.raison))" } elseif ($a.raison -and $x.raison -notlike "$($a.raison)*") { $diff += "$($a.titre) : raison attendue « $($a.raison) », obtenue « $($x.raison) »" }
         }
+        if ($poste -and $cartes.Count -ne $gard) { $diff += "$gard cartes attendues, $($cartes.Count) postées" }
         if ($trace.Count -ne $script:MailFauxTitres.Count) { $diff += "$($trace.Count) offres vues au lieu de $($script:MailFauxTitres.Count)" }
         & $add ''
         if ($diff.Count) { $code = 1; & $add 'TEST ÉCHEC'; foreach ($d in $diff) { & $add "  - $d" } } else { & $add 'TEST OK (attendu : 3 premiers gardés, Mécanicien ferroviaire et Chauffeur de bus écartés pour métier, Rouen gardé)' }
