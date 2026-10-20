@@ -9,12 +9,13 @@
 function Get-DevConfig {
     $oui = @('oui', 'true', '1', 'on', 'yes')
     $int = { param($k, $def, $min, $max) $v = $def; if ($Config.PSObject.Properties[$k] -and "$($Config.$k)" -match '^\d+$') { $v = [math]::Max($min, [math]::Min($max, [int]$Config.$k)) }; $v }
-    $c = @{ actif = $false; depot = 'Liam2109/ecom-quiz'; dossier = 'C:\Projets\ecom-quiz'; creneau = '01:00-06:00'; fusion = $true; modele = 'sonnet' }
+    $c = @{ actif = $false; depot = 'Liam2109/ecom-quiz'; dossier = 'C:\Projets\ecom-quiz'; creneau = '01:00-06:00'; fusion = $true; push = $true; modele = 'sonnet' }
     if ($Config.PSObject.Properties['dev_agent'] -and "$($Config.dev_agent)".Trim().ToLower() -in $oui) { $c.actif = $true }
     if ($Config.PSObject.Properties['dev_depot'] -and "$($Config.dev_depot)" -match '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') { $c.depot = "$($Config.dev_depot)" }
     if ($Config.PSObject.Properties['dev_dossier'] -and "$($Config.dev_dossier)".Trim()) { $c.dossier = "$($Config.dev_dossier)".Trim() }
     if ($Config.PSObject.Properties['dev_creneau'] -and "$($Config.dev_creneau)" -match '^([01]?\d|2[0-3]):[0-5]\d-([01]?\d|2[0-3]):[0-5]\d$') { $c.creneau = "$($Config.dev_creneau)" }
     if ($Config.PSObject.Properties['dev_fusion_valide'] -and "$($Config.dev_fusion_valide)".Trim().ToLower() -notin $oui) { $c.fusion = $false }
+    if ($Config.PSObject.Properties['dev_push'] -and "$($Config.dev_push)".Trim().ToLower() -notin $oui) { $c.push = $false }      # "non" : la branche reste en local, rien n'est envoyé à GitHub
     if ($Config.PSObject.Properties['dev_modele'] -and "$($Config.dev_modele)" -match '^[A-Za-z0-9._-]{2,40}$') { $c.modele = "$($Config.dev_modele)" }
     $c.max_nuit = & $int 'dev_max_taches_nuit' 3 1 10
     $c.minutes = & $int 'dev_minutes_par_tache' 30 5 120
@@ -159,6 +160,7 @@ function Invoke-DevFusion($t) {
     # Pull request de la branche jarvis/... vers main, puis fusion si dev_fusion_valide = "oui" (défaut). C'est le SEUL chemin vers main, et il exige le « valide » de Liam.
     $c = Get-DevConfig
     if (-not (Test-DevBrancheSure "$($t.branche)")) { return @{ ok = $false; texte = "Branche refusée par sécurité, monsieur : $($t.branche)." } }
+    if (-not $c.push -or ($t.ContainsKey('pousse') -and -not $t.pousse)) { return @{ ok = $false; texte = "Le push est désactivé (dev_push), monsieur : la branche $($t.branche) n'existe qu'en local, aucune pull request n'est ouverte. Réessayez « valide » une fois dev_push activé." } }
     try {
         $pr = Invoke-DevGitHub 'POST' "/repos/$($c.depot)/pulls" @{ title = "jarvis : $(Short $t.texte 80)"; head = "$($t.branche)"; base = 'main'; body = "Tâche $($t.id) de l'agent de développement de Jarvis, validée par Liam sur Discord." }
         $lien = "$($pr.html_url)"; Set-DevTache ([int]$t.id) @{ pr = [int]$pr.number; pr_url = $lien }
@@ -262,7 +264,7 @@ function Invoke-DevTache([int]$id) {
     $debut = Get-Date; Set-DevTache $id @{ statut = 'en_cours'; debut = $debut.ToString('o'); nuit = (Get-DevNuitCle $debut) }
     Write-Journal -Ordre 'dev' -Action "Agent de dev : début de la tâche $id" -Resultat (Short (Hide-Secrets $t.texte) 160)
     if (Test-DevTexteCleProd "$($t.texte)") { return (& $echec "la tâche réclame une clé de production (Stripe live / Supabase) : arrêt, rien n'a été exécuté." 'bloque') }
-    if (-not (Get-DevToken)) { return (& $echec "GITHUB_TOKEN_DEV absent ou invalide dans .env : je ne peux pas pousser de branche." 'bloque') }
+    if ($c.push -and -not (Get-DevToken)) { return (& $echec "GITHUB_TOKEN_DEV absent ou invalide dans .env : je ne peux pas pousser de branche." 'bloque') }
     $dossier = $c.dossier
     if (-not (Test-DevDossierSur $dossier)) { return (& $echec "dossier de travail refusé ($dossier) : il doit être séparé de Jarvis." 'bloque') }
     $remote = "https://github.com/$($c.depot).git"; if ((Test-ModeTest) -and $env:JARVIS_TEST_DEV_REMOTE) { $remote = $env:JARVIS_TEST_DEV_REMOTE }
@@ -338,13 +340,16 @@ function Invoke-DevTache([int]$id) {
         if ($cm.code -ne 0) { return (& $echec "commit impossible ($(Short ($cm.sortie -replace '\s+', ' ') 120))") }
         $sha = ((Invoke-DevGit $dossier @('rev-parse', 'HEAD')).sortie -split "`n")[0].Trim()
         if (-not (Test-DevBrancheSure $branche)) { return (& $echec "push refusé par sécurité : $branche" 'bloque') }
-        $ps = Invoke-DevGit $dossier @('push', 'origin', "refs/heads/${branche}:refs/heads/${branche}") 300
-        if ($ps.code -ne 0) { return (& $echec "push impossible ($(Short ($ps.sortie -replace '\s+', ' ') 140))") }
+        $lien = ''; $prev = ''
+        if ($c.push) {
+            $ps = Invoke-DevGit $dossier @('push', 'origin', "refs/heads/${branche}:refs/heads/${branche}") 300
+            if ($ps.code -ne 0) { return (& $echec "push impossible ($(Short ($ps.sortie -replace '\s+', ' ') 140))") }
+            $lien = "https://github.com/$($c.depot)/tree/$branche"
+            $prev = Get-DevPrevisualisation $c.depot $sha
+        } else { Write-Journal -Ordre 'dev' -Action "Agent de dev : push désactivé (dev_push)" -Resultat "branche $branche gardée en local" }
         # 7) compte rendu
-        $lien = "https://github.com/$($c.depot)/tree/$branche"
-        $prev = Get-DevPrevisualisation $c.depot $sha
         $mins = [math]::Round(((Get-Date) - $debut).TotalMinutes, 1)
-        Set-DevTache $id @{ statut = 'termine'; fin = (Get-Date).ToString('o'); branche = $branche; sha = $sha; lien = $lien; previsualisation = $prev; fichiers = @($fichiers); verif = @($verif); resume = (Short $resume 600); minutes = $mins }
+        Set-DevTache $id @{ statut = 'termine'; fin = (Get-Date).ToString('o'); branche = $branche; sha = $sha; lien = $lien; pousse = [bool]$c.push; previsualisation = $prev; fichiers = @($fichiers); verif = @($verif); resume = (Short $resume 600); minutes = $mins }
         Write-Journal -Ordre 'dev' -Action "Agent de dev : tâche $id terminée" -Resultat "branche $branche, $($fichiers.Count) fichier(s), $mins min"
         Send-DevNotif 'jarvis' '' (New-EmbedDevCompteRendu (Get-DevTache $id))
         return @{ ok = $true; branche = $branche }
@@ -373,7 +378,7 @@ function Get-DevPrevisualisation([string]$depot, [string]$sha) {
 function New-EmbedDevCompteRendu($t) {
     $f = @($t.fichiers); $liste = (($f | Select-Object -First 12 | ForEach-Object { "• $_" }) -join "`n"); if ($f.Count -gt 12) { $liste += "`n… et $($f.Count - 12) autre" + $(if ($f.Count -gt 13) { 's' }) }
     $champs = @(
-        @{ nom = 'Branche'; valeur = "[$($t.branche)]($($t.lien))"; inline = $false },
+        @{ nom = 'Branche'; valeur = $(if ($t.lien) { "[$($t.branche)]($($t.lien))" } else { "$($t.branche) (en local, push désactivé)" }); inline = $false },
         @{ nom = 'Fichiers modifiés'; valeur = $(if ($liste) { $liste } else { 'Aucun' }); inline = $false },
         @{ nom = 'Prévisualisation Vercel'; valeur = $(if ($t.previsualisation) { "$($t.previsualisation)" } else { "Pas disponible pour l'instant (Vercel n'a pas encore répondu à GitHub)" }); inline = $false },
         @{ nom = 'Build et tests'; valeur = $(if (@($t.verif).Count) { (@($t.verif) -join "`n") } else { 'Non lancés' }); inline = $false },

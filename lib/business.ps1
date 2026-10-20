@@ -109,8 +109,34 @@ function Get-SupabaseStats([datetime]$depuis) {
 }
 # ---------- Visites ----------
 function Get-VisitesBriefing([datetime]$depuis) {
-    # Vercel Analytics n'offre pas d'API de lecture accessible avec une clé restreinte connue de Jarvis : source non branchée (jamais de chiffre estimé).
-    @{ dispo = $false; raison = "visites du site : source non branchée (Vercel Analytics)" }
+    # Vercel Analytics en LECTURE SEULE (GET) : VERCEL_TOKEN + VERCEL_PROJECT_ID (+ VERCEL_TEAM_ID) dans .env. Sans eux : source non branchée (jamais de chiffre estimé).
+    $nonBranche = @{ dispo = $false; raison = "visites du site : source non branchée (Vercel Analytics)" }
+    $jeton = Get-EnvPropre 'VERCEL_TOKEN'; $projet = Get-EnvPropre 'VERCEL_PROJECT_ID'; $equipe = Get-EnvPropre 'VERCEL_TEAM_ID'
+    if (-not $jeton -or -not $projet -or $jeton -match '^xxx' -or $projet -match '^xxx') { return $nonBranche }
+    if ($projet -notmatch '^[A-Za-z0-9_.-]+$' -or ($equipe -and $equipe -notmatch '^[A-Za-z0-9_.-]+$')) { return @{ dispo = $false; raison = 'Vercel : identifiant de projet ou d''équipe illisible dans .env' } }
+    if ($jeton.Length -ge 8 -and $script:Secrets -notcontains $jeton) { $script:Secrets += $jeton }
+    $base = 'https://api.vercel.com'
+    if ($env:JARVIS_TEST_VERCEL_BASE -match '^http://127\.0\.0\.1:\d+$') { $base = $env:JARVIS_TEST_VERCEL_BASE }      # surcharge réservée aux tests : uniquement 127.0.0.1
+    elseif (Test-ModeTest) { return $nonBranche }                                                                       # tests : jamais le vrai Vercel
+    $since = [DateTimeOffset]::new($depuis.ToUniversalTime()).ToUnixTimeMilliseconds(); $until = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+    $u = "$base/v1/query/web-analytics/visits/count?projectId=$projet&since=$since&until=$until" + $(if ($equipe) { "&teamId=$equipe" } else { '' })
+    try {
+        $r = Invoke-RestMethod -Uri $u -Headers @{ Authorization = "Bearer $jeton" } -Method Get -TimeoutSec 20      # GET uniquement
+        $v = $null
+        foreach ($x in @($r, $r.data, $r.result)) {
+            if ($null -eq $x) { continue }
+            if ($x -is [ValueType] -and "$x" -match '^\d+$') { $v = [int64]$x; break }
+            foreach ($k in 'count', 'total', 'visits') { if ($x.PSObject.Properties.Name -contains $k -and "$($x.$k)" -match '^\d+$') { $v = [int64]$x.$k; break } }
+            if ($null -ne $v) { break }
+        }
+        if ($null -eq $v) { return @{ dispo = $false; raison = 'Vercel : réponse non reconnue (aucune visite lue)' } }
+        @{ dispo = $true; valeur = $v; partiel = $false; source = 'Vercel Analytics' }
+    } catch {
+        $c = if ($_.Exception.Response) { [int]$_.Exception.Response.StatusCode } else { 0 }
+        if ($c -in 401, 403) { return @{ dispo = $false; raison = 'Vercel : accès refusé (droits de lecture à vérifier)' } }
+        if ($c -in 402, 404) { return @{ dispo = $false; raison = 'Vercel : analyses indisponibles pour ce projet ou ce forfait' } }
+        @{ dispo = $false; raison = "Vercel : $(if ($c -eq 0) { 'source injoignable' } else { "erreur HTTP $c" })" }
+    }
 }
 
 function Get-ChiffresBusiness([datetime]$depuis, [switch]$SansSite) {
@@ -182,7 +208,10 @@ function Get-PhrasesBusiness($d) {
     if ($lus.Count) { $p.Add('Sur les 24 dernières heures : ' + ($lus -join ', ') + '.') }
     # une SEULE phrase pour tout ce qui est indisponible
     $manque = @($manque | Select-Object -Unique)
-    if ($manque.Count) { $p.Add("Je n'ai pas pu lire : " + ($manque -join ' ; ') + '.') }
+    # source jamais branchée = information (pas une panne) ; vraie erreur de lecture = « Je n'ai pas pu lire »
+    $nonBranchees = @($manque | Where-Object { $_ -match '(?i)non branch|absente?\b|non configur' }); $pannes = @($manque | Where-Object { $_ -notin $nonBranchees })
+    if ($nonBranchees.Count) { $p.Add("Pas encore connecté : " + ($nonBranchees -join ' ; ') + '.') }
+    if ($pannes.Count) { $p.Add("Je n'ai pas pu lire : " + ($pannes -join ' ; ') + '.') }
     # site
     if ($d.site) {
         if ($d.site.ok) { $p.Add("Le site tonproduit.shop répond, code 200.") }

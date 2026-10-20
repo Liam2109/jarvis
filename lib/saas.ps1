@@ -3,7 +3,7 @@
 # Une source absente ou refusée s'affiche « source non branchée » ou « indisponible » avec la raison ; jamais une valeur estimée.
 #
 # Sources NON branchées (noms exacts à fournir plus tard, voir JOURNAL-NUIT.md) :
-#   - Vercel Analytics (visites) : variable VERCEL_ANALYTICS_TOKEN + VERCEL_TEAM_ID / VERCEL_PROJECT_ID, jeton en lecture seule limité au projet (aucun droit d'écriture ni de déploiement).
+#   - Vercel Analytics (visites) : branché dès que VERCEL_TOKEN + VERCEL_PROJECT_ID (+ VERCEL_TEAM_ID) sont dans .env ; jeton en lecture seule (aucun droit d'écriture ni de déploiement). Sinon « source non branchée ».
 #   - Stripe : déjà branché si STRIPE_RESTRICTED_KEY (clé restreinte rk_…) existe ; droits minimaux en lecture seule : Charges (Read), Subscriptions (Read), rien d'autre.
 
 function Test-DemandePointSaas([string]$texte) {
@@ -91,7 +91,7 @@ function Format-ValeurSaas($d) {
     }
     if ($d.ca.dispo) { $o.ca = $(if ($d.ca.montants.Count) { (Format-Montants $d.ca.montants) + ' sur 24 h' } else { '0 € sur 24 h' }) + $(if ($d.ca.partiel) { ' (au moins)' } else { '' }) }
     elseif ("$($d.ca.raison)" -match 'absente') { $o.ca = "Source non branchée`n(STRIPE_RESTRICTED_KEY)" } else { $o.ca = & $nd $d.ca 'source non lue' }
-    $o.visites = $(if ($d.visites.dispo) { "$($d.visites.valeur) sur 24 h" } else { 'Source non branchée (Vercel Analytics)' })
+    $o.visites = $(if ($d.visites.dispo) { "$($d.visites.valeur) sur 24 h" } elseif ("$($d.visites.raison)" -match '(?i)non branch|absente?\b') { 'Source non branchée (Vercel Analytics)' } else { & $nd $d.visites 'source non lue' })
     $t = @($d.todo)
     $o.taches = $(if ($t.Count) { "$($t.Count) ouverte" + $(if ($t.Count -gt 1) { 's' }) + "`n" + (($t | Select-Object -First 3 | ForEach-Object { "• $_" }) -join "`n") + $(if ($t.Count -gt 3) { "`n… et $($t.Count - 3) autre" + $(if ($t.Count -gt 4) { 's' }) } else { '' }) } else { 'Aucune tâche ouverte' })
     $o.veille = "$($d.veille)"

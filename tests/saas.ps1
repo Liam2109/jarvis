@@ -100,6 +100,20 @@ $vrai = ConvertTo-EmbedReponse @('Une erreur est survenue : disque plein.'); Ver
 $ancien = ConvertTo-EmbedReponse @("Sur les 24 dernières heures : 3 e-mails. Je n'ai pas pu lire : Stripe, clé absente.")
 Verifier ($null -ne $ancien) 'cause trouvée : l''ancien texte du point contenait « Je n''ai pas pu lire », reconnu à tort comme erreur par ConvertTo-EmbedReponse (le point ne passe plus par là)'
 $script:DiscordTampon = $null; $script:DiscordEmbeds.Clear()
+# une seule source non branchée (visites) : le texte de l'état du business ne devient plus une carte rouge « Problème »
+$dv = @{ depuis = (Get-Date).AddHours(-24); maj = (Get-Date); site = [pscustomobject]@{ ok = $true; code = 200 }
+         visites = @{ dispo = $false; raison = 'visites du site : source non branchée (Vercel Analytics)' }
+         stats = @{ dispo = $true; sessions = 14; emails = 3; payees = 0; partiel = $false }; abonnes = @{ dispo = $true; valeur = 2; partiel = $false }
+         ca = @{ dispo = $true; montants = @{ EUR = 5800 }; paiements = 2; partiel = $false } }
+$tx = (Get-PhrasesBusiness $dv) -join ' '
+$carte = ConvertTo-EmbedReponse @($tx)
+Verifier ($tx -match 'Pas encore connecté : visites du site : source non branchée' -and $tx -notmatch "pas pu lire" -and $tx -match '14 quiz') 'une seule source non branchée : chiffres disponibles + « Pas encore connecté : visites… »'
+Verifier ($carte.couleur -ne $script:CouleurRouge -and $carte.titre -ne 'Problème' -and "$($carte.description)" -notmatch 'Réessayez') 'cette réponse n''est pas une carte rouge ni « Réessayez dans un instant »'
+$dv.visites = @{ dispo = $false; raison = 'Vercel : source injoignable' }
+$txe = (Get-PhrasesBusiness $dv) -join ' '
+Verifier ($txe -match "Je n'ai pas pu lire : Vercel" -and (ConvertTo-EmbedReponse @($txe)).couleur -eq $script:CouleurRouge) 'une vraie panne de lecture reste une carte rouge'
+$e = New-EmbedSaas (Get-SaasDonnees)
+Verifier ((Champ $e 'Visites').valeur -match 'non branchée' -and $e.couleur -eq $script:CouleurBleue) 'embed du point : visites non branchées = bleu (information), chiffres disponibles affichés'
 
 Write-Host '5) Action point_saas (voix et Claude) : mêmes données'
 $script:CanalDiscord = $null; $script:SimStats = @{ dispo = $true; http = 200; sessions = 14; emails = 3; saas = @{ quiz_total = 1280; quiz_24h = 14; emails_total = 412; emails_24h = 3; abonnes_actifs = 27; nouveaux_abonnes_24h = 2; abonnes_en_annulation = 0; paiements_echoues = 0 } }; $script:SimCa = @{ dispo = $true; montants = @{ EUR = 5800 }; paiements = 2; partiel = $false; source = 'Stripe' }

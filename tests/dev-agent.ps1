@@ -32,6 +32,8 @@ $r = Dire 'dev : ajoute un champ prénom'; Verifier ($r.r -and $r.texte -match '
 Verifier (-not (Update-DevAgent ([datetime]'2026-10-17T02:00:00'))) 'inactif : la boucle ne lance rien'
 $r = Decider 'valide'; Verifier (-not $r.r) 'inactif : « valide » reste un message ordinaire'
 Verifier (-not (Invoke-DevCommande 'ouvre chrome') -and -not (Invoke-DevCommande 'développe le site') -and -not (Invoke-DevCommande 'devine : quoi')) 'seul le préfixe « dev : » est reconnu'
+Verifier (-not (Get-DevConfig).push -and $vraie.dev_push -eq 'non') 'config.json : dev_push = "non" (aucun envoi vers GitHub)'
+Fixer 'dev_push' 'oui'; Verifier ((Get-DevConfig).push) 'dev_push = "oui" active le push'
 Fixer 'dev_agent' 'oui'; Verifier ((Get-DevConfig).actif) 'config.local.json : dev_agent = "oui" l''active'
 
 Write-Host '2) Fonctions pures'
@@ -188,6 +190,11 @@ $Config.dev_dossier = $travail
 Verifier ($x.tache.statut -eq 'bloque' -and $x.alertes[0].texte -match 'autre origine') 'le dépôt local pointe vers une autre origine que dev_depot : arrêt'
 [void](Gt $travail 'remote' 'set-url' 'origin' $bare)
 Verifier ((Gt $bare 'rev-parse' 'main').Trim() -eq $mainAvant) 'au bout de toutes ces tâches, main n''a toujours pas bougé sur l''origine'
+Fixer 'dev_push' 'non'; $refsAvant = Gt $bare 'branch' '--list'; $x = Essai 'ajoute une page presse' $ok
+Verifier ($x.tache.statut -eq 'termine' -and -not $x.tache.pousse -and -not $x.tache.lien -and (Gt $bare 'branch' '--list') -eq $refsAvant -and (Gt $travail 'branch' '--list') -match 'page-presse') 'dev_push = "non" : branche créée et commitée en local, rien envoyé à l''origine'
+$script:ApiAppels = @(); $r = Invoke-DevFusion $x.tache
+Verifier (-not $r.ok -and $r.texte -match 'push est désactivé' -and $script:ApiAppels.Count -eq 0) 'dev_push = "non" : « valide » n''ouvre aucune pull request'
+Fixer 'dev_push' 'oui'
 $allJ = Journal; Verifier ($allJ -notmatch [regex]::Escape($TOKEN) -and $allJ -notmatch 'rk_live_FAUSSE' -and $allJ -notmatch 'sk_live_abcdefghijklmnop') 'journal final : ni jeton, ni clé, ni secret'
 
 Write-Host ''

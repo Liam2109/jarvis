@@ -57,6 +57,7 @@ $script:ReponseTest = $ReponseTest   # crochet de test : réponse automatique au
 . (Join-Path $Root 'lib\discord.ps1')
 . (Join-Path $Root 'lib\saas.ps1')
 . (Join-Path $Root 'lib\dev-agent.ps1')
+. (Join-Path $Root 'lib\veille-train.ps1')
 . (Join-Path $Root 'lib\veille-reveil.ps1')
 . (Join-Path $Root 'lib\diag-serveur.ps1')
 . (Join-Path $Root 'lib\boucle.ps1')
@@ -185,6 +186,7 @@ switch ($Commande.ToLower()) {
                 Update-VeilleReveil                                      # (re)lance l'écoute de veille si elle s'est arrêtée
                 Update-PontDiscord                                       # redémarre le pont Discord s'il a planté (journal d'erreurs, délais croissants)
                 Update-DevAgent                                          # agent de développement du SaaS (désactivé par défaut : dev_agent) : démarre la prochaine tâche à l'heure du créneau
+                Update-VeilleTrain                                       # veille « annonces-train » (désactivée par défaut : veille_train) : un passage par heure dans un processus séparé
                 Update-Discord                                           # alertes regroupées et briefing planifié sur Discord (tout est désactivé par défaut)
                 if (((Get-Date) - $dernierCoeur).TotalMinutes -ge 5) { $dernierCoeur = Get-Date; Save-HeureArret }      # « dernière activité » (si Jarvis est arrêté de force)
                 Update-ModeJeu                                           # jeu / plein écran / heures : lecture seule du premier plan, toutes les 3 s

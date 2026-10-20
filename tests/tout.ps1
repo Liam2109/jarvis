@@ -42,7 +42,9 @@ $liste = @(
     @{ n = 'serveur léger (aucune écoute, Ollama déchargé, français, diag-serveur)'; f = 'serveur-leger.ps1' }
     @{ n = 'vitesse ressentie (suite filtrée, bruit, Ollama chaud sur ce PC)'; f = 'suivi.ps1' }
     @{ n = 'point SaaS + briefing du matin (sources branchées seulement)'; f = 'saas.ps1' }
+    @{ n = 'visites Vercel Analytics (lecture seule, faux serveur local)'; f = 'vercel.ps1' }
     @{ n = 'agent de développement du SaaS (file, branche, garde-fous, valide / refuse)'; f = 'dev-agent.ps1' }
+    @{ n = 'veille annonces-train (sources simulées, base locale, cartes, erreurs, résumé)'; f = 'veille-train.ps1' }
     @{ n = 'claude chaud (Invoke-Claude : démarrage unique, repli, arrêt d''urgence)'; f = 'chaud.ps1' }
 )
 function Get-Instantane {

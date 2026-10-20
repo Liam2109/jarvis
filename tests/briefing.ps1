@@ -23,7 +23,7 @@ function Donnees { param($stats = $null, $abonnes = $null, $ca = $null, $visites
 Write-Host '1) Aucune source disponible : aucun chiffre, UNE seule phrase d''indisponibilité'
 $t = Jours (Donnees)
 Verifier ((Nombres $t).Count -eq 0) "aucun chiffre dans : $t"
-Verifier (([regex]::Matches($t, "Je n'ai pas pu lire")).Count -eq 1) 'la phrase « Je n''ai pas pu lire » n''apparaît qu''une fois'
+Verifier (([regex]::Matches($t, "Pas encore connecté")).Count -eq 1 -and $t -notmatch "Je n'ai pas pu lire") 'sources non branchées : UNE phrase « Pas encore connecté », pas de « Je n''ai pas pu lire »'
 Verifier ($t -match 'visites' -and $t -match 'Supabase' -and $t -match 'Stripe') 'chaque source manquante est nommée (visites, Supabase, Stripe)'
 Verifier (([regex]::Matches($t, 'clé Stripe absente')).Count -eq 1) 'la même cause (Stripe) n''est pas répétée'
 

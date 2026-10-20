@@ -81,7 +81,9 @@ function Start-ClaudeChaud([string]$sys) {
     $psi.UseShellExecute = $false; $psi.CreateNoWindow = $true; $psi.WorkingDirectory = $script:DossierNeutre
     $psi.RedirectStandardInput = $true; $psi.RedirectStandardOutput = $true; $psi.RedirectStandardError = $true; $psi.StandardOutputEncoding = [Text.Encoding]::UTF8
     foreach ($k in 'ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN') { if ($psi.EnvironmentVariables.ContainsKey($k)) { $psi.EnvironmentVariables.Remove($k) } }      # abonnement Claude uniquement
-    $p = [Diagnostics.Process]::Start($psi); $p.BeginErrorReadLine()      # (stderr vidé sans gestionnaire : le tube ne bloque jamais)
+    $ancien = $null; try { $ancien = [Console]::InputEncoding; [Console]::InputEncoding = New-Object Text.UTF8Encoding $false } catch { }      # (console en UTF-8 : .NET écrirait un BOM avant la 1re ligne JSON)
+    try { $p = [Diagnostics.Process]::Start($psi) } finally { if ($ancien) { try { [Console]::InputEncoding = $ancien } catch { } } }
+    $p.BeginErrorReadLine()      # (stderr vidé sans gestionnaire : le tube ne bloque jamais)
     $script:Chaud = @{ p = $p; sys = $f; cle = $cle }; $script:ChaudTours = 0
     $true
 }
