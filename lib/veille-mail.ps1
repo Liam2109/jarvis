@@ -16,6 +16,19 @@ $script:TrainNormand = '\b(rouen|normandie|le havre|caen|cherbourg|dieppe|evreux
 $script:MailLieuxAffiches = @{ 'geneve' = 'Genève'; 'delemont' = 'Delémont'; 'neuchatel' = 'Neuchâtel'; 'la chaux de fonds' = 'La Chaux-de-Fonds'; 'saint maurice' = 'Saint-Maurice'; 'st maurice' = 'Saint-Maurice'; 'palezieux' = 'Palézieux'
     'evreux' = 'Évreux'; 'fecamp' = 'Fécamp'; 'alencon' = 'Alençon'; 'saint lo' = 'Saint-Lô'; 'mont saint aignan' = 'Mont-Saint-Aignan'; 'saint etienne du rouvray' = 'Saint-Étienne-du-Rouvray'; 'siders' = 'Sierre'; 'genf' = 'Genève'; 'neuenburg' = 'Neuchâtel' }      # affichage avec accents (le lieu est cherché sans accents)
 
+# ---------- Métier : seulement CONDUCTEUR de train / locomotive (liste blanche sur le titre, liste noire prioritaire, titre ambigu écarté et compté) ----------
+$script:MailEcartMetier = 0
+$script:MailMetierNoire = '\b(chauffeur(?:se)? (?:de )?(?:bus|car|autocar|autobus|poids lourds?|pl)|cariste|nettoyage|nettoyeur|nettoyeuse|mecanicien(?:ne)? auto(?:mobile)?|mecanicien(?:ne)? d atelier|electricien(?:ne)?|informaticien(?:ne)?|vendeur|vendeuse|controleur|controleuse|chef(?:fe)? de gare)\b'
+$script:MailMetierFort = '\bagents? de conduite\b|\bmecanicien(?:ne)?s? (?:de (?:locomotive|train)|ferroviaire)\b|\blokfuhrer(?:in)?\b|\blokfuehrer\b|\btriebfahrzeugfuhrer(?:in)?\b|\btriebfahrzeugfuehrer\b|\blocotrain\b|\bconduct(?:eur|rice)s? de (?:ligne|lignes|manoeuvres?|man uvres?)\b'
+$script:MailMetierContexteRail = '\b(trains?|lignes?|locomotives?|rail|ferroviaire|metros?|rer|tramways?|vehicules? moteurs?|manoeuvres?|man uvres?|cff|sbb|bls|sob|transilien|ter)\b'
+function Get-MailMetier([string]$titre) {
+    # 'garde' | 'noire' (liste noire, prioritaire) | 'ambigu' (conducteur sans contexte ferroviaire : bus, camion, travaux...) | 'rien' (pas une offre de conduite).
+    $n = ConvertTo-TrainNorm $titre; if ($n -match $script:MailMetierNoire) { return 'noire' }
+    $fort = $n -match $script:MailMetierFort; if (-not $fort -and $n -notmatch '\bconduct(?:eur|rice)s?\b') { return 'rien' }
+    if (-not $fort -and ($n -match '\b(bus|autobus|autocar|camion|travaux|engins?|chantier)\b' -or $n -notmatch $script:MailMetierContexteRail)) { return 'ambigu' }
+    'garde'
+}
+
 function Get-MailConfig {
     $oui = @('oui', 'true', '1', 'on', 'yes'); $c = @{ actif = $false; minutes = 10 }
     if ($Config.PSObject.Properties['veille_mail'] -and "$($Config.veille_mail)".Trim().ToLower() -in $oui) { $c.actif = $true }
@@ -159,9 +172,10 @@ function Get-MailAnnonces([string]$html, [string]$domaine, [string]$date) {
     # Les LIENS dont le texte parle de conduite de train ; le lieu est cherché dans le texte qui suit le lien (jusqu'à l'annonce suivante). Retourne les annonces GARDÉES ; les écartées sont comptées (Add-TrainEcart).
     $employeur = Get-MailEmployeur $domaine; $out = @(); $vus = @{}
     $ancres = @([regex]::Matches($html, '(?is)<a\s[^>]*?href\s*=\s*["'']([^"'']+)["''][^>]*>(.*?)</a>') | ForEach-Object { [pscustomobject]@{ fin = $_.Index + $_.Length; debut = $_.Index; href = $_.Groups[1].Value; titre = (ConvertTo-MailTexte $_.Groups[2].Value) } })
-    $cand = @($ancres | Where-Object { $_.titre.Length -ge 6 -and $_.titre.Length -le 200 -and (Test-TrainAnnonce $_.titre) })
+    $cand = @($ancres | Where-Object { $_.titre.Length -ge 6 -and $_.titre.Length -le 200 } | ForEach-Object { $_ | Add-Member -NotePropertyName metier -NotePropertyValue (Get-MailMetier $_.titre) -PassThru } | Where-Object { $_.metier -ne 'rien' })
     for ($i = 0; $i -lt $cand.Count; $i++) {
-        $a = $cand[$i]; $finCtx = $(if ($i + 1 -lt $cand.Count) { $cand[$i + 1].debut } else { $html.Length }); $finCtx = [math]::Min($finCtx, $a.fin + 1500)
+        $a = $cand[$i]; if ($a.metier -ne 'garde') { $script:MailEcartMetier++; continue }      # liste noire ou titre ambigu : jamais envoyé, compté au journal
+        $finCtx = $(if ($i + 1 -lt $cand.Count) { $cand[$i + 1].debut } else { $html.Length }); $finCtx = [math]::Min($finCtx, $a.fin + 1500)
         $ctx = $(if ($finCtx -gt $a.fin) { ConvertTo-MailTexte $html.Substring($a.fin, $finCtx - $a.fin) } else { '' })
         $lieu = Get-MailLieu "$($a.titre) $ctx"
         $f = Get-TrainFiltreMail $lieu $a.titre
@@ -189,7 +203,7 @@ function Invoke-VeilleMail([datetime]$now = (Get-Date)) {
     $e = Get-TrainEtat; $m = Get-MailEtat; $jour = $now.ToString('yyyy-MM-dd')
     $e.pid = $PID; Save-TrainEtat $e      # même verrou que la veille horaire : un seul passage à la fois (les dates de la veille horaire ne bougent pas)
     $m.dernier_lancement = $now.ToString('o'); Save-MailEtat $m
-    $script:TrainEcart = @{ lieu = 0; langue = 0 }; $script:TrainOllamaHS = $false
+    $script:TrainEcart = @{ lieu = 0; langue = 0 }; $script:TrainOllamaHS = $false; $script:MailEcartMetier = 0
     $lus = 0; $refuses = 0; $gardees = 0; $nouvelles = 0; $envoyees = 0; $erreur = ''; $deja = @{}
     try {
         $tok = Get-GmailAccessToken; $lib = Get-GmailLibelleId $tok
@@ -223,8 +237,8 @@ function Invoke-VeilleMail([datetime]$now = (Get-Date)) {
     $e.pid = 0; Save-TrainEtat $e
     $m.dernier_passage = $now.ToString('o'); Save-MailEtat $m
     $ecL = [int]$script:TrainEcart.lieu; $ecG = [int]$script:TrainEcart.langue
-    if ($lus -or $erreur -or $envoyees) {      # rien à dire = rien dans le journal (un passage toutes les 10 minutes)
-        Write-Journal -Action 'Veille e-mail' -Resultat "$(Format-Pluriel $lus 'mail lu' 'mails lus'), $(Format-Pluriel ($gardees + $ecL + $ecG) 'offre' 'offres'), $(Format-Pluriel $gardees 'gardée' 'gardées') ($($ecL + $ecG) écartée(s) hors Suisse romande / alémanique proche)$(if ($refuses) { " ; $refuses expéditeur(s) refusé(s) (non autorisé ou non authentifié)" }) ; $nouvelles nouvelle(s), $envoyees carte(s)$(if ($erreur) { ', erreur : ' + $erreur })"
+    if ($lus -or $erreur -or $envoyees -or $script:MailEcartMetier) {      # rien à dire = rien dans le journal (un passage toutes les 10 minutes)
+        Write-Journal -Action 'Veille e-mail' -Resultat "$(Format-Pluriel $lus 'mail lu' 'mails lus'), $(Format-Pluriel ($gardees + $ecL + $ecG) 'offre' 'offres'), $(Format-Pluriel $gardees 'gardée' 'gardées') ($($ecL + $ecG) écartée(s) hors Suisse romande / alémanique proche) ; $($script:MailEcartMetier) écartée(s) : métier$(if ($refuses) { " ; $refuses expéditeur(s) refusé(s) (non autorisé ou non authentifié)" }) ; $nouvelles nouvelle(s), $envoyees carte(s)$(if ($erreur) { ', erreur : ' + $erreur })"
     }
     @{ lus = $lus; nouvelles = $nouvelles; envoyees = $envoyees; erreur = $erreur }
 }
