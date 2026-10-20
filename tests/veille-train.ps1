@@ -24,9 +24,9 @@ $script:TrainHttpStub = { param($url, $m, $corps, $h) $script:Appels += @{ url =
 $script:TrainNotifStub = { param($salon, $embed) $script:Cartes += @{ salon = $salon; e = $embed }; $script:NotifOk }
 function Route([string]$re, [int]$code, [string]$texte) { $script:Routes = @(@{ re = $re; code = $code; texte = $texte }) + @($script:Routes) }
 function Reset-Mondes { $script:Appels = @(); $script:Cartes = @(); $script:Routes = @(); $script:NotifOk = $true; $script:TrainRobots = @{}; Remove-Item (Join-Path $TR 'memoire\veille-train.json') -Force -ErrorAction SilentlyContinue }
-function SbbJson($titres) { $i = 100; '[' + ((@($titres | ForEach-Object { $i++; '{"id":"' + $i + '","viewkey":"k' + $i + '","title":"' + $_ + '","attributes":{"100":["Zürich"]},"links":{"directlink":"https://jobs.sbb.ch/v2/offene-stellen/x/k' + $i + '"},"start_date":"2026-10-14T15:11:47Z"}' })) -join ',') + ']' }
+function SbbJson($titres, [string]$lieu = 'Lausanne') { $i = 100; '[' + ((@($titres | ForEach-Object { $i++; '{"id":"' + $i + '","viewkey":"k' + $i + '","title":"' + $_ + '","attributes":{"100":["' + $lieu + '"]},"links":{"directlink":"https://jobs.sbb.ch/v2/offene-stellen/x/k' + $i + '"},"start_date":"2026-10-14T15:11:47Z"}' })) -join ',') + ']' }
 $ROBOTS_SBB = "User-agent: *`nDisallow: /infos/`nDisallow: /content/plc/"
-function Monde-Normal { Reset-Mondes; Route '/robots\.txt' 200 "User-agent: *`nDisallow:"; Route 'company\.sbb\.ch/robots' 200 $ROBOTS_SBB; Route 'jobfilter\.results\.json' 200 (SbbJson @('Lokführer:in Kat. A40', 'Technicien lignes de contact', 'Quereinstieg Lokführer:in Personenverkehr 03/2027')); Route 'sob\.ch/jobs-und-karriere/offene-stellen' 200 '<html><body><a href="/jobs-und-karriere/offene-stellen/lokfuehrer-1">Lokführer/in 80-100%</a> <a href="/impressum">Impressum</a></body></html>' }
+function Monde-Normal { Reset-Mondes; Route '/robots\.txt' 200 "User-agent: *`nDisallow:"; Route 'company\.sbb\.ch/robots' 200 $ROBOTS_SBB; Route 'jobfilter\.results\.json' 200 (SbbJson @('Lokführer:in Kat. A40', 'Technicien lignes de contact', 'Quereinstieg Lokführer:in Personenverkehr 03/2027')); Route 'sob\.ch/jobs-und-karriere/offene-stellen' 200 '<html><body><a href="/jobs-und-karriere/offene-stellen/lokfuehrer-1">Conducteur de train 80-100%</a> <a href="/jobs-und-karriere/offene-stellen/lokfuehrer-2">Lokführer/in 80-100%</a> <a href="/impressum">Impressum</a></body></html>' }
 $cartes_de = { param($salon) @($script:Cartes | Where-Object { $_.salon -eq $salon }) }
 
 # ---------- 1. Réglage et configuration ----------
@@ -53,10 +53,10 @@ Verifier ($a.lien -eq '' -and $a.employeur -eq 'non précisé' -and $a.lieu -eq 
 Write-Host '3. Sources (réponses simulées)'
 Monde-Normal
 $sbb = @(Get-TrainSbb)
-Verifier ($sbb.Count -eq 2 -and $sbb[0].employeur -eq 'CFF / SBB' -and $sbb[0].lieu -eq 'Zürich' -and $sbb[0].date -eq '2026-10-14' -and $sbb[0].lien -match '^https://jobs\.sbb\.ch/') 'CFF / SBB : 2 annonces de conduite sur 3, employeur, lieu, date, lien'
+Verifier ($sbb.Count -eq 2 -and $sbb[0].employeur -eq 'CFF / SBB' -and $sbb[0].lieu -eq 'Lausanne' -and $sbb[0].date -eq '2026-10-14' -and $sbb[0].lien -match '^https://jobs\.sbb\.ch/') 'CFF / SBB : 2 annonces de conduite sur 3, employeur, lieu, date, lien'
 Verifier (@($script:Appels | Where-Object { $_.url -match 'robots\.txt' }).Count -eq 1) 'robots.txt lu avant la page'
 $p = @(Get-TrainPage 'sob' 'https://www.sob.ch/jobs-und-karriere/offene-stellen' 'SOB')
-Verifier ($p.Count -eq 1 -and $p[0].lien -eq 'https://www.sob.ch/jobs-und-karriere/offene-stellen/lokfuehrer-1' -and $p[0].titre -match 'Lokführer') 'SOB : seul le lien de conduite est repris, lien absolu'
+Verifier ($p.Count -eq 1 -and $p[0].lien -eq 'https://www.sob.ch/jobs-und-karriere/offene-stellen/lokfuehrer-1' -and $p[0].titre -match 'Conducteur') 'SOB : seul le lien de conduite en français est repris (titre allemand écarté), lien absolu'
 Verifier ($null -eq (Get-TrainFranceTravail)) 'France Travail sans FRANCETRAVAIL_ID / SECRET : ignorée (ni erreur ni alerte)'
 Remove-Item Env:FRANCETRAVAIL_ID, Env:FRANCETRAVAIL_SECRET -ErrorAction SilentlyContinue
 $SECRET = 'S3cr3t-valeur-test-XYZ123'; $env:FRANCETRAVAIL_ID = 'PAR_test_0123456789abcdef'; $env:FRANCETRAVAIL_SECRET = $SECRET
@@ -96,6 +96,25 @@ Verifier ($msg -match 'anti-robot') 'page de défi renvoyée avec un code 200 : 
 $script:TrainPauseSec = 1; $script:TrainDernierReq = Get-Date; $sw = [Diagnostics.Stopwatch]::StartNew(); Wait-TrainPoli; $sw.Stop(); $script:TrainPauseSec = 0
 Verifier ($sw.Elapsed.TotalSeconds -ge 0.8) 'rythme poli : on attend entre deux requêtes'
 Verifier ($src -match 'TrainPauseSec = 2') 'rythme réel : 2 secondes au moins entre deux requêtes'
+
+# ---------- 4b. Filtre Suisse romande / français ----------
+Write-Host '4b. Filtre Suisse romande'
+$Fg = { param($lieu, $titre) (Get-TrainFiltreSuisse $lieu $titre) }
+Verifier (-not (& $Fg 'Zürich' 'Lokführer:in Kat. A40').garde -and -not (& $Fg 'Bern' 'Conducteur de train').garde -and -not (& $Fg 'Basel' 'Conducteur de train').garde -and -not (& $Fg 'Luzern, Olten' 'Conducteur de train').garde) 'alémanique (Zurich, Berne, Bâle, Lucerne, Olten) : écartée même avec un titre français'
+Verifier (-not (& $Fg 'Winterthur' 'Quereinstieg Lokführer:in').garde -and -not (& $Fg 'St. Gallen' 'Lokführer:in').garde -and -not (& $Fg 'Aarau' 'Lokführer:in').garde -and -not (& $Fg '' 'Conducteur de train').garde) 'Winterthour, Saint-Gall, Aarau, lieu inconnu : écartés'
+$g = & $Fg 'Lausanne' 'Conducteur·trice de train (H/F)'
+Verifier ($g.garde -and -not $g.allemand) 'Lausanne, titre français : gardée, sans mention d''allemand'
+Verifier ((& $Fg 'Genève' 'Conducteur de train').garde -and (& $Fg 'Yverdon-les-Bains' 'Agent de conduite').garde -and (& $Fg 'Delémont' 'Conducteur de train').garde -and (& $Fg 'La Chaux-de-Fonds' 'Conducteur de train').garde -and (& $Fg 'Sion' 'Conducteur de train').garde -and (& $Fg 'Neuchâtel' 'Conducteur de train').garde) 'Genève, Yverdon, Delémont, La Chaux-de-Fonds, Sion, Neuchâtel : gardées'
+Verifier ((& $Fg 'Fribourg' 'Conducteur de train').garde -and (& $Fg 'Freiburg' 'Conducteur de train').garde) 'Fribourg / Freiburg avec un titre français : gardée'
+Verifier (-not (& $Fg 'Fribourg' 'Quereinstieg Lokführer:in Personenverkehr').garde -and -not (& $Fg 'Biel/Bienne' 'Lokführer:in Kat. A40').garde) 'Fribourg / Bienne avec un titre allemand : écartée'
+$g = & $Fg 'Lausanne' 'Quereinstieg Lokführer:in Personenverkehr'
+Verifier ($g.garde -and $g.allemand) 'lieu romand mais titre allemand : gardée et marquée « allemand »'
+Monde-Normal; Route 'jobfilter\.results\.json' 200 ((SbbJson @('Lokführer:in Kat. A40') 'Zürich').TrimEnd(']') + ',' + (SbbJson @('Conducteur de train TER') 'Lausanne').TrimStart('[').TrimEnd(']') + ',' + (SbbJson @('Quereinstieg Lokführer:in Rangier') 'Fribourg').TrimStart('[') )
+$sbb = @(Get-TrainSbb)
+Verifier ($sbb.Count -eq 1 -and $sbb[0].lieu -eq 'Lausanne') 'source CFF / SBB : annonce de Zurich et annonce allemande de Fribourg écartées, celle de Lausanne gardée'
+Monde-Normal; Route 'jobfilter\.results\.json' 200 (SbbJson @('Lokführer:in Kat. A40') 'Genève')
+$sbb = @(Get-TrainSbb); $emb = New-EmbedTrainAnnonce $sbb[0]
+Verifier ($sbb.Count -eq 1 -and $sbb[0].langue -match 'Allemand' -and (@($emb.champs | Where-Object { $_.nom -eq 'Langue' }).Count -eq 1)) 'carte : champ « Langue : Allemand probable » pour un titre allemand en lieu romand'
 
 # ---------- 5. Passages : une seule notification par annonce ----------
 Write-Host '5. Base locale et cartes'
@@ -141,7 +160,7 @@ Monde-Normal; Route 'jobfilter' 500 'panne'
 $r = Invoke-VeilleTrain $t0
 $sys = @(& $cartes_de 'systeme')
 Verifier ($r.erreurs -contains 'CFF / SBB' -and $sys.Count -eq 1 -and $sys[0].e.couleur -eq $script:CouleurOrange -and $sys[0].e.titre -match 'Attention') 'source en erreur : une carte « attention » (orange)'
-Verifier (@(& $cartes_de 'jarvis').Count -ge 1 -and (@($script:Cartes | Where-Object { $_.e.titre -match 'Lokf' })).Count -eq 1) 'les autres sources continuent (SOB : 1 carte)'
+Verifier (@(& $cartes_de 'jarvis').Count -ge 1 -and (@($script:Cartes | Where-Object { $_.e.titre -match 'Conducteur' })).Count -eq 1) 'les autres sources continuent (SOB : 1 carte)'
 $script:TrainRobots = @{}; $r = Invoke-VeilleTrain ($t0.AddHours(1)); $r = Invoke-VeilleTrain ($t0.AddHours(2))
 Verifier (@(& $cartes_de 'systeme').Count -eq 1) 'même source, même jour : pas de seconde alerte (pas de spam)'
 $script:TrainRobots = @{}; $r = Invoke-VeilleTrain ($t0.AddDays(1))

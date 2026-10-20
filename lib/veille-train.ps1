@@ -29,6 +29,19 @@ function New-TrainAnnonce([string]$source, [string]$ident, [string]$titre, [stri
     @{ id = "${source}:$ident"; source = $source; titre = "$titre".Trim(); employeur = $(if ("$employeur".Trim()) { "$employeur".Trim() } else { 'non précisé' }); lieu = $(if ("$lieu".Trim()) { "$lieu".Trim() } else { 'non précisé' }); date = "$date"; lien = $lien; type = (Get-TrainType $titre) }
 }
 
+# ---------- Filtre « francophone en Suisse romande » (sources suisses seulement) ----------
+# Lieu : liste blanche (tout ce qui n'y est pas, Zurich, Berne, Bâle, lieu inconnu... est écarté). Fribourg / Bienne (bilingues) : gardés seulement si le titre n'est pas en allemand.
+# Langue : seul le titre l'indique. Titre allemand dans un lieu romand = gardé mais marqué « Allemand probable » (carte) ; la page SOB (lieu inconnu) est écartée si le titre est allemand.
+$script:TrainRomand = '\b(lausanne|geneve|geneva|genf|vaud|yverdon|vevey|montreux|renens|morges|nyon|sion|sierre|siders|martigny|monthey|aigle|bex|delemont|la chaux de fonds|neuchatel|neuenburg|le locle|jura|porrentruy|valais|bulle|payerne|vallorbe|palezieux|cossonay|gland|rolle|prilly|crissier|ecublens|pully|lutry|vernier|carouge|lancy|meyrin|versoix|romont|chexbres|puidoux|villeneuve|saint maurice|st maurice|fully|orbe|echallens|moudon|avenches|saint imier|tavannes|moutier|courtelary|travers|couvet|fleurier|les brenets)\b'
+$script:TrainBilingue = '\b(fribourg|freiburg|biel|bienne|murten|morat)\b'
+$script:TrainMotifAllemand = 'lokfuhrer|lokfuehrer|triebfahrzeug|quereinstieg|zweitausbildung|rangier|zugmaschine|bauzug|fahrleitung|personenverkehr|guterverkehr|kategorie|\bkat\b|\bund\b|\bmit\b|erfahrung|ausbildung'
+function Test-TrainAllemand([string]$titre) { $n = ConvertTo-TrainNorm $titre; ($n -match $script:TrainMotifAllemand) -and ($n -notmatch 'conduct(?:eur|rice)|mecanicien|agent de conduite') }
+function Get-TrainFiltreSuisse([string]$lieu, [string]$titre) {
+    # @{ garde; allemand } : garde = lieu romand (et titre non allemand si le lieu est seulement bilingue).
+    $l = ConvertTo-TrainNorm $lieu; $fr = $l -match $script:TrainRomand; $bi = $l -match $script:TrainBilingue; $de = Test-TrainAllemand $titre
+    @{ garde = ($fr -or ($bi -and -not $de)); allemand = $de }
+}
+
 # ---------- Réseau poli (bouchon en test) ----------
 function Wait-TrainPoli { if ($script:TrainPauseSec -gt 0) { $r = $script:TrainPauseSec - ((Get-Date) - $script:TrainDernierReq).TotalSeconds; if ($r -gt 0) { Start-Sleep -Milliseconds ([int]($r * 1000)) } }; $script:TrainDernierReq = Get-Date }
 function Invoke-TrainHttp([string]$url, [string]$methode = 'GET', [string]$corps = '', [hashtable]$entetes = @{}) {
@@ -82,7 +95,10 @@ function Get-TrainSbb {
         if (-not (Test-TrainAnnonce "$($j.title)")) { continue }
         $lieu = $(if ($j.attributes.'100') { @($j.attributes.'100') -join ', ' } else { '' })
         $d = ''; if ("$($j.start_date)" -match '^\d{4}-\d{2}-\d{2}') { $d = $Matches[0] }
-        $out += New-TrainAnnonce 'sbb' "$($j.id)" "$($j.title)" 'CFF / SBB' $lieu $d "$($j.links.directlink)"
+        $f = Get-TrainFiltreSuisse $lieu "$($j.title)"; if (-not $f.garde) { continue }
+        $a = New-TrainAnnonce 'sbb' "$($j.id)" "$($j.title)" 'CFF / SBB' $lieu $d "$($j.links.directlink)"
+        if ($f.allemand) { $a.langue = 'Allemand probable (titre en allemand)' }
+        $out += $a
     }
     $out
 }
@@ -116,7 +132,7 @@ function Get-TrainPage([string]$cle, [string]$url, [string]$employeur) {
     $html = Get-TrainTexte $url; $out = @()
     foreach ($m in [regex]::Matches($html, '(?is)<a\s[^>]*href="([^"]+)"[^>]*>(.*?)</a>')) {
         $txt = ([Net.WebUtility]::HtmlDecode(($m.Groups[2].Value -replace '<[^>]+>', ' ')) -replace '\s+', ' ').Trim()
-        if (-not $txt -or -not (Test-TrainAnnonce $txt)) { continue }
+        if (-not $txt -or -not (Test-TrainAnnonce $txt) -or (Test-TrainAllemand $txt)) { continue }      # lieu inconnu : un titre allemand est écarté
         $lien = ''; try { $lien = ([uri]::new([uri]$url, [Net.WebUtility]::HtmlDecode($m.Groups[1].Value))).AbsoluteUri } catch {}
         $out += New-TrainAnnonce $cle $lien $txt $employeur 'Suisse' '' $lien
     }
@@ -147,6 +163,7 @@ function Save-TrainEtat($e) {
 function New-EmbedTrainAnnonce($a) {
     $champs = @(@{ nom = 'Employeur'; valeur = $a.employeur; inline = $true }, @{ nom = 'Lieu'; valeur = $a.lieu; inline = $true }, @{ nom = 'Type'; valeur = $a.type; inline = $true },
         @{ nom = $(if ($a.date) { 'Date' } else { 'Repérée le' }); valeur = $(if ($a.date) { ([datetime]$a.date).ToString('dd/MM/yyyy') } else { (Get-Date).ToString('dd/MM/yyyy') }); inline = $true })
+    if ($a.langue) { $champs += @{ nom = 'Langue'; valeur = $a.langue; inline = $true } }
     if ($a.lien) { $champs += @{ nom = 'Lien'; valeur = $a.lien; inline = $false } }
     New-EmbedDiscord $a.titre "Nouvelle annonce de conduite de train ($($a.type.ToLower()))." $script:CouleurBleue $champs (Get-PiedDiscord 'annonces-train')
 }
@@ -203,7 +220,7 @@ function Invoke-VeilleTrain([datetime]$now = (Get-Date)) {
     $e.nouvelles = @($e.nouvelles | Where-Object { try { ($now - [datetime]$_.vu_le).TotalDays -lt 7 } catch { $false } })
     $resume = $false
     if ($now.ToString('HH:mm') -ge $c.resume -and $e.dernier_resume -ne $jour) {      # résumé quotidien du matin (rattrapage : au premier passage après l'heure)
-        $veille = @($e.nouvelles | Where-Object { try { ($now - [datetime]$_.vu_le).TotalHours -lt 24 } catch { $false } })
+        $veille = @($e.nouvelles | Where-Object { try { ($now - [datetime]$_.vu_le).TotalHours -lt 24 -and ($_.source -ne 'sbb' -or (Get-TrainFiltreSuisse $_.lieu $_.titre).garde) } catch { $false } })      # anciennes alémaniques déjà vues : jamais dans le résumé
         if (Send-TrainNotif 'jarvis' (New-EmbedTrainResume $veille $muettes)) { $e.dernier_resume = $jour; $resume = $true }
     }
     $e.dernier_passage = $now.ToString('o'); $e.pid = 0; Save-TrainEtat $e
