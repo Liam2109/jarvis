@@ -185,8 +185,8 @@ switch ($Commande.ToLower()) {
                 Update-Marche                                            # relevés locaux de la veille de fond : panneau Marché, alertes, seuils (aucun réseau ici)
                 Update-VeilleReveil                                      # (re)lance l'écoute de veille si elle s'est arrêtée
                 Update-PontDiscord                                       # redémarre le pont Discord s'il a planté (journal d'erreurs, délais croissants)
-                Update-DevAgent                                          # agent de développement du SaaS (désactivé par défaut : dev_agent) : démarre la prochaine tâche à l'heure du créneau
-                Update-VeilleTrain                                       # veille « annonces-train » (désactivée par défaut : veille_train) : un passage par heure dans un processus séparé
+                [void](Update-DevAgent)                                  # agent de développement du SaaS (désactivé par défaut : dev_agent) : démarre la prochaine tâche à l'heure du créneau
+                [void](Update-VeilleTrain)                               # veille « annonces-train » (désactivée par défaut : veille_train) : un passage par heure dans un processus séparé
                 Update-Discord                                           # alertes regroupées et briefing planifié sur Discord (tout est désactivé par défaut)
                 if (((Get-Date) - $dernierCoeur).TotalMinutes -ge 5) { $dernierCoeur = Get-Date; Save-HeureArret }      # « dernière activité » (si Jarvis est arrêté de force)
                 Update-ModeJeu                                           # jeu / plein écran / heures : lecture seule du premier plan, toutes les 3 s

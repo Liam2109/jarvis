@@ -99,6 +99,7 @@ Verifier ($codeSeul -match 'Get-DevEnvEpure' -and $codeSeul -match 'Find-DevCleP
 Verifier ($run -match 'Invoke-DevTache' -and $run -match 'Send-DevAlerte') 'dev-agent.ps1 : processus séparé, alerte Discord en cas d''erreur'
 $js = Get-Content (Join-Path $Root 'jarvis.ps1') -Raw -Encoding UTF8; $dc = Get-Content (Join-Path $Root 'lib\discord.ps1') -Raw -Encoding UTF8
 Verifier ($js -match 'Update-DevAgent' -and $js -match 'lib\\dev-agent\.ps1' -and $dc -match 'Invoke-DevCommande' -and $dc -match 'Invoke-DevDecision') 'branché sur la boucle de Jarvis et sur les messages Discord'
+Verifier (-not ($js -split "`n" | Where-Object { $_ -match '^\s*(Update-DevAgent|Update-VeilleTrain)\b' }) -and $js -match '\[void\]\(Update-DevAgent\)' -and $js -match '\[void\]\(Update-VeilleTrain\)') 'boucle de jarvis.ps1 : Update-DevAgent / Update-VeilleTrain renvoient un booléen, capturé par [void] (sinon « False » s''écrit en continu dans la console)'
 
 Write-Host '6) « valide » / « refuse »'
 $e = Get-DevEtat; $e.taches = @(); $e.suivant = 1; Save-DevEtat $e
