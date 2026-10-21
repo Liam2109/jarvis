@@ -12,6 +12,7 @@ $Config = Import-ConfigJarvis
 . (Join-Path $Root 'lib\discord.ps1')
 . (Join-Path $Root 'lib\veille-train.ps1')
 . (Join-Path $Root 'lib\veille-mail.ps1')
+. (Join-Path $Root 'lib\candidatures.ps1')
 $script:Secrets = @($script:Secrets)
 try { if ($Mail) { [void](Invoke-VeilleMail) } else { [void](Invoke-VeilleTrain) } } catch {
     Write-Journal -Action 'Veille annonces-train : erreur' -Resultat (Hide-Secrets $_.Exception.Message)

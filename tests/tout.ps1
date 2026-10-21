@@ -46,6 +46,7 @@ $liste = @(
     @{ n = 'agent de développement du SaaS (file, branche, garde-fous, valide / refuse)'; f = 'dev-agent.ps1' }
     @{ n = 'veille annonces-train (sources simulées, base locale, cartes, erreurs, résumé)'; f = 'veille-train.ps1' }
     @{ n = 'veille e-mail annonces-train (Gmail simulé : expéditeurs, filtre, doublons, lecture seule)'; f = 'veille-mail.ps1' }
+    @{ n = 'suivi des réponses aux candidatures (règles FR/DE/EN, Ollama, Claude Haiku plafonné, fils, cartes #candidatures)'; f = 'candidatures.ps1' }
     @{ n = 'claude chaud (Invoke-Claude : démarrage unique, repli, arrêt d''urgence)'; f = 'chaud.ps1' }
 )
 function Get-Instantane {

@@ -141,12 +141,12 @@ function Get-MailDomaine([string]$from) {
     if (-not $m.Success) { $m = [regex]::Match($f, '^([^<>@\s"]+@([^<>\s@"]+))$') }
     if ($m.Success) { $m.Groups[2].Value.ToLowerInvariant().TrimEnd('.') } else { '' }
 }
-function Test-MailExpediteur([string]$from, [string]$auth) {
-    $d = Get-MailDomaine $from; if (-not $d -or $d -notmatch $script:MailExpediteurs) { return $false }
+function Test-MailExpediteur([string]$from, [string]$auth, [string]$re = $script:MailExpediteurs) {      # $re : domaines acceptés (par défaut la liste des alertes ; le suivi des candidatures passe la sienne)
+    $d = Get-MailDomaine $from; if (-not $d -or $d -notmatch $re) { return $false }
     # Authentification notée par Gmail : DMARC réussi pour ce domaine, ou DKIM / SPF réussi POUR un domaine autorisé (un faux « From » échoue).
-    if ($auth -match '(?i)dmarc=pass[^;]*header\.from=@?([A-Za-z0-9.\-]+)') { foreach ($m in [regex]::Matches($auth, '(?i)dmarc=pass[^;]*header\.from=@?([A-Za-z0-9.\-]+)')) { if ($m.Groups[1].Value.ToLowerInvariant() -match $script:MailExpediteurs) { return $true } } }
-    foreach ($m in [regex]::Matches($auth, '(?i)dkim=pass[^;]*?header\.(?:d|i)=@?([A-Za-z0-9.\-]+)')) { if ($m.Groups[1].Value.ToLowerInvariant() -match $script:MailExpediteurs) { return $true } }
-    foreach ($m in [regex]::Matches($auth, '(?i)spf=pass[^;]*?smtp\.mailfrom=(?:[^@\s;]*@)?([A-Za-z0-9.\-]+)')) { if ($m.Groups[1].Value.ToLowerInvariant() -match $script:MailExpediteurs) { return $true } }
+    if ($auth -match '(?i)dmarc=pass[^;]*header\.from=@?([A-Za-z0-9.\-]+)') { foreach ($m in [regex]::Matches($auth, '(?i)dmarc=pass[^;]*header\.from=@?([A-Za-z0-9.\-]+)')) { if ($m.Groups[1].Value.ToLowerInvariant() -match $re) { return $true } } }
+    foreach ($m in [regex]::Matches($auth, '(?i)dkim=pass[^;]*?header\.(?:d|i)=@?([A-Za-z0-9.\-]+)')) { if ($m.Groups[1].Value.ToLowerInvariant() -match $re) { return $true } }
+    foreach ($m in [regex]::Matches($auth, '(?i)spf=pass[^;]*?smtp\.mailfrom=(?:[^@\s;]*@)?([A-Za-z0-9.\-]+)')) { if ($m.Groups[1].Value.ToLowerInvariant() -match $re) { return $true } }
     $false
 }
 function Get-MailEmployeur([string]$d) {
@@ -226,6 +226,9 @@ function Invoke-VeilleMail([datetime]$now = (Get-Date), [switch]$Simulation, [sw
     $lus = 0; $refuses = 0; $gardees = 0; $nouvelles = 0; $envoyees = 0; $erreur = ''; $deja = @{}
     try {
         $tok = Get-GmailAccessToken; $lib = Get-GmailLibelleId $tok
+        if (-not $Simulation -and -not $Faux -and (Get-Command Invoke-Candidatures -ErrorAction SilentlyContinue) -and (Get-CandConfig).actif) {      # réponses à vos candidatures (lib\candidatures.ps1) : avant les offres, leurs ids rejoignent $m.messages
+            try { [void](Invoke-Candidatures $tok $m $now) } catch { Write-Journal -Action 'Candidatures' -Resultat ("erreur : " + (Short (Hide-Secrets $_.Exception.Message) 160)) }
+        }
         $liste = Invoke-GmailGet ("messages?labelIds=$([uri]::EscapeDataString($lib))&maxResults=25&q=" + [uri]::EscapeDataString('newer_than:7d')) $tok
         foreach ($ref in @($liste.messages)) {
             if (-not $ref -or $m.messages -contains "$($ref.id)") { continue }

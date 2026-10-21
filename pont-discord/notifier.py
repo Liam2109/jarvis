@@ -2,7 +2,7 @@ r"""Poste UN message (ou un fichier texte) dans un salon Discord avec le bot, SA
 
 Usage : python -I pont-discord\notifier.py --racine <dossier Jarvis> [--salon systeme] (--texte "..." | --fichier chemin.txt)
 Le jeton (DISCORD_BOT_TOKEN) vient de l'environnement (.env chargé par jarvis.ps1) : jamais d'argument, jamais affiché. Le salon vient de config.json (discord_salons),
-sinon de memoire\discord-salons.json (écrit par le pont), sinon « jarvis ». Seul le salon désigné est écrit ; aucune mention (@) n'est possible.
+sinon de memoire\discord-salons.json (écrit par le pont), sinon « jarvis ». Seul le salon désigné est écrit ; aucune mention (@) n'est possible, sauf avec --ping : seule la mention de DISCORD_USER_ID (vous) est alors permise.
 Sortie : une ligne « ok : N message(s) envoyé(s) dans #<salon> » ou « echec : <raison sans secret> ». Code 0 = envoyé."""
 import argparse
 import json
@@ -77,6 +77,7 @@ def main():
     p.add_argument("--texte", default="")
     p.add_argument("--fichier", default="")
     p.add_argument("--embed", default="", help="fichier JSON d'un embed de Jarvis (titre, description, couleur, champs, pied)")
+    p.add_argument("--ping", action="store_true", help="mentionne DISCORD_USER_ID (et lui seul) dans le premier message : entretien à confirmer")
     a = p.parse_args()
     jeton = os.environ.get("DISCORD_BOT_TOKEN", "").strip()
     if not jeton:
@@ -97,8 +98,13 @@ def main():
     envois = [{"content": m} for m in morceaux(texte)] or [{}]
     if embed:
         envois[-1]["embeds"] = [embed]
-    for corps in envois:
+    uid = os.environ.get("DISCORD_USER_ID", "").strip()
+    ping = a.ping and re.fullmatch(r"\d{15,25}", uid) is not None      # la seule mention possible : votre propre identifiant
+    for i, corps in enumerate(envois):
         corps["allowed_mentions"] = {"parse": []}
+        if ping and i == 0:
+            corps["content"] = ("<@%s> %s" % (uid, corps.get("content", ""))).strip()
+            corps["allowed_mentions"] = {"parse": [], "users": [uid]}
         req = urllib.request.Request("%s/channels/%d/messages" % (API, cid), data=json.dumps(corps).encode("utf-8"), method="POST",
                                      headers={"Authorization": "Bot " + jeton, "Content-Type": "application/json", "User-Agent": "DiscordBot (https://github.com/Liam2109, 1.0)"})
         try:
