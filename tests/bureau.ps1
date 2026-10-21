@@ -35,7 +35,7 @@ if (Test-Path $loc) {
 $gi = @(Get-Content (Join-Path $Root '.gitignore') -Encoding UTF8 | ForEach-Object { $_.Trim() }); Verifier ($gi -contains 'config.local.json') 'config.local.json est ignoré par git (jamais poussé vers le serveur)'
 
 Write-Host '3) États voulus de l''écoute de veille'
-Fixer 'veille_reveil' $true; Fixer 'bureau_veille' $true; $script:ModeJeu = $false
+Fixer 'voix_actif' 'oui'; Fixer 'veille_reveil' $true; Fixer 'bureau_veille' $true; $script:ModeJeu = $false      # voix_actif = oui : ces tests décrivent le comportement avec la voix (désactivée par défaut, voir testsoix-actif.ps1)
 $script:Actif = $false; Verifier ((Get-EtatVeilleVoulu) -eq 'ecoute') 'en veille, réveil activé : l''écoute légère tourne'
 $script:Actif = $true; Verifier ((Get-EtatVeilleVoulu) -eq 'arret') 'Jarvis réveillé : l''écoute de veille est arrêtée (le micro est à l''écoute normale)'
 $script:Actif = $false; $script:ModeJeu = $true; Verifier ((Get-EtatVeilleVoulu) -eq 'arret') 'mode jeu : jamais d''écoute de veille'

@@ -231,6 +231,7 @@ function Ecouter-Ordre {
     # Retourne le texte de l'ordre, ou $null. Essaie Vosk, puis System.Speech, puis le clavier.
     param([int]$Timeout = 60)
     if (Test-ModeTest) { return $null }                  # tests : jamais le micro
+    if (-not (Test-VoixActive)) { return $null }         # voix_actif = non (défaut) : le micro n'est jamais ouvert
     $py = Join-Path $script:VoixDir 'ecoute.py'
     $out = & python -I $py --timeout $Timeout 2>$null
     $o = $out | Where-Object { $_ -like 'ORDRE:*' } | Select-Object -First 1

@@ -144,6 +144,7 @@ switch ($Commande.ToLower()) {
             } catch {}
         }
         Remove-Item $quitFlag -ErrorAction SilentlyContinue
+        Write-Journal -Action 'Voix' -Resultat $(if (Test-VoixActive) { 'Voix activée (voix_actif = oui)' } else { 'Voix désactivée (voix_actif = non)' })      # option voix_actif : désactivée, le micro n'est jamais ouvert (ni écoute, ni mot de réveil, ni claquements)
         Write-Journal -Action 'Démarrage de Jarvis' -Resultat $(if ($SansCoffre) { 'ok (lancé avec -SansCoffre : pas de fenêtre de déverrouillage au démarrage)' } else { 'ok' })
         $serveur = Test-ModeServeur      # mode serveur : ni HUD, ni voix, ni musique, ni raccourcis, ni coffre ; micro seulement s'il y en a un ; Discord actif
         $veilleBureau = (Test-VeilleBureau)      # PC principal : démarrage en VEILLE silencieuse, ni HUD ni plein écran avant le réveil

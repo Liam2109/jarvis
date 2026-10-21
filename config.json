@@ -137,6 +137,7 @@
   "serveur_cerveau_local": false,
   "mode_serveur": false,
   "serveur_micro": "non",
+  "voix_actif": "non",
   "duree_max_phrase_s": 20,
   "suivi_strict": true,
   "bruit_adaptatif": true,

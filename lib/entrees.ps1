@@ -25,6 +25,7 @@ function Get-ArgsEcoute([string]$py, [string]$MoteurForce = '') {
 $script:EcouteMoteurForce = ''        # « vosk » pendant le mode jeu : le moteur GPU est déchargé
 function Start-Ecoute {
     if ((Test-ModeServeur) -and -not (Get-MicroServeur)) { $script:EcouteServeurRefusee = 1 + [int]$script:EcouteServeurRefusee; return }      # mode serveur sans micro voulu : ecoute.py n'est JAMAIS lancé (ni Whisper, ni Vosk, ni recherche de micro)
+    if (-not (Test-VoixActive)) { return }               # voix_actif = non (défaut) : le micro n'est jamais ouvert
     if (Test-ModeTest) { return }                        # tests : jamais le micro
     if ($script:Ecoute -and -not $script:Ecoute.HasExited) { return }
     $py = Join-Path $script:VoixDir 'ecoute.py'

@@ -30,6 +30,7 @@ function Test-VeilleBureau { [bool]($Config -and $Config.PSObject.Properties['bu
 function Get-EtatVeilleVoulu {
     # 'ecoute' : le processus de veille doit tourner (Jarvis est en sourdine/veille, réveil activé, ni serveur ni mode jeu). Sinon 'arret'.
     $r = Get-ReglagesVeille
+    if (-not (Test-VoixActive)) { return 'arret' }      # voix_actif = non (défaut) : ni mot de réveil ni claquements
     if ($r.reveil -and $script:Actif -eq $false -and $script:ModeJeu -ne $true -and -not (Test-ModeServeur) -and ($r.phrase -or $r.claquement)) { 'ecoute' } else { 'arret' }
 }
 function Get-ArgsVeille([string]$py) {
@@ -41,6 +42,7 @@ function Get-ArgsVeille([string]$py) {
 }
 function Start-EcouteVeille {
     if (Test-ModeTest) { return }
+    if (-not (Test-VoixActive)) { return }      # voix_actif = non (défaut) : le micro n'est jamais ouvert
     if ($script:VeilleProc -and -not $script:VeilleProc.HasExited) { return }
     $py = Join-Path $script:VoixDir 'reveil.py'
     $psi = New-Object Diagnostics.ProcessStartInfo 'python', (Get-ArgsVeille $py)
@@ -121,6 +123,7 @@ function Invoke-CalibrageClaquements {
     try {
         if (Test-ModeTest) { $sortie = "$script:SortieCalibrageTest" }
         else {
+            if (-not (Test-VoixActive)) { return @{ ok = $false; texte = "La voix est désactivée (voix_actif = non), monsieur : je n'ouvre pas le micro." } }
             $mc = Get-MicroConfig; $a = @('-I', '-u', (Join-Path $script:VoixDir 'reveil.py'), '--calibre', '5'); if ($mc.nom) { $a += @('--micro', $mc.nom) }
             $sortie = (& python @a 2>$null | Out-String)
         }

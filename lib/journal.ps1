@@ -10,6 +10,10 @@ function Get-DossierLogs {
     Join-Path $script:JarvisRoot 'logs'
 }
 function Test-ModeTest { $env:JARVIS_TEST -eq '1' }
+function Test-VoixActive {
+    # voix_actif ("oui" pour l'activer ; absent ou autre = "non") : seule porte du micro. Désactivée, AUCUN processus d'écoute (ecoute.py, reveil.py) n'est lancé : ni mot de réveil, ni claquements, ni détection de voix.
+    [bool]($Config -and $Config.PSObject.Properties['voix_actif'] -and "$($Config.voix_actif)".Trim().ToLower() -in @('oui', 'true', '1', 'on', 'yes'))
+}
 function Get-ConfigPath { if ($env:JARVIS_CONFIG -and (Test-Path $env:JARVIS_CONFIG)) { $env:JARVIS_CONFIG } else { Join-Path $script:JarvisRoot 'config.json' } }
 
 # ---------- Configuration : config.json (suivi par git) + config.local.json (réglages PROPRES à cette machine, jamais suivi par git : serveur, modèle Ollama...) ----------
