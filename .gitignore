@@ -15,3 +15,5 @@ config.local.json
 *.log
 .env.bak
 .env.tmp
+
+B2B/

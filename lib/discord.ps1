@@ -482,6 +482,12 @@ function Invoke-CommandeDiscord([string]$texte) {
         Set-Content $script:StopFlag '1' -Encoding ASCII; $script:DiscordStopCanal = "$script:CanalDiscord"
         Write-Journal -Ordre $texte -Action "Arrêt d'urgence demandé par Discord" -Resultat 'drapeau posé'; Add-TamponDiscord "Arrêt d'urgence demandé, monsieur."; return $true
     }
+    if ((Get-Command Invoke-InitiativeCommande -ErrorAction SilentlyContinue) -and (Invoke-InitiativeCommande $texte)) { $script:DiscordSansHumour = $true; return $true }      # « initiatives », « approuver 3 », « rejeter 3 », « plus tard 3 » : moteur d'initiatives (lib\initiatives.ps1)
+    if (Get-Command Invoke-ExtensionsOrdre -ErrorAction SilentlyContinue) {      # presets, vues et « capacités » (lib\presets.ps1, lib\vues.ps1) : sans effet tant que presets_actif et vues_actif sont « non »
+        $ex = Invoke-ExtensionsOrdre $texte
+        if ($ex) { $script:DiscordSansHumour = $true; if ($ex.embed -and (Get-DiscordStyle) -eq 'embed') { Add-EmbedDiscord $ex.embed } else { Add-TamponDiscord $ex.texte }; return $true }
+    }
+    if ((Get-Command Invoke-SkillsCommande -ErrorAction SilentlyContinue) -and (Invoke-SkillsCommande $texte)) { $script:DiscordSansHumour = $true; return $true }      # « skills », « active <nom> », « désactive <nom> », « supprime le skill <nom> », « fais-moi un skill pour … » (lib\skills.ps1)
     if ((Get-Command Invoke-DevCommande -ErrorAction SilentlyContinue) -and (Invoke-DevCommande $texte)) { $script:DiscordSansHumour = $true; return $true }      # « dev : ... » : agent de développement du SaaS (désactivé par défaut)
     if ((Get-Command Invoke-DevDecision -ErrorAction SilentlyContinue) -and (Invoke-DevDecision $texte)) { $script:DiscordSansHumour = $true; return $true }      # « valide » / « refuse » après un compte rendu de l'agent
     if ((Get-Command Test-DemandePointSaas -ErrorAction SilentlyContinue) -and (Test-DemandePointSaas $texte)) {      # « as-tu les données du SaaS », « stats », « comment va le site »... : le point, directement (embed à champs)
@@ -516,7 +522,9 @@ function Invoke-OrdreDiscord([string]$texte, [string]$canal = 'jarvis', [string]
     $script:DiscordTampon = New-Object System.Collections.Generic.List[string]; $script:DiscordEmbeds.Clear(); $script:DiscordHumour = ''; $script:DiscordSansHumour = $false; $script:DiscordConfirmeDansOrdre = $false
     try {
         Write-Journal -Ordre "[Discord #$canal] $texte" -Action 'Ordre reçu par Discord' -Resultat 'traitement'
-        if (-not (Invoke-CommandeDiscord $texte)) {
+        $lc = $null; if (Get-Command Resolve-LeconsOrdre -ErrorAction SilentlyContinue) { $lc = Resolve-LeconsOrdre $texte; if ($lc.texte) { $texte = $lc.texte } }      # leçons / style de parole (lib\lecons.ps1, désactivé par défaut) : commandes, corrections, « Tu veux dire Ollama ? »
+        if ($lc -and $lc.traite) { }
+        elseif (-not (Invoke-CommandeDiscord $texte)) {
             if ($script:Actif -eq $false) { Invoke-OrdreSourdine $texte }          # sourdine : réponse écrite seulement, aucune action
             else { Invoke-OrdreCorps $texte }
         }

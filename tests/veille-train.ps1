@@ -68,8 +68,8 @@ Route 'offres/search\?motsCles=conducteur%20de%20train&region=28' 200 '{"resulta
 $ft = @(Get-TrainFranceTravail)
 Verifier ($ft.Count -eq 1 -and $ft[0].employeur -eq 'SNCF Voyageurs' -and $ft[0].lieu -eq '78 - Yvelines' -and $ft[0].date -eq '2026-10-18') 'France Travail : annonce de conduite gardée, chauffeur de bus écarté'
 $tokAppel = @($script:Appels | Where-Object { $_.url -match 'access_token' })[0]; $rech = @($script:Appels | Where-Object { $_.url -match 'offres/search' })
-Verifier ($tokAppel.m -eq 'POST' -and $tokAppel.url -notmatch 'S3cr3t' -and $rech.Count -eq 12 -and (@($rech | Where-Object { $_.h.Authorization -eq 'Bearer jeton-de-test-0000' }).Count -eq 12)) 'France Travail : jeton en POST (jamais dans l''URL), 12 recherches (6 mots-clés × 2 régions), jeton en en-tête'
-Verifier (@($rech | Where-Object { $_.url -match 'region=28' }).Count -eq 6 -and @($rech | Where-Object { $_.url -match 'region=11' }).Count -eq 6) 'régions : Normandie (28) et Île-de-France (11)'
+Verifier ($tokAppel.m -eq 'POST' -and $tokAppel.url -notmatch 'S3cr3t' -and $rech.Count -eq 14 -and (@($rech | Where-Object { $_.h.Authorization -eq 'Bearer jeton-de-test-0000' }).Count -eq 14)) 'France Travail : jeton en POST (jamais dans l''URL), 14 recherches (7 mots-clés × 2 régions), jeton en en-tête'
+Verifier (@($rech | Where-Object { $_.url -match 'region=28' }).Count -eq 7 -and @($rech | Where-Object { $_.url -match 'region=11' }).Count -eq 7) 'régions : Normandie (28) et Île-de-France (11)'
 Monde-Normal; Route 'access_token' 401 "refusé $SECRET"
 $msg = ''; try { [void](Get-TrainFranceTravail) } catch { $msg = $_.Exception.Message }
 Verifier ($msg -match 'jeton refusé' -and $msg -notmatch 'S3cr3t') 'jeton refusé : message clair, secret absent'

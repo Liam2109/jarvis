@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="dark">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jarvis · Pilotage</title>
+<style>
+  /* Thème sombre de Jarvis (mêmes couleurs que le tableau de bord) ; rien n'est chargé depuis Internet. */
+  :root { --fond: #04070c; --accent: #4fd2ff; --accent-2: #9be9ff; --texte: #c6e4f2; --doux: #7f9fb2; --alerte: #ff7d6e; --vert: #6dffb4; --ligne: rgba(79,210,255,.20); --ligne-forte: rgba(79,210,255,.50);
+          --titre: "Bahnschrift", "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; --mono: "Cascadia Mono", Consolas, "Courier New", monospace; }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; background: var(--fond); color: var(--texte); font-family: var(--titre); font-size: 15px; }
+  body { display: grid; grid-template-columns: 230px minmax(0, 1fr); background-image: radial-gradient(ellipse at 50% 0%, rgba(30,80,120,.22), transparent 60%); }
+  aside { border-right: 1px solid var(--ligne); padding: 22px 14px; display: flex; flex-direction: column; gap: 8px; }
+  .marque { color: var(--accent); letter-spacing: .5em; font-weight: 700; margin: 0 0 14px 8px; }
+  .nav { display: flex; justify-content: space-between; align-items: center; width: 100%; text-align: left; padding: 10px 14px; border-radius: 10px; border: 1px solid transparent; background: transparent; color: var(--texte); font: inherit; cursor: pointer; }
+  .nav:hover { background: rgba(79,210,255,.10); }
+  .nav[aria-current="page"] { background: rgba(79,210,255,.16); border-color: var(--ligne-forte); color: #fff; }
+  main { padding: 26px 34px 110px; overflow-y: auto; min-width: 0; }
+  h2 { margin: 0 0 8px; font-size: 22px; letter-spacing: .04em; color: #eaf9ff; }
+  h3 { margin: 22px 0 10px; font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--doux); }
+  .note, .vide { color: var(--doux); font-size: 13px; } .vide { font-style: italic; }
+  .entete { display: flex; align-items: center; gap: 14px; margin-bottom: 4px; }
+  .badge { display: inline-block; min-width: 1.6em; padding: 2px 10px; border-radius: 999px; background: var(--accent); color: #04121c; font-size: 12px; font-weight: 700; text-align: center; }
+  .nav .badge { margin-left: 8px; }
+  .carte { display: flex; margin: 0 0 14px; border-radius: 12px; overflow: hidden; background: linear-gradient(180deg, rgba(12,26,40,.85), rgba(6,13,21,.85)); border: 1px solid var(--ligne); }
+  .carte .barre { flex: 0 0 6px; background: var(--accent); } .carte.urgente .barre { background: var(--alerte); }
+  .carte .contenu { padding: 14px 18px; flex: 1; min-width: 0; }
+  .carte h3 { margin: 6px 0 4px; font-size: 17px; letter-spacing: 0; text-transform: none; color: #fff; overflow-wrap: anywhere; }
+  .carte p { margin: 4px 0 10px; line-height: 1.4; overflow-wrap: anywhere; }
+  .ligne { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; } .age { margin-left: auto; color: var(--doux); font-size: 12px; font-family: var(--mono); }
+  .etiquette { display: inline-block; padding: 2px 10px; border-radius: 6px; border: 1px solid var(--ligne-forte); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-2); }
+  .etiquette.urgent { border-color: var(--alerte); color: var(--alerte); }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .btn { padding: 8px 18px; border-radius: 8px; border: 1px solid var(--ligne-forte); background: rgba(8,20,32,.9); color: #d8f4ff; font: inherit; cursor: pointer; }
+  .btn:hover { background: rgba(79,210,255,.22); } .btn.principal { background: var(--accent); color: #04121c; font-weight: 600; border-color: var(--accent); }
+  .lien { background: none; border: 0; color: var(--accent-2); text-decoration: underline; cursor: pointer; font: inherit; padding: 8px 0 0; }
+  .detail { margin-top: 8px; padding: 8px 12px; border: 1px dashed var(--ligne); border-radius: 8px; font-family: var(--mono); font-size: 12px; color: var(--doux); }
+  .grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+  .info { padding: 14px 16px; border: 1px solid var(--ligne); border-radius: 12px; background: rgba(8,19,30,.7); display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .info.large { grid-column: span 1; } .info .lib { color: var(--doux); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; } .info b { font-size: 22px; font-family: var(--mono); color: #eefbff; } .info small { color: var(--doux); }
+  .courbe { width: 100%; height: 90px; margin-top: 6px; }
+  .liste { list-style: none; margin: 0; padding: 0; } .liste li { padding: 6px 0; border-bottom: 1px dashed rgba(79,210,255,.13); overflow-wrap: anywhere; } .liste li.fait { color: var(--vert); }
+  .pastille { display: inline-block; width: 9px; height: 9px; margin-right: 8px; border-radius: 50%; background: var(--doux); } .pastille.on { background: var(--vert); box-shadow: 0 0 8px var(--vert); }
+  .deux { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 26px; }
+  #zone-conversation { position: fixed; right: 18px; bottom: 84px; z-index: 90; width: min(380px, 80vw); max-height: 50vh; overflow: auto; padding: 8px 14px; border-radius: 14px; background: rgba(6,13,21,.96); border: 1px solid var(--ligne-forte); }
+  .msg { padding: 5px 8px; margin: 4px 0; border-left: 2px solid var(--ligne-forte); line-height: 1.35; overflow-wrap: anywhere; font-size: 14px; } .msg.liam { border-left-color: #6f9dff; } .msg b { color: var(--accent); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
+  .toast { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 99; padding: 10px 22px; border-radius: 10px; background: rgba(8,19,30,.97); border: 1px solid var(--ligne-forte); opacity: 0; pointer-events: none; transition: opacity .2s; }
+  .toast.visible { opacity: 1; } .toast.ko { border-color: var(--alerte); }
+</style>
+</head>
+<body>
+<aside>
+  <div class="marque">JARVIS</div>
+  <div id="nav-liste"></div>
+</aside>
+<main>
+  <section id="zone-apercu" hidden></section>
+  <section id="zone-initiatives"></section>
+  <section id="zone-missions" hidden></section>
+  <section id="zone-taches" hidden></section>
+  <section id="zone-analytics" hidden></section>
+</main>
+<div id="zone-conversation"></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script>const K = "__TOKEN__";</script>
+<script src="/pilotage/widgets.js"></script>
+<script src="/pilotage/pilotage.js"></script>
+<script>window.Pilotage.init();</script>
+</body>
+</html>

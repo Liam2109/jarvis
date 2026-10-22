@@ -107,9 +107,22 @@ function Invoke-RequeteVisage($ctx) {
     if (-not $hoteOk -or ($origine -and $origine -ne "http://127.0.0.1:$port")) { Send-Http $ctx 'interdit' 'text/plain' 403; return }
     $chemin = $req.Url.AbsolutePath
     if ($req.HttpMethod -eq 'GET') {
+        if (($chemin -like '/vues/*' -or $chemin -like '/lib/three/*') -and (Get-Command Get-FichierVueHttp -ErrorAction SilentlyContinue)) {      # code des vues et three.js LOCAL : fichiers connus seulement (liste blanche), mêmes contrôles d'hôte et d'origine, jamais memoire\ ni config
+            $f = Get-FichierVueHttp $chemin; if ($f) { Send-Http $ctx $f.corps $f.type; return }
+            Send-Http $ctx 'introuvable' 'text/plain' 404; return
+        }
+        if ($chemin -like '/pilotage/*' -and (Get-Command Get-FichierPilotageHttp -ErrorAction SilentlyContinue)) {      # scripts du workspace Pilotage (liste blanche, désactivé par défaut : pilotage_actif) ; mêmes contrôles d'hôte et d'origine
+            $f = Get-FichierPilotageHttp $chemin; if ($f) { Send-Http $ctx $f.corps $f.type; return }
+            Send-Http $ctx 'introuvable' 'text/plain' 404; return
+        }
+        if ($chemin -eq '/pilotage' -and (Get-Command Get-PagePilotage -ErrorAction SilentlyContinue)) {      # page Pilotage : même jeton que la salle de marché
+            if ($req.QueryString['k'] -ne $script:Jeton) { Send-Http $ctx 'interdit' 'text/plain' 403; return }
+            $html = Get-PagePilotage $script:Jeton; if ($html) { Send-Http $ctx $html 'text/html; charset=utf-8'; return }
+            Send-Http $ctx 'introuvable' 'text/plain' 404; return
+        }
         if ($chemin -eq '/') {
             if ($req.QueryString['k'] -ne $script:Jeton) { Send-Http $ctx 'interdit' 'text/plain' 403; return }
-            $html = [IO.File]::ReadAllText((Join-Path $script:JarvisRoot 'visage\index.html'), [Text.Encoding]::UTF8).Replace('__TOKEN__', $script:Jeton).Replace('__TITRE__', $script:TitreOrbe).Replace('__MODE__', "$($Config.mode_affichage)")
+            $html = [IO.File]::ReadAllText((Join-Path $script:JarvisRoot 'visage\index.html'), [Text.Encoding]::UTF8).Replace('__TOKEN__', $script:Jeton).Replace('__TITRE__', $script:TitreOrbe).Replace('__MODE__', "$($Config.mode_affichage)").Replace('<!--__WIDGETS__-->', $(if ((Get-Command Get-PilotageConfig -ErrorAction SilentlyContinue) -and (Get-PilotageConfig).actif) { '<script src="/pilotage/widgets.js" defer></script>' } else { '' }))
             Send-Http $ctx $html 'text/html; charset=utf-8'; return
         }
         if ($chemin -eq '/marche') {      # page « salle de marché » (lecture seule) : même jeton, mêmes contrôles d'hôte et d'origine
@@ -119,16 +132,21 @@ function Invoke-RequeteVisage($ctx) {
         }
         if ($req.QueryString['k'] -eq $script:Jeton) {
             if ($chemin -eq '/marche-donnees' -and (Get-Command Get-DonneesSalleMarche -ErrorAction SilentlyContinue)) { Send-Http $ctx ((Get-DonneesSalleMarche) | ConvertTo-Json -Depth 8 -Compress); return }
-            if ($chemin -eq '/etat') { $niv = if (Get-Command Get-DonneesMicro -ErrorAction SilentlyContinue) { [int](Get-DonneesMicro).niveau } else { 0 }; Send-Http $ctx (@{ etat = $script:VisageEtatVal; niveau = $niv; jeu = [bool]($script:ModeJeu -eq $true); ack = [int]$script:AccuseN } | ConvertTo-Json -Compress); return }      # état de l'orbe + niveau du micro (anneaux) + mode jeu : sondage rapide et léger
+            if ($chemin -eq '/etat') { $niv = if (Get-Command Get-DonneesMicro -ErrorAction SilentlyContinue) { [int](Get-DonneesMicro).niveau } else { 0 }; Send-Http $ctx (@{ etat = $script:VisageEtatVal; niveau = $niv; jeu = [bool]($script:ModeJeu -eq $true); ack = [int]$script:AccuseN } + $(if (Get-Command Get-VuesEtatHttp -ErrorAction SilentlyContinue) { Get-VuesEtatHttp } else { @{} }) | ConvertTo-Json -Depth 6 -Compress); return }      # état de l'orbe + niveau du micro (anneaux) + mode jeu : sondage rapide et léger
+            if ($chemin -eq '/pilotage-donnees' -and (Get-Command Get-DonneesPilotage -ErrorAction SilentlyContinue)) { $d = Get-DonneesPilotage; if ($d) { Send-Http $ctx ($d | ConvertTo-Json -Depth 8 -Compress); return } }      # lecture seule, champs choisis un par un
+            if ($chemin -eq '/pilotage-widgets' -and (Get-Command Get-WidgetsPilotage -ErrorAction SilentlyContinue)) { $d = Get-WidgetsPilotage; if ($d) { Send-Http $ctx ($d | ConvertTo-Json -Depth 4 -Compress); return } }
             if ($chemin -eq '/donnees') { Send-Http $ctx ((Get-DonneesTableau) | ConvertTo-Json -Depth 6 -Compress); $script:PageChargee = $true; return }
         }
         Send-Http $ctx 'introuvable' 'text/plain' 404; return
     }
     if ($req.HttpMethod -eq 'POST' -and $req.Headers['X-Jarvis-Token'] -eq $script:Jeton) {
         $c = Read-Corps $req
+        if ($chemin -eq '/pilotage-action' -and (Get-Command Invoke-PilotageAction -ErrorAction SilentlyContinue)) { Send-Http $ctx ((Invoke-PilotageAction $c) | ConvertTo-Json -Compress); return }      # boutons Approuver / Rejeter / Plus tard : mêmes fonctions que Discord
+        if ($chemin -eq '/pilotage-widget' -and (Get-Command Invoke-PilotageWidget -ErrorAction SilentlyContinue)) { Send-Http $ctx ((Invoke-PilotageWidget $c) | ConvertTo-Json -Compress); return }      # barre de widgets : actions et niveaux existants
         switch ($chemin) {
             '/ordre'   { if ($c.texte) { $script:Entrees.Enqueue(@{ src = 'visage'; texte = "$($c.texte)".Trim(); entendu = $false }) } }
             '/reduire' { Switch-Visage }
+            '/vue'     { if (Get-Command Receive-VueEtat -ErrorAction SilentlyContinue) { Receive-VueEtat $c } }      # la page signale qu'une vue est ouverte / fermée / en erreur (Échap, bouton Fermer)
         }
         Send-Http $ctx '{"ok":true}'; return
     }

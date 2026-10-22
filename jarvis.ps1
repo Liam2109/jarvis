@@ -63,6 +63,12 @@ $script:ReponseTest = $ReponseTest   # crochet de test : réponse automatique au
 . (Join-Path $Root 'lib\veille-train.ps1')
 . (Join-Path $Root 'lib\veille-mail.ps1')
 . (Join-Path $Root 'lib\candidatures.ps1')
+. (Join-Path $Root 'lib\initiatives.ps1')
+. (Join-Path $Root 'lib\lecons.ps1')
+. (Join-Path $Root 'lib\skills.ps1')
+. (Join-Path $Root 'lib\presets.ps1')
+. (Join-Path $Root 'lib\vues.ps1')
+. (Join-Path $Root 'lib\pilotage.ps1')
 . (Join-Path $Root 'lib\veille-reveil.ps1')
 . (Join-Path $Root 'lib\diag-serveur.ps1')
 . (Join-Path $Root 'lib\boucle.ps1')
@@ -196,7 +202,9 @@ switch ($Commande.ToLower()) {
                 Update-PontDiscord                                       # redémarre le pont Discord s'il a planté (journal d'erreurs, délais croissants)
                 [void](Update-DevAgent)                                  # agent de développement du SaaS (désactivé par défaut : dev_agent) : démarre la prochaine tâche à l'heure du créneau
                 [void](Update-VeilleMail)                                 # veille « annonces-train » par e-mails d'alerte Gmail (désactivée par défaut : veille_mail) : un passage toutes les 10 minutes, lecture seule
-                [void](Update-VeilleTrain)                             # veille « annonces-train » (désactivée par défaut : veille_train) : un passage par heure dans un processus séparé
+                [void](Update-Initiatives)                                # moteur d'initiatives (désactivé par défaut : initiatives_actif) : propositions toutes les N minutes, scan de nuit ; rien sans l'accord de Liam
+                [void](Update-Lecons)                                     # leçons (désactivées par défaut : lecons_actif) : revue de nuit entre 3 h et 5 h ; rien n'est promu sans l'accord de Liam
+                [void](Update-VeilleTrain)                           # veille « annonces-train » (désactivée par défaut : veille_train) : un passage par heure dans un processus séparé
                 Update-Discord                                           # alertes regroupées et briefing planifié sur Discord (tout est désactivé par défaut)
                 if (((Get-Date) - $dernierCoeur).TotalMinutes -ge 5) { $dernierCoeur = Get-Date; Save-HeureArret }      # « dernière activité » (si Jarvis est arrêté de force)
                 Update-ModeJeu                                           # jeu / plein écran / heures : lecture seule du premier plan, toutes les 3 s

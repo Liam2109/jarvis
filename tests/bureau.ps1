@@ -25,12 +25,15 @@ if ($codePy -ne 0) { ($sortiePy -split "`n" | Where-Object { $_ -match 'ECHEC|É
 Write-Host '2) config.json : tout est désactivé par défaut ; ce PC l''active dans config.local.json'
 Verifier ($vraie.bureau_veille -eq $false -and $vraie.veille_reveil -eq $false) 'config.json : bureau_veille et veille_reveil sont FAUX (le serveur et les autres PC ne sont pas touchés)'
 Verifier ($vraie.claquement_seuil -eq 72 -and $vraie.claquement_ecart_min_ms -eq 200 -and $vraie.claquement_ecart_max_ms -eq 800 -and $vraie.claquement_duree_max_ms -eq 120 -and $vraie.claquement_actif -eq $true -and $vraie.reveil_phrase -eq $true) 'config.json : seuil 72, écart de 0,2 à 0,8 s, claquement de 120 ms au plus, phrase et claquement actifs'
-$loc = Join-Path $Root 'config.local.json'
+# Réglages typiques d'un PC de bureau, dans un fichier TEMPORAIRE : le vrai config.local.json de cette machine n'est jamais lu (il peut légitimement différer).
+$loc = Join-Path $env:TEMP ('jarvis-test-config-local-' + [guid]::NewGuid().ToString('N').Substring(0, 8) + '.json')
+[IO.File]::WriteAllText($loc, '{ "discord_actif": false, "bureau_veille": true, "veille_reveil": true, "etat_au_demarrage": "sourdine", "ollama": { "keep_alive": "24h" } }', [Text.UTF8Encoding]::new($false))
 if (Test-Path $loc) {
     $eff = Get-Content (Join-Path $Root 'config.json') -Raw -Encoding UTF8 | ConvertFrom-Json; Merge-ConfigObjet $eff (Get-Content $loc -Raw -Encoding UTF8 | ConvertFrom-Json)
     Verifier ($eff.discord_actif -eq $false) 'config.local.json de ce PC : Discord DÉSACTIVÉ (le bot reste sur le serveur)'
     Verifier ($eff.bureau_veille -eq $true -and $eff.veille_reveil -eq $true -and "$($eff.etat_au_demarrage)" -eq 'sourdine') 'config.local.json de ce PC : veille + réveil actifs, démarrage en sourdine'
     Verifier ("$($eff.ollama.keep_alive)" -eq '24h' -and $eff.ollama.modele -eq $vraie.ollama.modele) 'config.local.json de ce PC : Ollama gardé chaud 24 h, modèle de config.json conservé'
+    Remove-Item $loc -Force -ErrorAction SilentlyContinue
 } else { Write-Host '        (pas de config.local.json ici : contrôle de ce PC sauté)' }
 $gi = @(Get-Content (Join-Path $Root '.gitignore') -Encoding UTF8 | ForEach-Object { $_.Trim() }); Verifier ($gi -contains 'config.local.json') 'config.local.json est ignoré par git (jamais poussé vers le serveur)'
 

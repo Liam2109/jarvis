@@ -19,5 +19,6 @@ function Import-Competences([string]$dossier = (Join-Path $script:JarvisRoot 'li
             Write-Journal -Action 'Compétence personnelle IGNORÉE' -Resultat "$($f.Name) : $($_.Exception.Message)"
         }
     }
+    if (Get-Command Import-SkillsActifs -ErrorAction SilentlyContinue) { $sk = Import-SkillsActifs $dossier; $res.chargees += @($sk.chargees); $res.echecs += @($sk.echecs) }      # skills créés par Jarvis et validés par Liam : sous-dossiers dont le manifeste dit « actif » (lib\skills.ps1)
     $res
 }

@@ -81,6 +81,119 @@ function New-EmbedBriefing($lignes, $saas = @(), $marche = @(), $afaire = @(), [
     New-EmbedDiscord ((Get-EmojiModele 'soleil') + " $titre") (($l | ForEach-Object { Format-GrasDiscord $_ }) -join "`n`n") $script:CouleurBleue $champs (Get-PiedDiscord)
 }
 
+# ---------- 5) INITIATIVES (propositions de Jarvis : barre bleue = normal, rouge = urgent) ----------
+function Get-InitiativeLibelleType([string]$t) { switch ($t) { 'rappel' { 'Rappel' } 'suggestion' { 'Suggestion' } 'skill_propose' { 'Nouvelle compétence' } 'maintenance' { 'Entretien' } default { "$t" } } }
+function Get-InitiativeLibelleStatut([string]$s) { switch ($s) { 'en_attente' { 'À valider' } 'approuvee' { 'Approuvée' } 'rejetee' { 'Rejetée' } 'plus_tard' { 'Reportée' } 'oubliee' { 'Oubliée' } default { "$s" } } }
+function New-EmbedInitiative($i) {
+    # $i : id, titre, type, raison, urgence, niveau_autonomie, statut. Une idée par rubrique, la consigne pour répondre en dernier.
+    $urgent = ("$($i.urgence)" -eq 'haute')
+    $champs = @(
+        @{ nom = 'Pourquoi'; valeur = "$($i.raison)"; inline = $false },
+        @{ nom = 'Type'; valeur = (Get-InitiativeLibelleType "$($i.type)"); inline = $true },
+        @{ nom = 'Urgence'; valeur = $(if ($urgent) { 'Urgente' } else { 'Normale' }); inline = $true },
+        @{ nom = 'Statut'; valeur = (Get-InitiativeLibelleStatut "$($i.statut)"); inline = $true })
+    if ("$($i.statut)" -in 'en_attente', 'plus_tard', 'oubliee') { $champs += @{ nom = 'Votre réponse'; valeur = "approuver $($i.id)`nrejeter $($i.id)`nplus tard $($i.id)"; inline = $false } }
+    New-EmbedDiscord "Initiative n° $($i.id) · $(Get-InitiativeLibelleType "$($i.type)")" "**$($i.titre)**" $(if ($urgent) { $script:CouleurRouge } else { $script:CouleurBleue }) $champs "Rien n'est fait sans votre accord · $(Get-PiedDiscord)"
+}
+function New-EmbedInitiatives($liste, [int]$oubliees = 0) {
+    $l = @($liste)
+    if (-not $l.Count) { return (New-EmbedDiscord 'Initiatives' 'Aucune initiative en attente, monsieur.' $script:CouleurBleue @() (Get-PiedDiscord)) }
+    $urgent = @($l | Where-Object { "$($_.urgence)" -eq 'haute' -and "$($_.statut)" -eq 'en_attente' }).Count
+    $att = @($l | Where-Object { "$($_.statut)" -eq 'en_attente' }); $rep = @($l | Where-Object { "$($_.statut)" -eq 'plus_tard' })
+    $fmt = { param($x) "**n° $($x.id)** · $($x.titre)`n$($x.raison)" }
+    $champs = @()
+    if ($att.Count) { $champs += @{ nom = (Get-MotNombre $att.Count 'initiative à valider' 'initiatives à valider'); valeur = ((@($att | Select-Object -First 5 | ForEach-Object { & $fmt $_ })) -join "`n`n"); inline = $false } }
+    if ($rep.Count) { $champs += @{ nom = (Get-MotNombre $rep.Count 'initiative reportée' 'initiatives reportées'); valeur = ((@($rep | Select-Object -First 5 | ForEach-Object { & $fmt $_ })) -join "`n`n"); inline = $false } }
+    $champs += @{ nom = 'Votre réponse'; valeur = "approuver <n°> · rejeter <n°> · plus tard <n°>"; inline = $false }
+    $desc = $(if ($urgent) { (Get-MotNombre $urgent 'initiative urgente' 'initiatives urgentes') + ' à regarder en premier.' } else { 'Voici ce que je vous propose, monsieur.' })
+    $pied = (Get-PiedDiscord); if ($oubliees) { $pied = (Get-MotNombre $oubliees 'initiative oubliée' 'initiatives oubliées') + ' (sans réponse depuis plus de 4 jours) · ' + $pied }
+    New-EmbedDiscord 'Initiatives' $desc $(if ($urgent) { $script:CouleurRouge } else { $script:CouleurBleue }) $champs $pied
+}
+
+# ---------- 5 bis) LEÇONS ET STYLE DE PAROLE (ce que Jarvis a appris ; barre bleue) ----------
+function New-EmbedLecons($liste) {
+    $l = @($liste)
+    if (-not $l.Count) { return (New-EmbedDiscord 'Leçons apprises' "Je n'ai encore appris aucune leçon, monsieur." $script:CouleurBleue @() (Get-PiedDiscord)) }
+    $fmt = { param($x) "**n° $($x.id)** · $($x.regle)`nConfiance $([int][math]::Round([double]$x.confiance * 100)) % · $(Get-MotNombre ([int]$x.confirmations) 'confirmation' 'confirmations')" }
+    $groupes = @(@('Règles permanentes', @($l | Where-Object { "$($_.statut)" -eq 'permanente' })), @('Leçons fiables', @($l | Where-Object { "$($_.statut)" -ne 'permanente' -and [double]$_.confiance -ge 0.6 })), @('Leçons en cours', @($l | Where-Object { "$($_.statut)" -ne 'permanente' -and [double]$_.confiance -lt 0.6 })))
+    $champs = @(); foreach ($g in $groupes) { if ($g[1].Count) { $champs += @{ nom = "$($g[0]) ($($g[1].Count))"; valeur = ((@($g[1] | Sort-Object { -[double]$_.confiance } | Select-Object -First 4 | ForEach-Object { & $fmt $_ })) -join "`n`n"); inline = $false } } }
+    $champs += @{ nom = 'Votre réponse'; valeur = 'oublie la leçon <n°>'; inline = $false }
+    New-EmbedDiscord 'Leçons apprises' (Get-MotNombre $l.Count 'leçon retenue' 'leçons retenues' 'Aucune leçon') $script:CouleurBleue $champs (Get-PiedDiscord)
+}
+function New-EmbedStyle($s) {
+    # $s : elements (id, genre, cle, valeur, sens, confirmations), courte, detaillee
+    $el = @($s.elements)
+    $mots = @($el | Where-Object { "$($_.genre)" -eq 'mot' } | Sort-Object { -[int]$_.confirmations } | Select-Object -First 5 | ForEach-Object { "**n° $($_.id)** · « $($_.cle) » veut dire « $($_.valeur) » ($(Get-MotNombre ([int]$_.confirmations) 'fois' 'fois'))" })
+    $tour = @($el | Where-Object { "$($_.genre)" -eq 'tournure' } | Sort-Object { -[int]$_.confirmations } | Select-Object -First 5 | ForEach-Object { "**n° $($_.id)** · « $($_.cle) » : $($_.sens)" })
+    $suj = @($el | Where-Object { "$($_.genre)" -eq 'sujet' -and [int]$_.confirmations -ge 2 } | Sort-Object { -[int]$_.confirmations } | Select-Object -First 5 | ForEach-Object { "**n° $($_.id)** · $($_.cle) ($(Get-MotNombre ([int]$_.confirmations) 'fois' 'fois'))" })
+    $champs = @(@{ nom = 'Longueur des réponses'; valeur = $(if ([int]$s.detaillee -gt [int]$s.courte) { 'Détaillées' } else { 'Courtes et directes' }); inline = $true })
+    if ($mots.Count) { $champs += @{ nom = 'Mots que je corrige'; valeur = ($mots -join "`n"); inline = $false } }
+    if ($tour.Count) { $champs += @{ nom = 'Vos tournures'; valeur = ($tour -join "`n"); inline = $false } }
+    if ($suj.Count) { $champs += @{ nom = 'Sujets qui reviennent'; valeur = ($suj -join "`n"); inline = $false } }
+    $champs += @{ nom = 'Votre réponse'; valeur = 'oublie le style <n°>'; inline = $false }
+    New-EmbedDiscord 'Votre façon de parler' $(if ($el.Count) { "Voici ce que j'ai retenu, monsieur." } else { "Je n'ai encore rien appris de votre façon de parler, monsieur." }) $script:CouleurBleue $champs (Get-PiedDiscord)
+}
+
+# ---------- 5 ter) SKILLS (liste et rapport de validation ; barre bleue, rouge si le contrôle a échoué) ----------
+function New-EmbedSkills($liste) {
+    $l = @($liste)
+    if (-not $l.Count) { return (New-EmbedDiscord 'Skills' "Aucun skill pour le moment, monsieur. Dites « fais-moi un skill pour … »." $script:CouleurBleue @() (Get-PiedDiscord)) }
+    $champs = @()
+    foreach ($g in @(@('Actifs', 'actif'), @('Validés, désactivés', 'validé'), @('En quarantaine', 'quarantaine'), @('Refusés ou archivés', 'refusé'))) {
+        $x = @($l | Where-Object { $_.etat -eq $g[1] }); if (-not $x.Count) { continue }
+        $champs += @{ nom = "$($g[0]) ($($x.Count))"; valeur = ((@($x | Select-Object -First 6 | ForEach-Object { "**$($_.nom)** · $($_.description)$(if ($_.statut -eq 'echec_controle') { ' (contrôle échoué)' })" })) -join "`n"); inline = $false }
+    }
+    $champs += @{ nom = 'Votre réponse'; valeur = "active <nom>`ndésactive <nom>`nsupprime le skill <nom>"; inline = $false }
+    New-EmbedDiscord 'Skills' (Get-MotNombre $l.Count 'skill' 'skills') $script:CouleurBleue $champs (Get-PiedDiscord)
+}
+function New-EmbedSkillRapport($m, $initiative = $null) {
+    # $m : manifeste (nom, description, outils, permission_niveau, controle) ; $initiative : l'initiative de validation (ou $null si le contrôle a échoué)
+    $ok = ($m.controle -and $m.controle.statique -and $m.controle.statique.ok -eq $true -and $m.controle.test -and $m.controle.test.ok -eq $true)
+    $mot = { param($x) if ($x -and $x.ok -eq $true) { 'OK' } else { 'Échec' } }
+    $champs = @(
+        @{ nom = 'Ce qu''il fait'; valeur = "$($m.description)"; inline = $false },
+        @{ nom = 'Outils prévus'; valeur = (@($m.outils) -join ', '); inline = $true },
+        @{ nom = 'Permission'; valeur = "Niveau $($m.permission_niveau)"; inline = $true },
+        @{ nom = 'Contrôle statique'; valeur = (& $mot $m.controle.statique); inline = $true },
+        @{ nom = 'Test silencieux'; valeur = (& $mot $m.controle.test); inline = $true })
+    if (-not $ok) { $champs += @{ nom = 'Motifs'; valeur = ((@(@($m.controle.statique.motifs) + @($m.controle.test.motif) | Where-Object { $_ } | Select-Object -First 4)) -join "`n"); inline = $false } }
+    elseif ($initiative) { $champs += @{ nom = 'Votre réponse'; valeur = "approuver $($initiative.id)`nrejeter $($initiative.id)"; inline = $false } }
+    New-EmbedDiscord $(if ($ok) { "Skill « $($m.nom) » prêt à valider" } else { "Skill « $($m.nom) » écarté" }) $(if ($ok) { "Rien n'est activé tant que vous n'avez pas validé, puis dit « active $($m.nom) »." } else { 'Le contrôle a échoué : le skill reste en quarantaine, rien n''est activé.' }) $(if ($ok) { $script:CouleurBleue } else { $script:CouleurRouge }) $champs (Get-PiedDiscord)
+}
+
+# ---------- 5 quater) PRESETS, VUES ET CAPACITÉS (barre bleue) ----------
+function New-EmbedPresets($liste) {
+    $l = @($liste)
+    if (-not $l.Count) { return (New-EmbedDiscord 'Presets' "Aucun preset pour le moment, monsieur. Dites « crée un preset X avec … »." $script:CouleurBleue @() (Get-PiedDiscord)) }
+    $champs = @()
+    foreach ($g in @(@('Actifs', 'actif'), @('À valider', 'a_valider'), @('Désactivés', 'desactive'), @('Refusés', 'refuse'))) {
+        $x = @($l | Where-Object { "$($_.statut)" -eq $g[1] }); if (-not $x.Count) { continue }
+        $champs += @{ nom = "$($g[0]) ($($x.Count))"; valeur = ((@($x | Select-Object -First 6 | ForEach-Object { "**$($_.nom)** · $($_.description)$(if (@($_.declencheurs).Count) { "`nDites : « $($_.declencheurs[0]) »" })" })) -join "`n"); inline = $false }
+    }
+    $champs += @{ nom = 'Votre réponse'; valeur = "lance le preset <nom>`ndésactive le preset <nom>"; inline = $false }
+    New-EmbedDiscord 'Presets' (Get-MotNombre $l.Count 'preset' 'presets') $script:CouleurBleue $champs (Get-PiedDiscord)
+}
+function New-EmbedPresetRun($preset, $r) {
+    # $r : ok, texte, lignes (✓ / ✗ par étape)
+    New-EmbedDiscord "Preset « $($preset.nom) »" "$($r.texte)" $(if ($r.ok) { $script:CouleurBleue } else { $script:CouleurOrange }) $(if (@($r.lignes).Count) { @(@{ nom = 'Étapes'; valeur = (@($r.lignes) -join "`n"); inline = $false }) } else { @() }) (Get-PiedDiscord)
+}
+function New-EmbedVues($liste) {
+    $l = @($liste)
+    if (-not $l.Count) { return (New-EmbedDiscord 'Vues' 'Aucune vue installée, monsieur.' $script:CouleurBleue @() (Get-PiedDiscord)) }
+    $champs = @(foreach ($v in ($l | Select-Object -First 8)) {
+        if ($v.ok) { @{ nom = "$($v.vue.nom)"; valeur = "$($v.vue.description)`nDites : « montre $(@($v.vue.declencheurs)[0].phrase) »"; inline = $false } }
+        else { @{ nom = "$($v.id) (invalide)"; valeur = "$((@($v.motifs) | Select-Object -First 2) -join ' ; ')"; inline = $false } }
+    })
+    $champs += @{ nom = 'Votre réponse'; valeur = "montre la vue <nom>`nferme la vue"; inline = $false }
+    New-EmbedDiscord 'Vues' (Get-MotNombre $l.Count 'vue installée' 'vues installées') $script:CouleurBleue $champs (Get-PiedDiscord)
+}
+function New-EmbedCapacites($d) {
+    # $d : skills, presets, vues (listes de @{ nom; etat; description }), presets_actif, vues_actif
+    $bloc = { param($titre, $l, $actif) $x = @($l); $v = $(if ($x.Count) { (@($x | Select-Object -First 6 | ForEach-Object { "**$($_.nom)** · $($_.etat)" }) -join "`n") } else { 'Aucun.' }); @{ nom = "$titre ($($x.Count))$(if ($actif -eq $false) { ' · désactivés' })"; valeur = $v; inline = $false } }
+    $champs = @((& $bloc 'Skills' $d.skills $null), (& $bloc 'Presets' $d.presets $d.presets_actif), (& $bloc 'Vues' $d.vues $d.vues_actif))
+    New-EmbedDiscord 'Capacités' "Ce que j'ai installé, monsieur." $script:CouleurBleue $champs (Get-PiedDiscord)
+}
+
 # ---------- 6) ERREURS, REFUS ET ALERTES ----------
 function New-EmbedProbleme([string]$titre, [string]$phrase, [string]$quoiFaire, [bool]$grave = $true) {
     New-EmbedDiscord ((Get-EmojiModele 'alerte') + " $titre") ("$phrase" + $(if ($quoiFaire) { "`n`nQue faire : $quoiFaire" } else { '' })) $(if ($grave) { $script:CouleurRouge } else { $script:CouleurOrange }) @() (Get-PiedDiscord)

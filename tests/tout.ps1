@@ -46,7 +46,14 @@ $liste = @(
     @{ n = 'agent de développement du SaaS (file, branche, garde-fous, valide / refuse)'; f = 'dev-agent.ps1' }
     @{ n = 'veille annonces-train (sources simulées, base locale, cartes, erreurs, résumé)'; f = 'veille-train.ps1' }
     @{ n = 'veille e-mail annonces-train (Gmail simulé : expéditeurs, filtre, doublons, lecture seule)'; f = 'veille-mail.ps1' }
+    @{ n = 'offres conducteur débutant (exclusions, employeurs, pages, carte + brouillon Gmail, rien envoyé)'; f = 'offres-debutant.ps1' }
     @{ n = 'suivi des réponses aux candidatures (règles FR/DE/EN, Ollama, Claude Haiku plafonné, fils, cartes #candidatures)'; f = 'candidatures.ps1' }
+    @{ n = 'initiatives (création, interdits, décisions, oubli 4 jours, scan de nuit, niveaux 0-5, boucle, commandes Discord, cartes)'; f = 'initiatives.ps1' }
+    @{ n = 'leçons + style de parole (création, fusion, confiance, promotion proposée, secrets refusés, « omada » -> Ollama, commandes)'; f = 'lecons.ps1' }
+    @{ n = 'skills (idée sans fichier, génération simulée, contrôle statique, quarantaine, validation, refus archivé + leçon, commandes)'; f = 'skills.ps1' }
+    @{ n = 'presets (étapes classées, niveaux inchangés, création sur validation, exemples à valider, commandes)'; f = 'presets.ps1' }
+    @{ n = 'vues (manifestes VUE.md, analyse du JS, événements show / hide / command, routage, capacités, node --check si présent)'; f = 'vues.ps1' }
+    @{ n = 'pilotage (workspace, widgets, menu : lecture sans secret, boutons = fonctions Discord, jeton et hôte, échappement, node --check)'; f = 'pilotage.ps1' }
     @{ n = 'option voix_actif (désactivée par défaut : aucun micro, aucun réveil ; activée : comportement actuel)'; f = 'voix-actif.ps1' }
     @{ n = 'claude chaud (Invoke-Claude : démarrage unique, repli, arrêt d''urgence)'; f = 'chaud.ps1' }
 )

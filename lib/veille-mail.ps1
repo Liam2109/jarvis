@@ -11,12 +11,14 @@ $script:MailLibelle = 'annonces-train'
 $script:MailFaux = $false; $script:MailTrace = $null; $script:MailTraceId = @{}      # commande veille-mail-test : faux Gmail, trace des décisions (null = désactivée)
 $script:MailDelaiSec = 60; $script:MailAttenteRetry = 5      # appels Gmail : 60 s ; si le premier expire (aucune réponse), une nouvelle tentative après 5 s
 $script:MailPortee = 'https://www.googleapis.com/auth/gmail.readonly'
-$script:MailExpediteurs = '(^|\.)(jobup\.ch|jobscout24\.ch|sbb\.ch|indeed\.com|sncf\.fr|sncf\.com|francetravail\.fr)$'
+$script:MailExpediteurs = '(^|\.)(jobup\.ch|jobscout24\.ch|sbb\.ch|indeed\.com|sncf\.fr|sncf\.com|francetravail\.fr|hexafret\.com|hexafret\.fr|captrain\.fr|lineas\.net|mob\.ch|tpf\.ch)$'
 # Rouen / Normandie (liste blanche de lieux, comme pour la Suisse romande ; texte normalisé sans accents)
 $script:TrainNormand = '\b(rouen|normandie|le havre|caen|cherbourg|dieppe|evreux|elbeuf|sotteville|quevilly|mont saint aignan|barentin|yvetot|lisieux|oissel|montivilliers|fecamp|bernay|vernon|louviers|pont audemer|saint etienne du rouvray|darnetal|gisors|serquigny|alencon|saint lo|granville|avranches|coutances|flers|argentan|honfleur|deauville|bolbec|lillebonne|gonfreville|harfleur)\b'
+# Île-de-France (SNCF Voyageurs Île-de-France, Transilien) : même principe
+$script:TrainIdf = '\b(paris|ile de france|saint lazare|montparnasse|gare du nord|gare de l est|gare de lyon|austerlitz|versailles|saint quentin en yvelines|massy|juvisy|melun|cergy|pontoise|mantes la jolie|creteil|saint denis|bobigny|nanterre|la defense|argenteuil|noisy le sec|marne la vallee|torcy|meaux|provins|rambouillet|evry|corbeil essonnes|etampes|orly|villeneuve saint georges|trappes|plaisir|acheres|poissy|conflans sainte honorine|sartrouville|ermont|pantin|bondy|aulnay sous bois|rosny sous bois|le bourget|chelles|lagny|mitry|roissy|vaires)\b'
 
 $script:MailLieuxAffiches = @{ 'geneve' = 'Genève'; 'delemont' = 'Delémont'; 'neuchatel' = 'Neuchâtel'; 'la chaux de fonds' = 'La Chaux-de-Fonds'; 'saint maurice' = 'Saint-Maurice'; 'st maurice' = 'Saint-Maurice'; 'palezieux' = 'Palézieux'
-    'evreux' = 'Évreux'; 'fecamp' = 'Fécamp'; 'alencon' = 'Alençon'; 'saint lo' = 'Saint-Lô'; 'mont saint aignan' = 'Mont-Saint-Aignan'; 'saint etienne du rouvray' = 'Saint-Étienne-du-Rouvray'; 'siders' = 'Sierre'; 'genf' = 'Genève'; 'neuenburg' = 'Neuchâtel' }      # affichage avec accents (le lieu est cherché sans accents)
+    'evreux' = 'Évreux'; 'fecamp' = 'Fécamp'; 'alencon' = 'Alençon'; 'saint lo' = 'Saint-Lô'; 'mont saint aignan' = 'Mont-Saint-Aignan'; 'saint etienne du rouvray' = 'Saint-Étienne-du-Rouvray'; 'siders' = 'Sierre'; 'genf' = 'Genève'; 'neuenburg' = 'Neuchâtel'; 'ile de france' = 'Île-de-France'; 'gare du nord' = 'Gare du Nord'; 'gare de l est' = 'Gare de l''Est' }      # affichage avec accents (le lieu est cherché sans accents)
 
 # ---------- Métier : seulement CONDUCTEUR de train / locomotive (liste blanche sur le titre, liste noire prioritaire, titre ambigu écarté et compté) ----------
 $script:MailEcartMetier = 0
@@ -25,7 +27,7 @@ $script:MailMetierFort = '\bagents? de conduite\b|\bmecanicien(?:ne)?s? de (?:lo
 $script:MailMetierContexteRail = '\b(trains?|lignes?|locomotives?|rail|ferroviaire|metros?|rer|tramways?|vehicules? moteurs?|manoeuvres?|man uvres?|cff|sbb|bls|sob|transilien|ter)\b'
 function Get-MailMetier([string]$titre) {
     # 'garde' | 'noire' (liste noire, prioritaire) | 'ambigu' (conducteur sans contexte ferroviaire : bus, camion, travaux...) | 'rien' (pas une offre de conduite).
-    $n = ConvertTo-TrainNorm $titre; if ($n -match $script:MailMetierNoire) { return 'noire' }
+    $n = ConvertTo-TrainNorm $titre; if ($n -match $script:MailMetierNoire -or $n -match $script:TrainExclu) { return 'noire' }      # liste noire + offres « déjà formé / expérimenté / formateur » (lib\veille-train.ps1)
     $fort = $n -match $script:MailMetierFort; if (-not $fort -and $n -notmatch '\bconduct(?:eur|rice)s?\b') { return 'rien' }
     if (-not $fort -and ($n -match '\b(bus|autobus|autocar|camion|travaux|engins?|chantier)\b' -or $n -notmatch $script:MailMetierContexteRail)) { return 'ambigu' }
     'garde'
@@ -150,10 +152,10 @@ function Test-MailExpediteur([string]$from, [string]$auth, [string]$re = $script
     $false
 }
 function Get-MailEmployeur([string]$d) {
-    if ($d -match 'jobup') { return 'Jobup (alerte e-mail)' }; if ($d -match 'jobscout24') { return 'JobScout24 (alerte e-mail)' }; if ($d -match 'sbb\.ch') { return 'CFF / SBB (alerte e-mail)' }; if ($d -match 'indeed') { return 'Indeed (alerte e-mail)' }; if ($d -match 'sncf') { return 'SNCF (alerte e-mail)' }; if ($d -match 'francetravail') { return 'France Travail (alerte e-mail)' }
+    if ($d -match 'jobup') { return 'Jobup (alerte e-mail)' }; if ($d -match 'jobscout24') { return 'JobScout24 (alerte e-mail)' }; if ($d -match 'sbb\.ch') { return 'CFF / SBB (alerte e-mail)' }; if ($d -match 'indeed') { return 'Indeed (alerte e-mail)' }; if ($d -match 'sncf') { return 'SNCF (alerte e-mail)' }; if ($d -match 'hexafret') { return 'Hexafret (alerte e-mail)' }; if ($d -match 'captrain') { return 'Captrain (alerte e-mail)' }; if ($d -match 'lineas') { return 'Lineas (alerte e-mail)' }; if ($d -match 'mob\.ch') { return 'MOB (alerte e-mail)' }; if ($d -match 'tpf') { return 'TPF (alerte e-mail)' }; if ($d -match 'francetravail') { return 'France Travail (alerte e-mail)' }
     'Alerte e-mail'
 }
-$script:MailEmployeursConnus = [ordered]@{ 'cff|sbb|ffs' = 'CFF / SBB'; 'sncf' = 'SNCF'; 'ratp' = 'RATP'; 'transilien' = 'Transilien'; 'bls' = 'BLS'; 'sob' = 'SOB'; 'thurbo' = 'Thurbo'; 'tpf' = 'TPF'; 'travys' = 'TRAVYS'; 'transn' = 'transN'; 'mbc' = 'MBC'; 'rbs' = 'RBS'; 'zentralbahn' = 'Zentralbahn'; 'aare seeland mobil|asm' = 'ASM'; 'blt' = 'BLT'; 'tpg' = 'TPG'; 'tl' = 'TL'; 'chemins de fer du jura|cj' = 'Chemins de fer du Jura'; 'mob' = 'MOB'; 'bob' = 'BOB'; 'matterhorn gotthard' = 'Matterhorn Gotthard Bahn'; 'rhaetische|rhb' = 'RhB' }
+$script:MailEmployeursConnus = [ordered]@{ 'hexafret' = 'Hexafret'; 'captrain' = 'Captrain'; 'lineas' = 'Lineas'; 'cff|sbb|ffs' = 'CFF / SBB'; 'sncf' = 'SNCF'; 'ratp' = 'RATP'; 'transilien' = 'Transilien'; 'bls' = 'BLS'; 'sob' = 'SOB'; 'thurbo' = 'Thurbo'; 'tpf' = 'TPF'; 'travys' = 'TRAVYS'; 'transn' = 'transN'; 'mbc' = 'MBC'; 'rbs' = 'RBS'; 'zentralbahn' = 'Zentralbahn'; 'aare seeland mobil|asm' = 'ASM'; 'blt' = 'BLT'; 'tpg' = 'TPG'; 'tl' = 'TL'; 'chemins de fer du jura|cj' = 'Chemins de fer du Jura'; 'mob' = 'MOB'; 'bob' = 'BOB'; 'matterhorn gotthard' = 'Matterhorn Gotthard Bahn'; 'rhaetische|rhb' = 'RhB' }
 function Get-MailEmployeurTexte([string]$texte, [string]$defaut) {
     # Employeur lu dans le texte de l'offre (compagnies ferroviaires connues) ; sinon l'étiquette de l'expéditeur.
     $n = ConvertTo-TrainNorm $texte; foreach ($k in $script:MailEmployeursConnus.Keys) { if ($n -match ('\b(' + $k + ')\b')) { return $script:MailEmployeursConnus[$k] } }
@@ -168,13 +170,13 @@ function ConvertTo-MailTexte([string]$h) {
 function Get-MailLieu([string]$texte) {
     # Premier lieu reconnu (liste blanche Suisse romande / Normandie) dans le texte ; '' si aucun (l'annonce sera écartée).
     $n = ConvertTo-TrainNorm $texte; $best = $null
-    foreach ($re in $script:TrainRomand, $script:TrainBilingue, $script:TrainProche, $script:TrainNormand) { $m = [regex]::Match($n, $re); if ($m.Success -and (-not $best -or $m.Index -lt $best.Index)) { $best = $m } }
+    foreach ($re in $script:TrainRomand, $script:TrainBilingue, $script:TrainProche, $script:TrainNormand, $script:TrainIdf) { $m = [regex]::Match($n, $re); if ($m.Success -and (-not $best -or $m.Index -lt $best.Index)) { $best = $m } }
     if (-not $best) { return '' }
     if ($script:MailLieuxAffiches.ContainsKey($best.Value)) { $script:MailLieuxAffiches[$best.Value] } else { ([Globalization.CultureInfo]::InvariantCulture).TextInfo.ToTitleCase($best.Value) }
 }
 function Get-TrainFiltreMail([string]$lieu, [string]$titre) {
     # Rouen / Normandie : gardé ; sinon le filtre Suisse romande habituel (lieu romand, ou bilingue avec un titre non allemand).
-    if ((ConvertTo-TrainNorm $lieu) -match $script:TrainNormand) { return @{ garde = $true; allemand = $false; raison = '' } }
+    if ((ConvertTo-TrainNorm $lieu) -match ($script:TrainNormand + '|' + $script:TrainIdf)) { return @{ garde = $true; allemand = $false; raison = '' } }
     Get-TrainFiltreSuisse $lieu $titre
 }
 function Add-MailTrace([string]$titre, [string]$employeur, [string]$lieu, [string]$decision, [string]$raison, [string]$id = '') {

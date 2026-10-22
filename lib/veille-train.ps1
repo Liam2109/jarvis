@@ -22,7 +22,10 @@ function Get-TrainConfig {
 # ---------- Reconnaissance d'une annonce de conduite ----------
 function ConvertTo-TrainNorm([string]$t) { ((("$t".ToLowerInvariant().Normalize([Text.NormalizationForm]::FormD)) -replace '\p{Mn}', '') -replace '[^a-z0-9]+', ' ').Trim() }
 $script:TrainMotif = 'conduct(?:eur|rice)s?(?: (?:ou )?conduct(?:eur|rice))?(?: trice)? (?:de |des )?(?:trains?|lignes?|metros?|rer|tramways?|vehicules? moteurs?|manoeuvres?)|agents? de conduite|formation (?:de |d un |du )?(?:futur )?conducteur|lokfuhrer|lokfuehrer|lokomotivfuhrer|triebfahrzeugfuhrer|triebfahrzeugfuehrer|mecanicien(?:ne)? de locomotive|macchinista'
-function Test-TrainAnnonce([string]$titre) { $n = ConvertTo-TrainNorm $titre; ($n -match $script:TrainMotif) -and ($n -notmatch '\b(bus|autocar|autobus)\b') }
+# Offres pour DÉBUTANT : on écarte « déjà formé », expérimenté / confirmé, formateur / instructeur, « avec expérience » (« sans expérience » reste permis). Texte normalisé sans accents.
+$script:TrainExclu = '\b(deja forme(?:e|s|es)?|forme(?:e|s|es)?|experimente(?:e|s|es)?|confirme(?:e|s|es)?|formateurs?|formatrices?|instructeurs?|instructrices?|moniteurs?|monitrices?|tuteurs?|tutrices?|seniors?|avec experience|experience (?:requise|exigee|confirmee|souhaitee|prealable)|erfahren\w*|berufserfahren\w*|ausbilder(?:in)?|instruktor(?:in)?)\b'
+function Test-TrainExclu([string]$titre) { (ConvertTo-TrainNorm $titre) -match $script:TrainExclu }
+function Test-TrainAnnonce([string]$titre) { $n = ConvertTo-TrainNorm $titre; ($n -match $script:TrainMotif) -and ($n -notmatch '\b(bus|autocar|autobus)\b') -and ($n -notmatch $script:TrainExclu) }
 function Get-TrainType([string]$titre) { if ((ConvertTo-TrainNorm $titre) -match 'formation|quereinstieg|zweitausbildung|reconversion|alternance|apprenti|lehre|diplome|stage') { 'Formation' } else { 'Emploi' } }
 function New-TrainAnnonce([string]$source, [string]$ident, [string]$titre, [string]$employeur, [string]$lieu, [string]$date, [string]$lien) {
     if ($lien -notmatch '^https://') { $lien = '' }
@@ -115,7 +118,7 @@ function Get-TrainFranceTravail {
     $tok = ($t.texte | ConvertFrom-Json).access_token; if ($script:Secrets -notcontains $tok) { $script:Secrets += $tok }
     $out = @(); $vus = @{}
     foreach ($region in '28', '11') {      # 28 = Normandie, 11 = Île-de-France
-        foreach ($mot in 'conducteur de train', 'conducteur de ligne', 'agent de conduite', 'formation conducteur', 'conducteur de metro', 'conducteur RER') {
+        foreach ($mot in 'conducteur de train', 'conducteur de ligne', 'agent de conduite', 'formation conducteur', 'conducteur de metro', 'conducteur RER', 'conducteur de train debutant') {
             $r = Invoke-TrainHttp ("https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search?motsCles=$(& $e $mot)&region=$region&range=0-49&sort=1") 'GET' '' @{ Authorization = "Bearer $tok"; Accept = 'application/json' }
             if ($r.code -eq 204) { continue }
             if ($r.code -ne 200) { throw "recherche refusée (HTTP $($r.code)) $(Short (Hide-Secrets $r.texte) 100)" }
@@ -130,7 +133,7 @@ function Get-TrainFranceTravail {
     }
     $out
 }
-function Get-TrainPage([string]$cle, [string]$url, [string]$employeur) {
+function Get-TrainPage([string]$cle, [string]$url, [string]$employeur, [string]$lieuPage = 'Suisse') {
     # Page HTML publique : les LIENS dont le texte parle de conduite de train (aucune autre extraction).
     $html = Get-TrainTexte $url; $out = @()
     foreach ($m in [regex]::Matches($html, '(?is)<a\s[^>]*href="([^"]+)"[^>]*>(.*?)</a>')) {
@@ -138,12 +141,20 @@ function Get-TrainPage([string]$cle, [string]$url, [string]$employeur) {
         if (-not $txt -or -not (Test-TrainAnnonce $txt)) { continue }
         if (Test-TrainAllemand $txt) { Add-TrainEcart 'langue'; continue }      # lieu inconnu : un titre allemand est écarté
         $lien = ''; try { $lien = ([uri]::new([uri]$url, [Net.WebUtility]::HtmlDecode($m.Groups[1].Value))).AbsoluteUri } catch {}
-        $out += New-TrainAnnonce $cle $lien $txt $employeur 'Suisse' '' $lien
+        $out += New-TrainAnnonce $cle $lien $txt $employeur $lieuPage '' $lien
     }
     $out
 }
+function Get-TrainPagesConfig {
+    # Pages d'offres que VOUS déclarez dans config.json : "veille_offres_pages": [ { "nom": "Captrain", "url": "https://...", "employeur": "Captrain", "lieu": "Normandie" } ] (https seulement ; robots.txt respecté ; une page illisible = source en panne signalée une fois par jour).
+    if (-not $Config.PSObject.Properties['veille_offres_pages']) { return @() }
+    @(@($Config.veille_offres_pages) | Where-Object { $_ -and "$($_.url)" -match '^https://' -and "$($_.nom)".Trim() } | ForEach-Object {
+        $p = $_; $emp = $(if ("$($p.employeur)".Trim()) { "$($p.employeur)".Trim() } else { "$($p.nom)".Trim() }); $lieu = $(if ("$($p.lieu)".Trim()) { "$($p.lieu)".Trim() } else { 'non précisé' })
+        @{ nom = "$($p.nom)".Trim(); f = { Get-TrainPage ('page-' + (ConvertTo-TrainNorm $p.nom).Replace(' ', '-')) "$($p.url)" $emp $lieu }.GetNewClosure() }
+    })
+}
 function Get-TrainSources {
-    @(@{ nom = 'CFF / SBB'; f = { Get-TrainSbb } }, @{ nom = 'France Travail'; f = { Get-TrainFranceTravail } })
+    @(@{ nom = 'CFF / SBB'; f = { Get-TrainSbb } }, @{ nom = 'France Travail'; f = { Get-TrainFranceTravail } }) + @(Get-TrainPagesConfig)
 }
 
 # ---------- Base locale ----------
@@ -206,7 +217,8 @@ function New-EmbedTrainAnnonce($a) {
         @{ nom = $(if ($a.date) { 'Date' } else { 'Repérée le' }); valeur = $(if ($a.date) { ([datetime]$a.date).ToString('dd/MM/yyyy') } else { (Get-Date).ToString('dd/MM/yyyy') }); inline = $true })
     if ($a.langue) { $champs += @{ nom = 'Langue'; valeur = $a.langue; inline = $true } }
     if ($a.lien) { $champs += @{ nom = 'Lien'; valeur = $a.lien; inline = $false } }
-    $fr = $(if ($a -is [hashtable]) { $a['titre_fr'] } else { $a.titre_fr })
+    if (Get-Command Get-CandBrouillonChamp -ErrorAction SilentlyContinue) { $b = Get-CandBrouillonChamp $a; if ($b) { $champs += $b } }      # lib\candidatures.ps1 : lien « brouillon Gmail » (rien n'est envoyé)
+    $fr =$(if ($a -is [hashtable]) { $a['titre_fr'] } else { $a.titre_fr })
     $desc = "Nouvelle annonce de conduite de train ($($a.type.ToLower()))."
     if ($fr) { $desc += "`n-# Titre original : $($a.titre) · traduit automatiquement" }      # petit texte Discord sous le titre traduit
     New-EmbedDiscord (Get-TrainTitreAffiche $a) $desc $script:CouleurBleue $champs (Get-PiedDiscord 'annonces-train')

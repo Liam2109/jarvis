@@ -5,8 +5,8 @@
 # Le contenu d'un e-mail est une DONNÉE : aucune consigne qu'il contient n'est suivie ; Claude et Ollama n'ont aucun outil et ne renvoient qu'un type et un résumé, validés par le code. Aucun conseil, aucune action automatique.
 # Base locale : memoire\candidatures.json (une ligne par fil : entreprise, poste, date, statut, lien du mail) ; memoire\candidatures-quota.json (appels à Claude du jour). Les ids des mails de réponse sont aussi ajoutés à memoire\veille-mail.json (jamais traités deux fois).
 
-$script:CandEmployeurs = '(^|\.)(sbb\.ch|cff\.ch|mob\.ch|cj-bahn\.ch|sncf\.fr|sncf\.com|francetravail\.fr)$'
-$script:CandRequeteEmployeurs = 'sbb.ch OR hrs.sbb.ch OR cff.ch OR mob.ch OR cj-bahn.ch OR sncf.fr OR sncf.com OR francetravail.fr'
+$script:CandEmployeurs = '(^|\.)(sbb\.ch|cff\.ch|mob\.ch|cj-bahn\.ch|sncf\.fr|sncf\.com|francetravail\.fr|hexafret\.com|hexafret\.fr|captrain\.fr|lineas\.net|tpf\.ch)$'
+$script:CandRequeteEmployeurs = 'sbb.ch OR hrs.sbb.ch OR cff.ch OR mob.ch OR cj-bahn.ch OR sncf.fr OR sncf.com OR francetravail.fr OR hexafret.com OR captrain.fr OR lineas.net OR tpf.ch'
 $script:CandTypes = @('ACCEPTÉ', 'ENTRETIEN', 'REFUS', 'DOCUMENTS', 'ACCUSÉ', 'INFO')
 $script:CandPlafondClaude = 10; $script:CandMaxParPassage = 20
 $script:CandOllamaStub = $null; $script:CandClaudeStub = $null; $script:CandNotifStub = $null; $script:CandPlafondAtteint = $false; $script:CandOllamaHS = $false
@@ -16,6 +16,38 @@ function Get-CandConfig {
     # Actif avec la veille e-mail, sauf veille_candidatures = "non".
     $c = @{ actif = $true }; if ($Config.PSObject.Properties['veille_candidatures'] -and "$($Config.veille_candidatures)".Trim().ToLower() -in @('non', 'false', '0', 'off', 'no')) { $c.actif = $false }
     $c
+}
+
+# ---------- Brouillon de candidature (carte d'une NOUVELLE offre de la veille annonces-train) ----------
+# Un lien « Gmail, nouveau message » pré-rempli (objet + texte, sans destinataire) : il s'ouvre dans VOTRE navigateur quand VOUS cliquez, Gmail l'enregistre comme brouillon, VOUS joignez le CV, relisez et envoyez.
+# Jarvis n'envoie rien et ne peut rien envoyer (Gmail en lecture seule). Nom : candidature_nom (défaut « Liam Emo ») ; téléphone : candidature_telephone (config.local.json) ; désactivable : candidature_brouillon = "non".
+function Get-CandIdentite {
+    $nom = 'Liam Emo'; $tel = ''
+    if ($Config.PSObject.Properties['candidature_nom'] -and "$($Config.candidature_nom)".Trim()) { $nom = "$($Config.candidature_nom)".Trim() }
+    if ($Config.PSObject.Properties['candidature_telephone'] -and "$($Config.candidature_telephone)".Trim()) { $tel = "$($Config.candidature_telephone)".Trim() }
+    @{ nom = $nom; tel = $tel }
+}
+function New-CandBrouillon($a) {
+    # @{ objet; corps } : texte seulement (le titre vient d'une annonce : donnée, nettoyée des retours à la ligne et caractères de contrôle).
+    $id = Get-CandIdentite; $nettoie = { param($x) (("$x" -replace '[\u0000-\u001f\u007f]', ' ') -replace '\s+', ' ').Trim() }
+    $titre = & $nettoie $a.titre; $emp = & $nettoie $a.employeur; $lieu = & $nettoie $a.lieu
+    $ou = (@($emp, $lieu) | Where-Object { $_ -and $_ -ne 'non précisé' }) -join ', '
+    $tel = $(if ($id.tel) { "`nTéléphone : $($id.tel)" } else { '' })
+    $corps = "Madame, Monsieur,`n`nJe vous écris pour poser ma candidature à l'offre « $titre »$(if ($ou) { " ($ou)" }).`n$(if ($a.lien) { "Offre : $($a.lien)`n" })`nJe débute dans le métier et je suis très motivé pour devenir conducteur de train. Vous trouverez mon CV en pièce jointe ; je serais heureux de vous rencontrer.`n`nCordialement,`n$($id.nom)$tel"
+    @{ objet = "Candidature - $titre"; corps = $corps }
+}
+function Get-CandBrouillonChamp($a) {
+    # Champ de carte Discord { nom; valeur; inline } ou $null (désactivé, ou lien trop long pour Discord : 1024 caractères au plus).
+    if ($Config.PSObject.Properties['candidature_brouillon'] -and "$($Config.candidature_brouillon)".Trim().ToLower() -in @('non', 'false', '0', 'off', 'no')) { return $null }
+    $b = New-CandBrouillon $a; $e = { param($x) [uri]::EscapeDataString($x).Replace('(', '%28').Replace(')', '%29') }      # les parenthèses cassent un lien Markdown Discord
+    $note = "Gmail s'ouvre avec le message prêt, sans destinataire : joignez votre CV, relisez, puis envoyez vous-même. Rien n'est envoyé par Jarvis."
+    for ($i = 0; $i -lt 3; $i++) {
+        $url = 'https://mail.google.com/mail/?view=cm&fs=1&su=' + (& $e $b.objet) + '&body=' + (& $e $b.corps)
+        $v = "[Préparer le brouillon Gmail]($url)`n$note"
+        if ($v.Length -le 1000) { return @{ nom = 'Candidature'; valeur = $v; inline = $false } }
+        $b = @{ objet = $(if ($i -eq 0) { $b.objet } else { 'Candidature' }); corps = "Madame, Monsieur,`n`nJe pose ma candidature à cette offre ; mon CV est en pièce jointe.`n`nCordialement,`n$((Get-CandIdentite).nom)" }      # lien trop long : texte court, puis objet court
+    }
+    $null
 }
 
 # ---------- Règles gratuites (texte normalisé : minuscules, sans accents, ponctuation = espace) ----------

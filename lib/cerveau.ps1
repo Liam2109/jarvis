@@ -247,6 +247,7 @@ function Format-DetailConfirmation([string]$d) {
 function Invoke-UneAction($a, [string]$ordre, [string]$question = '') {
     # Passe UNE action par les permissions. Retourne le résultat, ou $null si refusée / non confirmée (la raison est dans $script:DernierRefus).
     $desc = Decrire-Action $a
+    if (Get-Command Use-LeconsAvant -ErrorAction SilentlyContinue) { Use-LeconsAvant $a $ordre }      # leçons apprises (lib\lecons.ps1, désactivé par défaut) : relues avant une tâche similaire
     $niv = Get-Niveau $a
     if ($script:CanalDiscord -and (Get-Command Get-NiveauDiscord -ErrorAction SilentlyContinue)) { $niv = Get-NiveauDiscord $a $niv }      # ordre venu de Discord : permissions durcies (confirmation, actions bloquées)
     $script:DernierRefus = ''
@@ -277,6 +278,8 @@ function Invoke-UneAction($a, [string]$ordre, [string]$question = '') {
     if ($r -and $r.ok) { $script:DiscordNbActions = 1 + [int]$script:DiscordNbActions }      # (Discord : une action exécutée = pastille ✅ permise ; sinon c'est de la conversation)
     Write-Journal -Ordre $ordre -Action $desc -Resultat $(if ($r.ok) { "ok : $($r.texte)" } else { "échec : $($r.texte)" })
     if (Get-Command Add-Conv -ErrorAction SilentlyContinue) { Add-Conv 'action' $(if ($r.ok) { "$($r.texte)" } else { "Échec : $($r.texte)" }) }
+    if (Get-Command Register-LeconAction -ErrorAction SilentlyContinue) { Register-LeconAction $a $r }      # leçon « ça marche / ça rate » (lib\lecons.ps1, désactivé par défaut)
+    if (Get-Command Register-SkillAction -ErrorAction SilentlyContinue) { Register-SkillAction $a $r }      # la même action réussie 3 fois -> idée de skill à valider (lib\skills.ps1, désactivé par défaut)
     return $r
 }
 
@@ -286,6 +289,10 @@ function Invoke-Ordre([string]$ordre) {
 function Invoke-OrdreCorps([string]$ordre) {
     if (Get-Command Add-Conv -ErrorAction SilentlyContinue) { Add-Conv 'liam' $ordre }
     if ((Get-Command Invoke-GuideLocal -ErrorAction SilentlyContinue) -and (Invoke-GuideLocal $ordre)) { Write-Journal -Ordre $ordre -Action 'Guide pas à pas' -Resultat 'navigation dans le guide'; Set-DiagOrdre 'guide pas à pas : étape suivante / précédente' 'guide'; return }
+    if (Get-Command Invoke-ExtensionsOrdre -ErrorAction SilentlyContinue) {      # presets, vues, capacités (lib\presets.ps1, lib\vues.ps1) : rien tant que presets_actif et vues_actif sont « non »
+        $ex = Invoke-ExtensionsOrdre $ordre
+        if ($ex) { Write-Journal -Ordre $ordre -Action 'Extension (preset, vue, capacités)' -Resultat (Short "$($ex.texte)" 140); Set-DiagOrdre 'extension : preset / vue / capacités' 'extension'; Parler "$($ex.texte)"; Set-VisageEtat 'ecoute'; return }
+    }
     Set-VisageEtat 'reflechit'
     if ((Get-Command Invoke-RefusVerdictProba -ErrorAction SilentlyContinue) -and (Invoke-RefusVerdictProba $ordre)) { Set-DiagOrdre 'refus : ni verdict ni probabilité (ce qui est à regarder affiché)' 'refus verdict'; Set-VisageEtat 'ecoute'; return }     # ni verdict ni probabilité : ce qui est à regarder
     if (Test-QuestionConseil $ordre) {   # « dois-je acheter... » : jamais de conseil en investissement, faits et risques seulement
