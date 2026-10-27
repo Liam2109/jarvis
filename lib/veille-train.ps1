@@ -29,7 +29,7 @@ function Test-TrainExclu([string]$titre) { (ConvertTo-TrainNorm $titre) -match $
 $script:TrainTram = '\b(tram|tramway|tramways|tram train)\b'
 function Test-TrainTram([string]$titre) { $n = ConvertTo-TrainNorm $titre; ($n -match $script:TrainTram) -and ($n -match $script:TrainMotif) }
 # Employeurs acceptés (liste de Liam). Un employeur CONNU hors liste est écarté ; un employeur inconnu ou vide (agence, annonce anonyme, site d'emploi) est gardé.
-$script:TrainEmployeursOk = '\b(sncf|transilien|ter|ratp|keolis|transdev|rail logistics|rle|fret|europorte|captrain|lineas|eurocargo|regiorail|hexafret|cff|sbb|ffs)\b'
+$script:TrainEmployeursOk = '\b(sncf|transilien|ter|ratp|keolis|transdev|rail logistics|rle|fret|europorte|captrain|lineas|eurocargo|regiorail|hexafret|cff|sbb|ffs|sncb|nmbs|infrabel|cfl)\b'
 function Test-TrainEmployeurOk([string]$emp) { $n = ConvertTo-TrainNorm ("$emp" -replace '\(alerte e-mail\)', ''); if (-not $n -or $n -match 'non precise|^(indeed|jobup|jobscout24|jobscout|france travail|alerte e mail)$') { return $true }; $n -match $script:TrainEmployeursOk }
 # Critères à VÉRIFIER (profil : 18 ans, bac général, BTS SIO interrompu, pas de bac+2) : l'annonce est GARDÉE mais marquée, jamais écartée en silence.
 function Get-TrainCritereVerifier([string]$texte) {
@@ -49,7 +49,7 @@ function Add-TrainEcartsEtat($e) {
     $old = $e.ecarts; $h = @{}; foreach ($k in $script:TrainEcartCles) { $h[$k] = $(if ($old) { [int]$old[$k] } else { 0 }) + [int]$script:TrainEcart[$k] }; $e.ecarts = $h
 }
 function Get-TrainProp($a, [string]$k) { if ($a -is [hashtable]) { "$($a[$k])" } else { "$($a.$k)" } }
-function Get-TrainZoneLibelle([string]$z) { switch ($z) { '1' { 'Priorité 1 (Île-de-France / Rouen)' } '2' { 'Priorité 2 (Caen / Le Havre)' } '3' { 'Priorité 3 (Lens)' } '4' { 'Dernier recours (Le Mans)' } default { '' } } }
+function Get-TrainZoneLibelle([string]$z) { switch ($z) { '1' { 'Priorité 1 (Île-de-France / Rouen)' } '2' { 'Priorité 2 (Caen / Le Havre)' } '3' { 'Priorité 3 (Lens)' } '4' { 'Dernier recours (Le Mans)' } '5' { 'Hors zone (France)' } '6' { 'Belgique francophone / Luxembourg' } default { '' } } }
 function Test-TrainAnnonce([string]$titre) { $n = ConvertTo-TrainNorm $titre; ($n -match $script:TrainMotif) -and ($n -notmatch '\b(bus|autocar|autobus)\b') -and ($n -notmatch $script:TrainTram) -and ($n -notmatch $script:TrainExclu) }
 function Get-TrainType([string]$titre) { if ((ConvertTo-TrainNorm $titre) -match 'formation|quereinstieg|zweitausbildung|reconversion|alternance|apprenti|lehre|diplome|stage') { 'Formation' } else { 'Emploi' } }
 function New-TrainAnnonce([string]$source, [string]$ident, [string]$titre, [string]$employeur, [string]$lieu, [string]$date, [string]$lien) {
@@ -63,7 +63,7 @@ function New-TrainAnnonce([string]$source, [string]$ident, [string]$titre, [stri
 $script:TrainRomand = '\b(lausanne|geneve|geneva|genf|vaud|yverdon|vevey|montreux|renens|morges|nyon|sion|sierre|siders|martigny|monthey|aigle|bex|delemont|la chaux de fonds|neuchatel|neuenburg|le locle|jura|porrentruy|valais|bulle|payerne|vallorbe|palezieux|cossonay|gland|rolle|prilly|crissier|ecublens|pully|lutry|vernier|carouge|lancy|meyrin|versoix|romont|chexbres|puidoux|villeneuve|saint maurice|st maurice|fully|orbe|echallens|moudon|avenches|saint imier|tavannes|moutier|courtelary|travers|couvet|fleurier|les brenets|bussigny|denges|echandens|saint sulpice|st sulpice|chavannes|penthalaz|daillens|sullens|lonay|etoy|allaman|aubonne|epalinges|cully|paudex|bremblens|romanel|vufflens|bercher|grandson|sainte croix|ste croix|la sarraz|chavornay|lucens|oron|chatel saint denis|chatel st denis|vuadens|estavayer|marly|givisiez|villars sur glane|vouvry|collombey|saxon|riddes|conthey|vetroz|evionnaz|cornavin|onex|thonex|chene bourg|satigny|bernex|plan les ouates|cointrin|coppet|boudry|colombier|peseux|cornaux|saint blaise|val de ruz|cernier|fontainemelon|courrendlin|glovelier|bassecourt|saignelegier|reconvilier|malleray|bevilard|sonceboz|la neuveville)\b'
 $script:TrainBilingue = '\b(fribourg|freiburg|biel|bienne|murten|morat)\b'
 $script:TrainProche = '\b(basel|bale|baselland|basel land|liestal|muttenz|pratteln|allschwil|binningen|arlesheim|sissach|birsfelden|munchenstein|riehen|laufon|solothurn|soleure|olten|grenchen|granges|oensingen|dulliken|balsthal|hagendorf|schonenwerd|zuchwil|biberist|gerlafingen|dornach|breitenbach|bern|berne|jura bernois|burgdorf|langenthal|lyss|thun|interlaken|koniz|ostermundigen|worb|munsingen|aargau|argovie|aarau|baden|brugg|lenzburg|wohlen|zofingen|rheinfelden|oftringen|suhr|wettingen|spreitenbach|windisch|rupperswil|mellingen|beinwil am see|brig|brigue|visp|viege|naters|zermatt|raron|leuk)\b'
-$script:TrainMotifAllemand = 'lokfuhrer|lokfuehrer|triebfahrzeug|quereinstieg|zweitausbildung|rangier|zugmaschine|bauzug|fahrleitung|personenverkehr|guterverkehr|kategorie|\bkat\b|\bund\b|\bmit\b|erfahrung|ausbildung'
+$script:TrainMotifAllemand = 'treinbestuurder|machinist|vacature|\bvoor\b|\bhet\b|lokfuhrer|lokfuehrer|triebfahrzeug|quereinstieg|zweitausbildung|rangier|zugmaschine|bauzug|fahrleitung|personenverkehr|guterverkehr|kategorie|\bkat\b|\bund\b|\bmit\b|erfahrung|ausbildung'
 function Test-TrainAllemand([string]$titre) { $n = ConvertTo-TrainNorm $titre; ($n -match $script:TrainMotifAllemand) -and ($n -notmatch 'conduct(?:eur|rice)|mecanicien|agent de conduite') }
 function Get-TrainFiltreSuisse([string]$lieu, [string]$titre) {
     # @{ garde; allemand; raison } : garde = lieu romand ou bilingue ET titre non allemand ; raison = 'lieu' (hors Suisse romande) ou 'langue' (titre allemand) si écartée.
@@ -77,11 +77,15 @@ $script:TrainZoneRouen = '\b(rouen|sotteville|quevilly|petit quevilly|grand quev
 $script:TrainZoneCaenHavre = '\b(caen|herouville saint clair|mondeville|ifs|ouistreham|le havre|harfleur|montivilliers|gonfreville|sainte adresse)\b'
 $script:TrainZoneLens = '\b(lens|livin|avion|henin beaumont|mericourt|billy montigny|harnes|loos en gohelle|sallaumines|noyelles godault)\b'
 $script:TrainZoneLeMans = '\b(le mans|allonnes|arnage|ruaudin|coulaines)\b'
+# Addendum 27/10 : le reste de la France n'est plus écarté (zone 5, « hors zone », carte grise) ; Belgique francophone (Wallonie, Bruxelles) et Luxembourg gardés (zone 6). Flandre (néerlandais), Suisse alémanique et Allemagne restent écartées.
+$script:TrainFranceHors = '\b(france|lille|roubaix|tourcoing|valenciennes|douai|arras|calais|dunkerque|boulogne sur mer|amiens|compiegne|creil|beauvais|saint quentin|reims|charleville mezieres|chalons en champagne|troyes|metz|nancy|thionville|strasbourg|mulhouse|colmar|dijon|besancon|belfort|lyon|villeurbanne|saint etienne|grenoble|chambery|annecy|valence|clermont ferrand|marseille|aix en provence|toulon|nice|avignon|nimes|montpellier|perpignan|beziers|narbonne|toulouse|albi|tarbes|pau|bayonne|bordeaux|perigueux|limoges|poitiers|la rochelle|angouleme|nantes|saint nazaire|angers|tours|orleans|bourges|rennes|brest|quimper|lorient|vannes|saint brieuc|laval|dieppe|evreux|cherbourg|lisieux|alencon|saint lo|granville|normandie|bretagne|occitanie|nouvelle aquitaine|auvergne|rhone alpes|grand est|hauts de france|bourgogne|centre val de loire|pays de la loire|provence|alsace|lorraine|picardie|champagne|corse|ajaccio|bastia)\b'
+$script:TrainBelgLux = '\b(belgique|wallonie|bruxelles|brussels|liege|namur|charleroi|mons|tournai|arlon|wavre|nivelles|la louviere|verviers|mouscron|huy|dinant|marche en famenne|ottignies|louvain la neuve|libramont|bertrix|luxembourg|esch sur alzette|differdange|dudelange|belval|bettembourg|ettelbruck|diekirch)\b'
 function Get-TrainFiltreMail([string]$lieu, [string]$titre) {
-    # @{ garde; allemand; raison ('lieu' | 'langue' | ''); zone (1 à 4, 0 = Suisse) }. Zones de France par priorité (voir TrainZone*) ; sinon Suisse romande, en français. Un titre allemand est écarté partout.
+    # @{ garde; allemand; raison ('lieu' | 'langue' | ''); zone (1 à 4 = priorités, 5 = hors zone France, 6 = Belgique francophone / Luxembourg, 0 = Suisse) }. Zones de France par priorité (voir TrainZone*) ; sinon Suisse romande, en français. Un titre allemand (ou néerlandais) est écarté partout.
     $l = ConvertTo-TrainNorm $lieu; $z = 0
     if ($l -match $script:TrainIdf -or "$lieu" -match '^\s*(75|77|78|91|92|93|94|95)\s*-' -or $l -match $script:TrainZoneRouen) { $z = 1 }
     elseif ($l -match $script:TrainZoneCaenHavre) { $z = 2 } elseif ($l -match $script:TrainZoneLens) { $z = 3 } elseif ($l -match $script:TrainZoneLeMans) { $z = 4 }
+    elseif ($l -match $script:TrainFranceHors -or "$lieu" -match '^\s*(\d{2}|2[AB]|97\d)\s*-') { $z = 5 } elseif ($l -match $script:TrainBelgLux) { $z = 6 }
     if ($z) { $de = Test-TrainAllemand $titre; return @{ garde = (-not $de); allemand = $de; raison = $(if ($de) { 'langue' } else { '' }); zone = $z } }
     $f = Get-TrainFiltreSuisse $lieu $titre; $f.zone = 0; $f
 }
@@ -275,7 +279,8 @@ function New-EmbedTrainAnnonce($a) {
     $desc = "Nouvelle annonce de conduite de train ($($a.type.ToLower()))."
     if ($fr) { $desc += "`n-# Titre original : $($a.titre) · traduit automatiquement" }      # petit texte Discord sous le titre traduit
     if ($z -eq '4') { $desc += "`n-# Dernier recours : zone Le Mans." }
-    New-EmbedDiscord (Get-TrainTitreAffiche $a) $desc $(if ($v -or $z -eq '4') { $script:CouleurOrange } else { $script:CouleurBleue }) $champs (Get-PiedDiscord 'annonces-train')
+    $couleur = $(if ($v -or $z -eq '4') { $script:CouleurOrange } elseif ($z -eq '5') { $script:CouleurGrise } else { $script:CouleurBleue })      # hors zone : grise (affichée quand même)
+    New-EmbedDiscord (Get-TrainTitreAffiche $a) $desc $couleur $champs (Get-PiedDiscord 'annonces-train')
 }
 function Get-TrainTitreAffiche($a) {
     # Titre traduit s'il existe, sinon l'original ; « [DE] » devant toute annonce en allemand.

@@ -27,7 +27,14 @@ $Fm = { param($lieu, $titre) Get-TrainFiltreMail $lieu $titre }
 foreach ($z in @(@('Rouen', 1), @('76 - ROUEN', 1), @('Sotteville-lès-Rouen', 1), @('Paris', 1), @('75 - PARIS 08', 1), @('93 - SAINT-DENIS', 1), @('Gare du Nord, Paris', 1), @('Caen', 2), @('14 - CAEN', 2), @('Le Havre', 2), @('76 - LE HAVRE', 2), @('Lens', 3), @('62 - LENS', 3), @('Le Mans', 4), @('72 - LE MANS', 4))) {
     $f = & $Fm $z[0] 'Conducteur de train débutant'; Verifier ($f.garde -and $f.zone -eq $z[1]) "« $($z[0]) » : gardée, priorité $($z[1])"
 }
-foreach ($l in 'Lille', '59 - LILLE', 'Marseille', 'Lyon', 'Dieppe', 'Strasbourg') { $f = & $Fm $l 'Conducteur de train'; Verifier (-not $f.garde -and $f.raison -eq 'lieu') "« $l » : écartée (lieu)" }
+foreach ($l in 'Lille', '59 - LILLE', 'Marseille', 'Lyon', 'Dieppe', 'Strasbourg', '31 - TOULOUSE') { $f = & $Fm $l 'Conducteur de train'; Verifier ($f.garde -and $f.zone -eq 5) "« $l » : hors zone France, gardée avec le tag (zone 5)" }
+$f = & $Fm 'Lille' 'Lokführer:in'; Verifier (-not $f.garde -and $f.raison -eq 'langue') 'Lille, titre allemand : écartée (langue)'
+Write-Host '1b. Belgique francophone, Luxembourg, Flandre'
+foreach ($l in 'Bruxelles', 'Liège', 'Namur', 'Charleroi', 'Mons', 'Wallonie', 'Luxembourg', 'Esch-sur-Alzette') { $f = & $Fm $l 'Conducteur de train'; Verifier ($f.garde -and $f.zone -eq 6) "« $l » : Belgique francophone / Luxembourg, gardée (zone 6)" }
+foreach ($l in 'Antwerpen', 'Gent', 'Hasselt', 'Brugge', 'Berlin') { $f = & $Fm $l 'Conducteur de train'; Verifier (-not $f.garde -and $f.raison -eq 'lieu') "« $l » : Flandre / Allemagne, écartée (lieu)" }
+$f = & $Fm 'Bruxelles' 'Treinbestuurder voor NMBS'; Verifier (-not $f.garde -and $f.raison -eq 'langue') 'Bruxelles, titre néerlandais : écartée (langue)'
+foreach ($e in 'SNCB', 'NMBS', 'Infrabel', 'CFL') { Verifier (Test-TrainEmployeurOk $e) "employeur ajouté : « $e » accepté" }
+Verifier ((Get-TrainZoneLibelle '5') -match 'Hors zone' -and (Get-TrainZoneLibelle '6') -match 'Belgique') 'libellés de zone : hors zone, Belgique / Luxembourg'
 Verifier ((Get-TrainZoneLibelle '4') -match 'Dernier recours' -and (Get-TrainZoneLibelle '1') -match 'Île-de-France / Rouen') 'libellés de zone : Le Mans = dernier recours'
 
 Write-Host '2. Suisse : romande et en français seulement, allemand écarté'
@@ -49,12 +56,14 @@ Verifier (-not (Get-TrainCritereVerifier 'Niveau bac général, débutant accept
 $script:TrainEcart = @{ lieu = 0; langue = 0 }; $script:MailEcartMetier = 0; $script:MailTrace = New-Object Collections.ArrayList
 $html = '<a href="https://ex.invalid/1">Conducteur de train débutant (H/F)</a> <p>Rouen. Niveau Bac+2 exigé.</p> <a href="https://ex.invalid/2">Conducteur de tramway (H/F)</a> <p>Rouen</p> <a href="https://ex.invalid/3">Lokführer:in</a> <p>Paris</p> <a href="https://ex.invalid/4">Conducteur de train (H/F)</a> <p>Lille</p> <a href="https://ex.invalid/5">Conducteur de train (H/F)</a> <p>Le Mans</p>'
 $an = @(Get-MailAnnonces $html 'sncf.fr' '2026-10-21')
-Verifier ($an.Count -eq 2 -and $an[0].lieu -eq 'Rouen' -and $an[0].verifier -match 'Bac\+2' -and $an[0].zone -eq '1' -and $an[1].lieu -eq 'Le Mans' -and $an[1].zone -eq '4') "e-mail : Rouen (bac+2 à vérifier) et Le Mans (dernier recours) gardées sur 5 : $($an.Count)"
-Verifier ($script:TrainEcart.tram -eq 1 -and $script:TrainEcart.langue -eq 1 -and $script:TrainEcart.lieu -eq 1) 'écarts comptés : tramway 1, langue (allemand) 1, lieu (Lille) 1'
+Verifier ($an.Count -eq 3 -and $an[0].lieu -eq 'Rouen' -and $an[0].verifier -match 'Bac\+2' -and $an[0].zone -eq '1' -and $an[1].lieu -eq 'Lille' -and $an[1].zone -eq '5' -and $an[2].lieu -eq 'Le Mans' -and $an[2].zone -eq '4') "e-mail : Rouen (bac+2 à vérifier), Lille (hors zone) et Le Mans (dernier recours) gardées sur 5 : $($an.Count)"
+Verifier ($script:TrainEcart.tram -eq 1 -and $script:TrainEcart.langue -eq 1 -and $script:TrainEcart.lieu -eq 0) 'écarts comptés : tramway 1, langue (allemand) 1, lieu 0 (Lille n''est plus écartée)'
 Verifier ((@($script:MailTrace | Where-Object { $_.raison -like 'langue*' }).Count -eq 1) -and (@($script:MailTrace | Where-Object { $_.raison -like 'tramway*' }).Count -eq 1)) 'trace du test e-mail : raisons « langue » et « tramway » visibles'
 $em = New-EmbedTrainAnnonce $an[0]
 Verifier ($em.couleur -eq $script:CouleurOrange -and (@($em.champs | Where-Object { $_.nom -eq 'Critère à vérifier' -and $_.valeur -match 'Bac\+2' }).Count -eq 1) -and (@($em.champs | Where-Object { $_.nom -eq 'Zone' -and $_.valeur -match 'Priorité 1' }).Count -eq 1)) 'carte : orange, champs « Critère à vérifier » et « Zone »'
-$em4 = New-EmbedTrainAnnonce $an[1]
+$emL = New-EmbedTrainAnnonce $an[1]
+Verifier ($emL.couleur -eq $script:CouleurGrise -and (@($emL.champs | Where-Object { $_.nom -eq 'Zone' -and $_.valeur -match 'Hors zone' }).Count -eq 1)) 'carte Lille : grise, tag « Hors zone (France) »'
+$em4 = New-EmbedTrainAnnonce $an[2]
 Verifier ($em4.couleur -eq $script:CouleurOrange -and $em4.description -match 'Dernier recours' -and (@($em4.champs | Where-Object { $_.nom -eq 'Zone' -and $_.valeur -match 'Dernier recours' }).Count -eq 1)) 'carte Le Mans : marquée « dernier recours »'
 
 Write-Host '5. Choix du CV'
@@ -119,24 +128,24 @@ Route 'offres/search' 200 ('{"resultats":[' + ($offres -join ',') + ']}')
 $t0 = Get-Date '2026-10-21T10:00:00'
 $res = Invoke-VeilleTrain $t0
 $cartesO = @($script:Cartes | Where-Object { $_.salon -eq 'jarvis' -and "$($_.e.titre)" -like 'Conducteur de train*' })
-Verifier ($res.nouvelles -eq 3 -and $cartesO.Count -eq 3) "3 annonces gardées sur 8 (Rouen, Le Mans, Lens) : $($res.nouvelles) nouvelles, $($cartesO.Count) cartes"
-Verifier ((Journal) -match '8 annonce\(s\) de conduite vue\(s\) : 3 gardée\(s\), 5 écartée\(s\) \(hors zone 1, allemand 1, tramway 1, autre employeur 1, expérience exigée 1\)') 'journal : 5 écartées visibles par raison (Lille, allemand, tramway, Randstad, expérience exigée)'
+Verifier ($res.nouvelles -eq 4 -and $cartesO.Count -eq 4) "4 annonces gardées sur 8 (Rouen, Lille hors zone, Le Mans, Lens) : $($res.nouvelles) nouvelles, $($cartesO.Count) cartes"
+Verifier ((Journal) -match '8 annonce\(s\) de conduite vue\(s\) : 4 gardée\(s\), 4 écartée\(s\) \(hors zone 0, allemand 1, tramway 1, autre employeur 1, expérience exigée 1\)') 'journal : 4 écartées visibles par raison (allemand, tramway, Randstad, expérience exigée) ; Lille gardée hors zone'
 $r1 = @($cartesO | Where-Object { @($_.e.champs | Where-Object { $_.nom -eq 'Critère à vérifier' }).Count -eq 1 }); Verifier ($r1.Count -eq 1) 'Rouen : bac+2 lu dans l''annonce -> « Critère à vérifier »'
 $resumeC = @($script:Cartes | Where-Object { "$($_.e.titre)" -match 'résumé' })
-Verifier ($resumeC.Count -eq 1 -and (@($resumeC[0].e.champs | Where-Object { $_.nom -eq 'Annonces écartées' -and $_.valeur -match 'hors zone 1' -and $_.valeur -match 'allemand 1' -and $_.valeur -match 'tramway 1' }).Count -eq 1)) 'résumé du matin : les écarts sont affichés (hors zone, allemand, tramway...)'
-Verifier ($script:CandCartes.Count -eq 3 -and @($script:CandCartes | Where-Object { $_.salon -eq 'candidatures' -and $_.e.titre -like 'Brouillon prêt*' }).Count -eq 3) '3 cartes « brouillon prêt » dans #candidatures (une par annonce gardée)'
+Verifier ($resumeC.Count -eq 1 -and (@($resumeC[0].e.champs | Where-Object { $_.nom -eq 'Annonces écartées' -and $_.valeur -notmatch 'hors zone' -and $_.valeur -match 'allemand 1' -and $_.valeur -match 'tramway 1' }).Count -eq 1)) 'résumé du matin : les écarts sont affichés (allemand, tramway...), plus de « hors zone »'
+Verifier ($script:CandCartes.Count -eq 4 -and @($script:CandCartes | Where-Object { $_.salon -eq 'candidatures' -and $_.e.titre -like 'Brouillon prêt*' }).Count -eq 4) '4 cartes « brouillon prêt » dans #candidatures (une par annonce gardée)'
 Verifier (@($script:CandCartes | Where-Object { @($_.e.champs | Where-Object { $_.nom -eq 'CV choisi' -and $_.valeur -match 'fret' }).Count -eq 1 }).Count -eq 1) 'Fret SNCF (Lens) -> CV fret'
 $res2 = Invoke-VeilleTrain $t0.AddMinutes(61)
-Verifier ($res2.nouvelles -eq 0 -and $script:CandCartes.Count -eq 3) 'deuxième passage : ni nouvelle carte ni nouveau brouillon (pas de doublon)'
+Verifier ($res2.nouvelles -eq 0 -and $script:CandCartes.Count -eq 4) 'deuxième passage : ni nouvelle carte ni nouveau brouillon (pas de doublon)'
 Remove-Item Env:FRANCETRAVAIL_ID, Env:FRANCETRAVAIL_SECRET -ErrorAction SilentlyContinue
 
 Write-Host '9. Suivi : relance à J+7 et résumé quotidien'
 $script:CandCartes = @(); $tj = Get-Date '2026-10-29T09:00:00'
 $s = Invoke-CvSuivi $tj
 $rel = @($script:CandCartes | Where-Object { $_.e.titre -like 'Relance à envisager*' })
-Verifier ($s.relances -eq 3 -and $rel.Count -eq 3 -and $rel[0].e.couleur -eq $script:CouleurOrange) '8 jours plus tard : 3 relances à envisager (une carte par candidature sans réponse)'
+Verifier ($s.relances -eq 4 -and $rel.Count -eq 4 -and $rel[0].e.couleur -eq $script:CouleurOrange) '8 jours plus tard : 4 relances à envisager (une carte par candidature sans réponse)'
 $sr = @($script:CandCartes | Where-Object { $_.e.titre -eq 'Candidatures · résumé du jour' })
-Verifier ($s.resume -and $sr.Count -eq 1 -and $sr[0].e.champs[0].valeur -match 'BROUILLON : 3') 'résumé du jour posté une fois (3 brouillons)'
+Verifier ($s.resume -and $sr.Count -eq 1 -and $sr[0].e.champs[0].valeur -match 'BROUILLON : 4') 'résumé du jour posté une fois (4 brouillons)'
 $script:CandCartes = @(); $s2 = Invoke-CvSuivi $tj.AddHours(1)
 Verifier ($s2.relances -eq 0 -and -not $s2.resume -and $script:CandCartes.Count -eq 0) 'même jour : ni seconde relance ni second résumé'
 $s3 = Invoke-CvSuivi $tj.AddDays(1)
