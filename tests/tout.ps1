@@ -48,6 +48,7 @@ $liste = @(
     @{ n = 'veille e-mail annonces-train (Gmail simulé : expéditeurs, filtre, doublons, lecture seule)'; f = 'veille-mail.ps1' }
     @{ n = 'offres conducteur débutant (exclusions, employeurs, pages, carte + brouillon Gmail, rien envoyé)'; f = 'offres-debutant.ps1' }
     @{ n = 'suivi des réponses aux candidatures (règles FR/DE/EN, Ollama, Claude Haiku plafonné, fils, cartes #candidatures)'; f = 'candidatures.ps1' }
+    @{ n = 'emploi conducteur (zones, allemand et tram écartés, bac+2 à vérifier, CV, lettre, brouillon prêt, relance J+7, résumé)'; f = 'emploi-conducteur.ps1' }
     @{ n = 'initiatives (création, interdits, décisions, oubli 4 jours, scan de nuit, niveaux 0-5, boucle, commandes Discord, cartes)'; f = 'initiatives.ps1' }
     @{ n = 'leçons + style de parole (création, fusion, confiance, promotion proposée, secrets refusés, « omada » -> Ollama, commandes)'; f = 'lecons.ps1' }
     @{ n = 'skills (idée sans fichier, génération simulée, contrôle statique, quarantaine, validation, refus archivé + leçon, commandes)'; f = 'skills.ps1' }
@@ -56,6 +57,7 @@ $liste = @(
     @{ n = 'pilotage (workspace, widgets, menu : lecture sans secret, boutons = fonctions Discord, jeton et hôte, échappement, node --check)'; f = 'pilotage.ps1' }
     @{ n = 'option voix_actif (désactivée par défaut : aucun micro, aucun réveil ; activée : comportement actuel)'; f = 'voix-actif.ps1' }
     @{ n = 'claude chaud (Invoke-Claude : démarrage unique, repli, arrêt d''urgence)'; f = 'chaud.ps1' }
+    @{ n = 'agent Prospection (démarrage unique, désactivé par défaut, 10 par boîte, ok lot / ✅ de Liam seul, envoi_automatique, rien d''envoyé)'; f = 'prospection.ps1' }
 )
 function Get-Instantane {
     $mem = Join-Path $racine 'memoire'

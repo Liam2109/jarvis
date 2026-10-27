@@ -1,5 +1,5 @@
 ﻿# Veille « annonces-train » par E-MAIL : lit les e-mails d'alerte d'emploi (Jobup, JobScout24, CFF / SBB, Indeed, SNCF, France Travail) rangés par vous dans le libellé Gmail « annonces-train »,
-# en extrait titre, employeur, lieu et lien, applique le même filtre (Suisse romande et Suisse alémanique proche ; offres en allemand gardées et traduites), la même traduction et la même absence de doublons que la veille horaire, et poste les cartes dans #annonces-train.
+# en extrait titre, employeur, lieu et lien, applique le même filtre (zones de Liam : Île-de-France, Rouen, Caen, Le Havre, Lens, Le Mans en dernier recours ; Suisse romande en français seulement, offres en allemand écartées), la même traduction et la même absence de doublons que la veille horaire, et poste les cartes dans #annonces-train.
 # DÉSACTIVÉE par défaut (veille_mail = "non"). Un passage toutes les 10 minutes (veille_mail_minutes, 5 au moins), dans le processus séparé veille-train.ps1 -Mail.
 # SÉCURITÉ : LECTURE SEULE (portée OAuth gmail.readonly : aucun envoi, aucune modification, aucune suppression possible) ; seul le libellé annonces-train est lu ; seuls les expéditeurs autorisés ET authentifiés (DMARC / DKIM / SPF) comptent.
 # Le contenu d'un e-mail est une DONNÉE : on n'en tire que des titres, des lieux et des liens (jamais suivis, jamais ouverts) ; aucune phrase d'un e-mail n'est exécutée, envoyée à Claude ou prise pour un ordre.
@@ -14,8 +14,6 @@ $script:MailPortee = 'https://www.googleapis.com/auth/gmail.readonly'
 $script:MailExpediteurs = '(^|\.)(jobup\.ch|jobscout24\.ch|sbb\.ch|indeed\.com|sncf\.fr|sncf\.com|francetravail\.fr|hexafret\.com|hexafret\.fr|captrain\.fr|lineas\.net|mob\.ch|tpf\.ch)$'
 # Rouen / Normandie (liste blanche de lieux, comme pour la Suisse romande ; texte normalisé sans accents)
 $script:TrainNormand = '\b(rouen|normandie|le havre|caen|cherbourg|dieppe|evreux|elbeuf|sotteville|quevilly|mont saint aignan|barentin|yvetot|lisieux|oissel|montivilliers|fecamp|bernay|vernon|louviers|pont audemer|saint etienne du rouvray|darnetal|gisors|serquigny|alencon|saint lo|granville|avranches|coutances|flers|argentan|honfleur|deauville|bolbec|lillebonne|gonfreville|harfleur)\b'
-# Île-de-France (SNCF Voyageurs Île-de-France, Transilien) : même principe
-$script:TrainIdf = '\b(paris|ile de france|saint lazare|montparnasse|gare du nord|gare de l est|gare de lyon|austerlitz|versailles|saint quentin en yvelines|massy|juvisy|melun|cergy|pontoise|mantes la jolie|creteil|saint denis|bobigny|nanterre|la defense|argenteuil|noisy le sec|marne la vallee|torcy|meaux|provins|rambouillet|evry|corbeil essonnes|etampes|orly|villeneuve saint georges|trappes|plaisir|acheres|poissy|conflans sainte honorine|sartrouville|ermont|pantin|bondy|aulnay sous bois|rosny sous bois|le bourget|chelles|lagny|mitry|roissy|vaires)\b'
 
 $script:MailLieuxAffiches = @{ 'geneve' = 'Genève'; 'delemont' = 'Delémont'; 'neuchatel' = 'Neuchâtel'; 'la chaux de fonds' = 'La Chaux-de-Fonds'; 'saint maurice' = 'Saint-Maurice'; 'st maurice' = 'Saint-Maurice'; 'palezieux' = 'Palézieux'
     'evreux' = 'Évreux'; 'fecamp' = 'Fécamp'; 'alencon' = 'Alençon'; 'saint lo' = 'Saint-Lô'; 'mont saint aignan' = 'Mont-Saint-Aignan'; 'saint etienne du rouvray' = 'Saint-Étienne-du-Rouvray'; 'siders' = 'Sierre'; 'genf' = 'Genève'; 'neuenburg' = 'Neuchâtel'; 'ile de france' = 'Île-de-France'; 'gare du nord' = 'Gare du Nord'; 'gare de l est' = 'Gare de l''Est' }      # affichage avec accents (le lieu est cherché sans accents)
@@ -27,7 +25,8 @@ $script:MailMetierFort = '\bagents? de conduite\b|\bmecanicien(?:ne)?s? de (?:lo
 $script:MailMetierContexteRail = '\b(trains?|lignes?|locomotives?|rail|ferroviaire|metros?|rer|tramways?|vehicules? moteurs?|manoeuvres?|man uvres?|cff|sbb|bls|sob|transilien|ter)\b'
 function Get-MailMetier([string]$titre) {
     # 'garde' | 'noire' (liste noire, prioritaire) | 'ambigu' (conducteur sans contexte ferroviaire : bus, camion, travaux...) | 'rien' (pas une offre de conduite).
-    $n = ConvertTo-TrainNorm $titre; if ($n -match $script:MailMetierNoire -or $n -match $script:TrainExclu) { return 'noire' }      # liste noire + offres « déjà formé / expérimenté / formateur » (lib\veille-train.ps1)
+    $n = ConvertTo-TrainNorm $titre; if ($n -match $script:TrainTram -and $n -match '\bconduct|\bagents? de conduite') { return 'tram' }      # tramway : écart compté à part
+    if ($n -match $script:MailMetierNoire -or $n -match $script:TrainExclu) { return 'noire' }      # liste noire + offres « déjà formé / expérimenté / formateur » (lib\veille-train.ps1)
     $fort = $n -match $script:MailMetierFort; if (-not $fort -and $n -notmatch '\bconduct(?:eur|rice)s?\b') { return 'rien' }
     if (-not $fort -and ($n -match '\b(bus|autobus|autocar|camion|travaux|engins?|chantier)\b' -or $n -notmatch $script:MailMetierContexteRail)) { return 'ambigu' }
     'garde'
@@ -170,14 +169,9 @@ function ConvertTo-MailTexte([string]$h) {
 function Get-MailLieu([string]$texte) {
     # Premier lieu reconnu (liste blanche Suisse romande / Normandie) dans le texte ; '' si aucun (l'annonce sera écartée).
     $n = ConvertTo-TrainNorm $texte; $best = $null
-    foreach ($re in $script:TrainRomand, $script:TrainBilingue, $script:TrainProche, $script:TrainNormand, $script:TrainIdf) { $m = [regex]::Match($n, $re); if ($m.Success -and (-not $best -or $m.Index -lt $best.Index)) { $best = $m } }
+    foreach ($re in $script:TrainRomand, $script:TrainBilingue, $script:TrainProche, $script:TrainNormand, $script:TrainIdf, $script:TrainZoneLens, $script:TrainZoneLeMans) { $m = [regex]::Match($n, $re); if ($m.Success -and (-not $best -or $m.Index -lt $best.Index)) { $best = $m } }
     if (-not $best) { return '' }
     if ($script:MailLieuxAffiches.ContainsKey($best.Value)) { $script:MailLieuxAffiches[$best.Value] } else { ([Globalization.CultureInfo]::InvariantCulture).TextInfo.ToTitleCase($best.Value) }
-}
-function Get-TrainFiltreMail([string]$lieu, [string]$titre) {
-    # Rouen / Normandie : gardé ; sinon le filtre Suisse romande habituel (lieu romand, ou bilingue avec un titre non allemand).
-    if ((ConvertTo-TrainNorm $lieu) -match ($script:TrainNormand + '|' + $script:TrainIdf)) { return @{ garde = $true; allemand = $false; raison = '' } }
-    Get-TrainFiltreSuisse $lieu $titre
 }
 function Add-MailTrace([string]$titre, [string]$employeur, [string]$lieu, [string]$decision, [string]$raison, [string]$id = '') {
     if ($null -eq $script:MailTrace) { return }
@@ -195,13 +189,16 @@ function Get-MailAnnonces([string]$html, [string]$domaine, [string]$date) {
         $finCtx = $(if ($i + 1 -lt $cand.Count) { $cand[$i + 1].debut } else { $html.Length }); $finCtx = [math]::Min($finCtx, $a.fin + 1500)
         $ctx = $(if ($finCtx -gt $a.fin) { ConvertTo-MailTexte $html.Substring($a.fin, $finCtx - $a.fin) } else { '' })
         $lieu = Get-MailLieu "$($a.titre) $ctx"; $emp = Get-MailEmployeurTexte "$($a.titre) $ctx" $employeur
+        if ($a.metier -eq 'tram') { Add-TrainEcart 'tram'; Add-MailTrace $a.titre $emp $lieu 'écartée' 'tramway : exclu'; continue }
         if ($a.metier -ne 'garde') { $script:MailEcartMetier++; Add-MailTrace $a.titre $emp $lieu 'écartée' $(if ($a.metier -eq 'noire') { 'métier : liste noire' } else { 'métier : titre ambigu' }); continue }      # liste noire ou titre ambigu : jamais envoyé, compté au journal
         $f = Get-TrainFiltreMail $lieu $a.titre
-        if (-not $f.garde) { Add-TrainEcart $f.raison; Add-MailTrace $a.titre $emp $lieu 'écartée' 'lieu : hors Suisse romande / alémanique proche (ou lieu non reconnu)'; continue }
+        if (-not $f.garde) { Add-TrainEcart $f.raison; Add-MailTrace $a.titre $emp $lieu 'écartée' $(if ($f.raison -eq 'langue') { 'langue : offre en allemand' } else { 'lieu : hors zones acceptées (ou lieu non reconnu)' }); continue }
+        if (-not (Test-TrainEmployeurOk $emp)) { Add-TrainEcart 'employeur'; Add-MailTrace $a.titre $emp $lieu 'écartée' 'employeur : hors de la liste acceptée'; continue }
         $sha = [Security.Cryptography.SHA1]::Create(); $h = (($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes((ConvertTo-TrainNorm $a.titre) + '|' + (ConvertTo-TrainNorm $lieu))) | ForEach-Object { $_.ToString('x2') }) -join ''); $sha.Dispose()
         $ident = $h.Substring(0, 16); if ($vus.ContainsKey($ident)) { continue }; $vus[$ident] = $true
         $n = New-TrainAnnonce 'mail' $ident $a.titre $emp $lieu $date ([Net.WebUtility]::HtmlDecode($a.href).Trim())
-        if ($f.allemand) { $n.langue = 'Allemand probable (titre en allemand)' }
+        if ($f.zone) { $n.zone = "$($f.zone)" }
+        $v = Get-TrainCritereVerifier "$($a.titre) $ctx"; if ($v) { $n.verifier = $v }
         Add-MailTrace $a.titre $emp $lieu 'gardée' $(if ($f.allemand) { 'conducteur reconnu, lieu accepté, titre en allemand ([DE])' } else { 'conducteur reconnu, lieu accepté' }) $n.id
         $out += $n
     }
@@ -224,12 +221,13 @@ function Invoke-VeilleMail([datetime]$now = (Get-Date), [switch]$Simulation, [sw
     if ($Simulation) { $m.messages = @() }      # simulation : relit tous les messages récents (rien n'est marqué traité)
     $vusAvant = @($e.vus)
     if (-not $Simulation) { $e.pid = $PID; Save-TrainEtat $e; $m.dernier_lancement = $now.ToString('o'); Save-MailEtat $m }      # même verrou que la veille horaire : un seul passage à la fois (les dates de la veille horaire ne bougent pas)
-    $script:TrainEcart = @{ lieu = 0; langue = 0 }; $script:TrainOllamaHS = $false; $script:MailEcartMetier = 0
+    $script:TrainEcart = @{ lieu = 0; langue = 0; tram = 0; employeur = 0; experience = 0 }; $script:TrainOllamaHS = $false; $script:MailEcartMetier = 0
     $lus = 0; $refuses = 0; $gardees = 0; $nouvelles = 0; $envoyees = 0; $erreur = ''; $deja = @{}
     try {
         $tok = Get-GmailAccessToken; $lib = Get-GmailLibelleId $tok
         if (-not $Simulation -and -not $Faux -and (Get-Command Invoke-Candidatures -ErrorAction SilentlyContinue) -and (Get-CandConfig).actif) {      # réponses à vos candidatures (lib\candidatures.ps1) : avant les offres, leurs ids rejoignent $m.messages
             try { [void](Invoke-Candidatures $tok $m $now) } catch { Write-Journal -Action 'Candidatures' -Resultat ("erreur : " + (Short (Hide-Secrets $_.Exception.Message) 160)) }
+            if (Get-Command Invoke-CvSuivi -ErrorAction SilentlyContinue) { try { [void](Invoke-CvSuivi $now) } catch { Write-Journal -Action 'Candidatures' -Resultat ("suivi : erreur " + (Short (Hide-Secrets $_.Exception.Message) 160)) } }      # lib\cv-candidature.ps1 : relances J+7 et résumé quotidien
         }
         $liste = Invoke-GmailGet ("messages?labelIds=$([uri]::EscapeDataString($lib))&maxResults=25&q=" + [uri]::EscapeDataString('newer_than:7d')) $tok
         foreach ($ref in @($liste.messages)) {
@@ -250,7 +248,7 @@ function Invoke-VeilleMail([datetime]$now = (Get-Date), [switch]$Simulation, [sw
                 if ($envoyees -ge $script:TrainMaxCartes) { $toutEnvoye = $false; Set-MailTraceEtat $a 'nouvelle : en attente (plafond de 8 cartes par passage)'; break }
                 $deja[$a.id] = $true
                 try { $fr = Get-TrainTraduction $a; if ($fr) { $a.titre_fr = $fr } } catch {}      # sans traduction : titre original
-                if (Send-TrainNotif 'jarvis' (New-EmbedTrainAnnonce $a)) { $envoyees++; $e.vus += $a.id; $a.vu_le = $now.ToString('o'); $e.nouvelles += $a; Set-MailTraceEtat $a $(if ($Simulation -and $script:MailTestPoste) { 'nouvelle : carte [TEST] postée dans #annonces-train' } elseif ($Simulation) { 'nouvelle : carte simulée (rien posté)' } else { 'nouvelle : carte envoyée dans #annonces-train' }) } else { $toutEnvoye = $false; Set-MailTraceEtat $a 'nouvelle : envoi refusé, réessai au passage suivant' }
+                if (Send-TrainNotif 'jarvis' (New-EmbedTrainAnnonce $a)) { $envoyees++; $e.vus += $a.id; $a.vu_le = $now.ToString('o'); $e.nouvelles += $a; if (Get-Command Invoke-CvBrouillon -ErrorAction SilentlyContinue) { Invoke-CvBrouillon $a $now }; Set-MailTraceEtat $a $(if ($Simulation -and $script:MailTestPoste) { 'nouvelle : carte [TEST] postée dans #annonces-train' } elseif ($Simulation) { 'nouvelle : carte simulée (rien posté)' } else { 'nouvelle : carte envoyée dans #annonces-train' }) } else { $toutEnvoye = $false; Set-MailTraceEtat $a 'nouvelle : envoi refusé, réessai au passage suivant' }
             }
             if ($toutEnvoye) { $m.messages += "$($ref.id)" }      # un message n'est « traité » que si toutes ses nouvelles annonces sont parties
         }
@@ -259,10 +257,10 @@ function Invoke-VeilleMail([datetime]$now = (Get-Date), [switch]$Simulation, [sw
         if ($e.erreurs['E-mail (Gmail)'] -ne $jour) { if (Send-TrainNotif 'systeme' (New-EmbedTrainAttention 'E-mail (Gmail)' $erreur)) { $e.erreurs['E-mail (Gmail)'] = $jour } }      # une carte par jour
     }
     $e.nouvelles = @($e.nouvelles | Where-Object { try { ($now - [datetime]$_.vu_le).TotalDays -lt 7 } catch { $false } })
-    $ecL = [int]$script:TrainEcart.lieu; $ecG = [int]$script:TrainEcart.langue
-    if (-not $Simulation) { $e.pid = 0; Save-TrainEtat $e; $m.dernier_passage = $now.ToString('o'); Save-MailEtat $m }
+    $ecG = [int]$script:TrainEcart.langue; $ecL = 0; foreach ($k in $script:TrainEcartCles) { $ecL += [int]$script:TrainEcart[$k] }; $ecL -= $ecG      # ecL = tous les autres écarts (zone, tramway, employeur)
+    if (-not $Simulation) { Add-TrainEcartsEtat $e; $e.pid = 0; Save-TrainEtat $e; $m.dernier_passage = $now.ToString('o'); Save-MailEtat $m }
     if (-not $Simulation -and ($lus -or $erreur -or $envoyees -or $script:MailEcartMetier)) {      # rien à dire = rien dans le journal (un passage toutes les 10 minutes)
-        Write-Journal -Action 'Veille e-mail' -Resultat "$(Format-Pluriel $lus 'mail lu' 'mails lus'), $(Format-Pluriel ($gardees + $ecL + $ecG) 'offre' 'offres'), $(Format-Pluriel $gardees 'gardée' 'gardées') ($($ecL + $ecG) écartée(s) hors Suisse romande / alémanique proche) ; $($script:MailEcartMetier) écartée(s) : métier$(if ($refuses) { " ; $refuses expéditeur(s) refusé(s) (non autorisé ou non authentifié)" }) ; $nouvelles nouvelle(s), $envoyees carte(s)$(if ($erreur) { ', erreur : ' + $erreur })"
+        Write-Journal -Action 'Veille e-mail' -Resultat "$(Format-Pluriel $lus 'mail lu' 'mails lus'), $(Format-Pluriel ($gardees + $ecL + $ecG) 'offre' 'offres'), $(Format-Pluriel $gardees 'gardée' 'gardées') ($($ecL + $ecG) écartée(s) : $(Get-TrainEcartTexte $script:TrainEcart -Tout)) ; $($script:MailEcartMetier) écartée(s) : métier$(if ($refuses) { " ; $refuses expéditeur(s) refusé(s) (non autorisé ou non authentifié)" }) ; $nouvelles nouvelle(s), $envoyees carte(s)$(if ($erreur) { ', erreur : ' + $erreur })"
     }
     @{ lus = $lus; nouvelles = $nouvelles; envoyees = $envoyees; erreur = $erreur; gardees = $gardees; refuses = $refuses }
 }
@@ -297,7 +295,7 @@ function Update-VeilleMail([datetime]$now = (Get-Date)) {
 # N'affiche que : titre (et titre traduit), employeur, lieu, décision, raison. Jamais de jeton, de secret ni d'autre contenu de mail.
 $script:MailFauxTitres = @(
     @{ titre = 'Conducteur de locomotive (H/F) – Lausanne'; de = 'Jobup <alerte@jobup.ch>'; attendu = 'gardée'; raison = '' }
-    @{ titre = 'Lokführer/in – Basel'; de = 'JobScout24 <alerts@jobscout24.ch>'; attendu = 'gardée'; raison = '' }
+    @{ titre = 'Conducteur de locomotive (H/F) – Yverdon'; de = 'JobScout24 <alerts@jobscout24.ch>'; attendu = 'gardée'; raison = '' }
     @{ titre = 'Mécanicien de locomotive – Bussigny'; de = 'Jobup <alerte@jobup.ch>'; attendu = 'gardée'; raison = '' }
     @{ titre = 'Mécanicien ferroviaire – Neuchâtel'; de = 'JobScout24 <alerts@jobscout24.ch>'; attendu = 'écartée'; raison = 'métier' }
     @{ titre = 'Chauffeur de bus – Genève'; de = 'Jobup <alerte@jobup.ch>'; attendu = 'écartée'; raison = 'métier' }
@@ -381,7 +379,7 @@ function Invoke-VeilleMailTest($opt) {
         if ($poste -and $cartes.Count -ne $gard) { $diff += "$gard cartes attendues, $($cartes.Count) postées" }
         if ($trace.Count -ne $script:MailFauxTitres.Count) { $diff += "$($trace.Count) offres vues au lieu de $($script:MailFauxTitres.Count)" }
         & $add ''
-        if ($diff.Count) { $code = 1; & $add 'TEST ÉCHEC'; foreach ($d in $diff) { & $add "  - $d" } } else { & $add 'TEST OK (attendu : 3 premiers gardés, Mécanicien ferroviaire et Chauffeur de bus écartés pour métier, Rouen gardé)' }
+        if ($diff.Count) { $code = 1; & $add 'TEST ÉCHEC'; foreach ($d in $diff) { & $add "  - $d" } } else { & $add 'TEST OK (attendu : les 3 premiers gardés, Mécanicien ferroviaire et Chauffeur de bus écartés pour métier, Rouen gardé)' }
     }
     @{ code = $code; ok = ($code -eq 0); lignes = @($L); trace = $trace; carteSimulees = $cartes.Count }
 }

@@ -25,7 +25,32 @@ $script:TrainMotif = 'conduct(?:eur|rice)s?(?: (?:ou )?conduct(?:eur|rice))?(?: 
 # Offres pour DÉBUTANT : on écarte « déjà formé », expérimenté / confirmé, formateur / instructeur, « avec expérience » (« sans expérience » reste permis). Texte normalisé sans accents.
 $script:TrainExclu = '\b(deja forme(?:e|s|es)?|forme(?:e|s|es)?|experimente(?:e|s|es)?|confirme(?:e|s|es)?|formateurs?|formatrices?|instructeurs?|instructrices?|moniteurs?|monitrices?|tuteurs?|tutrices?|seniors?|avec experience|experience (?:requise|exigee|confirmee|souhaitee|prealable)|erfahren\w*|berufserfahren\w*|ausbilder(?:in)?|instruktor(?:in)?)\b'
 function Test-TrainExclu([string]$titre) { (ConvertTo-TrainNorm $titre) -match $script:TrainExclu }
-function Test-TrainAnnonce([string]$titre) { $n = ConvertTo-TrainNorm $titre; ($n -match $script:TrainMotif) -and ($n -notmatch '\b(bus|autocar|autobus)\b') -and ($n -notmatch $script:TrainExclu) }
+# Tramway : jamais (Transdev, RATP...). Test-TrainTram ne vaut que pour un titre de CONDUITE (pour compter l'écart sans compter les autres métiers).
+$script:TrainTram = '\b(tram|tramway|tramways|tram train)\b'
+function Test-TrainTram([string]$titre) { $n = ConvertTo-TrainNorm $titre; ($n -match $script:TrainTram) -and ($n -match $script:TrainMotif) }
+# Employeurs acceptés (liste de Liam). Un employeur CONNU hors liste est écarté ; un employeur inconnu ou vide (agence, annonce anonyme, site d'emploi) est gardé.
+$script:TrainEmployeursOk = '\b(sncf|transilien|ter|ratp|keolis|transdev|rail logistics|rle|fret|europorte|captrain|lineas|eurocargo|regiorail|hexafret|cff|sbb|ffs)\b'
+function Test-TrainEmployeurOk([string]$emp) { $n = ConvertTo-TrainNorm ("$emp" -replace '\(alerte e-mail\)', ''); if (-not $n -or $n -match 'non precise|^(indeed|jobup|jobscout24|jobscout|france travail|alerte e mail)$') { return $true }; $n -match $script:TrainEmployeursOk }
+# Critères à VÉRIFIER (profil : 18 ans, bac général, BTS SIO interrompu, pas de bac+2) : l'annonce est GARDÉE mais marquée, jamais écartée en silence.
+function Get-TrainCritereVerifier([string]$texte) {
+    $n = ConvertTo-TrainNorm $texte; $r = @()
+    if ($n -match '\bbac (?:2|3|4|5)\b|\bbts\b|\bdut\b|\bniveau (?:5|6|iii|ii)\b|\blicence\b|\bdiplome de niveau (?:5|6)\b') { $r += 'Bac+2 (ou diplôme supérieur) demandé' }
+    if ($n -match '\b(?:21|22|23|25) ans (?:minimum|revolus|ou plus|au moins)|(?:au moins|minimum|a partir de|plus de|age minimum|age de|ages? de) (?:de )?(?:21|22|23|25) ans') { $r += 'Âge minimum de 21 ans ou plus' }
+    $r -join ' ; '
+}
+$script:TrainEcartCles = @('lieu', 'langue', 'tram', 'employeur', 'experience')
+function Get-TrainEcartTexte($h, [switch]$Tout) {
+    $noms = [ordered]@{ lieu = 'hors zone'; langue = 'allemand'; tram = 'tramway'; employeur = 'autre employeur'; experience = 'expérience exigée' }; $p = @()
+    foreach ($k in $noms.Keys) { $n = $(if ($h) { [int]$h[$k] } else { 0 }); if ($n -or $Tout) { $p += "$($noms[$k]) $n" } }
+    $p -join ', '
+}
+function Add-TrainEcartsEtat($e) {
+    # Écarts cumulés depuis le dernier résumé du matin (affichés dans la carte du résumé, puis remis à zéro).
+    $old = $e.ecarts; $h = @{}; foreach ($k in $script:TrainEcartCles) { $h[$k] = $(if ($old) { [int]$old[$k] } else { 0 }) + [int]$script:TrainEcart[$k] }; $e.ecarts = $h
+}
+function Get-TrainProp($a, [string]$k) { if ($a -is [hashtable]) { "$($a[$k])" } else { "$($a.$k)" } }
+function Get-TrainZoneLibelle([string]$z) { switch ($z) { '1' { 'Priorité 1 (Île-de-France / Rouen)' } '2' { 'Priorité 2 (Caen / Le Havre)' } '3' { 'Priorité 3 (Lens)' } '4' { 'Dernier recours (Le Mans)' } default { '' } } }
+function Test-TrainAnnonce([string]$titre) { $n = ConvertTo-TrainNorm $titre; ($n -match $script:TrainMotif) -and ($n -notmatch '\b(bus|autocar|autobus)\b') -and ($n -notmatch $script:TrainTram) -and ($n -notmatch $script:TrainExclu) }
 function Get-TrainType([string]$titre) { if ((ConvertTo-TrainNorm $titre) -match 'formation|quereinstieg|zweitausbildung|reconversion|alternance|apprenti|lehre|diplome|stage') { 'Formation' } else { 'Emploi' } }
 function New-TrainAnnonce([string]$source, [string]$ident, [string]$titre, [string]$employeur, [string]$lieu, [string]$date, [string]$lien) {
     if ($lien -notmatch '^https://') { $lien = '' }
@@ -34,18 +59,33 @@ function New-TrainAnnonce([string]$source, [string]$ident, [string]$titre, [stri
 
 # ---------- Filtre « francophone en Suisse romande » (sources suisses seulement) ----------
 # Lieu : liste blanche = Suisse romande (Vaud, Genève, Valais, Neuchâtel, Jura, Fribourg, Bienne...) + Suisse alémanique proche (Bâle, Soleure, Berne, Argovie). Tout le reste (Zurich et l'est du pays, Suisse centrale, lieu inconnu) est écarté.
-# Langue : les offres EN ALLEMAND sont gardées (titre traduit en français par Ollama, carte marquée « [DE] » et « Allemand probable »). Seule la page SOB (lieu inconnu) écarte un titre allemand.
+# Langue : les offres EN ALLEMAND sont ÉCARTÉES (comptées « langue »), partout ; seules les offres en français de Suisse romande sont gardées (Fribourg et Bienne, bilingues, comprises). Bâle, Berne, Argovie... ne sont plus acceptées.
 $script:TrainRomand = '\b(lausanne|geneve|geneva|genf|vaud|yverdon|vevey|montreux|renens|morges|nyon|sion|sierre|siders|martigny|monthey|aigle|bex|delemont|la chaux de fonds|neuchatel|neuenburg|le locle|jura|porrentruy|valais|bulle|payerne|vallorbe|palezieux|cossonay|gland|rolle|prilly|crissier|ecublens|pully|lutry|vernier|carouge|lancy|meyrin|versoix|romont|chexbres|puidoux|villeneuve|saint maurice|st maurice|fully|orbe|echallens|moudon|avenches|saint imier|tavannes|moutier|courtelary|travers|couvet|fleurier|les brenets|bussigny|denges|echandens|saint sulpice|st sulpice|chavannes|penthalaz|daillens|sullens|lonay|etoy|allaman|aubonne|epalinges|cully|paudex|bremblens|romanel|vufflens|bercher|grandson|sainte croix|ste croix|la sarraz|chavornay|lucens|oron|chatel saint denis|chatel st denis|vuadens|estavayer|marly|givisiez|villars sur glane|vouvry|collombey|saxon|riddes|conthey|vetroz|evionnaz|cornavin|onex|thonex|chene bourg|satigny|bernex|plan les ouates|cointrin|coppet|boudry|colombier|peseux|cornaux|saint blaise|val de ruz|cernier|fontainemelon|courrendlin|glovelier|bassecourt|saignelegier|reconvilier|malleray|bevilard|sonceboz|la neuveville)\b'
 $script:TrainBilingue = '\b(fribourg|freiburg|biel|bienne|murten|morat)\b'
 $script:TrainProche = '\b(basel|bale|baselland|basel land|liestal|muttenz|pratteln|allschwil|binningen|arlesheim|sissach|birsfelden|munchenstein|riehen|laufon|solothurn|soleure|olten|grenchen|granges|oensingen|dulliken|balsthal|hagendorf|schonenwerd|zuchwil|biberist|gerlafingen|dornach|breitenbach|bern|berne|jura bernois|burgdorf|langenthal|lyss|thun|interlaken|koniz|ostermundigen|worb|munsingen|aargau|argovie|aarau|baden|brugg|lenzburg|wohlen|zofingen|rheinfelden|oftringen|suhr|wettingen|spreitenbach|windisch|rupperswil|mellingen|beinwil am see|brig|brigue|visp|viege|naters|zermatt|raron|leuk)\b'
 $script:TrainMotifAllemand = 'lokfuhrer|lokfuehrer|triebfahrzeug|quereinstieg|zweitausbildung|rangier|zugmaschine|bauzug|fahrleitung|personenverkehr|guterverkehr|kategorie|\bkat\b|\bund\b|\bmit\b|erfahrung|ausbildung'
 function Test-TrainAllemand([string]$titre) { $n = ConvertTo-TrainNorm $titre; ($n -match $script:TrainMotifAllemand) -and ($n -notmatch 'conduct(?:eur|rice)|mecanicien|agent de conduite') }
 function Get-TrainFiltreSuisse([string]$lieu, [string]$titre) {
-    # @{ garde; allemand; raison } : garde = lieu romand, bilingue ou alémanique proche (le titre allemand ne compte plus contre l'annonce) ; raison = 'lieu' si écartée (hors liste blanche).
-    $l = ConvertTo-TrainNorm $lieu; $garde = ($l -match $script:TrainRomand) -or ($l -match $script:TrainBilingue) -or ($l -match $script:TrainProche); $de = Test-TrainAllemand $titre
-    @{ garde = $garde; allemand = $de; raison = $(if ($garde) { '' } else { 'lieu' }) }
+    # @{ garde; allemand; raison } : garde = lieu romand ou bilingue ET titre non allemand ; raison = 'lieu' (hors Suisse romande) ou 'langue' (titre allemand) si écartée.
+    $l = ConvertTo-TrainNorm $lieu; $lieuOk = ($l -match $script:TrainRomand) -or ($l -match $script:TrainBilingue); $de = Test-TrainAllemand $titre
+    @{ garde = ($lieuOk -and -not $de); allemand = $de; raison = $(if (-not $lieuOk) { 'lieu' } elseif ($de) { 'langue' } else { '' }) }
 }
-function Add-TrainEcart([string]$raison) { if (-not $script:TrainEcart) { $script:TrainEcart = @{ lieu = 0; langue = 0 } }; $script:TrainEcart[$raison]++ }
+# Île-de-France (SNCF Voyageurs Île-de-France, Transilien) : même principe
+$script:TrainIdf = '\b(paris|ile de france|saint lazare|montparnasse|gare du nord|gare de l est|gare de lyon|austerlitz|versailles|saint quentin en yvelines|massy|juvisy|melun|cergy|pontoise|mantes la jolie|creteil|saint denis|bobigny|nanterre|la defense|argenteuil|noisy le sec|marne la vallee|torcy|meaux|provins|rambouillet|evry|corbeil essonnes|etampes|orly|villeneuve saint georges|trappes|plaisir|acheres|poissy|conflans sainte honorine|sartrouville|ermont|pantin|bondy|aulnay sous bois|rosny sous bois|le bourget|chelles|lagny|mitry|roissy|vaires)\b'
+# Zones acceptées par priorité : 1 = Île-de-France + Rouen, 2 = Caen + Le Havre, 3 = Lens, 4 = Le Mans (dernier recours). Lille et le reste : écartés.
+$script:TrainZoneRouen = '\b(rouen|sotteville|quevilly|petit quevilly|grand quevilly|elbeuf|mont saint aignan|darnetal|oissel|barentin|saint etienne du rouvray|canteleu|maromme|deville les rouen|bois guillaume)\b'
+$script:TrainZoneCaenHavre = '\b(caen|herouville saint clair|mondeville|ifs|ouistreham|le havre|harfleur|montivilliers|gonfreville|sainte adresse)\b'
+$script:TrainZoneLens = '\b(lens|livin|avion|henin beaumont|mericourt|billy montigny|harnes|loos en gohelle|sallaumines|noyelles godault)\b'
+$script:TrainZoneLeMans = '\b(le mans|allonnes|arnage|ruaudin|coulaines)\b'
+function Get-TrainFiltreMail([string]$lieu, [string]$titre) {
+    # @{ garde; allemand; raison ('lieu' | 'langue' | ''); zone (1 à 4, 0 = Suisse) }. Zones de France par priorité (voir TrainZone*) ; sinon Suisse romande, en français. Un titre allemand est écarté partout.
+    $l = ConvertTo-TrainNorm $lieu; $z = 0
+    if ($l -match $script:TrainIdf -or "$lieu" -match '^\s*(75|77|78|91|92|93|94|95)\s*-' -or $l -match $script:TrainZoneRouen) { $z = 1 }
+    elseif ($l -match $script:TrainZoneCaenHavre) { $z = 2 } elseif ($l -match $script:TrainZoneLens) { $z = 3 } elseif ($l -match $script:TrainZoneLeMans) { $z = 4 }
+    if ($z) { $de = Test-TrainAllemand $titre; return @{ garde = (-not $de); allemand = $de; raison = $(if ($de) { 'langue' } else { '' }); zone = $z } }
+    $f = Get-TrainFiltreSuisse $lieu $titre; $f.zone = 0; $f
+}
+function Add-TrainEcart([string]$raison) { if (-not $script:TrainEcart) { $script:TrainEcart = @{ lieu = 0; langue = 0 } }; if (-not $script:TrainEcart.ContainsKey($raison)) { $script:TrainEcart[$raison] = 0 }; $script:TrainEcart[$raison]++ }
 
 # ---------- Réseau poli (bouchon en test) ----------
 function Wait-TrainPoli { if ($script:TrainPauseSec -gt 0) { $r = $script:TrainPauseSec - ((Get-Date) - $script:TrainDernierReq).TotalSeconds; if ($r -gt 0) { Start-Sleep -Milliseconds ([int]($r * 1000)) } }; $script:TrainDernierReq = Get-Date }
@@ -98,6 +138,7 @@ function Get-TrainSbb {
     $json = Get-TrainTexte 'https://company.sbb.ch/content/internet/corporate/en/jobs-karriere/jobs/job-suche/jcr:content/parmain/jobfilter.results.json'
     $o = $json | ConvertFrom-Json; $out = @()
     foreach ($j in @($o)) {
+        if (Test-TrainTram "$($j.title)") { Add-TrainEcart 'tram'; continue }
         if (-not (Test-TrainAnnonce "$($j.title)")) { continue }
         $lieu = $(if ($j.attributes.'100') { @($j.attributes.'100') -join ', ' } else { '' })
         $d = ''; if ("$($j.start_date)" -match '^\d{4}-\d{2}-\d{2}') { $d = $Matches[0] }
@@ -117,17 +158,24 @@ function Get-TrainFranceTravail {
     if ($t.code -ne 200) { throw "jeton refusé (HTTP $($t.code)) : vérifiez FRANCETRAVAIL_ID / FRANCETRAVAIL_SECRET et l'abonnement à l'API Offres d'emploi" }
     $tok = ($t.texte | ConvertFrom-Json).access_token; if ($script:Secrets -notcontains $tok) { $script:Secrets += $tok }
     $out = @(); $vus = @{}
-    foreach ($region in '28', '11') {      # 28 = Normandie, 11 = Île-de-France
+    foreach ($region in '28', '11', '32', '52') {      # 28 = Normandie (Rouen, Caen, Le Havre), 11 = Île-de-France, 32 = Hauts-de-France (Lens), 52 = Pays de la Loire (Le Mans)
         foreach ($mot in 'conducteur de train', 'conducteur de ligne', 'agent de conduite', 'formation conducteur', 'conducteur de metro', 'conducteur RER', 'conducteur de train debutant') {
             $r = Invoke-TrainHttp ("https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search?motsCles=$(& $e $mot)&region=$region&range=0-49&sort=1") 'GET' '' @{ Authorization = "Bearer $tok"; Accept = 'application/json' }
             if ($r.code -eq 204) { continue }
             if ($r.code -ne 200) { throw "recherche refusée (HTTP $($r.code)) $(Short (Hide-Secrets $r.texte) 100)" }
             foreach ($o in @(($r.texte | ConvertFrom-Json).resultats)) {
-                if (-not (Test-TrainAnnonce "$($o.intitule)") -or $vus.ContainsKey("$($o.id)")) { continue }
-                $vus["$($o.id)"] = $true
+                if ($vus.ContainsKey("$($o.id)")) { continue }; $vus["$($o.id)"] = $true
+                if (Test-TrainTram "$($o.intitule)") { Add-TrainEcart 'tram'; continue }
+                if (-not (Test-TrainAnnonce "$($o.intitule)")) { continue }
+                $f = Get-TrainFiltreMail "$($o.lieuTravail.libelle)" "$($o.intitule)"; if (-not $f.garde) { Add-TrainEcart $f.raison; continue }      # zones de Liam (lib\veille-mail.ps1) ; titre allemand écarté
+                if (-not (Test-TrainEmployeurOk "$($o.entreprise.nom)")) { Add-TrainEcart 'employeur'; continue }
+                if ("$($o.experienceExige)" -eq 'E') { Add-TrainEcart 'experience'; continue }      # débutant accepté obligatoire
                 $lien = "$($o.origineOffre.urlOrigine)"; if ($lien -notmatch '^https://') { $lien = "https://candidat.francetravail.fr/offres/recherche/detail/$($o.id)" }
                 $d = ''; if ("$($o.dateCreation)" -match '^\d{4}-\d{2}-\d{2}') { $d = $Matches[0] }
-                $out += New-TrainAnnonce 'ft' "$($o.id)" "$($o.intitule)" "$($o.entreprise.nom)" "$($o.lieuTravail.libelle)" $d $lien
+                $n = New-TrainAnnonce 'ft' "$($o.id)" "$($o.intitule)" "$($o.entreprise.nom)" "$($o.lieuTravail.libelle)" $d $lien
+                if ($f.zone) { $n.zone = "$($f.zone)" }
+                $v = Get-TrainCritereVerifier ("$($o.intitule) $($o.description) $(@($o.formations | ForEach-Object { "$($_.niveauLibelle) $($_.domaineLibelle)" }) -join ' ') $($o.qualificationLibelle)"); if ($v) { $n.verifier = $v }
+                $out += $n
             }
         }
     }
@@ -138,6 +186,7 @@ function Get-TrainPage([string]$cle, [string]$url, [string]$employeur, [string]$
     $html = Get-TrainTexte $url; $out = @()
     foreach ($m in [regex]::Matches($html, '(?is)<a\s[^>]*href="([^"]+)"[^>]*>(.*?)</a>')) {
         $txt = ([Net.WebUtility]::HtmlDecode(($m.Groups[2].Value -replace '<[^>]+>', ' ')) -replace '\s+', ' ').Trim()
+        if ($txt -and (Test-TrainTram $txt)) { Add-TrainEcart 'tram'; continue }
         if (-not $txt -or -not (Test-TrainAnnonce $txt)) { continue }
         if (Test-TrainAllemand $txt) { Add-TrainEcart 'langue'; continue }      # lieu inconnu : un titre allemand est écarté
         $lien = ''; try { $lien = ([uri]::new([uri]$url, [Net.WebUtility]::HtmlDecode($m.Groups[1].Value))).AbsoluteUri } catch {}
@@ -159,19 +208,20 @@ function Get-TrainSources {
 
 # ---------- Base locale ----------
 function Get-TrainEtat {
-    $o = Read-JsonMemoire 'veille-train.json'; $e = @{ vus = @(); nouvelles = @(); dernier_passage = ''; dernier_lancement = ''; dernier_resume = ''; erreurs = @{}; pid = 0 }
+    $o = Read-JsonMemoire 'veille-train.json'; $e = @{ vus = @(); nouvelles = @(); dernier_passage = ''; dernier_lancement = ''; dernier_resume = ''; erreurs = @{}; pid = 0; ecarts = @{} }
     if ($o) {
         foreach ($k in 'dernier_passage', 'dernier_lancement', 'dernier_resume') { if ($o.PSObject.Properties[$k]) { $e[$k] = "$($o.$k)" } }
         if ($o.PSObject.Properties['pid'] -and "$($o.pid)" -match '^\d+$') { $e.pid = [int]$o.pid }
         if ($o.PSObject.Properties['vus']) { $e.vus = @($o.vus | ForEach-Object { "$_" }) }
         if ($o.PSObject.Properties['nouvelles']) { $e.nouvelles = @($o.nouvelles | ForEach-Object { $h = @{}; foreach ($p in $_.PSObject.Properties) { $h[$p.Name] = "$($p.Value)" }; $h }) }
         if ($o.PSObject.Properties['erreurs'] -and $o.erreurs) { foreach ($p in $o.erreurs.PSObject.Properties) { $e.erreurs[$p.Name] = "$($p.Value)" } }
+        if ($o.PSObject.Properties['ecarts'] -and $o.ecarts) { foreach ($p in $o.ecarts.PSObject.Properties) { $e.ecarts[$p.Name] = "$($p.Value)" } }
     }
     $e
 }
 function Save-TrainEtat($e) {
     $e.vus = @($e.vus | Select-Object -Last $script:TrainMaxVus)
-    Save-JsonMemoire 'veille-train.json' ([ordered]@{ dernier_passage = $e.dernier_passage; dernier_lancement = $e.dernier_lancement; dernier_resume = $e.dernier_resume; pid = $e.pid; erreurs = $e.erreurs; vus = @($e.vus); nouvelles = @($e.nouvelles) })
+    Save-JsonMemoire 'veille-train.json' ([ordered]@{ dernier_passage = $e.dernier_passage; dernier_lancement = $e.dernier_lancement; dernier_resume = $e.dernier_resume; pid = $e.pid; erreurs = $e.erreurs; ecarts = $e.ecarts; vus = @($e.vus); nouvelles = @($e.nouvelles) })
 }
 
 # ---------- Cartes Discord (ton « info » : bleu ; « attention » : orange) ----------
@@ -216,21 +266,45 @@ function New-EmbedTrainAnnonce($a) {
     $champs = @(@{ nom = 'Employeur'; valeur = $a.employeur; inline = $true }, @{ nom = 'Lieu'; valeur = $a.lieu; inline = $true }, @{ nom = 'Type'; valeur = $a.type; inline = $true },
         @{ nom = $(if ($a.date) { 'Date' } else { 'Repérée le' }); valeur = $(if ($a.date) { ([datetime]$a.date).ToString('dd/MM/yyyy') } else { (Get-Date).ToString('dd/MM/yyyy') }); inline = $true })
     if ($a.langue) { $champs += @{ nom = 'Langue'; valeur = $a.langue; inline = $true } }
+    $z = Get-TrainProp $a 'zone'; $v = Get-TrainProp $a 'verifier'
+    if ($z) { $champs += @{ nom = 'Zone'; valeur = (Get-TrainZoneLibelle $z); inline = $true } }
+    if ($v) { $champs += @{ nom = 'Critère à vérifier'; valeur = $v; inline = $true } }      # gardée, jamais écartée en silence
     if ($a.lien) { $champs += @{ nom = 'Lien'; valeur = $a.lien; inline = $false } }
     if (Get-Command Get-CandBrouillonChamp -ErrorAction SilentlyContinue) { $b = Get-CandBrouillonChamp $a; if ($b) { $champs += $b } }      # lib\candidatures.ps1 : lien « brouillon Gmail » (rien n'est envoyé)
     $fr =$(if ($a -is [hashtable]) { $a['titre_fr'] } else { $a.titre_fr })
     $desc = "Nouvelle annonce de conduite de train ($($a.type.ToLower()))."
     if ($fr) { $desc += "`n-# Titre original : $($a.titre) · traduit automatiquement" }      # petit texte Discord sous le titre traduit
-    New-EmbedDiscord (Get-TrainTitreAffiche $a) $desc $script:CouleurBleue $champs (Get-PiedDiscord 'annonces-train')
+    if ($z -eq '4') { $desc += "`n-# Dernier recours : zone Le Mans." }
+    New-EmbedDiscord (Get-TrainTitreAffiche $a) $desc $(if ($v -or $z -eq '4') { $script:CouleurOrange } else { $script:CouleurBleue }) $champs (Get-PiedDiscord 'annonces-train')
 }
 function Get-TrainTitreAffiche($a) {
     # Titre traduit s'il existe, sinon l'original ; « [DE] » devant toute annonce en allemand.
     $de = [bool]"$($a.langue)" -or (Test-TrainAllemand "$($a.titre)"); $t = $(if ("$($a.titre_fr)") { "$($a.titre_fr)" } else { "$($a.titre)" })
     $(if ($de) { "[DE] $t" } else { $t })
 }
-function New-EmbedTrainResume($nouvelles, $sourcesMuettes = @()) {
+function Get-TrainLigneAnnonce($a) {
+    # Une ligne Discord : titre cliquable (lien de l'annonce) · employeur · lieu. Sans lien : titre simple.
+    $t = (Get-TrainTitreAffiche $a) -replace '[\[\]]', ''
+    $l = "$($a.lien)" -replace '\)', '%29' -replace '\s', '%20'
+    $debut = $(if ($l -match '^https://') { "• [$t]($l)" } else { "• $t" })
+    "$debut · $($a.employeur) · $($a.lieu)"
+}
+function Get-TrainChampsAnnonces($liste, [int]$max = 10, [string]$nom = 'Annonces') {
+    # Plusieurs champs si besoin : Discord limite chaque champ à 1024 caractères (les liens longs ne doivent jamais être coupés).
+    $champs = @(); $bloc = @(); $taille = 0; $premier = $true
+    foreach ($a in @($liste | Select-Object -First $max)) {
+        $ligne = Get-TrainLigneAnnonce $a
+        if ($ligne.Length -gt 1000) { $ligne = "• $(Get-TrainTitreAffiche $a) · $($a.employeur) · $($a.lieu)" }
+        if ($taille + $ligne.Length + 1 -gt 1000 -and $bloc.Count) { $champs += @{ nom = $(if ($premier) { $nom } else { "$nom (suite)" }); valeur = ($bloc -join "`n"); inline = $false }; $premier = $false; $bloc = @(); $taille = 0 }
+        $bloc += $ligne; $taille += $ligne.Length + 1
+    }
+    if ($bloc.Count) { $champs += @{ nom = $(if ($premier) { $nom } else { "$nom (suite)" }); valeur = ($bloc -join "`n"); inline = $false } }
+    $champs
+}
+function New-EmbedTrainResume($nouvelles, $sourcesMuettes = @(), $ecarts = $null) {
     $n = @($nouvelles); $desc = $(if ($n.Count) { "$($n.Count) nouvelle$(if ($n.Count -gt 1) { 's' }) annonce$(if ($n.Count -gt 1) { 's' }) depuis hier." } else { 'Aucune nouvelle annonce depuis hier.' })
-    $champs = @(); if ($n.Count) { $champs += @{ nom = 'Annonces'; valeur = (@($n | Select-Object -First 10 | ForEach-Object { "• $(Get-TrainTitreAffiche $_) · $($_.employeur) · $($_.lieu)" }) -join "`n"); inline = $false } }
+    $champs = @(); if ($n.Count) { $champs += @(Get-TrainChampsAnnonces $n 10 'Annonces') }      # titres cliquables (lien de l'annonce)
+    $et = Get-TrainEcartTexte $ecarts; if ($et) { $champs += @{ nom = 'Annonces écartées'; valeur = $et; inline = $false } }
     if (@($sourcesMuettes).Count) { $champs += @{ nom = 'Sources en panne'; valeur = (@($sourcesMuettes) -join ', '); inline = $false } }
     New-EmbedDiscord 'Annonces conducteur de train · résumé du matin' $desc $script:CouleurBleue $champs (Get-PiedDiscord 'annonces-train')
 }
@@ -256,7 +330,7 @@ function Invoke-VeilleTrain([datetime]$now = (Get-Date)) {
     # Retourne @{ nouvelles; envoyees; erreurs; resume }. Une source en erreur n'arrête pas les autres.
     $e = Get-TrainEtat; $c = Get-TrainConfig; $jour = $now.ToString('yyyy-MM-dd')
     $e.pid = $PID; $e.dernier_lancement = $now.ToString('o'); Save-TrainEtat $e
-    $trouvees = @(); $erreurs = @(); $muettes = @(); $script:TrainEcart = @{ lieu = 0; langue = 0 }; $script:TrainOllamaHS = $false
+    $trouvees = @(); $erreurs = @(); $muettes = @(); $script:TrainEcart = @{ lieu = 0; langue = 0; tram = 0; employeur = 0; experience = 0 }; $script:TrainOllamaHS = $false
     foreach ($s in Get-TrainSources) {
         try {
             $r = & $s.f
@@ -268,28 +342,29 @@ function Invoke-VeilleTrain([datetime]$now = (Get-Date)) {
             if ($e.erreurs["$($s.nom)"] -ne $jour) { if (Send-TrainNotif 'systeme' (New-EmbedTrainAttention $s.nom $raison)) { $e.erreurs["$($s.nom)"] = $jour } }      # une carte par source et par jour
         }
     }
+    Add-TrainEcartsEtat $e
     $nouvelles = @($trouvees | Where-Object { $e.vus -notcontains $_.id } | Sort-Object { $_.id } -Unique)
     $envoyees = 0; $n = 0
     foreach ($a in $nouvelles) {
         $n++
         if ($n -gt $script:TrainMaxCartes) { break }
         try { $fr = Get-TrainTraduction $a; if ($fr) { $a.titre_fr = $fr } } catch {}      # jamais d'erreur : sans traduction, titre original
-        if (Send-TrainNotif 'jarvis' (New-EmbedTrainAnnonce $a)) { $envoyees++; $e.vus += $a.id; $a.vu_le = $now.ToString('o'); $e.nouvelles += $a }
+        if (Send-TrainNotif 'jarvis' (New-EmbedTrainAnnonce $a)) { $envoyees++; $e.vus += $a.id; $a.vu_le = $now.ToString('o'); $e.nouvelles += $a; if (Get-Command Invoke-CvBrouillon -ErrorAction SilentlyContinue) { Invoke-CvBrouillon $a $now } }      # lib\cv-candidature.ps1 : brouillon prêt dans #candidatures (rien n'est envoyé)
     }
     $reste = @($nouvelles | Select-Object -Skip $script:TrainMaxCartes)
     if ($reste.Count) {      # trop d'annonces d'un coup (premier passage) : une seule carte pour le reste, pas de rafale
-        $emb = New-EmbedDiscord "$($reste.Count) autres nouvelles annonces" 'Pour ne pas vous noyer, voici les titres ; les liens sont dans les sources officielles.' $script:CouleurBleue @(@{ nom = 'Annonces'; valeur = (@($reste | Select-Object -First 12 | ForEach-Object { "• $(Get-TrainTitreAffiche $_) · $($_.employeur) · $($_.lieu)" + $(if ($_.lien) { " · $($_.lien)" } else { '' }) }) -join "`n"); inline = $false }) (Get-PiedDiscord 'annonces-train')
+        $emb = New-EmbedDiscord "$($reste.Count) autres nouvelles annonces" 'Pour ne pas vous noyer, voici les titres ; cliquez sur un titre pour ouvrir l''annonce.' $script:CouleurBleue @(Get-TrainChampsAnnonces $reste 12 'Annonces') (Get-PiedDiscord 'annonces-train')
         if (Send-TrainNotif 'jarvis' $emb) { foreach ($a in $reste) { $e.vus += $a.id; $a.vu_le = $now.ToString('o'); $e.nouvelles += $a } }
     }
     $e.nouvelles = @($e.nouvelles | Where-Object { try { ($now - [datetime]$_.vu_le).TotalDays -lt 7 } catch { $false } })
     $resume = $false
     if ($now.ToString('HH:mm') -ge $c.resume -and $e.dernier_resume -ne $jour) {      # résumé quotidien du matin (rattrapage : au premier passage après l'heure)
         $veille = @($e.nouvelles | Where-Object { try { ($now - [datetime]$_.vu_le).TotalHours -lt 24 -and ($_.source -ne 'sbb' -or (Get-TrainFiltreSuisse $_.lieu $_.titre).garde) } catch { $false } })      # anciennes alémaniques déjà vues : jamais dans le résumé
-        if (Send-TrainNotif 'jarvis' (New-EmbedTrainResume $veille $muettes)) { $e.dernier_resume = $jour; $resume = $true }
+        if (Send-TrainNotif 'jarvis' (New-EmbedTrainResume $veille $muettes $e.ecarts)) { $e.dernier_resume = $jour; $resume = $true; $e.ecarts = @{} }
     }
     $e.dernier_passage = $now.ToString('o'); $e.pid = 0; Save-TrainEtat $e
-    $ecL = [int]$script:TrainEcart.lieu; $ecG = [int]$script:TrainEcart.langue
-    Write-Journal -Action 'Veille annonces-train' -Resultat "$($trouvees.Count + $ecL + $ecG) annonce(s) de conduite vue(s) : $($trouvees.Count) gardée(s), $($ecL + $ecG) écartée(s) hors Suisse romande / alémanique proche (lieu $ecL, langue $ecG) ; $($nouvelles.Count) nouvelle(s), $envoyees carte(s)$(if ($erreurs.Count) { ', sources en erreur : ' + ($erreurs -join ', ') })"
+    $ecT = 0; foreach ($k in $script:TrainEcartCles) { $ecT += [int]$script:TrainEcart[$k] }
+    Write-Journal -Action 'Veille annonces-train' -Resultat "$($trouvees.Count + $ecT) annonce(s) de conduite vue(s) : $($trouvees.Count) gardée(s), $ecT écartée(s) ($(Get-TrainEcartTexte $script:TrainEcart -Tout)) ; $($nouvelles.Count) nouvelle(s), $envoyees carte(s)$(if ($erreurs.Count) { ', sources en erreur : ' + ($erreurs -join ', ') })"
     @{ nouvelles = $nouvelles.Count; envoyees = $envoyees; erreurs = $erreurs; resume = $resume }
 }
 

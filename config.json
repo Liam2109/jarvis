@@ -59,7 +59,7 @@
   "claquement_ecart_min_ms": 200,
   "claquement_ecart_max_ms": 800,
   "claquement_duree_max_ms": 120,
-  "discord_salons": { "jarvis": "1560228842185162752", "systeme": "", "marche": "", "business": "", "annonces-train": "1562128107941404742", "candidatures": "" },
+  "discord_salons": { "jarvis": "1560228842185162752", "systeme": "", "marche": "", "business": "", "annonces-train": "1562128107941404742", "candidatures": "1562128107941404742" },
   "discord_delai_confirmation_secondes": 60,
   "discord_alertes_max_par_heure": 6,
   "discord_briefing_actif": false,
