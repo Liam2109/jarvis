@@ -8,6 +8,8 @@ $TR = Join-Path $env:TEMP ('jarvis-test-' + [guid]::NewGuid().ToString('N').Subs
 $Config = Get-Content $(if ($env:JARVIS_CONFIG -and (Test-Path $env:JARVIS_CONFIG)) { $env:JARVIS_CONFIG } else { Join-Path $Root 'config.json' }) -Raw -Encoding UTF8 | ConvertFrom-Json
 . (Join-Path $Root 'lib\instagram.ps1')
 $echecs = 0
+function Get-Instantane([string]$f) { if (Test-Path -LiteralPath $f) { $i = Get-Item -LiteralPath $f; "$($i.Length):$($i.LastWriteTimeUtc.Ticks)" } else { 'absent' } }      # un fichier d'agent (état, journal) peut déjà exister (portable serveur : les agents tournent pour de vrai) : les tests ne doivent pas le CHANGER, pas exiger qu'il n'existe pas
+$ag0 = Join-Path $Root 'B2B\agents'; $avantFic = @{}; foreach ($n in 'instagram-etat.json') { $avantFic[$n] = Get-Instantane (Join-Path $ag0 $n) }
 function Verifier([bool]$cond, [string]$msg) { if ($cond) { Write-Host "  OK    $msg" } else { Write-Host "  ECHEC $msg" -ForegroundColor Red; $script:echecs++ } }
 function Fixer([string]$cle, $val) { if ($Config.PSObject.Properties[$cle]) { $Config.$cle = $val } else { $Config | Add-Member -NotePropertyName $cle -NotePropertyValue $val } }
 function Effacer([string]$cle) { if ($Config.PSObject.Properties[$cle]) { $Config.PSObject.Properties.Remove($cle) } }
@@ -50,7 +52,7 @@ try {
         Remove-Item Env:PYTHONIOENCODING -ErrorAction SilentlyContinue
     } else { Write-Host '  (python introuvable : tests Python sautés)' }
     Verifier (-not (Test-Path (Join-Path $Root 'B2B\agents\instagram-continu.verrou'))) 'aucun verrou de boucle laissé'
-    Verifier (-not (Test-Path (Join-Path $Root 'B2B\agents\instagram-etat.json'))) 'aucun état écrit dans le dépôt par les tests'
+    Verifier ((Get-Instantane (Join-Path $ag0 'instagram-etat.json')) -eq $avantFic['instagram-etat.json']) 'aucun état écrit dans le dépôt par les tests (un état existant est inchangé)'
 
     Write-Host '5. Propreté'
     Verifier ((Get-FileHash (Join-Path $Root 'config.json')).Hash -eq $hashConfig) 'config.json inchangé'

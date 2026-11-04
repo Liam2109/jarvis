@@ -74,8 +74,9 @@ Verifier ($vraie.whisper_peripherique -eq 'cuda' -and $vraie.moteur_voix_apparei
 Verifier (-not $vraie.PSObject.Properties['ollama_toujours_chaud'] -and -not ($vraie.ollama.PSObject.Properties['keep_alive'])) 'config.json : AUCUN réglage « Ollama chaud » (ce serait appliqué au serveur)'
 Verifier ($vraie.voix_moteur -eq 'edge') 'la voix reste Edge'
 $loc = Join-Path $Root 'config.local.json'
-if (Test-Path $loc) {
-    $l = Get-Content $loc -Raw -Encoding UTF8 | ConvertFrom-Json
+$l = $null; if (Test-Path $loc) { try { $l = Get-Content $loc -Raw -Encoding UTF8 | ConvertFrom-Json } catch { } }
+if ($l -and $l.PSObject.Properties['mode_serveur'] -and $l.mode_serveur -eq $true) { Write-Host '        (config.local.json d''un portable serveur : mode_serveur = true, sans Ollama chaud ; contrôles propres au PC principal sautés)' }
+elseif ($l) {
     Verifier ($l.ollama_toujours_chaud -eq $true -and "$($l.ollama.keep_alive)" -eq '24h') 'config.local.json de ce PC : Ollama chaud en permanence (keep_alive 24 h)'
     Verifier (-not $l.PSObject.Properties['mode_serveur']) 'config.local.json de ce PC : pas en mode serveur'
 } else { Write-Host '        (pas de config.local.json ici : contrôle de ce PC sauté)' }

@@ -209,6 +209,10 @@ SOURCES = [{"cle": "coiffeur", "metier": "coiffeur", "titre": "Coiffeur", "nom_f
 rendus = []
 def rendre(source, sortie): rendus.append(source["cle"]); Path(sortie).write_bytes(b"png")
 CONF_V = {**conf, "sources_cartes": SOURCES}
+# le profil serveur (b2b.local.json « serveur »: true) interdit la fabrication de cartes (aucun navigateur) : ce test ne doit pas dépendre de la machine qui le lance
+serveur_reel = I.M.serveur; I.M.serveur = lambda: True
+assert I.cmd_visuels(CONF_V, False, rendre)["action"] == "serveur" and not rendus, "profil serveur : aucune carte fabriquée"
+I.M.serveur = lambda: False
 assert I.cmd_visuels(CONF_V, False, rendre)["action"] == "assez" and not rendus                                          # 3 posts publiables : rien à fabriquer
 plan_bas = I.cocher(PLAN_TXT, 2, "2026-11-04"); I.PLAN.write_text(plan_bas, encoding="utf-8")                           # il reste 3 et 4 : 2 publiables (< 3)
 r = I.cmd_visuels(CONF_V, False, rendre)
@@ -252,3 +256,4 @@ I.CONFIG.write_text(json.dumps({"envoi_automatique": True, "_aide": "x"}), encod
 
 print("OK : tous les tests de l'agent Instagram passent (dossier temporaire :", tmp, ")")
 import shutil; shutil.rmtree(tmp, ignore_errors=True)
+I.M.serveur = serveur_reel

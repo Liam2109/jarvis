@@ -17,7 +17,7 @@ function Vider { Remove-Item (Join-Path $TR 'memoire\initiatives.json') -Force -
 $hashConfig = (Get-FileHash (Join-Path $Root 'config.json')).Hash
 $vraie = Get-Content (Join-Path $Root 'config.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 $script:Cartes = @(); $script:InitNotifStub = { param($i) $script:Cartes += $i; $true }
-$now = Get-Date
+$now = (Get-Date).Date.AddHours(10)      # 10 h aujourd'hui, jamais l'heure réelle : « maintenant + 3 h » passerait au lendemain quand la mise à jour automatique lance les tests le soir (après 21 h), et le plafond « du jour » ne serait plus le même jour
 
 # ---------- Réglages : défaut prudent ----------
 $sauve = $Config; $Config = [pscustomobject]@{}

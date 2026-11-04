@@ -129,7 +129,7 @@ $bare = Join-Path $GT 'origine.git'; $seed = Join-Path $GT 'seed'; $travail = Jo
 $mainAvant = (Gt $bare 'rev-parse' 'main').Trim()
 $env:JARVIS_TEST_DEV_REMOTE = $bare; $Config | Add-Member -NotePropertyName dev_dossier -NotePropertyValue $travail -Force
 function Faux-Claude([string]$nom, [string]$corps) { $f = Join-Path $GT "$nom.cmd"; ("@echo off`r`n" + $corps) | Set-Content $f -Encoding ASCII; $f }
-$ok = Faux-Claude 'ok' "echo export const prenom = true; > nouveau.ts`r`necho Ajout du champ prenom dans nouveau.ts.`r`necho Rien d autre a signaler."
+$ok = Faux-Claude 'ok' "<nul set /p=`"export const prenom = true;`">nouveau.ts`r`necho Ajout du champ prenom dans nouveau.ts.`r`necho Rien d autre a signaler."
 Fixer 'dev_agent' 'oui'; $e = Get-DevEtat; $e.taches = @(); $e.suivant = 1; Save-DevEtat $e
 $t = Add-DevTache 'ajoute un champ prénom au formulaire'
 $env:JARVIS_TEST_DEV_CLAUDE = $ok; $script:Notifs = @(); $script:ApiAppels = @()
@@ -145,11 +145,13 @@ $ent = $script:Notifs | Where-Object { $_.salon -eq 'jarvis' -and $_.embed } | S
 $champs = @($ent.embed.champs | ForEach-Object { $_.nom }) -join ' | '
 Verifier ($ent -and $champs -match 'Branche' -and $champs -match 'Fichiers modifiés' -and $champs -match 'Prévisualisation Vercel' -and $champs -match 'Build et tests' -and $champs -match 'Votre décision') 'compte rendu Discord : branche, fichiers, prévisualisation, build et tests, décision'
 $txtE = ($ent.embed.champs | ForEach-Object { $_.valeur }) -join "`n"
-Verifier ($txtE -match 'nouveau\.ts' -and $txtE -match 'github\.com/Liam2109/ecom-quiz/tree/jarvis' -and $txtE -match "Pas disponible pour l'instant" -and $txtE -match 'npm run build : réussi' -and $txtE -match 'npm run test : réussi' -and $txtE -match '\*\*valide\*\*') 'le compte rendu dit : fichiers, lien, prévisualisation absente (honnête), build et tests réussis, valide / refuse'
+$npmDispo = [bool](Get-Command npm -ErrorAction SilentlyContinue)      # sans Node (portable serveur) le dépôt ne peut pas être construit : le compte rendu doit alors le dire honnêtement, pas prétendre « réussi »
+$verifNpm = $(if ($npmDispo) { $txtE -match 'npm run build : réussi' -and $txtE -match 'npm run test : réussi' } else { $txtE -match 'npm introuvable : build et tests non lancés' })
+Verifier ($txtE -match 'nouveau\.ts' -and $txtE -match 'github\.com/Liam2109/ecom-quiz/tree/jarvis' -and $txtE -match "Pas disponible pour l'instant" -and $verifNpm -and $txtE -match '\*\*valide\*\*') ('le compte rendu dit : fichiers, lien, prévisualisation absente (honnête), build et tests ' + $(if ($npmDispo) { 'réussis' } else { 'non lancés (npm introuvable, dit honnêtement)' }) + ', valide / refuse')
 $j = Journal
 Verifier ($j -match 'git push' -and $j -match 'Agent de dev : tâche 1 terminée' -and $j -notmatch [regex]::Escape($TOKEN) -and $j -notmatch 'AUTHORIZATION') 'tout est journalisé, et le jeton n''apparaît nulle part'
 Verifier (-not (Test-Path (Join-Path $travail '.git\config') -PathType Leaf) -or ((Get-Content (Join-Path $travail '.git\config') -Raw) -notmatch [regex]::Escape($TOKEN))) 'le jeton n''est écrit dans aucun fichier du dépôt de travail'
-Verifier ((Gt $travail 'status' '--porcelain').Trim() -eq '') 'dépôt de travail propre après la tâche'
+$sale = (Gt $travail 'status' '--porcelain').Trim(); Verifier ($sale -eq '') ('dépôt de travail propre après la tâche' + $(if ($sale) { ' — reste : ' + ($sale -replace '\s+', ' ') + ' | diff : ' + ((Gt $travail 'diff' '--stat') -replace '\s+', ' ') + ' | ' + (($d = ((Gt $travail 'diff') -replace '\s+', ' ')).Substring(0, [Math]::Min(300, $d.Length))) } else { '' }))
 $mails = Gt $travail 'log' '-1' '--format=%an <%ae>'; Verifier ($mails -match 'Jarvis \(agent de dev\)') 'commit signé « Jarvis (agent de dev) »'
 
 # 2e tâche : une nouvelle branche, la 1re intacte

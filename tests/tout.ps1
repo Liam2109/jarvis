@@ -79,8 +79,13 @@ $liste = @(
     @{ n = 'agent appels-sid (liste d''appels du matin pour Sid : 50 à 60 entreprises jamais appelées, restaurants / coiffeurs / plombiers / électriciens, téléphone valide, STOP et exclus écartés, jamais deux fois la même, CSV, preparer / etat / annuler / à blanc, aucun envoi)'; f = 'appels-sid.ps1' }
     @{ n = 'agents B2B sur le serveur (liste blanche git sans secret, *.local.json, machine active, lanceur serveur 6 Go, tâches Jarvis-B2B idempotentes, intégration maj-auto, transfert)'; f = 'b2b-serveur.ps1' }
     @{ n = 'chemins (protection du dossier Jarvis sous un chemin avec espace et en nom court 8.3 « SERVEU~1 », forme longue)'; f = 'chemins.ps1' }
+    @{ n = 'diagnostic Discord du portable (faux serveur local, code 403 expliqué, jeton jamais affiché, rien d''envoyé)'; f = 'diag-discord.ps1' }
     @{ n = 'profil serveur (revue de chaque série, séries sautées, memoire\ non contrôlé, tableau lisible, tests-dernier.txt)'; f = 'profil-serveur.ps1' }
 )
+# Vérifié le 05/11/2026 sur un clone git propre (aucun fichier hors git : ni memoire\, ni config.local.json du PC), SANS claude ni Ollama dans le PATH, sans identité git, sans Node, dans un dossier à espace : routeur, vitesse ressentie (suivi),
+# Discord, agent SaaS (dev-agent), agents Instagram et appels-sid n'exigent NI claude NI Ollama (tout y est simulé) : leurs échecs venaient de fichiers propres au PC (memoire\profil.md, config.local.json, journaux d'agents déjà existants,
+# réglage serveur de b2b.local.json) ou de la lenteur d'un portable ; les tests ont été rendus indépendants de ces fichiers au lieu de sauter les séries. Si une série exige VRAIMENT une commande, la déclarer dans $exigeCommande ci-dessous : elle est sautée
+# (profil serveur seulement) quand Get-Command ne la trouve pas, jamais d'après le nom de la machine.
 # REVUE DE CHAQUE SÉRIE pour le profil serveur (voix / écran / Edge / GPU / Ollama / Windows Speech). « garde » = tourne aussi sur le serveur ;
 # « SAUTÉE » = sautée seulement en profil serveur, pour la raison écrite. Une série ajoutée à la liste doit recevoir sa ligne ici (tests\profil-serveur.ps1 le vérifie).
 #   ecran.ps1              SAUTÉE  choix de l'écran (ecran_jarvis) et géométrie de la fenêtre de l'orbe : le serveur n'a aucun écran à piloter
@@ -138,6 +143,8 @@ $liste = @(
 #   appels-sid.ps1         garde   agent B2B (requis sur le serveur)
 #   b2b-serveur.ps1        garde   agents B2B sur le serveur (requis sur le serveur)
 #   profil-serveur.ps1     garde   texte de tout.ps1 seulement
+#   diag-discord.ps1       garde   faux serveur local 127.0.0.1 : le diagnostic des alertes Discord sert justement sur le serveur
+$exigeCommande = @{ }      # 'serie.ps1' = @('commande', ...) : séries qui exigent vraiment une commande installée (vide : aucune aujourd'hui)
 $saute = @{
     'ecran.ps1' = 'choix de l''écran (ecran_jarvis) et géométrie de la fenêtre de l''orbe : le serveur n''a aucun écran à piloter'
     'voix.ps1' = 'Windows Speech (voix française SAPI) fabrique un WAV que Vosk / Whisper reconnaissent, avec les modèles de voix\models : absents du serveur sans micro'
@@ -162,6 +169,7 @@ $env:JARVIS_TEST = '1'; $env:JARVIS_CONFIG = $copie
 $res = @()
 try {
     foreach ($t in $liste) {
+        if ($profilServeur -and $exigeCommande.ContainsKey($t.f)) { $absente = @($exigeCommande[$t.f] | Where-Object { -not (Get-Command $_ -ErrorAction SilentlyContinue) }); if ($absente.Count) { $res += [pscustomobject]@{ resultat = 'SAUTÉE (profil serveur)'; duree = '-'; test = $t.n; raison = ('commande absente de cette machine : ' + ($absente -join ', ')) }; continue } }
         if ($profilServeur -and $saute.ContainsKey($t.f)) { $res += [pscustomobject]@{ resultat = 'SAUTÉE (profil serveur)'; duree = '-'; test = $t.n; raison = $saute[$t.f] }; continue }
         $sw = [Diagnostics.Stopwatch]::StartNew()
         $args2 = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $PSScriptRoot $t.f))

@@ -8,7 +8,7 @@ $TR = Join-Path $env:TEMP ('jarvis-test-' + [guid]::NewGuid().ToString('N').Subs
 $Config = Get-Content $(if ($env:JARVIS_CONFIG -and (Test-Path $env:JARVIS_CONFIG)) { $env:JARVIS_CONFIG } else { Join-Path $Root 'config.json' }) -Raw -Encoding UTF8 | ConvertFrom-Json
 . (Join-Path $Root 'lib\rendez-vous.ps1')
 $echecs = 0
-$jrnRdv = Join-Path $Root 'B2B\agents\rendez-vous-journal.log'; $jrnAvant = $(if (Test-Path $jrnRdv) { (Get-Item $jrnRdv).Length } else { -1 })      # le vrai journal peut exister (refus de la machine inactive écrit par Jarvis) : on vérifie qu'il ne bouge pas
+$etatRdv = Join-Path $Root 'B2B\agents\rendez-vous-etat.json'; $etatRdvAvant = $(if (Test-Path $etatRdv) { (Get-Item $etatRdv).Length } else { -1 }); $jrnRdv = Join-Path $Root 'B2B\agents\rendez-vous-journal.log'; $jrnAvant = $(if (Test-Path $jrnRdv) { (Get-Item $jrnRdv).Length } else { -1 })      # le vrai journal peut exister (refus de la machine inactive écrit par Jarvis) : on vérifie qu'il ne bouge pas
 function Verifier([bool]$cond, [string]$msg) { if ($cond) { Write-Host "  OK    $msg" } else { Write-Host "  ECHEC $msg" -ForegroundColor Red; $script:echecs++ } }
 function Fixer([string]$cle, $val) { if ($Config.PSObject.Properties[$cle]) { $Config.$cle = $val } else { $Config | Add-Member -NotePropertyName $cle -NotePropertyValue $val } }
 function Effacer([string]$cle) { if ($Config.PSObject.Properties[$cle]) { $Config.PSObject.Properties.Remove($cle) } }
@@ -54,7 +54,7 @@ try {
         Remove-Item Env:PYTHONIOENCODING -ErrorAction SilentlyContinue
     } else { Write-Host '  (python introuvable : tests Python sautés)' }
     Verifier (-not (Test-Path (Join-Path $Root 'B2B\agents\rendez-vous-continu.verrou'))) 'aucun verrou de boucle laissé'
-    Verifier (-not (Test-Path (Join-Path $Root 'B2B\agents\rendez-vous-etat.json'))) 'aucun état écrit dans le dépôt par les tests'
+    Verifier ($etatRdvAvant -eq $(if (Test-Path $etatRdv) { (Get-Item $etatRdv).Length } else { -1 })) 'aucun état écrit dans le dépôt par les tests (un état existant est inchangé)'
     Verifier ($jrnAvant -eq $(if (Test-Path $jrnRdv) { (Get-Item $jrnRdv).Length } else { -1 })) 'aucun journal écrit dans le dépôt par les tests (le journal existant, s''il y en a un, est inchangé)'
 
     Write-Host '5. Propreté'

@@ -144,7 +144,7 @@ $echant = @('Très bien monsieur', "C'est fait, monsieur.", 'Il est 13:20, monsi
 $sw = [Diagnostics.Stopwatch]::StartNew(); $n = 0
 for ($i = 0; $i -lt 40; $i++) { foreach ($e in $echant) { [void](Get-MorceauxVoix $e); $n++ } }
 $moy = $sw.Elapsed.TotalMilliseconds / $n
-Verifier ($moy -lt 15) ("préparation du texte vocal : {0:N2} ms en moyenne par réponse ({1} mesures) — négligeable devant la synthèse (1,5 s)" -f $moy, $n)
+Verifier ($moy -lt 75) ("préparation du texte vocal : {0:N2} ms en moyenne par réponse ({1} mesures) — négligeable devant la synthèse (1,5 s) ; seuil 75 ms = 5 % de la synthèse, large pour un portable lent" -f $moy, $n)
 $pire = 0.0; foreach ($e in $echant) { $t0 = Get-Date; [void](Get-MorceauxVoix $e); $d = ((Get-Date) - $t0).TotalMilliseconds; if ($d -gt $pire) { $pire = $d } }
 Verifier ($pire -lt 100) ("pire cas isolé : {0:N1} ms" -f $pire)
 $regress = @(foreach ($e in $echant) {

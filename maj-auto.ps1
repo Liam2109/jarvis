@@ -34,9 +34,12 @@ function Send-AlerteMaj([string]$texte) {
         if ($canal -notmatch '^\d{5,25}$') { Write-Journal -Action 'Mise à jour auto' -Resultat 'alerte Discord impossible : aucun salon connu'; return }
         $mention = $(if ($uid -match '^\d{15,25}$') { "<@$uid> " } else { '' })
         $corps = @{ content = ($mention + [char]0x26A0 + [char]0xFE0F + ' ' + $texte); allowed_mentions = @{ users = @($(if ($mention) { $uid })) } } | ConvertTo-Json -Depth 4 -Compress
-        [void](Invoke-RestMethod -Uri "https://discord.com/api/v10/channels/$canal/messages" -Method Post -Headers @{ Authorization = "Bot $tok" } -Body ([Text.Encoding]::UTF8.GetBytes($corps)) -ContentType 'application/json; charset=utf-8' -TimeoutSec 20)
+        [void](Invoke-RestMethod -Uri "https://discord.com/api/v10/channels/$canal/messages" -Method Post -Headers @{ Authorization = "Bot $tok"; 'User-Agent' = 'DiscordBot (jarvis-maj-auto, 1.0)' } -Body ([Text.Encoding]::UTF8.GetBytes($corps)) -ContentType 'application/json; charset=utf-8' -TimeoutSec 20)
         Write-Journal -Action 'Mise à jour auto' -Resultat 'alerte Discord envoyée'
-    } catch { Write-Journal -Action 'Mise à jour auto' -Resultat ("alerte Discord échouée : " + (Hide-Secrets $_.Exception.Message)) }
+    } catch {
+        $detail = ''; try { $dj = $_.ErrorDetails.Message | ConvertFrom-Json; if ($dj.code) { $detail = " [Discord code $($dj.code) : $($dj.message)]" } } catch { }      # le code d'erreur de Discord (50001 = salon non visible, 50013 = droit d'écrire manquant) : jamais le jeton
+        Write-Journal -Action 'Mise à jour auto' -Resultat ("alerte Discord échouée : " + (Hide-Secrets $_.Exception.Message) + $detail + " ; diagnostic : powershell -File diag-discord.ps1")
+    }
 }
 function Start-JarvisServeur {
     if ($SansRelance) { Say 'relance de Jarvis : ignorée (-SansRelance)'; return }

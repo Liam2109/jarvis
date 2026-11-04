@@ -8,7 +8,8 @@ $Root = Split-Path -Parent $PSScriptRoot
 . (Join-Path $Root 'lib\journal.ps1')
 $TR = Join-Path $env:TEMP ('jarvis-test-' + [guid]::NewGuid().ToString('N').Substring(0, 8)); New-Item -ItemType Directory $TR, "$TR\memoire", "$TR\logs", "$TR\projets", "$TR\captures" | Out-Null; $script:JarvisRoot = $TR
 "# To-do de Liam`r`n- [ ] Envoyer la facture`r`n- [ ] Appeler le comptable`r`n- [ ] Corriger le quiz du SaaS`r`n- [x] Payer la TVA" | Set-Content "$TR\memoire\todo.md" -Encoding UTF8; '# Notes' | Set-Content "$TR\memoire\notes.md" -Encoding UTF8; '# R' | Set-Content "$TR\memoire\resume.md" -Encoding UTF8
-Copy-Item (Join-Path $Root 'memoire\profil.md') "$TR\memoire\profil.md"
+$profilReel = Join-Path $Root 'memoire\profil.md'      # memoire\ n'est pas dans git : sur le portable serveur le profil de Liam n'existe pas, un profil de TEST (même forme, assez long pour la borne de taille) le remplace
+if (Test-Path $profilReel) { Copy-Item $profilReel "$TR\memoire\profil.md" } else { (@('# Profil de Liam (test)') + (1..40 | ForEach-Object { "- (2026-01-01) fait de test numéro $_ : une préférence quelconque de Liam, écrite pour le test" })) -join "`r`n" | Set-Content "$TR\memoire\profil.md" -Encoding UTF8 }
 $Config = Get-Content (Get-ConfigPath) -Raw -Encoding UTF8 | ConvertFrom-Json
 foreach ($l in 'voix', 'business', 'permissions', 'actions', 'coffre', 'entrees', 'ecrans', 'tableau', 'visage', 'sons', 'raccourcis', 'cerveau', 'cerveau-local', 'veille', 'memoire', 'rapide', 'discretion', 'modejeu', 'marche', 'priorite', 'comprehension', 'routeur', 'competences', 'pc', 'bureau', 'matin', 'boucle') { . (Join-Path $Root "lib\$l.ps1") }
 $script:JarvisRoot = $TR

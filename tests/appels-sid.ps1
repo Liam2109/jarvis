@@ -4,6 +4,8 @@ $ErrorActionPreference = 'Stop'
 $env:JARVIS_TEST = '1'
 $Root = Split-Path -Parent $PSScriptRoot
 $echecs = 0
+function Get-Instantane([string]$f) { if (Test-Path -LiteralPath $f) { $i = Get-Item -LiteralPath $f; "$($i.Length):$($i.LastWriteTimeUtc.Ticks)" } else { 'absent' } }      # un fichier d'agent (état, journal) peut déjà exister (portable serveur : les agents tournent pour de vrai) : les tests ne doivent pas le CHANGER, pas exiger qu'il n'existe pas
+$ag0 = Join-Path $Root 'B2B\agents'; $avantFic = @{}; foreach ($n in 'appels-sid-etat.json', 'appels-sid.verrou', 'appels-sid-journal.log', 'google-sheets-token.json') { $avantFic[$n] = Get-Instantane (Join-Path $ag0 $n) }
 function Verifier([bool]$cond, [string]$msg) { if ($cond) { Write-Host "  OK    $msg" } else { Write-Host "  ECHEC $msg" -ForegroundColor Red; $script:echecs++ } }
 $hashConfig = (Get-FileHash (Join-Path $Root 'config.json')).Hash
 $hashProsp = (Get-FileHash (Join-Path $Root 'B2B\agents\prospection-config.json')).Hash
@@ -30,7 +32,7 @@ if ($py) {
     Verifier ($LASTEXITCODE -eq 0 -and $sortie -match 'OK : tous les tests de l''agent appels-sid passent') 'agents\test_appels_sid.py : tous les tests passent'
     Remove-Item Env:PYTHONIOENCODING -ErrorAction SilentlyContinue
 } else { Write-Host '  (python introuvable : tests Python sautés)' }
-foreach ($f in 'appels-sid-etat.json', 'appels-sid.verrou', 'appels-sid-journal.log', 'google-sheets-token.json') { Verifier (-not (Test-Path (Join-Path $ag $f))) "aucun $f écrit dans le dépôt par les tests" }
+foreach ($f in 'appels-sid-etat.json', 'appels-sid.verrou', 'appels-sid-journal.log', 'google-sheets-token.json') { Verifier ((Get-Instantane (Join-Path $ag0 $f)) -eq $avantFic[$f]) "aucun $f écrit dans le dépôt par les tests (un fichier existant est inchangé)" }
 Verifier (-not (Test-Path (Join-Path $Root 'B2B\docs\sid\liste-sid-2026-11-04.csv'))) 'aucune liste de test dans B2B\docs\sid'
 
 Write-Host '3. Propreté'
