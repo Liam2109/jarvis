@@ -38,10 +38,10 @@ $html = '<a href="https://ex.invalid/1">Conducteur de train débutant (H/F)</a> 
 $script:TrainEcart = @{ lieu = 0; langue = 0 }; $script:MailEcartMetier = 0
 $script:MailTrace = New-Object Collections.ArrayList
 $an = @(Get-MailAnnonces $html 'hexafret.com' '2026-10-21')
-Verifier ($an.Count -eq 2) "2 offres gardées (Rouen débutant, Paris) sur 4 : $($an.Count)"
+Verifier ($an.Count -eq 3) "3 offres gardées (Rouen débutant, Paris, Marseille hors zone avec tag : décision du 27/10) sur 4 : $($an.Count)"
 Verifier ($an.Count -ge 1 -and $an[0].lieu -eq 'Rouen' -and $an[0].employeur -match 'Hexafret') 'Hexafret reconnu, lieu Rouen'
 Verifier ($an.Count -ge 2 -and $an[1].lieu -match 'Paris|Gare du Nord') 'Île-de-France acceptée'
-Verifier ($script:MailEcartMetier -eq 1 -and $script:TrainEcart.lieu -eq 1) 'une écartée pour métier (expérimenté), une pour lieu (Marseille)'
+Verifier ($script:MailEcartMetier -eq 1 -and $script:TrainEcart.lieu -eq 0 -and $an.Count -ge 3 -and $an[2].lieu -match 'Marseille' -and "$($an[2].zone)") 'une écartée pour métier (expérimenté) ; Marseille n''est plus écartée : gardée hors zone, avec son tag (addendum du 27/10)'
 Verifier ((Get-MailEmployeurTexte 'Captrain France - conducteur' 'x') -eq 'Captrain' -and (Get-MailEmployeurTexte 'Lineas Academy' 'x') -eq 'Lineas' -and (Get-MailEmployeurTexte 'MOB Montreux Oberland' 'x') -eq 'MOB' -and (Get-MailEmployeurTexte 'TPF Fribourg' 'x') -eq 'TPF') 'Captrain, Lineas, MOB, TPF reconnus dans le texte'
 
 Write-Host '3. Pages d''offres configurables (robots.txt respecté)'

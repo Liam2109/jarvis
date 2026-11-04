@@ -63,6 +63,9 @@ $script:ReponseTest = $ReponseTest   # crochet de test : réponse automatique au
 . (Join-Path $Root 'lib\veille-train.ps1')
 . (Join-Path $Root 'lib\veille-mail.ps1')
 . (Join-Path $Root 'lib\prospection.ps1')
+. (Join-Path $Root 'lib\instagram.ps1')
+. (Join-Path $Root 'lib\devis.ps1')
+. (Join-Path $Root 'lib\rendez-vous.ps1')
 . (Join-Path $Root 'lib\candidatures.ps1')
 . (Join-Path $Root 'lib\cv-candidature.ps1')
 . (Join-Path $Root 'lib\initiatives.ps1')
@@ -208,6 +211,9 @@ switch ($Commande.ToLower()) {
                 [void](Update-Lecons)                                     # leçons (désactivées par défaut : lecons_actif) : revue de nuit entre 3 h et 5 h ; rien n'est promu sans l'accord de Liam
                 [void](Update-VeilleTrain)                           # veille « annonces-train » (désactivée par défaut : veille_train) : un passage par heure dans un processus séparé
                 [void](Update-Prospection)                               # agent Prospection (désactivé par défaut : prospection_actif) : lance B2B\agents\prospection.py demarrage UNE fois, 90 s après le démarrage, dans un processus caché séparé ; aucun envoi sans « ok lot » de Liam
+                [void](Update-Instagram)                                  # agent Instagram (désactivé par défaut : instagram_actif) : lance B2B\agents\instagram.py continu UNE fois, 90 s après le démarrage ; SIMULATION tant que envoi_automatique = false
+                [void](Update-Devis)                                      # agent devis (désactivé par défaut : devis_actif) : lance B2B\agents\devis.py continu UNE fois, 90 s après le démarrage ; aperçu et « ok devis » sur Discord seulement si envoi_automatique = true ; rien n'est jamais envoyé au client
+                [void](Update-RendezVous)                                 # agent rendez-vous (désactivé par défaut : rendez_vous_actif) : lance B2B\agents\rendez-vous.py continu UNE fois, 90 s après le démarrage ; lecture seule de l'agenda iCal ; messages Discord seulement si envoi_automatique = true
                 Update-Discord                                           # alertes regroupées et briefing planifié sur Discord (tout est désactivé par défaut)
                 if (((Get-Date) - $dernierCoeur).TotalMinutes -ge 5) { $dernierCoeur = Get-Date; Save-HeureArret }      # « dernière activité » (si Jarvis est arrêté de force)
                 Update-ModeJeu                                           # jeu / plein écran / heures : lecture seule du premier plan, toutes les 3 s

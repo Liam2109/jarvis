@@ -1,0 +1,9 @@
+{
+  "prenom_nom": "",
+  "entreprise": "",
+  "siret": "",
+  "telephone": "",
+  "email_reponse": "",
+  "base_url_maquettes": "",
+  "_aide": "Modèle : copier ce fichier en identite.json (ignoré par git, à copier à la main sur le serveur) et le remplir. Champs vides = marqués « À COMPLÉTER » par les agents."
+}

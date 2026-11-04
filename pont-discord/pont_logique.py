@@ -16,6 +16,7 @@ from collections import deque
 from pathlib import Path
 
 NOMS_SALONS = ("jarvis", "systeme", "marche", "business")      # jarvis : discussion et to-do · systeme : alertes, journal, rapports · marche : résumés et cours · business : SaaS, revenus, leads
+NOMS_SORTIE = ("important", "journal")      # salons où Jarvis ÉCRIT seulement (alertes critiques, journal de bord) : jamais d'ordre reçu, facultatifs (absence non signalée)
 ALIAS_FORCES = {"alertes": "systeme", "todo": "jarvis"}          # anciens noms de config.json, toujours acceptés pour forcer un identifiant
 LONGUEUR_MAX = 1000          # un ordre plus long est refusé poliment
 MORCEAU_MAX = 1900           # Discord limite un message à 2000 caractères
@@ -54,7 +55,7 @@ def associer_salons(salons):
     Nom exact d'abord, sinon le nom le plus court qui contient le mot-clé ; un salon ne sert qu'à une clé."""
     norm = [(int(i), normaliser_nom(n)) for i, n in salons]
     pris, res = set(), {}
-    for cle in NOMS_SALONS:
+    for cle in NOMS_SALONS + NOMS_SORTIE:
         cands = sorted((len(n), 0 if n == cle else 1, i) for i, n in norm if cle in n and i not in pris)
         cands.sort(key=lambda c: (c[1], c[0], c[2]))
         if cands:
@@ -368,7 +369,7 @@ class Pont:
 
     def _nom_salon(self, canal_id):
         for nom, ident in self.salons().items():
-            if ident == canal_id:
+            if ident == canal_id and nom not in NOMS_SORTIE:
                 return nom
         return None
 

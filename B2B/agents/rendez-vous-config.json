@@ -1,0 +1,7 @@
+{
+  "envoi_automatique": false,
+  "cycle_minutes": 5,
+  "titre_debut": "Rendez-vous de 15 minutes",
+  "rappel_minutes": 30,
+  "_aide": "ical_url : adresse SECRÈTE au format iCal de l'agenda « Liam » (Google Agenda, Paramètres, agenda « Liam », « Adresse secrète au format iCal »). Elle donne accès en lecture à tout l'agenda : ne la partager avec personne, ne jamais la coller dans un message ; ce fichier est hors git (B2B/ est ignoré) et l'agent ne l'affiche ni ne la journalise jamais. envoi_automatique : false = SIMULATION (aucun message Discord ; le journal agents\\rendez-vous-journal.log dit ce qui serait posté) ; true = messages réels dans le salon Discord « 📅-rdv » (trouvé par son nom sans emoji : salon_nom = rdv ; ou par son identifiant : salon_id). Salon introuvable = rien n'est posté, une alerte par jour (jamais de repli sur le salon par défaut). cycle_minutes : un passage toutes les 5 minutes. titre_debut : seuls les événements dont le titre commence ainsi sont traités. rappel_minutes : rappel avant le rendez-vous, une seule fois. Arrêt de secours : python agents\\rendez-vous.py arreter. Reprise après une erreur : python agents\\rendez-vous.py reprendre."
+}

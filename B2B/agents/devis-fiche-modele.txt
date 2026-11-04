@@ -1,0 +1,20 @@
+# Fiche client pour l'agent devis. Les lignes qui commencent par # sont ignorées. Remplir après les deux-points ; tout champ vide ou oublié est signalé et l'agent s'arrête.
+Entreprise :
+Métier :
+Ville :
+# Contact : nom du client, plus au moins un e-mail ou un téléphone
+Contact :
+E-mail :
+Téléphone :
+# Offre : page web (590 €) ou site complet
+Offre :
+# Prix : site complet seulement. 990 € a un lien d'acompte prêt ; un autre montant (jusqu'à 1 490 €) demande de créer le lien d'acompte avant
+Prix :
+# Options : aucune, ou maintenance (29 € par mois). Toute autre option n'a pas de prix connu : elle bloque le devis
+Options : aucune
+# Délai : nombre de jours ouvrés, décidé par Liam (ex. 8 jours ouvrés)
+Délai :
+# Livrables : 3 à 5 éléments séparés par des points-virgules (ex. photos ; horaires ; bouton d'appel ; carte)
+Livrables :
+# Besoin : les mots exacts du client (facultatif)
+Besoin :

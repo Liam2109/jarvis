@@ -267,6 +267,9 @@ verifier([m.normaliser_nom(x) for x in ("\U0001F916｜Jarvis", "⚙️-Système-
 NOMS = [(11, "général"), (12, "\U0001F916｜Jarvis"), (13, "⚙️-Système"), (14, "\U0001F4C8-marché-cours"), (15, "\U0001F4BC・business"), (16, "règles")]
 verifier(m.associer_salons(NOMS) == {"jarvis": 12, "systeme": 13, "marche": 14, "business": 15}, "les quatre salons sont reconnus malgré les emojis et les accents")
 verifier(m.associer_salons([(1, "jarvis-vieux"), (2, "jarvis")])["jarvis"] == 2, "nom exact préféré")
+CIBLES = [(21, "🤖-jarvis"), (22, "🛠️-système"), (23, "💼-business"), (24, "💸-paiements"), (25, "🗓️-résumé-du-jour"), (26, "🚆-annonces-train"), (27, "🚨-important"), (28, "📓-journal"), (29, "📦-lots"), (30, "💬-réponses"), (31, "📞-appels-du-jour")]
+verifier(m.associer_salons(CIBLES) == {"jarvis": 21, "systeme": 22, "business": 23, "important": 27, "journal": 28}, "noms cibles avec emojis : jarvis, système, business, important, journal reconnus ; lots / réponses / appels-du-jour ne volent aucun mot-clé")
+bi = Banc(salons={}); bi.pont.maj_serveurs([{"id": 900, "salons": CIBLES}]); verifier(set(m.NOMS_SORTIE) == {"important", "journal"} and "important" not in m.NOMS_SALONS and bi.pont._nom_salon(27) is None and bi.pont._nom_salon(21) == "jarvis" and bi.pont.salons()["important"] == 27, "important et journal : trouvés pour écrire, jamais écoutés (aucun ordre), facultatifs")
 b = Banc(salons={})
 b.pont.maj_serveurs([{"id": 900, "salons": NOMS}])
 cache = json.loads((b.tmp / "discord-salons.json").read_text(encoding="utf-8"))

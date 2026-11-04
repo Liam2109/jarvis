@@ -1,0 +1,4 @@
+{
+  "jours_relus": 14,
+  "_aide": "salon_paiement_id : identifiant du salon Discord (business). utilisateur_id : vide = DISCORD_USER_ID du .env de Jarvis. Les mots de passe d'application et GOOGLE_AGENDA_ICAL vont dans B2B\\.env, jamais ici."
+}

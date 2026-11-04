@@ -1,4 +1,4 @@
-﻿# Agent Prospection (B2B\agents\prospection.py) : lancé au démarrage de Jarvis dans un processus caché SÉPARÉ. Jarvis n'en dépend pas : le script est
+﻿# Agent Prospection (B2B\agents\prospection.py) : lancé UNE fois par session (commande « continu --pid <Jarvis> »), dans un processus caché SÉPARÉ qui boucle (un cycle toutes les cycle_minutes) jusqu'au quota du jour, veille jusqu'au lendemain et s'arrête si Jarvis s'arrête. Secours : prospection.py arreter. Jarvis n'en dépend pas : le script est
 # autonome (planifiable aussi). Python garde la date du dernier lancement (agents\prospection-dernier-lancement.txt) : la journée n'est lancée qu'UNE fois
 # par jour. Le lot du jour est posté dans le salon business par le bot Jarvis (API REST) ; rien n'est envoyé sans « ok lot » (ou ✅) de Liam seul,
 # sauf si envoi_automatique = true dans B2B\agents\prospection-config.json. Ni Ollama ni Jarvis ne sont lancés par ce script.
@@ -22,7 +22,7 @@ function Update-Prospection([datetime]$now = (Get-Date)) {
     $log = Join-Path $script:RacineReelle ('logs\prospection-{0}.log' -f (Get-Date -Format 'yyyy-MM-dd'))
     try {
         $env:PYTHONIOENCODING = 'utf-8'
-        [void](Start-Process $py.Source -ArgumentList "`"$s`"", 'demarrage' -WorkingDirectory (Split-Path (Split-Path $s -Parent) -Parent) -WindowStyle Hidden -RedirectStandardOutput $log -RedirectStandardError ($log + '.err') -PassThru)
-        Write-Journal -Action 'Prospection' -Resultat 'agent lancé (demarrage : journée une fois par jour, puis écoute de « ok lot » / ✅)'; $true
+        [void](Start-Process $py.Source -ArgumentList "`"$s`"", 'continu', '--pid', "$PID" -WorkingDirectory (Split-Path (Split-Path $s -Parent) -Parent) -WindowStyle Hidden -RedirectStandardOutput $log -RedirectStandardError ($log + '.err') -PassThru)
+        Write-Journal -Action 'Prospection' -Resultat 'agent lancé (continu : boucle tant que Jarvis tourne, quota du jour, lots à valider par « ok lot » / ✅)'; $true
     } catch { Write-Journal -Action 'Prospection' -Resultat "lancement impossible : $($_.Exception.Message)"; $false }
 }

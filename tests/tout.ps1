@@ -58,6 +58,11 @@ $liste = @(
     @{ n = 'option voix_actif (désactivée par défaut : aucun micro, aucun réveil ; activée : comportement actuel)'; f = 'voix-actif.ps1' }
     @{ n = 'claude chaud (Invoke-Claude : démarrage unique, repli, arrêt d''urgence)'; f = 'chaud.ps1' }
     @{ n = 'agent Prospection (démarrage unique, désactivé par défaut, 10 par boîte, ok lot / ✅ de Liam seul, envoi_automatique, rien d''envoyé)'; f = 'prospection.ps1' }
+    @{ n = 'agent Instagram (démarrage unique, désactivé par défaut, un post par jour à 12 h 30, simulation, arrêt et alerte sur erreur, rien de publié)'; f = 'instagram.ps1' }
+    @{ n = 'agent devis (démarrage unique, désactivé par défaut, devis PDF + texte, prix des sources seulement, un seul devis en validation, rien envoyé au client, arrêt et alerte sur erreur)'; f = 'devis.ps1' }
+    @{ n = 'agent rendez-vous (démarrage unique, désactivé par défaut, lecture iCal, nouveau / déplacé / annulé / rappel annoncés une fois, premier passage sans historique, simulation, adresse secrète jamais affichée)'; f = 'rendez-vous.ps1' }
+    @{ n = 'agent appels-sid (liste d''appels du matin pour Sid : 50 à 60 entreprises jamais appelées, restaurants / coiffeurs / plombiers / électriciens, téléphone valide, STOP et exclus écartés, jamais deux fois la même, CSV, preparer / etat / annuler / à blanc, aucun envoi)'; f = 'appels-sid.ps1' }
+    @{ n = 'agents B2B sur le serveur (liste blanche git sans secret, *.local.json, machine active, lanceur serveur 6 Go, tâches Jarvis-B2B idempotentes, intégration maj-auto, transfert)'; f = 'b2b-serveur.ps1' }
 )
 function Get-Instantane {
     $mem = Join-Path $racine 'memoire'

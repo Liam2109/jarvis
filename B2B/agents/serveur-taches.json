@@ -1,0 +1,63 @@
+{
+  "_aide": "Tâches du portable serveur (créées par maj-auto.ps1 UNIQUEMENT pour les agents listés dans agents_actifs de agents\b2b.local.json). Un cycle = une ou plusieurs commandes courtes, lancées une par une par serveur-b2b.ps1 (verrou global : un seul agent à la fois ; priorité sous la normale ; profil serveur : aucun navigateur). Jamais de commande « continu » ni de rendu de cartes (Edge).",
+  "agents": {
+    "appels-sid": {
+      "script": "appels-sid.py",
+      "commandes": [
+        [
+          "jour"
+        ]
+      ],
+      "heure": "08:00"
+    },
+    "instagram": {
+      "script": "instagram.py",
+      "commandes": [
+        [
+          "jour"
+        ],
+        [
+          "valider"
+        ]
+      ],
+      "toutes_minutes": 5
+    },
+    "devis": {
+      "script": "devis.py",
+      "commandes": [
+        [
+          "jour"
+        ]
+      ],
+      "toutes_minutes": 3
+    },
+    "rendez-vous": {
+      "script": "rendez-vous.py",
+      "commandes": [
+        [
+          "jour"
+        ]
+      ],
+      "toutes_minutes": 5
+    },
+    "reponses": {
+      "script": "reponses.py",
+      "commandes": [
+        [
+          "--jours",
+          "14"
+        ]
+      ],
+      "toutes_minutes": 15
+    },
+    "prospection": {
+      "script": "prospection.py",
+      "commandes": [
+        [
+          "jour"
+        ]
+      ],
+      "toutes_minutes": 10
+    }
+  }
+}

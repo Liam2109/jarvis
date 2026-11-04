@@ -1,0 +1,5 @@
+{
+  "envoi_automatique": false,
+  "cycle_minutes": 3,
+  "_aide": "envoi_automatique : false = SIMULATION (aucun message Discord ; Liam valide en ligne de commande : python agents\\devis.py marquer DEV-AAAA-NNN valide) ; true = l'agent poste l'aperçu « à valider » sur Discord et lit le « ok devis » (ou ✅) de Liam SEUL. Dans les deux cas RIEN n'est envoyé au client : Liam envoie lui-même puis coche « envoye ». cycle_minutes : un passage toutes les 3 minutes dans la boucle. salon_nom : salon Discord des aperçus et alertes (vide = salon par défaut de reponses-config.json). Prix et liens : docs\\KIT-RDV-15MIN.md et docs\\liens-paiement.md (dans le code, jamais ici). Arrêt de secours : python agents\\devis.py arreter. Reprise après une erreur : python agents\\devis.py reprendre."
+}

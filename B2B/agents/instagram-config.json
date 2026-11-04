@@ -1,0 +1,49 @@
+{
+  "envoi_automatique": false,
+  "heure_publication": "12:30",
+  "fenetre_minutes": 90,
+  "cycle_minutes": 5,
+  "file_minimum": 3,
+  "graph_version": "v21.0",
+  "poll_essais": 30,
+  "poll_pause_s": 10,
+  "sources_cartes": [
+    {
+      "cle": "coiffeur",
+      "metier": "coiffeur",
+      "titre": "Coiffeur",
+      "capture": "sites\\captures-instagram\\coiffeur.png",
+      "hashtags": "#coiffeur #siteweb #rouen #normandie"
+    },
+    {
+      "cle": "restaurant",
+      "metier": "restaurant",
+      "titre": "Restaurant",
+      "capture": "sites\\captures-instagram\\restaurant.png",
+      "hashtags": "#restaurant #siteweb #rouen #normandie"
+    },
+    {
+      "cle": "fleuriste",
+      "metier": "fleuriste",
+      "titre": "Fleuriste",
+      "capture": "sites\\captures-instagram\\fleuriste.png",
+      "hashtags": "#fleuriste #siteweb #rouen #normandie"
+    },
+    {
+      "cle": "boulangerie",
+      "metier": "boulangerie",
+      "article": "une",
+      "titre": "Boulangerie",
+      "capture": "sites\\captures-instagram\\boulangerie.png",
+      "hashtags": "#boulangerie #siteweb #rouen #normandie"
+    },
+    {
+      "cle": "garage",
+      "metier": "garage",
+      "titre": "Garage",
+      "capture": "sites\\captures-instagram\\garage.png",
+      "hashtags": "#garage #siteweb #rouen #normandie"
+    }
+  ],
+  "_aide": "envoi_automatique : false = SIMULATION (rien n'est publié, rien n'est coché dans docs\\INSTAGRAM-PLAN.md, les cartes fabriquées attendent la validation de Liam) ; true = publication RÉELLE par l'API officielle, une par jour. heure_publication / fenetre_minutes : publication à partir de 12:30 (heure de Paris), jamais plus tard que 90 minutes après (sinon « manqué », alerte, essai le lendemain). cycle_minutes : un passage toutes les 5 minutes dans la boucle. file_minimum : sous ce nombre de posts publiables, l'agent fabrique les prochaines cartes (sources_cartes). graph_version : version de la Graph API (à vérifier dans la documentation Meta au moment de l'activation). image_url_base : si renseigné (adresse publique d'un dossier d'images), l'agent l'utilise à la place du dépôt non publié sur la Page Facebook. salon_nom : salon Discord des alertes (vide = salon par défaut de reponses-config.json). sources_cartes : une entrée par métier dont la page exemple est prête ; capture = chemin (relatif à B2B ou absolu) d'une capture validée de la page ; nom_fictif facultatif (n'est jamais inventé : vide = la légende dit seulement « ce n'est pas un site client »). Jeton : agents\\instagram-token.json {access_token, ig_user_id, page_id} (hors git, jamais affiché). Arrêt de secours : python agents\\instagram.py arreter. Reprise après une erreur : python agents\\instagram.py reprendre."
+}

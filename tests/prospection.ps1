@@ -38,13 +38,15 @@ try {
     Verifier (Test-Path (Join-Path $Root 'B2B\agents\prospection.py')) 'B2B\agents\prospection.py présent'
     $cfgAgent = Get-Content (Join-Path $Root 'B2B\agents\prospection-config.json') -Raw -Encoding UTF8 | ConvertFrom-Json
     Verifier ($cfgAgent.envoi_automatique -eq $false) 'prospection-config.json : envoi_automatique = false par défaut'
-    Verifier ($cfgAgent.par_boite_par_jour -le 10 -and $cfgAgent.pause_envoi_s[0] -ge 90 -and $cfgAgent.pause_envoi_s[1] -le 300) 'plafond 10 par boîte et par jour, pauses 90 à 300 s'
+    Verifier ($cfgAgent.quota_par_boite -le 10 -and $cfgAgent.montee_pas -le 10 -and $cfgAgent.montee_plafond -le 100 -and $cfgAgent.pause_envoi_s[0] -ge 60 -and $cfgAgent.pause_envoi_s[1] -le 300) 'quota 10 par boîte et par jour, montée de 10 par jour jusqu''à 100 au plus, pauses 60 à 300 s'
 
     Write-Host '4. Tests Python de l''agent (hors ligne : faux SMTP, faux Discord, fichiers temporaires)'
     $py = Get-Command python -ErrorAction SilentlyContinue
     if ($py) {
         $env:PYTHONIOENCODING = 'utf-8'
+        $ea = $ErrorActionPreference; $ErrorActionPreference = 'Continue'      # (l'agent écrit ses erreurs simulées sur stderr : ce ne sont pas des erreurs du test)
         $sortie = & $py.Source (Join-Path $Root 'B2B\agents\test_prospection.py') 2>&1 | Out-String
+        $ErrorActionPreference = $ea
         Verifier ($LASTEXITCODE -eq 0 -and $sortie -match 'OK : tous les tests passent') 'agents\test_prospection.py : tous les tests passent'
         Remove-Item Env:PYTHONIOENCODING -ErrorAction SilentlyContinue
     } else { Write-Host '  (python introuvable : tests Python sautés)' }

@@ -357,7 +357,7 @@ Verifier ($x.statut -eq 'mis-a-jour' -and (Test-OctetsEgaux ([IO.File]::ReadAllB
 $hAvant = Hash "$rr\.env"
 $x = Restore-EnvDepuisChiffre $rr ([Text.Encoding]::UTF8.GetBytes('faux-mot-de-passe'))
 Verifier ($x.statut -eq 'echec' -and (Hash "$rr\.env") -eq $hAvant -and -not (Test-Path "$rr\.env.tmp")) 'mauvais mot de passe : l''ancien .env est conservé tel quel'
-Set-Content "$rr\.env.chiffre" ((Get-Content "$rr\.env.chiffre" -Raw) -replace 'mac=.', 'mac=Z') -Encoding ASCII
+Set-Content "$rr\.env.chiffre" ([regex]::Replace((Get-Content "$rr\.env.chiffre" -Raw), 'mac=(.)', { param($m) 'mac=' + $(if ($m.Groups[1].Value -eq 'Z') { 'Y' } else { 'Z' }) })) -Encoding ASCII
 $x = Restore-EnvDepuisChiffre $rr $mdp; Verifier ($x.statut -eq 'echec' -and (Hash "$rr\.env") -eq $hAvant) 'fichier corrompu : l''ancien .env est conservé tel quel'
 $x = Restore-EnvDepuisChiffre $rr $null; Verifier ($x.statut -eq 'echec' -and $x.raison -match 'mot de passe du serveur absent' -and (Hash "$rr\.env") -eq $hAvant) 'mot de passe du serveur absent : échec clair, .env intact'
 $x = Restore-EnvDepuisChiffre (Join-Path $TR 'vide') $mdp; Verifier ($x.statut -eq 'absent') 'sans .env.chiffre : rien à faire'

@@ -1,0 +1,40 @@
+﻿# Test SILENCIEUX de l'agent appels-sid (liste d'appels du matin pour Sid) : fichiers présents, simulation par défaut, aucun envoi ni réseau dans le code, branchement dans tests\tout.ps1 ;
+# puis les tests Python hors ligne (faux fichiers, dossiers temporaires, aucun réseau).
+$ErrorActionPreference = 'Stop'
+$env:JARVIS_TEST = '1'
+$Root = Split-Path -Parent $PSScriptRoot
+$echecs = 0
+function Verifier([bool]$cond, [string]$msg) { if ($cond) { Write-Host "  OK    $msg" } else { Write-Host "  ECHEC $msg" -ForegroundColor Red; $script:echecs++ } }
+$hashConfig = (Get-FileHash (Join-Path $Root 'config.json')).Hash
+$hashProsp = (Get-FileHash (Join-Path $Root 'B2B\agents\prospection-config.json')).Hash
+$ag = Join-Path $Root 'B2B\agents'
+
+Write-Host '1. Fichiers et réglages'
+foreach ($f in 'appels-sid.py', 'google_sheets.py', 'appels-sid-config.json', 'appels-sid.md', 'test_appels_sid.py') { Verifier (Test-Path (Join-Path $ag $f)) "B2B\agents\$f présent" }
+$cfgAgent = Get-Content (Join-Path $ag 'appels-sid-config.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+Verifier ($cfgAgent.envoi_automatique -eq $false) 'appels-sid-config.json : envoi_automatique = false par défaut'
+Verifier ($cfgAgent.par_liste -ge 50 -and $cfgAgent.par_liste -le 60) 'appels-sid-config.json : par_liste entre 50 et 60'
+Verifier ($cfgAgent.cible_reserve -ge 220 -and $cfgAgent.seuil_alerte -eq 110) 'appels-sid-config.json : réserve cible 220, alerte sous 110 (2 jours)'
+$src = Get-Content (Join-Path $ag 'appels-sid.py') -Raw -Encoding UTF8
+Verifier ($src -notmatch 'smtplib|send_message|gmail_api|stripe|webbrowser|os\.system|shell=True|places\.googleapis') 'appels-sid.py : aucun envoi d''e-mail ni de message à une entreprise, aucun Stripe, aucune API payante'
+Verifier (-not $cfgAgent.partager_avec) 'appels-sid-config.json : aucun partager_avec dans le fichier versionné (rien n''est partagé ; l''adresse vit dans appels-sid-config.local.json, ignoré par git)'
+Verifier ((Get-ScheduledTask -TaskName 'Jarvis-AppelsSid' -ErrorAction SilentlyContinue) -eq $null) 'tâche planifiée Jarvis-AppelsSid NON installée (installer-tache n''a jamais été lancé)'
+$tout = Get-Content (Join-Path $Root 'tests\tout.ps1') -Raw -Encoding UTF8
+Verifier ($tout -match "f = 'appels-sid\.ps1'") 'tests\tout.ps1 lance ce test'
+
+Write-Host '2. Tests Python de l''agent (hors ligne)'
+$py = Get-Command python -ErrorAction SilentlyContinue
+if ($py) {
+    $env:PYTHONIOENCODING = 'utf-8'
+    $sortie = & $py.Source -I (Join-Path $ag 'test_appels_sid.py') 2>&1 | Out-String
+    Verifier ($LASTEXITCODE -eq 0 -and $sortie -match 'OK : tous les tests de l''agent appels-sid passent') 'agents\test_appels_sid.py : tous les tests passent'
+    Remove-Item Env:PYTHONIOENCODING -ErrorAction SilentlyContinue
+} else { Write-Host '  (python introuvable : tests Python sautés)' }
+foreach ($f in 'appels-sid-etat.json', 'appels-sid.verrou', 'appels-sid-journal.log', 'google-sheets-token.json') { Verifier (-not (Test-Path (Join-Path $ag $f))) "aucun $f écrit dans le dépôt par les tests" }
+Verifier (-not (Test-Path (Join-Path $Root 'B2B\docs\sid\liste-sid-2026-11-04.csv'))) 'aucune liste de test dans B2B\docs\sid'
+
+Write-Host '3. Propreté'
+Verifier ((Get-FileHash (Join-Path $Root 'config.json')).Hash -eq $hashConfig) 'config.json inchangé'
+Verifier ((Get-FileHash (Join-Path $Root 'B2B\agents\prospection-config.json')).Hash -eq $hashProsp) 'prospection-config.json inchangé (la liste de Liam n''est redirigée que sur ordre)'
+if ($echecs) { Write-Host "`n$echecs ÉCHEC(S)" -ForegroundColor Red; exit 1 }
+Write-Host "`nTOUT EST VERT." -ForegroundColor Green; exit 0

@@ -2,6 +2,8 @@
 #   git fetch ; si origin/main a du nouveau : git pull --ff-only -> arrêt de Jarvis -> tests\tout.ps1 ->
 #     tout est vert : Jarvis est relancé (nouvelle version)
 #     un test est rouge : git reset --hard sur l'ancien commit, Jarvis relancé (ancienne version), journal + alerte Discord ; le commit refusé n'est pas réessayé tant qu'il reste le même.
+#   Après des tests verts, SI B2B\agents\b2b.local.json existe (réglage propre à cette machine) : dépendances Python de B2B\requirements.txt puis tâches planifiées « Jarvis-B2B-<agent> » des seuls agents
+#   actifs (lib\b2b-serveur.ps1, idempotent). Sans ce fichier (PC de bureau) : rien. Un échec de cette étape n'annule jamais la mise à jour de Jarvis.
 # Ne touche JAMAIS à memoire\, logs\ ni config.local.json (ignorés par git : ni pull ni reset ne les modifient). .env n'est écrit que par le déchiffrement ATOMIQUE de .env.chiffre
 # (ancien .env dans .env.bak ; échec = ancien .env conservé + alerte ; mise à jour refusée = clés remises comme avant).
 # Options (tests / essais) : -Simulation (dit s'il y a une mise à jour, ne change rien) · -Racine · -ScriptTests · -SansArret · -SansRelance · -SansPip · -FichierAlerte (alerte écrite dans ce fichier au lieu de Discord).
@@ -10,6 +12,7 @@ $ErrorActionPreference = 'Stop'
 Set-Location $Racine
 . (Join-Path $Racine 'lib\journal.ps1')
 if (Test-Path (Join-Path $Racine 'lib\env-chiffre.ps1')) { . (Join-Path $Racine 'lib\env-chiffre.ps1') }      # synchro chiffrée du .env (absente d'un très ancien clone : la 1re mise à jour l'apporte)
+if (Test-Path (Join-Path $Racine 'lib\b2b-serveur.ps1')) { . (Join-Path $Racine 'lib\b2b-serveur.ps1') }      # agents B2B du serveur : dépendances Python + tâches planifiées (après un pull réussi et des tests verts)
 $script:Sortie = New-Object System.Collections.Generic.List[string]
 function Say([string]$t) { $script:Sortie.Add($t); Write-Host $t }
 function Invoke-Git {
@@ -110,7 +113,12 @@ try {
     if (-not $rouge) {
         Write-Journal -Action 'Mise à jour auto' -Resultat "tests verts : version $($nouveau.Substring(0, 7)) adoptée"
         Remove-Item $refuse -Force -ErrorAction SilentlyContinue
-        Say "tests verts : version $($nouveau.Substring(0, 7)) adoptée"; Start-JarvisServeur; return
+        Say "tests verts : version $($nouveau.Substring(0, 7)) adoptée"
+        if (Get-Command Update-B2BServeur -ErrorAction SilentlyContinue) {      # agents B2B : requirements + tâches planifiées des agents ACTIFS seulement (b2b.local.json) ; sans réglage B2B sur cette machine : rien
+            $b2b = Update-B2BServeur $Racine -SansPip:$SansPip; if ($b2b) { Say $b2b }
+            if ($script:B2BPipEchec) { Send-AlerteMaj 'agents B2B : pip install -r B2B\requirements.txt a échoué sur le serveur (Jarvis est à jour ; vérifier Python et le réseau)' }
+        }
+        Start-JarvisServeur; return
     }
     $r = Invoke-Git reset --hard $ancien
     if ($envMaj -and (Test-Path (Join-Path $Racine '.env.bak'))) { Copy-Item (Join-Path $Racine '.env.bak') (Join-Path $Racine '.env') -Force; Write-Journal -Action 'Mise à jour auto' -Resultat 'clés (.env) remises à l''état d''avant la mise à jour refusée'; Say 'clés (.env) remises à l''état d''avant' }

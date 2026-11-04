@@ -1,0 +1,63 @@
+# Agent appels-sid (3 nov. 2026)
+Rôle : **tous les appels vont à Sid**. Chaque matin, l'agent cherche de nouvelles entreprises avec un numéro de téléphone, prépare la **liste d'appels de Sid** (50 à 60 entreprises jamais appelées), la dépose dans `docs\sid\liste-sid-AAAA-MM-JJ.csv` et, une fois autorisé, dans une **feuille Google** du dossier « Sid ». **Il n'envoie rien à une entreprise ni à Sid** (pas d'e-mail, pas de message) : le seul message qu'il poste est l'alerte Discord de réserve. Code : `agents\appels-sid.py` + `agents\google_sheets.py` ; tests : `agents\test_appels_sid.py` + `tests\appels-sid.ps1` (listé dans `tests\tout.ps1`) ; réglages : `agents\appels-sid-config.json` ; état : `agents\appels-sid-etat.json` ; journal : `agents\appels-sid-journal.log`.
+
+**Simulation par défaut** (`envoi_automatique: false`) : ni Google, ni partage, ni message Discord ; le journal dit ce qui serait fait. Le sourcing et la liste CSV, eux, sont écrits (ce sont des fichiers locaux). **Rien n'est installé ni partagé tant que Liam n'a pas dit « active ».**
+
+## Commandes
+| Commande | Effet |
+|---|---|
+| `python agents\appels-sid.py jour [--jour AAAA-MM-JJ] [--a-blanc]` | **Le passage du matin** : sourcer, préparer la liste, créer le dossier et la feuille Google, alerte de réserve. C'est ce que lance la tâche planifiée. `--a-blanc` : décrit chaque étape, aucune écriture, aucun réseau. |
+| `preparer [--jour …] [--a-blanc]` | Seulement la liste du jour (une par jour). |
+| `sourcer [--jour …] [--a-blanc]` | Cherche de nouvelles entreprises avec téléphone (OpenStreetMap). `--a-blanc` : interroge Overpass (lecture seule) et dit combien seraient ajoutées, sans rien écrire. |
+| `etat` | Réserve par métier, jours de réserve, liste de Liam (active ou redirigée), Google, partage, dernière liste. |
+| `annuler [AAAA-MM-JJ] [--force] [--a-blanc]` | Libère les entreprises d'une liste non utilisée (refusé si une case ou une remarque du CSV est remplie). Le CSV est conservé en `.annulee.csv` ; un dossier Google déjà créé reste en place. |
+| `google-autoriser` | Autorisation Google, **une seule fois** (voir plus bas). |
+| `rediriger-liste` / `rendre-liste` `[--a-blanc]` | La liste d'appels quotidienne de Liam n'est plus produite / lui est rendue. |
+| `installer-tache` / `retirer-tache` `[--oui]` | Tâche planifiée Windows. **Sans `--oui` : affiche seulement la commande PowerShell, n'exécute rien.** |
+
+## Réserve et sélection (la logique de `prospection.py` est réutilisée, pas recopiée)
+- **Métiers** : restaurants (numéro seulement, aucune page d'exemple), coiffeurs, plombiers-chauffagistes, électriciens. Jamais fleuriste, boulangerie ni garage. Répartition par poids (`repartition` : 12 / 12 / 13 / 18) ; si un métier manque, les autres complètent.
+- **Reprise des listes de Liam** : les entreprises de `docs\liste-appels-*.md` **jamais appelées** (aucune case « appelé » ni « répondu ») entrent dans la réserve, avec leur ligne de `prospection-trouves.csv`. Appelées, refus ou STOP : jamais reprises.
+- **Écartées** : déjà sorties pour Sid (état : ne ressortent jamais, sauf `annuler`), numéro invalide (10 chiffres français 01 à 07 ou 09, +33 accepté, jamais 08), même numéro déjà pris, STOP, refus, exclu, écarté, hors zone et vagues fermées (`zone.py`), e-mail dans `exclus-emails.json`, déjà contactée par e-mail ou ayant répondu (suivi).
+- **Sources** : `prospection-trouves.csv` (« sans site, téléphone », « téléphone seulement », « listé »), `suivi-prospects.csv` (« à contacter »), `prospects_maps.csv`, et les lignes des listes d'appels.
+- **Ordre de la liste = ordre de la journée de Sid** : artisans du bâtiment (avant 9 h ou vers 17 h), coiffeurs (milieu de matinée), restaurants (14 h – 16 h). Créneaux indicatifs, non mesurés.
+
+## Sourcing : de nouveaux numéros, gratuit
+- Source : **OpenStreetMap** par l'API Overpass (données ouvertes ODbL), la même que la prospection, avec sa fonction d'appel (identification dans le User-Agent, nouvel essai après un refus 429 / 5xx avec attente de 30, 60 puis 120 s), sa zone (cercle de 40 km autour de Rouen, puis départements des vagues ouvertes) et ses règles de zone. **Aucune API payante** (Google Places n'est pas utilisé), aucune clé, aucun contournement de blocage.
+- Débit : **6 requêtes au plus par passage, une à la fois, 15 s entre deux**. Une requête déjà faite n'est pas refaite avant 30 jours.
+- Priorité aux métiers dont la réserve est sous leur part de la cible (`cible_reserve` : 220, environ 4 jours) : plombiers, électriciens, puis coiffeurs, restaurants. Pas de requête inutile pour un métier déjà assez fourni.
+- Une fiche est ajoutée si : nom et commune connus, en zone, **téléphone français valide**, **aucun site indiqué** (aucune page n'est ouverte ni jugée), pas déjà connue (`prospection-trouves.csv`, suivi, maps, listes d'appels, exclus, déjà sortie) ni même numéro. Avec `avec_site: true`, une fiche qui déclare un site est aussi ajoutée (statut « téléphone seulement »).
+- Écriture dans **`prospection-trouves.csv`**, le fichier de la prospection (statut « sans site, téléphone », source « OpenStreetMap, base de données ouverte ») : les lignes existantes sont conservées, le fichier est relu juste avant d'écrire puis remplacé d'un coup. `prospection-etat.json` n'est jamais touché. Petit risque connu : si la boucle de la prospection écrit ce fichier exactement au même instant, l'une des deux écritures peut être perdue (la fiche sera retrouvée au prochain passage).
+- Panne (réseau, Overpass) : alerte Discord (une par jour), la liste du jour est quand même préparée avec la réserve existante, nouvel essai le lendemain.
+
+## Google : dossier « Sid » > « AAAA-MM-JJ » > feuille
+- API **Google Drive** seulement (gratuite, OAuth, compte `contact.lmsites@gmail.com`) ; la feuille est créée en convertissant le CSV, donc l'API Sheets n'est pas nécessaire. Portée minimale `drive.file` : l'agent ne voit que ce qu'il a lui-même créé. Client `agents\google-client.json`, jeton `agents\google-sheets-token.json` (hors git, jamais affiché ni journalisé), même mécanisme que `gmail_api.py`.
+- Chaque jour : dossier « Sid » (créé une fois) puis sous-dossier du jour puis feuille « Liste d'appels AAAA-MM-JJ », colonnes : `#`, `Nom`, `Ville`, `Téléphone`, `Métier`, `Créneau conseillé`, `Constat vérifié`, `Page d'exemple`, `Appelé`, `Répondu`, `Rendez-vous pris`, `Refus`, `Remarque` (pas de colonne STOP ; le CSV local a les mêmes colonnes).
+- **Rien n'est recréé ni écrasé** : si le dossier du jour existe, il est reconnu (état, sinon recherche dans le Drive) ; s'il manque seulement la feuille, seule la feuille est créée.
+- **Partage** : `partager_avec` vide = rien n'est partagé. Avec l'e-mail de Sid (et `envoi_automatique: true`), le dossier « Sid » est partagé **en éditeur, une seule fois** (Google envoie alors son e-mail d'invitation à Sid).
+- Un jeton d'un autre compte que `compte_google` est refusé avant toute création.
+
+## Autorisation Google : une seule fois (à faire par Liam)
+1. Console Google Cloud (console.cloud.google.com), projet de `google-client.json` › **API et services › Bibliothèque** › « **Google Drive API** » › **Activer**.
+2. **Écran de consentement OAuth** : si l'application est en mode « Test », ajouter `contact.lmsites@gmail.com` comme **utilisateur test**.
+3. Dans un terminal : `python agents\appels-sid.py google-autoriser` ; le navigateur s'ouvre, choisir `contact.lmsites@gmail.com`, accepter (avertissement « application non validée » normal : Avancé › Continuer), puis fermer l'onglet. Le jeton est enregistré.
+4. Vérifier : `python agents\appels-sid.py jour --a-blanc` ne contacte pas Google ; l'essai réel est fait par le premier `jour` avec `envoi_automatique: true`.
+
+## La liste d'appels de Liam
+Elle est produite par `cmd_liste_matin` / `cmd_appels` de `prospection.py`, déclenchés à `liste_appels_heure` (08:00) dans `prospection-config.json`, puis postée dans « appels-du-jour ». **`rediriger-liste`** met `liste_appels_heure` à `99:99` (jamais atteinte) : plus aucun fichier `docs\liste-appels-*.md`, plus aucun message pour Liam ; le code de la prospection et l'envoi d'e-mails ne sont pas touchés ; l'ancienne heure est gardée, **`rendre-liste`** la remet. Limite : la commande manuelle `prospection.py appels` force encore une liste si Liam la lance lui-même. **Non appliqué tant que Liam n'a pas dit « active »** : sinon plus personne ne recevrait de liste.
+
+## Tâche planifiée Windows (non installée)
+`python agents\appels-sid.py installer-tache` affiche la commande : tâche `Jarvis-AppelsSid`, **tous les jours à 08:00** (`heure_tache`), **rattrapage au réveil du PC si manquée** (`-StartWhenAvailable`), une seule instance à la fois (`IgnoreNew`) en plus du verrou, 2 h au plus, session de Liam, sans fenêtre (`pythonw`), lance `appels-sid.py jour`. `installer-tache --oui` l'installe, `retirer-tache --oui` la retire.
+
+## Sûreté
+- **Verrou** `appels-sid.verrou` : deux lancements en même temps sont refusés ; repris s'il est laissé par un processus mort ou vieux de plus de 3 h. **Une panne ne bloque jamais les jours suivants** : chaque étape (sourcing, liste, Google) est isolée, journalisée, alertée une fois par jour, et le passage suivant rattrape (liste existante ni refaite ni re-marquée, Google rattrapé).
+- Arrêt de secours : créer `agents\appels-sid.arret`. État illisible = arrêt avec message, état jamais écrasé.
+- **Alertes** (salon Discord par défaut, comme devis et rendez-vous, en mode réel seulement) : réserve sous 110 entreprises (moins de 2 jours), sourcing en échec, Google en échec, liste impossible. Une par motif et par jour, **uniquement des nombres** ; le journal ne contient ni numéro, ni e-mail, ni nom d'entreprise.
+- L'état (`appels-sid-etat.json`) = clés d'entreprises, dates, identifiants de dossier Google ; **aucun numéro**.
+
+## Pour l'activer (Liam)
+1. Autoriser Google une fois (4 étapes ci-dessus).
+2. `agents\appels-sid-config.json` : `partager_avec` = e-mail de Sid (optionnel) puis `envoi_automatique: true`.
+3. `python agents\appels-sid.py rediriger-liste` (plus de liste pour Liam).
+4. `python agents\appels-sid.py installer-tache --oui` (tâche de 8 h 00).
+5. Contrôle le lendemain : `python agents\appels-sid.py etat`, le journal, le dossier « Sid » dans le Drive.

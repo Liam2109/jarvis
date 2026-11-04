@@ -1,0 +1,9 @@
+# Idées notées par Claude (chat), copie de sécurité
+À ne pas réécrire : Claude Code a déjà écrasé IDEES-MASTER.md plusieurs fois. Ces lignes sont aussi dans docs\IDEES-MASTER.md.
+
+- 26 oct. 2026 — Liam : « au pire tu me fais un site pour le web qui fait sérieux » : site vitrine pour son activité de création de sites (agence). Il garde le domaine lmlsmulti-services.com et choisit de remplacer le site de débarras actuel (précautions : sauvegarde, prévenir Léo, republier le débarras sur un sous-domaine).
+- 26 oct. 2026 — Idée de Liam : créer des SKILLS Claude à donner aux agents pour qu'ils conçoivent de bons sites sans qu'on répète les consignes, un skill adapté par domaine/métier.
+- 26 oct. 2026 — Consignes de Liam pour les skills : skill 3D et animation légère avec version mobile, du RÉALISME partout ; pas seulement des artisans (coiffeurs, fleuristes, etc.) : un modèle designé par type d'activité ; AUCUN PHP (jugé peu sûr), sites statiques ; des sites qui CONVERTISSENT (pas seulement beaux) ; des sites différents de ceux que font les IA habituelles ; plus tard, des sites vraiment sur mesure pour chaque client.
+- 26 oct. 2026 — Skills enregistrés par Liam : site-local-conversion, site-local-animation-3d, site-local-direction-artistique (« local » = sites de commerces et artisans locaux). À proposer ensuite : familles d'activités, sécurité sans PHP, qualité et livraison. Copie des fichiers dans B2B\skills\ pour Claude Code (.claude\skills\ ne peut pas être écrit à distance).
+- 26 oct. 2026 — Règle de Liam : ne JAMAIS afficher son lieu d'habitation ni une adresse personnelle dans un site (ni dans les maquettes ni dans le site de l'agence) ; zone d'intervention de l'artisan seulement.
+- 26 oct. 2026 — Liam veut un aperçu avec une vue téléphone ET une vue ordinateur côte à côte, plus beau que le panneau de droite habituel, pour juger tout de suite la qualité d'un site.

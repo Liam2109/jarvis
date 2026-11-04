@@ -16,4 +16,47 @@ config.local.json
 .env.bak
 .env.tmp
 
-B2B/
+
+# ---------- B2B : LISTE BLANCHE (04/11/2026) : seul le code, les tests, les configs PAR DÉFAUT sans secret et la doc utile partent sur GitHub ----------
+# Tout le reste (jetons, états, listes de prospects, journaux, sites, lots, médias) est ignoré. Les réglages secrets ou propres à une machine vivent dans *.local.json (ignoré).
+B2B/*
+!B2B/*.md
+!B2B/*.py
+!B2B/requirements.txt
+!B2B/agents/
+B2B/agents/*
+!B2B/agents/*.py
+!B2B/agents/*.md
+!B2B/agents/*-config.json
+!B2B/agents/liens-metiers.json
+!B2B/agents/identite.exemple.json
+!B2B/agents/serveur-taches.json
+!B2B/agents/serveur-b2b.ps1
+!B2B/agents/devis-fiche-modele.txt
+!B2B/docs/
+B2B/docs/*
+!B2B/docs/*.md
+!B2B/sites/
+B2B/sites/*
+!B2B/sites/moteur/
+B2B/sites/moteur/*
+!B2B/sites/moteur/*.py
+# ... puis les refus explicites (le dernier motif gagne) : secrets, jetons, états, verrous, listes, journaux
+B2B/messages-a-valider.md
+B2B/docs/sid/
+B2B/docs/liste-appels-*
+B2B/agents/gmail-*
+B2B/agents/instagram-token*
+B2B/agents/google-sheets-token*
+B2B/agents/google-client*
+B2B/agents/ical_url*
+B2B/agents/*-etat.json
+B2B/agents/*.verrou
+B2B/agents/*.arret
+B2B/agents/*-retours.json
+B2B/agents/*-traitees.json
+B2B/agents/exclus*
+B2B/agents/identite.json
+B2B/agents/prospection-dernier-lancement.txt
+*.local.json
+B2B/**/*.csv

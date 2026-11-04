@@ -1,0 +1,5 @@
+# Dépendances Python des agents B2B sur le portable serveur (installées par maj-auto.ps1 : python -m pip install -r B2B\requirements.txt).
+# Uniquement ce que les agents importent : aucun navigateur, aucun paquet lourd (serveur 6 Go).
+google-api-python-client>=2.100
+google-auth-oauthlib>=1.2
+google-auth-httplib2>=0.2

@@ -51,7 +51,7 @@ function Get-DiscordConfig {
     if ($Config.PSObject.Properties['discord_salons'] -and $Config.discord_salons) {
         foreach ($p in $Config.discord_salons.PSObject.Properties) {
             $n = $(if ($p.Name -eq 'alertes') { 'systeme' } elseif ($p.Name -eq 'todo') { 'jarvis' } else { $p.Name })
-            if ($n -in 'jarvis', 'systeme', 'marche', 'business' -and "$($p.Value)".Trim() -match '^\d{5,25}$') { $c.salons[$n] = "$($p.Value)".Trim() }
+            if ($n -in 'jarvis', 'systeme', 'marche', 'business', 'important', 'journal' -and "$($p.Value)".Trim() -match '^\d{5,25}$') { $c.salons[$n] = "$($p.Value)".Trim() }
         }
     }
     $c.manquants = @($c.manquants | Where-Object { -not $c.salons.ContainsKey($_) })
@@ -557,7 +557,8 @@ function Send-AlerteDiscord([string]$cle, [string]$titre, [bool]$grave = $false)
     [void]$script:DiscordAlertesEnvoyees.RemoveAll([Predicate[datetime]]{ param($t) ($now - $t).TotalHours -ge 1 })
     $script:DiscordAlertesVues[$k] = $now
     if ($script:DiscordAlertesEnvoyees.Count -lt $c.max_alertes) {
-        if ((Get-DiscordStyle) -eq 'embed') { [void](Send-MessageDiscord 'systeme' '' '' (New-EmbedAlerte $texte $cle $grave)) } else { [void](Send-MessageDiscord 'systeme' "Alerte, monsieur : $texte") }
+        $salon = $(if ($grave -and $c.salons.ContainsKey('important')) { 'important' } else { 'systeme' })      # alerte grave : salon « important » s'il existe, sinon « système »
+        if ((Get-DiscordStyle) -eq 'embed') { [void](Send-MessageDiscord $salon '' '' (New-EmbedAlerte $texte $cle $grave)) } else { [void](Send-MessageDiscord $salon "Alerte, monsieur : $texte") }
         $script:DiscordAlertesEnvoyees.Add($now); Write-Journal -Action 'Alerte Discord' -Resultat "envoyée : $cle"
         return 'envoyee'
     }
