@@ -170,3 +170,5 @@ Contexte : Liam utilise un petit PC portable (celui de Mathéo, avec carte Wi-Fi
 - 2026-11-03 : Accès appelants : page ou tableau partagé pour que les appelants (ex. Sid) voient les créneaux libres de Liam et leurs chiffres, SANS mot de passe ni accès à ses comptes (ex. lien de planning de rendez-vous Google Agenda).
 
 - 2026-11-03 : Liam ne veut AUCUNE offre gratuite (pas de page offerte contre avis) : toujours payant. Agent devis décidé (obligatoire). Planning Google Agenda réservable créé (lundi-vendredi 10 h-16 h, 15 min) : https://calendar.google.com/calendar/appointments/schedules/AcZssZ3xvWSaK8qGD2TTJST9f12yK_AUNGA7Ru59_qoYk2p4O5MM8noDvTqnw9HKVJ-I2t8ddNvMIgF7 . Reste à ajouter : lien Google Meet automatique et 2 questions (entreprise, site ou landing page) dans le formulaire de réservation. Contact appelants : proposer WhatsApp (numéro à donner par Liam).
+
+- 2026-11-04 : Restaurant : page **Le Velours** retenue (https://b2b-demos.vercel.app/le-velours-exemple-ef5bae7c/). A faire : ajouter une vidéo en tête de page (hero vidéo), comme les autres pages métier. Ensuite : lire les réponses du Google Form de Sid.

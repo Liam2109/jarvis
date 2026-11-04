@@ -20,7 +20,7 @@ function Cmd([string]$texte) {
     $r = Invoke-CommandeDiscord $texte
     @{ traite = $r; tampon = ($script:DiscordTampon -join ' '); embeds = @($script:DiscordEmbeds) }
 }
-function Fichiers { @(Get-ChildItem $TR -Recurse -File | Where-Object { $_.FullName -notmatch '\\(logs|tmp)\\' } | ForEach-Object { $_.FullName.Substring($TR.Length + 1) } | Sort-Object) }
+function Fichiers { @(Get-ChildItem $TR -Recurse -File | Where-Object { $_.FullName -notmatch '\\(logs|tmp)\\' } | ForEach-Object { ($_.FullName -split '\\' | Select-Object -Skip ($TR.TrimEnd('\') -split '\\').Count) -join '\' } | Sort-Object) }      # par segments : $TR peut être en nom court 8.3 (SERVEU~1) alors que FullName est en nom long
 $hashConfig = (Get-FileHash (Join-Path $Root 'config.json')).Hash
 $vraie = Get-Content (Join-Path $Root 'config.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 $realQ = @(Get-ChildItem (Join-Path $Root 'quarantaine') -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object { "$($_.FullName):$($_.Length)" }) -join '|'

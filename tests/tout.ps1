@@ -7,8 +7,23 @@
 # Les tests qui exigent de VRAIES fenêtres / de VRAIES touches ne sont pas ici : voir tests\manuels.ps1 (à lancer vous-même, si vous le voulez).
 # Après les tests : contrôle que config.json et memoire\ n'ont pas bougé, que les fichiers temporaires sont nettoyés et qu'aucun processus
 # Jarvis / orbe / écoute / Ollama ne reste.
-param([switch]$Rapide)      # (-Rapide est accepté pour compatibilité : tous les tests de cette liste sont déjà silencieux)
+#
+# DEUX PROFILS (mêmes tests, mêmes contrôles ; le second saute seulement les séries qui ont besoin d'une voix, d'un écran, d'Edge, du GPU) :
+#   - PROFIL NORMAL (PC principal, par défaut) : TOUTES les séries, TOUS les contrôles.
+#   - PROFIL SERVEUR : automatique quand B2B\agents\b2b.local.json contient "serveur": true, ou avec -Serveur. Le portable serveur n'a ni micro, ni voix
+#     française, ni écran à piloter, ni Edge utile : les séries qui en dépendent sont SAUTÉES (et listées « SAUTÉE » avec leur raison dans le tableau
+#     et dans logs\tests-dernier.txt, jamais en silence). Le contrôle « memoire\ inchangé » est ignoré (Jarvis tourne sur le serveur et écrit sa
+#     mémoire pendant les tests) ; config.json, .env et les processus restent contrôlés. -Complet force le profil normal même sur le serveur.
+param([switch]$Rapide,          # (-Rapide est accepté pour compatibilité : tous les tests de cette liste sont déjà silencieux)
+      [switch]$Serveur,         # force le profil serveur
+      [switch]$Complet,         # force le profil normal
+      [string]$FichierB2BLocal = '')   # (tests) autre b2b.local.json que le vrai
 $racine = Split-Path -Parent $PSScriptRoot
+$profilServeur = [bool]$Serveur
+if (-not $Complet -and -not $profilServeur) {
+    $fb = $(if ($FichierB2BLocal) { $FichierB2BLocal } else { Join-Path $racine 'B2B\agents\b2b.local.json' })
+    if (Test-Path -LiteralPath $fb) { try { $jb = Get-Content -LiteralPath $fb -Raw -Encoding UTF8 | ConvertFrom-Json; if ($jb.PSObject.Properties['serveur'] -and "$($jb.serveur)" -match '^(?i:true|oui|1)$') { $profilServeur = $true } } catch { } }
+}
 $liste = @(
     @{ n = 'ecran';                       f = 'ecran.ps1' }
     @{ n = 'briefing (Supabase, Stripe)'; f = 'briefing.ps1' }
@@ -63,7 +78,74 @@ $liste = @(
     @{ n = 'agent rendez-vous (démarrage unique, désactivé par défaut, lecture iCal, nouveau / déplacé / annulé / rappel annoncés une fois, premier passage sans historique, simulation, adresse secrète jamais affichée)'; f = 'rendez-vous.ps1' }
     @{ n = 'agent appels-sid (liste d''appels du matin pour Sid : 50 à 60 entreprises jamais appelées, restaurants / coiffeurs / plombiers / électriciens, téléphone valide, STOP et exclus écartés, jamais deux fois la même, CSV, preparer / etat / annuler / à blanc, aucun envoi)'; f = 'appels-sid.ps1' }
     @{ n = 'agents B2B sur le serveur (liste blanche git sans secret, *.local.json, machine active, lanceur serveur 6 Go, tâches Jarvis-B2B idempotentes, intégration maj-auto, transfert)'; f = 'b2b-serveur.ps1' }
+    @{ n = 'chemins (protection du dossier Jarvis sous un chemin avec espace et en nom court 8.3 « SERVEU~1 », forme longue)'; f = 'chemins.ps1' }
+    @{ n = 'profil serveur (revue de chaque série, séries sautées, memoire\ non contrôlé, tableau lisible, tests-dernier.txt)'; f = 'profil-serveur.ps1' }
 )
+# REVUE DE CHAQUE SÉRIE pour le profil serveur (voix / écran / Edge / GPU / Ollama / Windows Speech). « garde » = tourne aussi sur le serveur ;
+# « SAUTÉE » = sautée seulement en profil serveur, pour la raison écrite. Une série ajoutée à la liste doit recevoir sa ligne ici (tests\profil-serveur.ps1 le vérifie).
+#   ecran.ps1              SAUTÉE  choix de l'écran (ecran_jarvis) et géométrie de la fenêtre de l'orbe : le serveur n'a aucun écran à piloter
+#   briefing.ps1           garde   appels réseau simulés (faux serveur local), aucune voix
+#   veille.ps1             garde   sources simulées, lecture seule ; les mots vosk / GPU ne sont que des textes vérifiés
+#   memoire.ps1            garde   dossier temporaire, aucune dépendance matérielle
+#   cerveau.ps1            garde   Ollama et Claude simulés (bouchons) ; protection du dossier Jarvis : voir chemins.ps1
+#   chemins.ps1            garde   protection du dossier Jarvis sous un chemin avec espace et en nom court 8.3 : aucun matériel
+#   competences.ps1        garde   fichiers seulement
+#   rapide.ps1             garde   chemin rapide en texte, aucune voix
+#   discretion.ps1         garde   niveau du micro SIMULÉ : aucun accès au micro
+#   modejeu.ps1            garde   premier plan simulé, aucune fenêtre
+#   sons.ps1               garde   jingle généré en fichier, aucune lecture, aucun périphérique audio
+#   raccourcis.ps1         garde   touches et raccourcis simulés
+#   marche.ps1             garde   source factice, aucune voix réelle
+#   sources.ps1            garde   réseau interdit en test (bouchons), Ollama simulé
+#   voix.ps1               SAUTÉE  Windows Speech (voix française SAPI) fabrique un WAV que Vosk / Whisper reconnaissent, avec les modèles de voix\models : absents du serveur sans micro
+#   routeur.ps1            garde   routeur Ollama simulé, synthèse vocale bouchonnée
+#   pc.ps1                 SAUTÉE  contrôle des fenêtres et applications (écran) ; mesures réelles du moteur vocal CPU / GPU (cuda) avec voix française Windows
+#   politesse.ps1          garde   ton majordome, fenêtres simulées
+#   vitesse.ps1            garde   étages simulés, aucun Ollama réel, aucun son
+#   silence.ps1            garde   réglages et arguments de l'écoute vérifiés en texte : aucune écoute lancée
+#   salle.ps1              garde   Alpha Vantage simulé, aucune fenêtre
+#   interface.ps1          SAUTÉE  charge la page dans Edge sans fenêtre (captures à plusieurs résolutions) : Edge / écran
+#   interface-marche.ps1   SAUTÉE  charge la salle de marché dans Edge sans fenêtre : Edge / écran
+#   matin.ps1              garde   tout simulé
+#   sauvegarde.ps1         garde   faux dossier temporaire
+#   discord.ps1            garde   faux pont : requis sur le serveur (pont / alertes)
+#   voix-naturelle.ps1     garde   réglages et normalisation du texte, aucun processus de synthèse
+#   vitesse-v3.ps1         garde   mesures simulées, aucune voix
+#   serveur.ps1            garde   serveur 24/7 : dépôt, installateur en simulation, mise à jour auto
+#   bureau.ps1             SAUTÉE  réveil vocal et détecteur de claquements du PC principal : dépend du micro (le serveur est sans micro)
+#   serveur-leger.ps1      garde   mode serveur léger : c'est LA série du serveur
+#   suivi.ps1              garde   réglages et seuils, Ollama simulé
+#   saas.ps1               garde   sources branchées seulement, simulé
+#   vercel.ps1             garde   faux serveur local 127.0.0.1
+#   dev-agent.ps1          garde   dépôt git temporaire
+#   veille-train.ps1       garde   sources simulées, base locale
+#   veille-mail.ps1        garde   Gmail simulé
+#   offres-debutant.ps1    garde   offres simulées
+#   candidatures.ps1       garde   Ollama / Claude Haiku simulés
+#   emploi-conducteur.ps1  garde   fichiers et règles seulement
+#   initiatives.ps1        garde   dossier temporaire
+#   lecons.ps1             garde   Ollama simulé
+#   skills.ps1             garde   génération simulée
+#   presets.ps1            garde   dossier temporaire
+#   vues.ps1               garde   manifestes et JS en texte ; node --check seulement si node est présent
+#   pilotage.ps1           garde   pages et routes en texte ; node --check seulement si node est présent
+#   voix-actif.ps1         garde   vérifie que la détection vocale reste coupée : aucun micro ouvert
+#   chaud.ps1              garde   faux claude local (python), aucun réseau
+#   prospection.ps1        garde   agent B2B (requis sur le serveur)
+#   instagram.ps1          garde   agent B2B (requis sur le serveur)
+#   devis.ps1              garde   agent B2B (requis sur le serveur)
+#   rendez-vous.ps1        garde   agent B2B (requis sur le serveur)
+#   appels-sid.ps1         garde   agent B2B (requis sur le serveur)
+#   b2b-serveur.ps1        garde   agents B2B sur le serveur (requis sur le serveur)
+#   profil-serveur.ps1     garde   texte de tout.ps1 seulement
+$saute = @{
+    'ecran.ps1' = 'choix de l''écran (ecran_jarvis) et géométrie de la fenêtre de l''orbe : le serveur n''a aucun écran à piloter'
+    'voix.ps1' = 'Windows Speech (voix française SAPI) fabrique un WAV que Vosk / Whisper reconnaissent, avec les modèles de voix\models : absents du serveur sans micro'
+    'pc.ps1' = 'contrôle des fenêtres et applications (écran) ; mesures réelles du moteur vocal CPU / GPU (cuda) avec voix française Windows'
+    'interface.ps1' = 'charge la page dans Edge sans fenêtre (captures à plusieurs résolutions) : Edge / écran'
+    'interface-marche.ps1' = 'charge la salle de marché dans Edge sans fenêtre : Edge / écran'
+    'bureau.ps1' = 'réveil vocal et détecteur de claquements du PC principal : dépend du micro (le serveur est sans micro)'
+}
 function Get-Instantane {
     $mem = Join-Path $racine 'memoire'
     @{ config = (Get-FileHash (Join-Path $racine 'config.json')).Hash
@@ -80,11 +162,12 @@ $env:JARVIS_TEST = '1'; $env:JARVIS_CONFIG = $copie
 $res = @()
 try {
     foreach ($t in $liste) {
+        if ($profilServeur -and $saute.ContainsKey($t.f)) { $res += [pscustomobject]@{ resultat = 'SAUTÉE (profil serveur)'; duree = '-'; test = $t.n; raison = $saute[$t.f] }; continue }
         $sw = [Diagnostics.Stopwatch]::StartNew()
         $args2 = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $PSScriptRoot $t.f))
         $sortie = & powershell @args2 2>&1 | Out-String; $code = $LASTEXITCODE
         $nb = ([regex]::Matches($sortie, '(?m)^\s+OK ')).Count
-        $res += [pscustomobject]@{ test = $t.n; resultat = $(if ($code -eq 0) { "VERT ($nb vérifications)" } else { "ROUGE (code $code)" }); duree = ('{0:N0} s' -f $sw.Elapsed.TotalSeconds) }
+        $res += [pscustomobject]@{ resultat = $(if ($code -eq 0) { "VERT ($nb vérifications)" } else { "ROUGE (code $code)" }); duree = ('{0:N0} s' -f $sw.Elapsed.TotalSeconds); test = $t.n; raison = '' }
         if ($code -ne 0) { Write-Host ("--- sortie de « {0} » (extrait des échecs) ---" -f $t.n) -ForegroundColor Red; ($sortie -split "`n" | Where-Object { $_ -match 'ECHEC|ÉCHEC|Exception|n.est pas reconnu' }) | Select-Object -First 8 | ForEach-Object { Write-Host $_ } }
     }
 } finally {
@@ -97,13 +180,28 @@ try {
 $apres = Get-Instantane
 $ctl = @()
 $ctl += [pscustomobject]@{ controle = 'config.json inchangé (les tests ont utilisé une copie)'; ok = ($apres.config -eq $avant.config) }
-$ctl += [pscustomobject]@{ controle = 'memoire\ inchangé (aucune écriture dans votre mémoire)'; ok = ($apres.memoire -eq $avant.memoire) }
+if ($profilServeur) { $ctl += [pscustomobject]@{ controle = 'memoire\ non contrôlé en profil serveur (Jarvis tourne sur le serveur et y écrit sa mémoire)'; ok = $true } }
+else { $ctl += [pscustomobject]@{ controle = 'memoire\ inchangé (aucune écriture dans votre mémoire)'; ok = ($apres.memoire -eq $avant.memoire) } }
 $ctl += [pscustomobject]@{ controle = '.env inchangé'; ok = ($apres.env -eq $avant.env) }
 $ctl += [pscustomobject]@{ controle = 'aucun processus Jarvis / orbe / écoute / Ollama créé ou resté'; ok = (@(Get-ProcessusJarvis).Count -le $procAvant) }
 $ctl += [pscustomobject]@{ controle = 'aucun fichier temporaire de test restant'; ok = (@(Get-ChildItem $env:TEMP -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name -like 'jarvis-test-*' -or $_.Name -like 'jarvis-config-test-*' }).Count -eq 0) }
-Write-Host ''; $res | Format-Table -AutoSize
+Write-Host ''
+Write-Host ('Profil : ' + $(if ($profilServeur) { 'SERVEUR (séries sans voix, écran, Edge ni GPU)' } else { 'NORMAL (toutes les séries)' }))
+# tableau LARGE (220 colonnes) : le résultat est la première colonne, donc jamais tronqué, quelle que soit la largeur de la console
+$tableau = ($res | Select-Object resultat, duree, test | Format-Table -AutoSize | Out-String -Width 220)
+Write-Host $tableau
+foreach ($s in @($res | Where-Object { $_.resultat -like 'SAUTÉE*' })) { Write-Host ('  sautée : {0} -> {1}' -f $s.test.Split('(')[0].Trim(), $s.raison) -ForegroundColor DarkGray }
 $ctl | ForEach-Object { Write-Host ("  {0}  {1}" -f $(if ($_.ok) { 'OK   ' } else { 'ECHEC' }), $_.controle) -ForegroundColor $(if ($_.ok) { 'Gray' } else { 'Red' }) }
 Write-Host "`nTests manuels (vraies fenêtres / vraies touches), NON lancés ici : tests\manuels.ps1" -ForegroundColor DarkGray
 $rouges = @($res | Where-Object { $_.resultat -like 'ROUGE*' }); $mauvais = @($ctl | Where-Object { -not $_.ok })
+# une ligne par série (nom | VERT / ROUGE / SAUTÉE | durée) dans logs\tests-dernier.txt (UTF-8) : lisible même si la console tronque
+try {
+    $dl = Join-Path $racine 'logs'; if (-not (Test-Path -LiteralPath $dl)) { New-Item -ItemType Directory $dl -Force | Out-Null }
+    $tx = @(('Tests Jarvis | {0:yyyy-MM-dd HH:mm:ss} | profil {1} | {2}' -f (Get-Date), $(if ($profilServeur) { 'SERVEUR' } else { 'NORMAL' }), $env:COMPUTERNAME))
+    foreach ($r in $res) { $tx += ('{0} | {1} | {2}{3}' -f $r.test, ($r.resultat -replace ' \(.*$', ''), $r.duree, $(if ($r.raison) { ' | ' + $r.raison } else { '' })) }
+    foreach ($c in $ctl) { $tx += ('controle | {0} | {1}' -f $(if ($c.ok) { 'OK' } else { 'ECHEC' }), $c.controle) }
+    $tx += $(if ($rouges.Count -or $mauvais.Count) { 'RESULTAT | ROUGE' } else { 'RESULTAT | VERT' })
+    [IO.File]::WriteAllLines((Join-Path $dl 'tests-dernier.txt'), $tx, (New-Object Text.UTF8Encoding($false)))
+} catch { Write-Host ('  (logs\tests-dernier.txt non écrit : ' + $_.Exception.Message + ')') -ForegroundColor DarkGray }
 if ($rouges.Count -or $mauvais.Count) { Write-Host "ÉCHEC : $($rouges.Count) test(s) rouge(s), $($mauvais.Count) contrôle(s) en échec." -ForegroundColor Red; exit 1 }
 Write-Host 'TOUT EST VERT.' -ForegroundColor Green; exit 0

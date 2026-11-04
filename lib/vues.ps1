@@ -45,9 +45,10 @@ function ConvertFrom-VueFrontMatter([string]$texte) {
 function Test-VueScripts([string]$dossier) {
     # Analyse statique de TOUS les .js de la vue. Retourne la liste des motifs de refus.
     $mo = @(); $fichiers = @(Get-ChildItem $dossier -Filter *.js -File -Recurse -ErrorAction SilentlyContinue)
+    $baseVue = $(if (Get-Command Get-CheminLong -ErrorAction SilentlyContinue) { Get-CheminLong $dossier } else { $dossier }).TrimEnd('\')      # forme longue : un %TEMP% en nom court 8.3 (SERVEU~1) ne doit pas fausser les noms relatifs
     if (-not (Test-Path (Join-Path $dossier 'vue.js'))) { return @('vue.js absent') }
     foreach ($f in $fichiers) {
-        $rel = $f.FullName.Substring($dossier.TrimEnd('\').Length + 1).Replace('\', '/')
+        $rel = $f.FullName.Substring($baseVue.Length + 1).Replace('\', '/')
         if ($rel -cnotmatch '^(vue\.js|[a-z0-9-]+(/[a-z0-9-]+)*\.js)$') { $mo += "nom de fichier non permis : $rel"; continue }
         $js = Get-Content $f.FullName -Raw -Encoding UTF8
         foreach ($r in $script:VueReglesJs) { if ($js -match $r[1]) { $mo += "$rel : $($r[0])" } }

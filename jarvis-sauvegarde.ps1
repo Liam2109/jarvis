@@ -8,7 +8,15 @@
 param([string]$Dossier = 'C:\Users\Liam\Jarvis-sauvegardes', [string]$Source = '', [int]$Garder = 0)
 $ErrorActionPreference = 'Stop'
 if (-not $Source) { $Source = $PSScriptRoot }
-$Source = (Resolve-Path $Source).Path.TrimEnd('\')
+# Forme longue des chemins (un %TEMP% ou un profil en nom court 8.3, ex. C:\Users\SERVEU~1, ferait mal calculer les noms relatifs et manquer l'exclusion de .env)
+function Get-Long([string]$p) {
+    $p = [IO.Path]::GetFullPath($p); if ($p -notmatch '~\d') { return $p }
+    try { if (-not ('Jarvis.SauvLong' -as [type])) { Add-Type -Namespace Jarvis -Name SauvLong -MemberDefinition '[System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)] public static extern uint GetLongPathNameW(string c, System.Text.StringBuilder l, uint n);' }
+        $reste = ''; $d = $p; while ($d -and -not (Test-Path -LiteralPath $d)) { $reste = '\' + (Split-Path $d -Leaf) + $reste; $d = Split-Path $d -Parent }
+        if (-not $d) { return $p }; $sb = New-Object System.Text.StringBuilder 32768
+        if ([Jarvis.SauvLong]::GetLongPathNameW($d, $sb, 32768) -gt 0) { $d = $sb.ToString() }; return ($d.TrimEnd('\') + $reste) } catch { return $p }
+}
+$Source = (Get-Long (Resolve-Path $Source).Path).TrimEnd('\'); $Dossier = Get-Long $Dossier
 Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
 if (-not (Test-Path $Dossier)) { New-Item -ItemType Directory $Dossier -Force | Out-Null }
 $zip = Join-Path $Dossier ("jarvis-{0}.zip" -f (Get-Date -Format 'yyyyMMdd-HHmmss'))

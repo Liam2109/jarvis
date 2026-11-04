@@ -60,3 +60,8 @@ B2B/agents/identite.json
 B2B/agents/prospection-dernier-lancement.txt
 *.local.json
 B2B/**/*.csv
+
+gmail-*.json
+google-client.json
+identite.json
+exclus-emails.json

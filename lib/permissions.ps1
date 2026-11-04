@@ -8,11 +8,28 @@ $script:TypesNiveau3 = @{
     modifier_mot_de_passe = 'la modification de mots de passe'; supprimer_jarvis = 'la suppression de Jarvis ou de son journal'
 }
 
+# Forme LONGUE d'un chemin : développe les noms courts 8.3 (ex. C:\Users\SERVEU~1\AppData...), sinon deux écritures du même dossier ne se comparent pas
+# (la protection de Jarvis comparait un chemin court à un chemin long). Un chemin qui n'existe pas encore est développé jusqu'à son dernier dossier existant.
+function Get-CheminLong([string]$chemin) {
+    $p = [IO.Path]::GetFullPath($chemin)
+    if ($p -notmatch '~\d') { return $p }
+    try {
+        if (-not ('Jarvis.CheminLong' -as [type])) { Add-Type -Namespace Jarvis -Name CheminLong -MemberDefinition '[System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)] public static extern uint GetLongPathNameW(string court, System.Text.StringBuilder long_, uint n);' }
+        $reste = ''; $d = $p
+        while ($d -and -not (Test-Path -LiteralPath $d)) { $reste = '\' + (Split-Path $d -Leaf) + $reste; $d = Split-Path $d -Parent }
+        if (-not $d) { return $p }
+        $sb = New-Object System.Text.StringBuilder 32768
+        $n = [Jarvis.CheminLong]::GetLongPathNameW($d, $sb, 32768)
+        if ($n -gt 0 -and $n -lt 32768) { $d = $sb.ToString() }
+        return ($d.TrimEnd('\') + $reste)
+    } catch { return $p }
+}
+
 # Chemins protégés : Jarvis lui-même (dossier, journal, mémoire, .env)
 function Test-CheminJarvis([string]$chemin) {
     if (-not $chemin) { return $false }
-    try { $p = [IO.Path]::GetFullPath($chemin).TrimEnd('\') } catch { return $false }
-    $r = $script:JarvisRoot.TrimEnd('\')
+    try { $p = (Get-CheminLong $chemin).TrimEnd('\') } catch { return $false }
+    $r = (Get-CheminLong $script:JarvisRoot).TrimEnd('\')
     return ($p -ieq $r) -or $p.StartsWith($r + '\', [StringComparison]::OrdinalIgnoreCase)
 }
 
@@ -26,13 +43,13 @@ function Test-CheminSecret([string]$chemin) {
 # Chemins système : jamais supprimés/déplacés par Jarvis
 function Test-CheminSysteme([string]$chemin) {
     if (-not $chemin) { return $false }
-    try { $p = [IO.Path]::GetFullPath($chemin).TrimEnd('\') } catch { return $false }
+    try { $p = (Get-CheminLong $chemin).TrimEnd('\') } catch { return $false }
     if ($p -match '^[A-Za-z]:$') { return $true }
     foreach ($s in $env:SystemRoot, $env:ProgramFiles, ${env:ProgramFiles(x86)}, $env:ProgramData, $env:USERPROFILE, "$env:USERPROFILE\AppData") {
-        if ($s -and $p -ieq $s.TrimEnd('\')) { return $true }
+        if ($s -and $p -ieq (Get-CheminLong $s).TrimEnd('\')) { return $true }
     }
     foreach ($s in $env:SystemRoot, $env:ProgramFiles, ${env:ProgramFiles(x86)}) {
-        if ($s -and $p.StartsWith($s.TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase)) { return $true }
+        if ($s -and $p.StartsWith((Get-CheminLong $s).TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase)) { return $true }
     }
     return $false
 }

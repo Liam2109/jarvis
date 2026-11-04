@@ -47,6 +47,7 @@ def faux_executer(cmd): EXEC.append(cmd); return 0, ""
 def faux_dormir(s): SOMMEIL.append(s)
 A.appel_reseau = reseau; A.alerter_discord = faux_alerte; A.executer = faux_executer; A.dormir = faux_dormir; A.ouvrir_drive = lambda conf: DRIVE
 A.PROSPECTION_CONFIG = tmp / "agents" / "prospection-config.json"
+A.appel_sirene = lambda dept, naf, page: {"results": []}; A.lire_site = lambda url: None      # SIRENE et les sites publics : jamais de réseau ici (section 14 bis : doublures complètes)
 A.M.verifier = lambda *a, **k: (True, "")      # la garde « machine active » (machine.py) est testée dans test_machine.py
 
 echecs = 0
@@ -346,7 +347,7 @@ verifier(all(l["statut"] == "sans site, téléphone" and l["metier"] == "plombie
 verifier({l["telephone"] for l in nouveaux} == {tel(6001), "02 35 77 00 12"}, "téléphone normalisé (+33 accepté, tag contact:phone lu)")
 verifier(P.ETAT.read_text(encoding="utf-8") == etat_p_avant and not list(tmp.glob("*.tmp")), "prospection-etat.json non touché, aucun fichier temporaire laissé")
 verifier(len(FO.requetes) == 1 and "[out:json]" in FO.requetes[0], "une requête Overpass (sourcing_requetes_max = 1)")
-verifier('"craft"="plumber"' in FO.requetes[0] and "phone" in FO.requetes[0] and "mobile" in FO.requetes[0] and "(around:" in FO.requetes[0], "requête : plombiers, fiches avec téléphone seulement, cercle autour de Rouen (méthode et zone de la prospection)")
+verifier('"craft"="plumber"' in FO.requetes[0] and "phone" in FO.requetes[0] and "mobile" in FO.requetes[0] and "(around:" not in FO.requetes[0] and '"ref:INSEE"="76"' in FO.requetes[0] and "(area.a)" in FO.requetes[0], "requête : plombiers, fiches avec téléphone seulement, relation OpenStreetMap du département 76 (plus de cercle autour de Rouen)")
 verifier("places.googleapis" not in src and "GOOGLE_PLACES" not in src and "api_key" not in src.lower(), "aucune API payante (Google Places non utilisé), aucune clé")
 j = A.JOURNAL.read_text(encoding="utf-8")
 verifier("sourcer" in j and not re.search(r"\d\d \d\d \d\d \d\d \d\d|Fiche|@", j), "journal : nombres seulement, aucune donnée personnelle")
@@ -367,7 +368,7 @@ monde(trouves=[], config={"sourcing_requetes_max": 6, "pause_overpass_s": 15, "c
 lancer("sourcer", "--jour", JOUR)
 ordre = [TYPE_REQ.search(r).group(1) for r in FO.requetes]
 verifier(len(FO.requetes) == 6 and ordre[:2] == ["plumber", "electrician"], f"6 requêtes au plus par passage, plombiers puis électriciens d'abord : {ordre}")
-verifier(SOMMEIL == [15] * 5, f"pause de 15 s entre deux requêtes (jamais avant la première) : {SOMMEIL}")
+verifier([s for s in SOMMEIL if s >= 15] == [15] * 5, f"pause de 15 s entre deux requêtes Overpass (jamais avant la première) : {SOMMEIL}")
 monde(trouves=[trouve(f"Resto Plein {i}", "restaurant", "Rouen", tel(100 + i)) for i in range(120)] + [trouve(f"Coiff Plein {i}", "coiffeur", "Rouen", tel(300 + i)) for i in range(60)], config={"sourcing_requetes_max": 6, "cible_reserve": 220})
 FO.__init__(); lancer("sourcer", "--jour", JOUR); ordre = [TYPE_REQ.search(r).group(1) for r in FO.requetes]
 verifier(ordre and "restaurant" not in ordre and "hairdresser" not in ordre and ordre[0] == "plumber", f"métiers déjà assez fournis : pas de requête inutile ({ordre})")
@@ -384,6 +385,164 @@ lancer("sourcer", "--jour", JOUR); lancer("sourcer", "--jour", JOUR)
 verifier(len(ALERTES) == 1 and "sourcing" in ALERTES[0].lower() and not re.search(r"\d\d \d\d \d\d|@", ALERTES[0]), "envoi_automatique=true : une seule alerte Discord par jour, sans donnée personnelle")
 lancer("sourcer", "--jour", JOUR2); verifier(len(ALERTES) == 2, "nouvelle alerte le lendemain si la panne continue")
 A.appel_reseau = reseau
+
+print("14 bis. Normandie (14, 27, 50, 61, 76) : OpenStreetMap par département, SIRENE, réserve par département")
+A.appel_reseau = FO      # faux Overpass de la section 14 (la section se termine par le retour au réseau interdit)
+EVAL0 = A.evaluer_site
+verifier("rayon_osm_m" not in A.DEFAUT and "rayon_osm_m" not in A.cfg() and A.cfg()["departements"] == ["76", "27", "14", "50", "61"] and A.cfg()["zone"] == "Normandie", "rayon_osm_m (40 km) remplacé par la zone Normandie : cinq départements")
+monde(trouves=[], config={"departements": ["27", "99", "76"]}); verifier(A.cfg()["departements"] == ["76", "27"], "départements du réglage : seuls ceux de Normandie sont gardés, dans l'ordre du plus proche de Rouen")
+monde(trouves=[], config={"departements": ["75"]}); verifier(A.cfg()["departements"] == ["76", "27", "14", "50", "61"], "réglage sans département normand : retour à toute la Normandie")
+# la zone d'acceptation : Normandie seulement (vagues de la prospection non utilisées pour cela)
+monde(trouves=[trouve("Resto 76", "restaurant", "Rouen", "02 35 10 00 01", cp="76000"), trouve("Resto 27", "restaurant", "Évreux", "02 32 10 00 02", cp="27000"), trouve("Resto 14", "restaurant", "Caen", "02 31 10 00 03", cp="14000"),
+               trouve("Resto 50", "restaurant", "Saint-Lô", "02 33 10 00 04", cp="50000"), trouve("Resto 61", "restaurant", "Alençon", "02 33 10 00 05", cp="61000"), trouve("Resto 75", "restaurant", "Paris", "01 40 10 00 06", cp="75001"),
+               trouve("Resto 60", "restaurant", "Beauvais", "03 44 10 00 07", cp="60000"), trouve("Resto 28", "restaurant", "Chartres", "02 37 10 00 08", cp="28000"), trouve("Resto 35", "restaurant", "Rennes", "02 99 10 00 09", cp="35000")])
+noms = {c["nom"] for c in A.candidats(A.etat_lire())}
+verifier(noms == {"Resto 76", "Resto 27", "Resto 14", "Resto 50", "Resto 61"}, f"Calvados, Manche et Orne acceptés avec l'Eure et la Seine-Maritime ; Paris, Oise, Eure-et-Loir, Ille-et-Vilaine refusés : {sorted(noms)}")
+monde(trouves=[trouve("Resto 76", "restaurant", "Rouen", "02 35 10 00 01", cp="76000"), trouve("Resto 14", "restaurant", "Caen", "02 31 10 00 03", cp="14000")], config={"departements": ["76"]})
+A.cfg(); verifier({c["nom"] for c in A.candidats(A.etat_lire())} == {"Resto 76"}, "departements = [76] : seule la Seine-Maritime est acceptée")
+
+# une requête Overpass par département et par métier, pauses, nouvelles tentatives
+monde(trouves=[], config={"sourcing_requetes_max": 30, "sirene_actif": False, "cible_reserve": 2000}); FO.__init__(); lancer("sourcer", "--jour", JOUR)
+deps_req = [re.search(r'"ref:INSEE"="(\d\d)"', r).group(1) for r in FO.requetes]; types_req = [TYPE_REQ.search(r).group(1) for r in FO.requetes]
+verifier(len(FO.requetes) == 20 and sorted(set(deps_req)) == ["14", "27", "50", "61", "76"] and deps_req[:4] == ["76"] * 4 and all(deps_req.count(d) == 4 for d in set(deps_req)), f"20 requêtes : une par département et par métier, Seine-Maritime d'abord : {deps_req}")
+verifier(all("(around:" not in r and "(area.a)" in r and 'area["boundary"="administrative"]["ref:INSEE"=' in r for r in FO.requetes), "chaque requête cible la relation OpenStreetMap du département (area ref:INSEE), jamais un cercle")
+verifier(all("[timeout:90]" in r for r in FO.requetes), "délai Overpass de 90 s par requête (requêtes découpées : jamais toute la région d'un coup)")
+verifier(any('"craft"="hvac"' in r for r in FO.requetes) and any('"amenity"="fast_food"' in r for r in FO.requetes), "plombier-chauffagiste : craft=plumber et craft=hvac ; restaurant : restaurant et fast_food")
+verifier(SOMMEIL == [15] * 19, f"15 s entre deux requêtes Overpass, jamais avant la première : {len(SOMMEIL)} pauses")
+monde(trouves=[], config={"sourcing_requetes_max": 30, "sirene_actif": False, "cible_reserve": 2000}); FO.__init__(); lancer("sourcer", "--jour", JOUR, "--dept", "27")
+verifier(len(FO.requetes) == 4 and all('"ref:INSEE"="27"' in r for r in FO.requetes), "--dept 27 : seulement les quatre requêtes de l'Eure")
+code, _ = lancer("sourcer", "--dept", "75"); verifier(code != 0, "--dept hors Normandie : refusé")
+# nouvelles tentatives après une erreur Overpass (429 puis 503, puis réponse)
+class Rep:
+    def __init__(s, c): s.c = c
+    def __enter__(s): return s
+    def __exit__(s, *a): return False
+    def read(s, *a): return json.dumps(s.c).encode()
+import urllib.error
+essais = []
+def ouvrir_capricieux(rq, timeout=0):
+    essais.append(1)
+    if len(essais) == 1: raise urllib.error.HTTPError("u", 429, "trop vite", {}, None)
+    if len(essais) == 2: raise urllib.error.HTTPError("u", 503, "occupé", {}, None)
+    return Rep({"elements": []})
+attentes = []; r = P.appel_overpass("[out:json];", ouvrir=ouvrir_capricieux, dormir=attentes.append)
+verifier(r == {"elements": []} and len(essais) == 3 and attentes == [30, 60], f"Overpass : refus 429 puis 503 -> nouvelles tentatives après 30 s et 60 s ({attentes}), puis succès")
+
+# SIRENE : doublures (aucun réseau)
+class FauxSirene:
+    def __init__(s): s.appels, s.pages, s.panne = [], {}, False
+    def __call__(s, dept, naf, page):
+        s.appels.append((dept, naf, page))
+        if s.panne: raise OSError("panne simulée")
+        return {"results": s.pages.get((dept, naf, page), [])}
+def ent(siren, nom, cp="76000", ville="ROUEN", etat="A"): return {"siren": siren, "nom_complet": nom, "etat_administratif": etat, "siege": {"code_postal": cp, "libelle_commune": ville}}
+class FauxSites:
+    def __init__(s): s.pages, s.lus = {}, []
+    def __call__(s, url):
+        s.lus.append(url); t = s.pages.get(url)
+        return (url, {}, t) if t else None
+FS, FSI = FauxSites(), FauxSirene()
+A.lire_site = FS; A.appel_sirene = FSI; A.evaluer_site = lambda url, texte: ("site faible" in texte, 5 if "site faible" in texte else 0)
+def page(tel_html, faible):
+    return f"<html>Rouen 76000 {'site faible' if faible else 'site soigné'} {tel_html}</html>"
+SR = {("76", "43.22A", 1): [
+    ent("111000001", "PLOMBERIE MARTIN (MARTIN PAUL)"),                       # téléphone trouvé sur la fiche OpenStreetMap SANS commune
+    ent("111000002", "ENTREPRISE DUBOIS CHAUFFAGE"),                          # téléphone sur son site, site faible : gardée
+    ent("111000003", "ATELIER BON SITE"),                                     # site correct : exclue
+    ent("111000004", "SANS TEL SARL"),                                        # ni fiche ni site : aucun numéro, écartée
+    ent("111000005", "ENTREPRISE DOUBLON TEL"),                               # numéro déjà connu
+    ent("111000006", "ENTREPRISE FERMEE", etat="C"),                          # cessée : jamais prise
+    ent("111000007", "ENTREPRISE HORS DEPT", cp="14000", ville="CAEN"),       # siège dans un autre département que celui demandé
+    ent("111000008", "CHAUFFAGE EUROPE SA"),                                  # 08 : numéro spécial, refusé
+    ent("111000009", "DEJA CONNUE", ville="ROUEN")]}                          # même nom et même ville qu'une fiche existante
+SR[("76", "43.22B", 1)] = [ent("111000010", "PLOMBIER NORD", ville="ELBEUF", cp="76500")]
+FS.pages = {"https://duboischauffage.fr": page("<a href='tel:+33235700030'>02 35 70 00 30</a>", True),
+            "https://atelierbonsite.fr": page("<a href='tel:0235700040'>02 35 70 00 40</a>", False),
+            "https://doublontel.fr": page("<a href='tel:0235999999'>02 35 99 99 99</a>", True),
+            "https://chauffageeurope.fr": page("<a href='tel:0800123456'>0800 12 34 56</a>", True),
+            "https://plombiernord.fr": page("Elbeuf 76500 <a href='tel:0235700050'>02 35 70 00 50</a>", True)}
+FSI.pages = SR
+def monde_s(config=None, **kw):
+    cf = {"sourcing_requetes_max": 1, "sirene_requetes_max": 5, "sirene_pages_max": 2, "sirene_sites_max": 20, "departements": ["76"], "pause_site_s": 2, "pause_sirene_s": 1, "cible_reserve": 2000}; cf.update(config or {})
+    monde(trouves=kw.get("trouves", [trouve("Deja Connue", "plombier-chauffagiste", "Rouen", "02 35 99 99 99")]), config=cf); FO.__init__(); FSI.appels.clear(); FS.lus.clear(); FSI.panne = False
+    FO.fixes = [[el(1), el(1, name="Plomberie Martin", **{"addr:city": "", "phone": "02 35 70 00 20"})]]
+monde_s(); avant = P.lire_trouves(); code, sortie = lancer("sourcer", "--a-blanc", "--jour", JOUR)
+verifier(code == 0 and "à blanc" in sortie and P.lire_trouves() == avant and not A.ETAT.exists() and not A.JOURNAL.exists(), "SIRENE --a-blanc : rien n'est écrit (prospection-trouves.csv, état, journal)")
+verifier(len(FSI.appels) > 0, "… mais l'API SIRENE est bien interrogée (à blanc = lecture seule)")
+monde_s(); code, sortie = lancer("sourcer", "--jour", JOUR); apres = P.lire_trouves(); neuves = {l["nom"]: l for l in apres if l not in [trouve("Deja Connue", "plombier-chauffagiste", "Rouen", "02 35 99 99 99")]}
+verifier(code == 0 and set(neuves) >= {"Plomberie Martin", "Entreprise Dubois Chauffage", "Plombier Nord"}, f"SIRENE : les entreprises dont on trouve un numéro sont ajoutées : {sorted(neuves)}")
+verifier("Atelier Bon Site" not in neuves and "Sans Tel Sarl" not in neuves and "Entreprise Doublon Tel" not in neuves and "Entreprise Fermee" not in neuves and "Entreprise Hors Dept" not in neuves and "Chauffage Europe Sa" not in neuves and len([l for l in apres if l["nom"] == "Deja Connue"]) == 1,
+         "écartées : site correct, aucun numéro, numéro déjà connu, entreprise cessée, autre département, numéro 08, même nom et même ville qu'une fiche existante")
+m = neuves["Plomberie Martin"]; d = neuves["Entreprise Dubois Chauffage"]
+verifier(m["telephone"] == "02 35 70 00 20" and m["siren"] == "111000001" and m["statut"] == "sans site, téléphone" and m["cp"] == "76000" and m["source"].startswith("SIRENE") and "fiche OpenStreetMap" in m["source"], "numéro lu sur la fiche OpenStreetMap (sans addr:city), SIREN et source notés")
+verifier(d["telephone"] == "02 35 70 00 30" and d["statut"] == "téléphone seulement" and d["site_actuel"] == "https://duboischauffage.fr" and "site public" in d["source"], "numéro lu sur le site public (lien tel: +33), site faible : statut « téléphone seulement »")
+verifier(all(A.telephone_valide(l["telephone"]) == l["telephone"] and l["telephone"] for l in neuves.values()), "toutes les lignes ajoutées ont un numéro français valide, normalisé")
+verifier("https://atelierbonsite.fr" in FS.lus and "https://sanstel.fr" in FS.lus and not any("exemple" in u for u in FS.lus), "les sites sont cherchés sous les domaines usuels du nom (.fr puis .com)")
+verifier(all(a[0] == "76" for a in FSI.appels) and ("76", "43.22A", 1) in FSI.appels and ("76", "43.22B", 1) in FSI.appels, f"codes NAF du plombier-chauffagiste : 43.22A et 43.22B interrogés ({FSI.appels[:3]})")
+verifier(SOMMEIL.count(1) == len(FSI.appels) - 1 and SOMMEIL.count(2) >= 1, f"pauses : 1 s entre deux appels d'API, 2 s entre deux pages de sites ({SOMMEIL})")
+etat = A.etat_lire(); sv = etat["sirene"]["vus"]
+verifier(sv["111000001"].endswith("ajoutée") and sv["111000003"].endswith("site correct") and sv["111000004"].endswith("sans téléphone") and sv["111000005"].endswith("numéro déjà connu"), f"état : chaque entreprise examinée est notée avec son résultat : {sorted(set(v.split('|')[1] for v in sv.values()))}")
+j = A.JOURNAL.read_text(encoding="utf-8"); verifier("SIRENE" in j and not re.search(r"\d\d \d\d \d\d \d\d \d\d|Dubois|Martin|@", j), "journal : nombres seulement, aucune donnée personnelle")
+# deuxième passage : rien n'est refait (entreprises déjà examinées), aucune ligne en double
+n_lignes = len(P.lire_trouves())
+FO.__init__(); FO.fixes = [[]]; FSI.appels.clear(); FS.lus.clear(); lancer("sourcer", "--jour", JOUR2)
+verifier(len(P.lire_trouves()) == n_lignes and not any(u in FS.lus for u in ("https://atelierbonsite.fr", "https://duboischauffage.fr")), "deuxième passage : aucune entreprise examinée deux fois, aucune ligne en double")
+# limites : pages de sites, appels d'API, pages par code NAF et curseur
+monde_s(config={"sirene_sites_max": 2}); lancer("sourcer", "--jour", JOUR)
+verifier(len(FS.lus) <= 2, f"sirene_sites_max = 2 : au plus 2 pages de sites lues ({len(FS.lus)})")
+monde_s(config={"sirene_requetes_max": 1}); lancer("sourcer", "--jour", JOUR); verifier(len(FSI.appels) == 1, "sirene_requetes_max = 1 : un seul appel d'API")
+monde_s(config={"sirene_actif": False}); lancer("sourcer", "--jour", JOUR); verifier(FSI.appels == [] and FS.lus == [], "sirene_actif = false : SIRENE n'est pas interrogée")
+page25 = [ent(f"2220{i:05d}", f"ENTREPRISE SANS NUMERO {i}") for i in range(25)]
+FSI.pages = {("76", "43.22A", 1): page25, ("76", "43.22A", 2): page25[:3]}
+monde_s(config={"sirene_pages_max": 1, "sirene_sites_max": 200}); lancer("sourcer", "--jour", JOUR)
+verifier(FSI.appels[0] == ("76", "43.22A", 1) and A.etat_lire()["sirene"]["curseurs"].get("76|43.22A") == 2, f"sirene_pages_max = 1 : première page lue, le curseur de reprise est noté (page 2) : {A.etat_lire()['sirene']['curseurs']}")
+FSI.appels.clear(); lancer("sourcer", "--jour", JOUR2); verifier(FSI.appels and FSI.appels[0] == ("76", "43.22A", 2), "le passage suivant reprend à la page 2 (le sourcing se fait par petites étapes)")
+FSI.pages = SR
+# panne de l'API SIRENE : message, ce qui a été trouvé est gardé, aucun plantage
+monde_s(); FSI.panne = True; code, sortie = lancer("sourcer", "--jour", JOUR)
+verifier(code == 2 and "échec" in sortie.lower() and any(l["nom"] == "Fiche 1" for l in P.lire_trouves()), "panne SIRENE : échec signalé (code 2), les fiches OpenStreetMap déjà trouvées sont gardées")
+FSI.panne = False
+# lecture du numéro sur une page publique
+verifier(A.telephones_page("<a href='tel:+33 2 35 62 41 64'>x</a> Mobile 06.12.34.56.78 ; 0800 12 34 56 ; 02 35 62 41 64") == ["02 35 62 41 64", "06 12 34 56 78"], "telephones_page : liens tel: puis texte, mobile et fixe valides, 08 refusé, doublons écartés")
+verifier(A.telephones_page("Du 12 34 56 78 90 au 11 11 11 11 11 : prix 20 35 624 164") == [], "telephones_page : suites de chiffres qui ne sont pas des numéros français : refusées")
+verifier(callable(A.evaluer_site), "evaluer_site : constat vérifié de la prospection (site correct = entreprise exclue)")
+
+print("14 ter. Jamais redonner un numéro, STOP par numéro, réserve par département")
+monde(trouves=gros_monde(30), config={"par_liste": 50}); lancer("preparer", "--jour", JOUR)
+donnes = {l[3] for l in lire_csv(JOUR)[1:]}; verifier(len(donnes) == 50, "liste du jour préparée (50 numéros)")
+nom_donne = next(l[1] for l in lire_csv(JOUR)[1:])
+P.ecrire_trouves(P.lire_trouves() + [trouve("Autre Nom Meme Numero", "restaurant", "Autre Ville", next(iter(donnes)))], P.TROUVES)
+verifier("Autre Nom Meme Numero" not in {c["nom"] for c in A.candidats(A.etat_lire())}, "un numéro déjà donné à Sid ne ressort jamais, même sous un autre nom d'entreprise")
+S.ecrire(S.lire() + [suivi("Nom Different Stop", "restaurant", "Autre Ville", "06 99 88 77 66", statut="STOP")])
+P.ecrire_trouves(P.lire_trouves() + [trouve("Encore Un Nom", "restaurant", "Ville X", "06 99 88 77 66")], P.TROUVES)
+verifier("Encore Un Nom" not in {c["nom"] for c in A.candidats(A.etat_lire())}, "le numéro d'une entreprise qui a dit STOP n'est jamais redonné, même sous un autre nom")
+code, _ = lancer("annuler", JOUR, "--force"); P.ecrire_trouves([l for l in P.lire_trouves() if l["nom"] != "Autre Nom Meme Numero"], P.TROUVES)
+verifier(code == 0 and "Autre Nom Meme Numero" not in {c["nom"] for c in A.candidats(A.etat_lire())} and len(donnes & {c["tel"] for c in A.candidats(A.etat_lire())}) == 50, "après annulation de la liste : les numéros sont de nouveau disponibles")
+t_dep = [trouve(f"Plomb Calvados {i}", "plombier-chauffagiste", "Caen", tel(2000 + i), cp="14000") for i in range(3)] + [trouve(f"Resto Manche {i}", "restaurant", "Saint-Lô", tel(2100 + i), cp="50000") for i in range(2)] + \
+        [trouve("Coiff Rouen", "coiffeur", "Rouen", tel(2200), cp="76000"), trouve("Elec Sans Cp", "électricien", "Quelque Part", tel(2300), cp="")]
+monde(trouves=t_dep, config={"par_liste": 55}); code, sortie = lancer("etat")
+verifier(code == 0 and "Réserve par métier et par département" in sortie and "Calvados 14" in sortie and "Manche 50" in sortie and "Seine-Maritime 76" in sortie and "Orne 61" in sortie and "Eure 27" in sortie, "etat : tableau métier x département (les cinq départements normands)")
+verifier(re.search(r"Plombier-chauffagiste\s+3\s+0\s+0\s+0\s+0\s+3|Plombier-chauffagiste\s+[\d\s]*3", sortie) is not None and "inconnu" in sortie, "le tableau donne le nombre par métier et par département, et une colonne pour les codes postaux inconnus")
+verifier("= 0 jour(s) à 55 numéros par jour" in sortie, f"jours de réserve à 55 numéros par jour (7 numéros : 0 jour) : {[l for l in sortie.splitlines() if 'jour(s)' in l]}")
+monde(trouves=gros_monde(30), config={"par_liste": 55}); code, sortie = lancer("etat"); verifier("= 2 jour(s) à 55 numéros par jour" in sortie or "= 3 jour(s) à 55 numéros par jour" in sortie, "120 numéros / 55 par jour : 2 jours de réserve, dit en toutes lettres")
+monde(trouves=gros_monde(30), config={"sourcing_requetes_max": 1, "sirene_actif": False}); FO.__init__(); FO.fixes = [[]]; code, sortie = lancer("sourcer", "--jour", JOUR, "--a-blanc")
+verifier("Réserve par métier et par département" in sortie and "jour(s) à 55 numéros par jour" in sortie, "fin de `sourcer` : la réserve par métier et par département et les jours de réserve sont affichés")
+monde(trouves=gros_monde(30), config={"sirene_actif": False, "cible_reserve": 100}); FO.__init__(); code, sortie = lancer("jour", "--jour", JOUR)
+verifier("Réserve par métier et par département" in sortie and "jour(s) à 55 numéros par jour" in sortie, "fin de `jour` : même tableau")
+
+print("14 quater. Mode simulation : aucun réseau, données fictives, rien d'écrit")
+orig = (A.appel_reseau, A.appel_sirene, A.lire_site, A.evaluer_site, A.dormir)
+monde(trouves=[], config={"sourcing_requetes_max": 20, "sirene_requetes_max": 20, "sirene_sites_max": 40, "cible_reserve": 2000}); avant = P.lire_trouves()
+code, sortie = lancer("sourcer", "--simulation", "--jour", JOUR)
+verifier(code == 0 and P.lire_trouves() == avant and not A.ETAT.exists() and not A.JOURNAL.exists() and not list(tmp.glob("*.tmp")), "sourcer --simulation : aucun accès réseau (urlopen interdit dans ce test), rien d'écrit")
+verifier("20 requête(s) Overpass" in sortie and re.search(r"[1-9]\d* appel\(s\) SIRENE", sortie) and re.search(r"dont SIRENE : [1-9]", sortie), f"simulation : les 20 requêtes (5 départements x 4 métiers) et SIRENE tournent : {[l for l in sortie.splitlines() if l.startswith('Sourcing')]}")
+verifier("Réserve par métier et par département" in sortie and "Seine-Maritime 76" in sortie and "jour(s) à 55 numéros par jour" in sortie, "simulation : le tableau final de réserve est affiché")
+A.appel_reseau, A.appel_sirene, A.lire_site, A.evaluer_site, A.dormir = orig
+code, sortie = lancer("sourcer", "--simulation", "--dept", "50", "--jour", JOUR); verifier(code == 0 and "4 requête(s) Overpass" in sortie, "simulation limitée à un département : 4 requêtes")
+A.appel_reseau, A.appel_sirene, A.lire_site, A.evaluer_site, A.dormir = orig
+src2 = (ICI / "appels-sid.py").read_text(encoding="utf-8")
+verifier("recherche-entreprises.api.gouv.fr" in (ICI / "prospection.py").read_text(encoding="utf-8") and "google.com/maps" not in src2 and "pagesjaunes" not in src2.lower() and "googleapis.com/maps" not in src2 and "places.googleapis" not in src2, "sources : OpenStreetMap (Overpass) et l'API officielle SIRENE seulement ; ni Google Maps ni Pages Jaunes")
+A.appel_reseau = reseau; A.appel_sirene = lambda dept, naf, page: {"results": []}; A.lire_site = lambda url: None
 
 print("15. Google Drive : dossier « Sid » > date, feuille du jour, partage")
 monde(trouves=gros_monde(), config={"envoi_automatique": True})
