@@ -1,5 +1,5 @@
 {
-  "envoi_automatique": false,
+  "envoi_automatique": true,
   "par_liste": 55,
   "repartition": {
     "plombier": 12,
@@ -28,5 +28,6 @@
   "sirene_pages_max": 4,
   "sirene_sites_max": 30,
   "pause_sirene_s": 1,
-  "pause_site_s": 2
+  "pause_site_s": 2,
+  "partager_avec": "francoisldn972@gmail.com"
 }

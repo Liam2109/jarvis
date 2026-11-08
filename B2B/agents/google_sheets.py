@@ -111,7 +111,16 @@ def autoriser(adresse):
     try: from google_auth_oauthlib.flow import InstalledAppFlow
     except ImportError: raise GA.BibliothequeManquante("Bibliothèques Google absentes : " + PIP) from None
     if not CLIENT.exists(): raise FileNotFoundError("agents\\google-client.json absent")
-    cr = InstalledAppFlow.from_client_secrets_file(str(CLIENT), PORTEES).run_local_server(port=0, login_hint=adresse, authorization_prompt_message="", success_message="Autorisation reçue : tu peux fermer cet onglet.")
+    cr = None
+    for essai in range(1, 4):
+        try:
+            cr = InstalledAppFlow.from_client_secrets_file(str(CLIENT), PORTEES).run_local_server(
+                port=0, login_hint=adresse, authorization_prompt_message="  lien (si besoin) : {url}",
+                success_message="Autorisation reçue : tu peux fermer cet onglet.")
+            break
+        except Exception as e:
+            if essai == 3: raise
+            print(f"  ! tentative {essai}/3 interrompue ({type(e).__name__}, souvent une connexion parasite du navigateur) : nouvelle tentative, nouveau lien")
     try: from googleapiclient.discovery import build
     except ImportError: raise GA.BibliothequeManquante("Bibliothèques Google absentes : " + PIP) from None
     vraie = Drive(build("drive", "v3", credentials=cr, cache_discovery=False), adresse).compte()
