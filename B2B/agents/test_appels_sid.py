@@ -8,6 +8,14 @@ os.environ.setdefault("JARVIS_TEST", "1")
 from pathlib import Path
 ICI = Path(__file__).resolve().parent
 sys.path.insert(0, str(ICI))
+
+def _etat_fichier(p):
+    """(taille, date de modification) si présent, sinon None : un fichier d'agent réel (état, verrou, journal) peut déjà exister sur le portable serveur où l'agent tourne pour de vrai ;
+    les tests ne doivent pas exiger qu'il soit absent, seulement qu'il reste inchangé."""
+    if p.exists():
+        s = p.stat(); return (s.st_size, s.st_mtime_ns)
+    return None
+_AVANT_REEL = {n: _etat_fichier(ICI / n) for n in ("appels-sid-etat.json", "appels-sid.verrou", "appels-sid-journal.log")}
 import prospection as P, suivi as S
 spec = importlib.util.spec_from_file_location("appels_sid", ICI / "appels-sid.py"); A = importlib.util.module_from_spec(spec); spec.loader.exec_module(A)
 
@@ -285,7 +293,7 @@ verifier(not re.search(r"smtplib|send_message|messages\(\)\.send|gmail_api|strip
 verifier(not re.search(r"print\([^)]*(jeton|token|password|mot de passe)", src, re.I), "aucun jeton ni mot de passe affiché")
 cfg_reel = json.loads((ICI / "appels-sid-config.json").read_text(encoding="utf-8-sig"))
 verifier(cfg_reel.get("envoi_automatique") is False, "appels-sid-config.json : envoi_automatique = false")
-verifier(not (ICI / "appels-sid-etat.json").exists() and not (ICI / "appels-sid.verrou").exists() and not (ICI / "appels-sid-journal.log").exists(), "les tests n'ont rien écrit dans le dépôt")
+verifier(all(_etat_fichier(ICI / n) == _AVANT_REEL[n] for n in ("appels-sid-etat.json", "appels-sid.verrou", "appels-sid-journal.log")), "les tests n'ont rien écrit dans le dépôt (un fichier d'agent déjà présent, car l'agent tourne pour de vrai sur le serveur, reste inchangé)")
 verifier(not (ICI.parent / "docs" / "sid").exists() or not list((ICI.parent / "docs" / "sid").glob("liste-sid-2026-11-0*.csv")), "aucun CSV de test dans docs\\sid du dépôt")
 
 print("13. Liste de Liam redirigée vers Sid (jamais appliquée sans ordre)")

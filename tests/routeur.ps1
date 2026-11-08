@@ -179,7 +179,16 @@ Verifier ((Wait-SynthTts $h 1.5) -and $h.mp3 -like '*.wav') 'fichier WAV reçu a
 $h2 = Start-SynthTts 'Très bien monsieur' 'fr-FR-HenriNeural'; Verifier ($h2.pret -and $h2.mode -eq 'piper (cache)' -and $script:Requetes.Count -eq 1) 'phrase fixe déjà en cache : rejouée sans nouvelle synthèse'
 Remove-Item $h.mp3 -ErrorAction SilentlyContinue; Remove-Item function:Test-PiperPret, function:Send-PiperRequete
 $modelePiper = Get-PiperModele      # voix par défaut : tom (homme)
-if (Test-Path $modelePiper) {
+$fb = Join-Path $Root 'B2B\agents\b2b.local.json'; $profilServeur = $false
+if (Test-Path -LiteralPath $fb) { try { $jb = Get-Content -LiteralPath $fb -Raw -Encoding UTF8 | ConvertFrom-Json; if ($jb.PSObject.Properties['serveur'] -and "$($jb.serveur)" -match '^(?i:true|oui|1)$') { $profilServeur = $true } } catch { } }
+if ($profilServeur) {
+    # Profil serveur (B2B\agents\b2b.local.json "serveur": true, aucun micro) : le serveur Piper réel n'est JAMAIS lancé ni réchauffé ici, même si le modèle est présent sur le disque -> appel simulé (mêmes bouchons que la synthèse ci-dessus), aucun processus python démarré.
+    function Test-PiperPret { $true }; $script:ReqServeur = @()
+    function Send-PiperRequete([string]$texte, [string]$dest) { $script:ReqServeur += $texte; [IO.File]::WriteAllBytes($dest, (New-Object byte[] 24000)) }
+    $t0 = Get-Date; $hS = Start-SynthTts 'Très bien monsieur, je passe en sourdine.' 'fr-FR-HenriNeural'; [void](Wait-SynthTts $hS 1.5); $ms = [int]((Get-Date) - $t0).TotalMilliseconds
+    Verifier ($hS.piper -and $script:ReqServeur.Count -eq 1 -and (Test-Path $hS.mp3) -and (Get-Item $hS.mp3).Length -gt 20000) "profil serveur : appel au serveur Piper SIMULÉ (jamais lancé ni réchauffé pour de vrai) : $ms ms"
+    Remove-Item $hS.mp3 -ErrorAction SilentlyContinue; Remove-Item function:Test-PiperPret, function:Send-PiperRequete
+} elseif (Test-Path $modelePiper) {
     $wavP = Join-Path $TR 'piper.wav'; $pret = Join-Path $TR 'pret.flag'
     $psi = New-Object System.Diagnostics.ProcessStartInfo 'python', "-I -u `"$(Join-Path $Root 'voix\piper_serveur.py')`" `"$modelePiper`" `"$pret`""; $psi.UseShellExecute = $false; $psi.CreateNoWindow = $true; $psi.RedirectStandardInput = $true
     $srv = [System.Diagnostics.Process]::Start($psi); $fin = (Get-Date).AddSeconds(60); while (-not (Test-Path $pret) -and (Get-Date) -lt $fin -and -not $srv.HasExited) { Start-Sleep -Milliseconds 200 }
