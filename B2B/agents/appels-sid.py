@@ -43,7 +43,7 @@ ZONE = {"departements": list(NORMANDIE)}   # remplacé par cfg() : les départem
 DEFAUT = {"envoi_automatique": False, "par_liste": 55, "repartition": {"plombier": 12, "electricien": 12, "coiffeur": 13, "restaurant": 18},
           "cible_reserve": 220, "seuil_alerte": 110, "sourcing_requetes_max": 6, "pause_overpass_s": 15, "sourcing_refaire_jours": 30,
           "zone": "Normandie", "departements": list(NORMANDIE), "sirene_actif": True, "sirene_requetes_max": 12, "sirene_pages_max": 4, "sirene_sites_max": 30, "pause_sirene_s": 1, "pause_site_s": 2,
-          "avec_site": False, "partager_avec": "", "compte_google": "contact.lmsites@gmail.com", "heure_tache": "08:00", "jours_appel": list(JOURS_SEMAINE)}
+          "avec_site": False, "partager_avec": "", "compte_google": "contact.lmsites@gmail.com", "heure_tache": "08:00", "jours_appel": list(JOURS_SEMAINE), "dossier_sid_id": ""}
 MIN_LISTE, MAX_LISTE = 50, 60
 VERROU_MAX_S = 3 * 3600   # un verrou plus vieux est celui d'un processus bloqué : repris
 TACHE = "Jarvis-AppelsSid"
@@ -128,6 +128,7 @@ def cfg():
     if not isinstance(c.get("repartition"), dict): c["repartition"] = DEFAUT["repartition"]
     if not re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", str(c.get("heure_tache"))): c["heure_tache"] = DEFAUT["heure_tache"]
     c["partager_avec"] = str(c.get("partager_avec") or "").strip(); c["compte_google"] = str(c.get("compte_google") or DEFAUT["compte_google"]).strip()
+    c["dossier_sid_id"] = str(c.get("dossier_sid_id") or "").strip()
     return c
 
 
@@ -569,20 +570,21 @@ def cmd_sourcer(conf, jour, a_blanc, depts=None):
 
 # --- Google Drive : dossier « Sid » > date, feuille du jour --------------------------------------------------------------
 def exporter_google(conf, etat, jour, drive, a_blanc):
-    """Crée (une seule fois) Sid > AAAA-MM-JJ > « Liste d'appels AAAA-MM-JJ » depuis le CSV du jour. Ce qui existe déjà n'est ni recréé ni écrasé. Partage du dossier « Sid » avec partager_avec
-    (éditeur, une fois) seulement s'il est renseigné. Simulation (envoi_automatique=false) et --a-blanc : aucun contact avec Google."""
+    """Crée (une seule fois) <dossier racine> > AAAA-MM-JJ > « Liste d'appels AAAA-MM-JJ » depuis le CSV du jour. Ce qui existe déjà n'est ni recréé ni écrasé. Partage du dossier racine avec
+    partager_avec (éditeur, une fois) seulement s'il est renseigné. Simulation (envoi_automatique=false) et --a-blanc : aucun contact avec Google. Dossier racine : dossier_sid_id (réglage,
+    l'ID fixe du dossier Drive où Sid regarde déjà) s'il est renseigné, sinon le dossier « Sid » trouvé ou créé à la racine du Drive (ancien comportement, avant son onboarding du 5 nov. 2026)."""
     fichier = chemin(jour); titre = f"Liste d'appels {jour}"; cible = conf["partager_avec"].lower()
     if not conf["envoi_automatique"] or a_blanc:
-        print(f"  Google : {'à blanc' if a_blanc else 'simulation (envoi_automatique=false)'} : serait créé Sid > {jour} > « {titre} »" + (f", dossier « Sid » partagé avec une adresse ({'valide' if EMAIL.match(cible) else 'INVALIDE'})" if cible else ", aucun partage"))
+        print(f"  Google : {'à blanc' if a_blanc else 'simulation (envoi_automatique=false)'} : serait créé <dossier racine> > {jour} > « {titre} »" + (f", dossier racine partagé avec une adresse ({'valide' if EMAIL.match(cible) else 'INVALIDE'})" if cible else ", aucun partage"))
         if not a_blanc: journaliser("google", f"{jour} : simulation, rien créé")
         return
     if not fichier.exists(): raise ErreurAgent(f"la liste du {jour} n'existe pas ({fichier.name}) : rien à envoyer à Google")
     if (drive.compte() or "").lower() != conf["compte_google"].lower(): raise ErreurAgent(f"le jeton Google appartient à un autre compte que {conf['compte_google']} : relancez google-autoriser avec le bon compte")
     g = etat["google"]
-    racine = g.get("racine") or drive.trouver_dossier("Sid") or drive.creer_dossier("Sid"); g["racine"] = racine; etat_ecrire(etat)
+    racine = conf["dossier_sid_id"] or g.get("racine") or drive.trouver_dossier("Sid") or drive.creer_dossier("Sid"); g["racine"] = racine; etat_ecrire(etat)
     if cible:
         if not EMAIL.match(cible): print("  ! partager_avec n'est pas une adresse e-mail valide : rien n'est partagé"); journaliser("google", "partage ignoré : adresse invalide")
-        elif g.get("partage") != cible: drive.partager(racine, cible); g["partage"] = cible; etat_ecrire(etat); journaliser("google", "dossier Sid partagé (éditeur)")
+        elif g.get("partage") != cible: drive.partager(racine, cible); g["partage"] = cible; etat_ecrire(etat); journaliser("google", "dossier racine partagé (éditeur)")
     jg = g.setdefault(jour, {})
     jg["dossier"] = jg.get("dossier") or drive.trouver_dossier(jour, racine) or drive.creer_dossier(jour, racine); etat_ecrire(etat)
     if not jg.get("feuille"):
@@ -593,17 +595,17 @@ def exporter_google(conf, etat, jour, drive, a_blanc):
             jg["feuille"] = drive.creer_feuille(jg["dossier"], titre, tampon.getvalue())
         etat_ecrire(etat)
     journaliser("google", f"{jour} : dossier et feuille en place")
-    print(f"  Google : Sid > {jour} > « {titre} » en place")
+    print(f"  Google : <dossier racine> > {jour} > « {titre} » en place")
 
 
 def nettoyer_dossiers_drive(conf, etat, jour, drive, a_blanc):
-    """Met à la corbeille (jamais une suppression définitive) les sous-dossiers de « Sid » nommés AAAA-MM-JJ datant de plus de JOURS_DOSSIER_MAX jours. Simulation (envoi_automatique=false)
-    et --a-blanc : aucun contact avec Google. Aucun dossier « Sid » encore créé : rien à faire."""
+    """Met à la corbeille (jamais une suppression définitive) les sous-dossiers du dossier racine (dossier_sid_id, ou « Sid » à la racine du Drive à défaut) nommés AAAA-MM-JJ datant de plus de
+    JOURS_DOSSIER_MAX jours. Simulation (envoi_automatique=false) et --a-blanc : aucun contact avec Google. Aucun dossier racine encore trouvé : rien à faire."""
     if not conf["envoi_automatique"] or a_blanc:
         print(f"  Google (nettoyage) : {'à blanc' if a_blanc else 'simulation (envoi_automatique=false)'} : rien n'est listé ni mis à la corbeille")
         return
-    racine = etat["google"].get("racine") or drive.trouver_dossier("Sid")
-    if not racine: print("  Google (nettoyage) : aucun dossier « Sid » pour l'instant"); return
+    racine = conf["dossier_sid_id"] or etat["google"].get("racine") or drive.trouver_dossier("Sid")
+    if not racine: print("  Google (nettoyage) : aucun dossier racine pour l'instant"); return
     vieux = [(i, n) for i, n in drive.lister_dossiers(racine) if re.fullmatch(r"\d{4}-\d{2}-\d{2}", n) and _jours_ecoules(jour, n) > JOURS_DOSSIER_MAX]
     for i, _ in vieux: drive.mettre_corbeille(i)
     if vieux: journaliser("nettoyage", f"{jour} : {len(vieux)} dossier(s) mis à la corbeille ({', '.join(sorted(n for _, n in vieux))})")
