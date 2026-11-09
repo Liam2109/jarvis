@@ -63,6 +63,16 @@ class Drive:
 
     def trouver_dossier(self, nom, parent=None): return self._chercher(nom, DOSSIER_MIME, parent)
 
+    def lister_dossiers(self, parent):
+        """(id, nom) des sous-dossiers directs d'un dossier, hors corbeille."""
+        q = f"mimeType = '{DOSSIER_MIME}' and trashed = false and '{_q(parent)}' in parents"
+        r = _appel(self.svc.files().list(q=q, fields="files(id,name)", spaces="drive", pageSize=1000))
+        return [(f["id"], f["name"]) for f in r.get("files", [])]
+
+    def mettre_corbeille(self, id_):
+        """Corbeille (jamais une suppression définitive)."""
+        _appel(self.svc.files().update(fileId=id_, body={"trashed": True}, fields="id"))
+
     def creer_dossier(self, nom, parent=None):
         corps = {"name": nom, "mimeType": DOSSIER_MIME}
         if parent: corps["parents"] = [parent]

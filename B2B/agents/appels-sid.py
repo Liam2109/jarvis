@@ -3,7 +3,8 @@
 Aucun message n'est envoyé à une entreprise ni à Sid, aucune API payante. Même modèle que devis et rendez-vous : script autonome, réglages (appels-sid-config.json), état (appels-sid-etat.json),
 verrou, arrêt de secours, alerte Discord, journal, tests écrits avant le code. `envoi_automatique: false` (défaut) = SIMULATION : ni Google, ni partage, ni Discord (le journal dit ce qui serait fait).
 
-  python agents\\appels-sid.py jour [--jour AAAA-MM-JJ] [--a-blanc]       le passage du matin : sourcer, préparer la liste, dossier + feuille Google, alerte de réserve (c'est ce que lance la tâche planifiée)
+  python agents\\appels-sid.py jour [--jour AAAA-MM-JJ] [--a-blanc]       le passage du matin : sourcer, préparer la liste, dossier + feuille Google, corbeille des dossiers Google de plus de 7 jours,
+                                                                          alerte de réserve (c'est ce que lance la tâche planifiée) ; un jour hors `jours_appel` (réglage) : rien n'est généré, noté dans le journal
   python agents\\appels-sid.py preparer [--jour AAAA-MM-JJ] [--a-blanc]   seulement la liste du jour (docs\\sid\\liste-sid-AAAA-MM-JJ.csv) ; --a-blanc : affiche sans rien écrire
   python agents\\appels-sid.py sourcer [--jour AAAA-MM-JJ] [--a-blanc] [--dept 27] [--simulation]
                                                                           cherche de nouvelles entreprises AVEC téléphone dans toute la Normandie : OpenStreetMap (Overpass, une requête par département et par métier)
@@ -34,13 +35,15 @@ CONFIG, ETAT, VERROU, ARRET, JOURNAL = (ICI / "appels-sid-config.json", ICI / "a
 PROSPECTION_CONFIG = ICI / "prospection-config.json"
 NORMANDIE = ("76", "27", "14", "50", "61")   # Seine-Maritime, Eure, Calvados, Manche, Orne : du plus proche de Rouen au plus lointain
 NOMS_DEPT = {"14": "Calvados", "27": "Eure", "50": "Manche", "61": "Orne", "76": "Seine-Maritime"}
+JOURS_SEMAINE = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
+JOURS_DOSSIER_MAX = 7   # un sous-dossier Google « Sid » plus vieux que ça (nom AAAA-MM-JJ) est mis à la corbeille à chaque passage de `jour`
 # Codes NAF (SIRENE) des quatre métiers : plombier-chauffagiste = installation d'eau et de gaz (43.22A) + équipements thermiques et climatisation (43.22B) ; restaurant = traditionnel (56.10A) + rapide (56.10C)
 NAF_SID = {"plombier": ["43.22A", "43.22B"], "electricien": ["43.21A"], "coiffeur": ["96.02A"], "restaurant": ["56.10A", "56.10C"]}
 ZONE = {"departements": list(NORMANDIE)}   # remplacé par cfg() : les départements dans lesquels l'agent cherche et accepte une entreprise
 DEFAUT = {"envoi_automatique": False, "par_liste": 55, "repartition": {"plombier": 12, "electricien": 12, "coiffeur": 13, "restaurant": 18},
           "cible_reserve": 220, "seuil_alerte": 110, "sourcing_requetes_max": 6, "pause_overpass_s": 15, "sourcing_refaire_jours": 30,
           "zone": "Normandie", "departements": list(NORMANDIE), "sirene_actif": True, "sirene_requetes_max": 12, "sirene_pages_max": 4, "sirene_sites_max": 30, "pause_sirene_s": 1, "pause_site_s": 2,
-          "avec_site": False, "partager_avec": "", "compte_google": "contact.lmsites@gmail.com", "heure_tache": "08:00"}
+          "avec_site": False, "partager_avec": "", "compte_google": "contact.lmsites@gmail.com", "heure_tache": "08:00", "jours_appel": list(JOURS_SEMAINE)}
 MIN_LISTE, MAX_LISTE = 50, 60
 VERROU_MAX_S = 3 * 3600   # un verrou plus vieux est celui d'un processus bloqué : repris
 TACHE = "Jarvis-AppelsSid"
@@ -71,6 +74,11 @@ def appel_reseau(requete):
 
 
 def dormir(s): time.sleep(s)
+
+
+def maintenant_paris():
+    """Date et heure actuelles à Paris (P.heure_paris : heure d'été comprise, sans dépendre de la base de fuseaux de Windows) ; remplacée par une doublure dans les tests pour simuler un jour de semaine."""
+    return P.heure_paris()
 
 
 def ouvrir_drive(conf):
@@ -115,6 +123,8 @@ def cfg():
     deps = [str(d).strip() for d in c.get("departements") or [] if str(d).strip() in NORMANDIE]
     c["departements"] = [d for d in NORMANDIE if d in deps] or list(NORMANDIE); ZONE["departements"] = list(c["departements"])
     c["envoi_automatique"] = c.get("envoi_automatique") is True; c["avec_site"] = c.get("avec_site") is True
+    jrs = [str(j).strip().lower() for j in c.get("jours_appel") or [] if str(j).strip().lower() in JOURS_SEMAINE]
+    c["jours_appel"] = jrs or list(JOURS_SEMAINE)   # réglage absent ou invalide -> aucune restriction (tous les jours), jamais un blocage silencieux
     if not isinstance(c.get("repartition"), dict): c["repartition"] = DEFAUT["repartition"]
     if not re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", str(c.get("heure_tache"))): c["heure_tache"] = DEFAUT["heure_tache"]
     c["partager_avec"] = str(c.get("partager_avec") or "").strip(); c["compte_google"] = str(c.get("compte_google") or DEFAUT["compte_google"]).strip()
@@ -586,6 +596,20 @@ def exporter_google(conf, etat, jour, drive, a_blanc):
     print(f"  Google : Sid > {jour} > « {titre} » en place")
 
 
+def nettoyer_dossiers_drive(conf, etat, jour, drive, a_blanc):
+    """Met à la corbeille (jamais une suppression définitive) les sous-dossiers de « Sid » nommés AAAA-MM-JJ datant de plus de JOURS_DOSSIER_MAX jours. Simulation (envoi_automatique=false)
+    et --a-blanc : aucun contact avec Google. Aucun dossier « Sid » encore créé : rien à faire."""
+    if not conf["envoi_automatique"] or a_blanc:
+        print(f"  Google (nettoyage) : {'à blanc' if a_blanc else 'simulation (envoi_automatique=false)'} : rien n'est listé ni mis à la corbeille")
+        return
+    racine = etat["google"].get("racine") or drive.trouver_dossier("Sid")
+    if not racine: print("  Google (nettoyage) : aucun dossier « Sid » pour l'instant"); return
+    vieux = [(i, n) for i, n in drive.lister_dossiers(racine) if re.fullmatch(r"\d{4}-\d{2}-\d{2}", n) and _jours_ecoules(jour, n) > JOURS_DOSSIER_MAX]
+    for i, _ in vieux: drive.mettre_corbeille(i)
+    if vieux: journaliser("nettoyage", f"{jour} : {len(vieux)} dossier(s) mis à la corbeille ({', '.join(sorted(n for _, n in vieux))})")
+    print(f"  Google (nettoyage) : {len(vieux)} dossier(s) de plus de {JOURS_DOSSIER_MAX} jours mis à la corbeille" if vieux else "  Google (nettoyage) : aucun dossier de plus de 7 jours")
+
+
 # --- le passage du matin -------------------------------------------------------------------------------------------
 def _etape(nom, fn, conf, etat, jour, a_blanc):
     """Exécute une étape ; une panne est journalisée et alertée (une fois par jour) mais n'arrête jamais les étapes suivantes. -> résultat ou None."""
@@ -602,6 +626,11 @@ def _etape(nom, fn, conf, etat, jour, a_blanc):
 
 def cmd_jour(conf, jour, a_blanc):
     if ARRET.exists(): raise ErreurAgent(f"arrêt de secours présent ({ARRET.name}) : rien n'est fait (supprimez le fichier pour reprendre)")
+    nom_jour = JOURS_SEMAINE[maintenant_paris().weekday()]
+    if nom_jour not in conf["jours_appel"]:
+        print(f"Jour hors planning ({nom_jour}) : aucune liste générée (jours_appel : {', '.join(conf['jours_appel'])}).")
+        journaliser("jour", f"{jour} : jour hors planning, aucune liste générée ({nom_jour})", a_blanc)
+        return 0
     with sous_verrou(a_blanc):
         etat = etat_lire(); print(f"Passage du {jour}" + (" [à blanc : rien n'est écrit, aucun accès réseau ni Google]" if a_blanc else ""))
         if a_blanc: print("  1. sourcing : serait lancé ici (jusqu'à %d requête(s) Overpass, %d appel(s) SIRENE) ; `sourcer --a-blanc` montre ce qu'il trouverait" % (conf["sourcing_requetes_max"], conf["sirene_requetes_max"]))
@@ -609,6 +638,7 @@ def cmd_jour(conf, jour, a_blanc):
         if jour in etat["listes"] or chemin(jour).exists(): print(f"  2. liste du {jour} : déjà préparée"); liste = True
         else: liste = _etape("liste", lambda: _preparer(conf, etat, jour, a_blanc, complet=False), conf, etat, jour, a_blanc) is not None
         if liste: _etape("google", lambda: exporter_google(conf, etat, jour, None if (a_blanc or not conf["envoi_automatique"]) else ouvrir_drive(conf), a_blanc), conf, etat, jour, a_blanc)
+        _etape("nettoyage", lambda: nettoyer_dossiers_drive(conf, etat, jour, None if (a_blanc or not conf["envoi_automatique"]) else ouvrir_drive(conf), a_blanc), conf, etat, jour, a_blanc)
         r = reserve(etat); detail = ", ".join(f"{NOMS[m]} {n}" for m, n in r["par"].items())
         print(f"  Réserve : {r['total']} entreprise(s) ({detail})"); afficher_reserve(conf, r)
         if r["total"] < conf["seuil_alerte"]:

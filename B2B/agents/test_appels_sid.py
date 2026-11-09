@@ -4,6 +4,7 @@
 ni fleuriste, ni boulangerie, ni garage) ; téléphone valide ; ni STOP ni exclus ; jamais deux fois la même entreprise (état) ; CSV docs\\sid\\liste-sid-AAAA-MM-JJ.csv ; commandes
 preparer / etat / annuler / --a-blanc ; aucun envoi, aucun partage, aucun appel API."""
 import contextlib, csv, importlib.util, io, json, os, re, socket, sys, tempfile, urllib.request
+from datetime import date
 os.environ.setdefault("JARVIS_TEST", "1")
 from pathlib import Path
 ICI = Path(__file__).resolve().parent
@@ -37,17 +38,19 @@ LIENS = {"plombier-chauffagiste": "https://exemple-plombier.example/", "electric
 import google_sheets as GS
 class FauxDrive:
     """Même interface que google_sheets.Drive : dossiers, feuilles, partages gardés en mémoire."""
-    def __init__(s, compte="contact.lmsites@gmail.com"): s.dossiers, s.feuilles, s.partages, s.n, s.panne, s.appels, s.compte_reel = {}, {}, [], 0, False, 0, compte
+    def __init__(s, compte="contact.lmsites@gmail.com"): s.dossiers, s.feuilles, s.partages, s.n, s.panne, s.appels, s.compte_reel, s.corbeille = {}, {}, [], 0, False, 0, compte, set()
     def _nouveau(s, p): s.n += 1; return f"{p}{s.n}"
     def _controle(s):
         s.appels += 1
         if s.panne: raise GS.ErreurDrive(503, "panne simulée")
     def compte(s): s._controle(); return s.compte_reel
-    def trouver_dossier(s, nom, parent=None): s._controle(); return next((i for i, (n, p) in s.dossiers.items() if n == nom and p == parent), None)
+    def trouver_dossier(s, nom, parent=None): s._controle(); return next((i for i, (n, p) in s.dossiers.items() if n == nom and p == parent and i not in s.corbeille), None)
     def creer_dossier(s, nom, parent=None): s._controle(); i = s._nouveau("D"); s.dossiers[i] = (nom, parent); return i
     def trouver_feuille(s, dossier, titre): s._controle(); return next((i for i, (t, d, _) in s.feuilles.items() if t == titre and d == dossier), None)
     def creer_feuille(s, dossier, titre, contenu): s._controle(); i = s._nouveau("F"); s.feuilles[i] = (titre, dossier, contenu); return i
     def partager(s, dossier, email): s._controle(); s.partages.append((dossier, email))
+    def lister_dossiers(s, parent): s._controle(); return [(i, n) for i, (n, p) in s.dossiers.items() if p == parent and i not in s.corbeille]
+    def mettre_corbeille(s, id_): s._controle(); s.corbeille.add(id_)
 DRIVE = FauxDrive()
 ALERTES, EXEC, SOMMEIL = [], [], []
 def faux_alerte(texte): ALERTES.append(texte); return True
@@ -598,17 +601,33 @@ class Req:
     def execute(s): return s.f()
 class FauxSvc:
     """Imite googleapiclient : svc.files().list(...).execute() ; garde les appels."""
-    def __init__(s): s.journal, s.fichiers, s.n = [], [], 0
+    def __init__(s): s.journal, s.fichiers, s.n, s.trashed = [], [], 0, set()
     def files(s): return s
     def permissions(s): return s
     def about(s): return s
-    def list(s, **k): s.journal.append(("list", k)); return Req(lambda: {"files": [f for f in s.fichiers if f"name = '{f['name']}'" in k["q"].replace("\\'", "'") and f["mimeType"] in k["q"] and (not f["parents"] or f["parents"][0] in k["q"])]})
+    def list(s, **k):
+        s.journal.append(("list", k))
+        def _r():
+            q = k["q"].replace("\\'", "'"); out = []
+            for f in s.fichiers:
+                if f["id"] in s.trashed or f["mimeType"] not in q: continue
+                if "name = '" in q and f"name = '{f['name']}'" not in q: continue
+                if f["parents"][0] not in q: continue
+                out.append(f)
+            return {"files": out}
+        return Req(_r)
+    def update(s, **k):
+        s.journal.append(("update", k))
+        def _r():
+            if k.get("body", {}).get("trashed"): s.trashed.add(k["fileId"])
+            return {"id": k["fileId"]}
+        return Req(_r)
     def create(s, **k):
         s.journal.append(("create", k))
         def _r():
             s.n += 1; b = k.get("body", {})
             if "role" in b: return {"id": "perm"}
-            s.fichiers.append({"id": f"X{s.n}", "name": b["name"], "mimeType": b["mimeType"], "parents": b.get("parents", [])}); return {"id": f"X{s.n}"}
+            s.fichiers.append({"id": f"X{s.n}", "name": b["name"], "mimeType": b["mimeType"], "parents": b.get("parents") or ["root"]}); return {"id": f"X{s.n}"}
         return Req(_r)
     def get(s, **k): s.journal.append(("get", k)); return Req(lambda: {"user": {"emailAddress": "contact.lmsites@gmail.com"}})
 sv = FauxSvc(); d = GS.Drive(sv, "contact.lmsites@gmail.com")
@@ -622,6 +641,12 @@ verifier(d.trouver_feuille(j2, "Liste d'appels 2026-11-04") == f, "feuille retro
 d.partager(i, "sid@example.invalid"); cr = [k for n, k in sv.journal if n == "create"][-1]
 verifier(cr["body"] == {"type": "user", "role": "writer", "emailAddress": "sid@example.invalid"} and cr["fileId"] == i, "partage en éditeur (writer) du dossier")
 d.creer_dossier("L'apostrophe", None); verifier(d.trouver_dossier("L'apostrophe") is not None, "apostrophe dans un nom : requête correctement échappée")
+j3 = d.creer_dossier("2026-10-01", i)
+verifier(sorted(n for _, n in d.lister_dossiers(i)) == ["2026-10-01", "2026-11-04"], "lister_dossiers : les sous-dossiers d'un dossier parent")
+d.mettre_corbeille(j3); maj = [k for n, k in sv.journal if n == "update"][-1]
+verifier(maj == {"fileId": j3, "body": {"trashed": True}, "fields": "id"}, "mettre_corbeille : trashed=true (jamais une suppression définitive)")
+verifier(d.trouver_dossier("2026-10-01", i) is None and j3 not in [x for x, _ in d.lister_dossiers(i)], "dossier à la corbeille : plus retrouvé ni listé")
+verifier(d.trouver_dossier("2026-11-04", i) == j2, "les autres dossiers ne sont pas touchés")
 class Boom(Exception): pass
 class SvcPanne(FauxSvc):
     def list(s, **k): return Req(lambda: (_ for _ in ()).throw(Boom("TOKEN-SECRET-123 ya29.xyz")))
@@ -706,6 +731,67 @@ verifier(len(DRIVE.feuilles) == 3 and DRIVE.partages == [(racine, "sid@example.i
 verifier(len(json.loads(A.ETAT.read_text(encoding="utf-8"))["sorties"]) == 165, "état : 165 entreprises marquées, jamais retirées")
 j = A.JOURNAL.read_text(encoding="utf-8"); verifier(not re.search(r"\d\d \d\d \d\d \d\d \d\d|@|E2E", j), "journal des 3 jours : aucune donnée personnelle")
 A.appel_reseau = reseau
+
+print("21. jours_appel : jour hors planning (aucune liste, aucun accès réseau ni Google, aucune alerte)")
+MERCREDI, SAMEDI, LUNDI, VENDREDI = date(2026, 11, 4), date(2026, 11, 7), date(2026, 11, 2), date(2026, 11, 6)
+reel_maintenant = A.maintenant_paris
+monde(trouves=gros_monde(), config={"envoi_automatique": True, "jours_appel": ["lundi", "mardi", "vendredi"]})
+A.maintenant_paris = lambda: MERCREDI
+code, sortie = lancer("jour", "--jour", JOUR)
+verifier(code == 0 and "hors planning" in sortie.lower(), f"mercredi hors jours_appel : code 0, message clair ({sortie.strip()[:160]})")
+verifier(not (A.SORTIE / f"liste-sid-{JOUR}.csv").exists() and not A.ETAT.exists(), "mercredi : aucune liste générée, aucun état écrit")
+verifier(DRIVE.appels == 0 and ALERTES == [], "mercredi : aucun accès Drive, aucune alerte Discord")
+verifier("jour hors planning" in A.JOURNAL.read_text(encoding="utf-8").lower(), "le journal note le jour hors planning")
+A.maintenant_paris = lambda: SAMEDI
+code, sortie = lancer("jour", "--jour", JOUR2)
+verifier(code == 0 and "hors planning" in sortie.lower() and not (A.SORTIE / f"liste-sid-{JOUR2}.csv").exists(), "samedi (hors liste) : pareil, rien généré")
+A.maintenant_paris = lambda: LUNDI
+code, sortie = lancer("jour", "--jour", JOUR)
+verifier(code == 0 and "hors planning" not in sortie.lower() and (A.SORTIE / f"liste-sid-{JOUR}.csv").exists(), "lundi (dans jours_appel) : la liste est générée normalement")
+monde(trouves=gros_monde(), config={"envoi_automatique": True, "jours_appel": ["lundi", "mardi", "vendredi"]})
+A.maintenant_paris = lambda: VENDREDI
+code, sortie = lancer("jour", "--jour", JOUR)
+verifier(code == 0 and (A.SORTIE / f"liste-sid-{JOUR}.csv").exists(), "vendredi (dans jours_appel) : la liste est générée")
+monde(trouves=gros_monde(), config={"envoi_automatique": True})   # jours_appel absent du réglage
+A.maintenant_paris = lambda: MERCREDI
+code, sortie = lancer("jour", "--jour", JOUR)
+verifier(code == 0 and (A.SORTIE / f"liste-sid-{JOUR}.csv").exists(), "jours_appel absent du réglage : aucune restriction (tous les jours)")
+verifier(set(A.cfg()["jours_appel"]) == set(A.JOURS_SEMAINE), "réglage absent -> tous les jours (sécurité, jamais un blocage silencieux)")
+monde(trouves=gros_monde(), config={"jours_appel": ["LUNDI", " mardi ", "inconnu", 42]})
+verifier(A.cfg()["jours_appel"] == ["lundi", "mardi"], "jours_appel : casse et espaces tolérés, valeurs invalides écartées")
+monde(trouves=gros_monde(), config={"jours_appel": ["inconnu", 42, ""]})
+verifier(set(A.cfg()["jours_appel"]) == set(A.JOURS_SEMAINE), "jours_appel entièrement invalide -> tous les jours")
+A.maintenant_paris = reel_maintenant
+verifier(callable(A.maintenant_paris) and A.maintenant_paris() is not None, "maintenant_paris restauré (fonction réelle)")
+
+print("22. Nettoyage Drive : sous-dossiers « Sid » de plus de 7 jours mis à la corbeille (jamais supprimés)")
+monde(trouves=gros_monde(), config={})   # simulation
+avant = DRIVE.appels; A.nettoyer_dossiers_drive(A.cfg(), A.etat_lire(), JOUR, DRIVE, False)
+verifier(DRIVE.appels == avant, "simulation (envoi_automatique=false) : le Drive n'est pas contacté pour le nettoyage")
+monde(trouves=gros_monde(), config={"envoi_automatique": True})
+avant = DRIVE.appels; A.nettoyer_dossiers_drive(A.cfg(), A.etat_lire(), JOUR, DRIVE, True)
+verifier(DRIVE.appels == avant, "--a-blanc : le Drive n'est pas contacté pour le nettoyage")
+A.nettoyer_dossiers_drive(A.cfg(), A.etat_lire(), JOUR, DRIVE, False)
+verifier(True, "pas encore de dossier « Sid » : rien ne casse")
+racine = DRIVE.creer_dossier("Sid")
+vieux = DRIVE.creer_dossier("2026-10-20", racine)      # 15 jours avant JOUR (2026-11-04)
+pile = DRIVE.creer_dossier("2026-10-28", racine)       # exactement 7 jours avant JOUR : gardé (pas « plus de » 7)
+recent = DRIVE.creer_dossier("2026-10-30", racine)     # 5 jours avant JOUR : gardé
+autre = DRIVE.creer_dossier("pas-une-date", racine)    # nom non daté : jamais touché
+etat = A.etat_lire(); etat["google"]["racine"] = racine; A.etat_ecrire(etat)
+A.nettoyer_dossiers_drive(A.cfg(), A.etat_lire(), JOUR, DRIVE, False)
+verifier(vieux in DRIVE.corbeille and DRIVE.trouver_dossier("2026-10-20", racine) is None, "dossier de 15 jours : mis à la corbeille, plus retrouvé")
+verifier(pile not in DRIVE.corbeille and recent not in DRIVE.corbeille and autre not in DRIVE.corbeille, "7 jours exactement, 5 jours, et nom non daté : conservés")
+verifier("corbeille" in A.JOURNAL.read_text(encoding="utf-8").lower(), "le nettoyage est journalisé")
+n = len(ALERTES); A.nettoyer_dossiers_drive(A.cfg(), A.etat_lire(), JOUR, DRIVE, False)
+verifier(len(ALERTES) == n, "rien à nettoyer la seconde fois : pas d'erreur, pas d'alerte")
+
+print("22bis. Nettoyage branché dans la commande « jour »")
+monde(trouves=gros_monde(), config={"envoi_automatique": True})
+lancer("preparer", "--jour", JOUR); A.exporter_google(A.cfg(), A.etat_lire(), JOUR, DRIVE, False)
+racine = DRIVE.trouver_dossier("Sid"); ancien = DRIVE.creer_dossier("2026-10-01", racine)
+code, sortie = lancer("jour", "--jour", JOUR2)
+verifier(code == 0 and ancien in DRIVE.corbeille, "jour : le nettoyage tourne aussi pendant le passage normal (vieux dossier mis à la corbeille)")
 
 print()
 if echecs: print(f"{echecs} ÉCHEC(S)"); sys.exit(1)
