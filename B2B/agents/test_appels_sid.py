@@ -17,6 +17,12 @@ def _etat_fichier(p):
         s = p.stat(); return (s.st_size, s.st_mtime_ns)
     return None
 _AVANT_REEL = {n: _etat_fichier(ICI / n) for n in ("appels-sid-etat.json", "appels-sid.verrou", "appels-sid-journal.log")}
+
+def _instantane_dossier(p):
+    """Liste triée (nom, taille, date) d'un dossier réel (docs\\sid) : peut déjà contenir de vraies listes si l'agent tourne pour de vrai sur le serveur ;
+    les tests, qui écrivent dans un dossier temporaire, ne doivent rien y ajouter, modifier ni supprimer."""
+    return sorted((f.name,) + (_etat_fichier(f) or (0, 0)) for f in p.iterdir() if f.is_file()) if p.exists() else []
+_AVANT_SID_REEL = _instantane_dossier(ICI.parent / "docs" / "sid")
 import prospection as P, suivi as S
 spec = importlib.util.spec_from_file_location("appels_sid", ICI / "appels-sid.py"); A = importlib.util.module_from_spec(spec); spec.loader.exec_module(A)
 
@@ -295,11 +301,11 @@ src = (ICI / "appels-sid.py").read_text(encoding="utf-8")
 verifier(not re.search(r"smtplib|send_message|messages\(\)\.send|gmail_api|stripe|webbrowser|os\.system|shell=True", src, re.I), "appels-sid.py : aucun envoi d'e-mail ni de message à une entreprise, aucun Stripe, pas de shell")
 verifier(not re.search(r"print\([^)]*(jeton|token|password|mot de passe)", src, re.I), "aucun jeton ni mot de passe affiché")
 cfg_reel = json.loads((ICI / "appels-sid-config.json").read_text(encoding="utf-8-sig"))
-verifier(cfg_reel.get("envoi_automatique") is True, "appels-sid-config.json : envoi_automatique = true (activé pour de vrai par Liam le 09/11/2026, état voulu et définitif)")
-verifier(A.EMAIL.match(cfg_reel.get("partager_avec") or ""), "appels-sid-config.json : partager_avec renseigné (adresse valide)")
+verifier(cfg_reel.get("envoi_automatique") is False, "appels-sid-config.json : envoi_automatique = false (fichier versionné ; activation réelle par machine dans appels-sid-config.local.json, ignoré par git)")
+verifier(not cfg_reel.get("partager_avec"), "appels-sid-config.json : aucun partager_avec dans le fichier versionné (l'adresse vit dans appels-sid-config.local.json)")
 verifier(cfg_reel.get("jours_appel") == ["lundi", "mardi", "vendredi"], "appels-sid-config.json : jours_appel = lundi, mardi, vendredi")
 verifier(all(_etat_fichier(ICI / n) == _AVANT_REEL[n] for n in ("appels-sid-etat.json", "appels-sid.verrou", "appels-sid-journal.log")), "les tests n'ont rien écrit dans le dépôt (un fichier d'agent déjà présent, car l'agent tourne pour de vrai sur le serveur, reste inchangé)")
-verifier(not (ICI.parent / "docs" / "sid").exists() or not list((ICI.parent / "docs" / "sid").glob("liste-sid-2026-11-0*.csv")), "aucun CSV de test dans docs\\sid du dépôt")
+verifier(_instantane_dossier(ICI.parent / "docs" / "sid") == _AVANT_SID_REEL, "docs\\sid du dépôt : rien ajouté, modifié ni supprimé par les tests (une vraie liste de l'agent, s'il tourne sur le serveur, reste inchangée)")
 
 print("13. Liste de Liam redirigée vers Sid (jamais appliquée sans ordre)")
 monde(trouves=gros_monde(), config={})

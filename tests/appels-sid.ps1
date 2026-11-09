@@ -1,4 +1,4 @@
-﻿# Test SILENCIEUX de l'agent appels-sid (liste d'appels du matin pour Sid) : fichiers présents, réglages (activé pour de vrai depuis le 09/11/2026, décision de Liam), aucun envoi ni réseau dans le code, branchement dans tests\tout.ps1 ;
+﻿# Test SILENCIEUX de l'agent appels-sid (liste d'appels du matin pour Sid) : fichiers présents, simulation par défaut dans le fichier versionné, aucun envoi ni réseau dans le code, branchement dans tests\tout.ps1 ;
 # puis les tests Python hors ligne (faux fichiers, dossiers temporaires, aucun réseau).
 $ErrorActionPreference = 'Stop'
 $env:JARVIS_TEST = '1'
@@ -14,14 +14,17 @@ $ag = Join-Path $Root 'B2B\agents'
 Write-Host '1. Fichiers et réglages'
 foreach ($f in 'appels-sid.py', 'google_sheets.py', 'appels-sid-config.json', 'appels-sid.md', 'test_appels_sid.py') { Verifier (Test-Path (Join-Path $ag $f)) "B2B\agents\$f présent" }
 $cfgAgent = Get-Content (Join-Path $ag 'appels-sid-config.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-Verifier ($cfgAgent.envoi_automatique -eq $true) 'appels-sid-config.json : envoi_automatique = true (activé pour de vrai par Liam le 09/11/2026, état voulu et définitif)'
+Verifier ($cfgAgent.envoi_automatique -eq $false) 'appels-sid-config.json : envoi_automatique = false par défaut (fichier versionné ; activation réelle par machine dans appels-sid-config.local.json, ignoré par git)'
 Verifier ($cfgAgent.par_liste -ge 50 -and $cfgAgent.par_liste -le 60) 'appels-sid-config.json : par_liste entre 50 et 60'
 Verifier ($cfgAgent.cible_reserve -ge 220 -and $cfgAgent.seuil_alerte -eq 110) 'appels-sid-config.json : réserve cible 220, alerte sous 110 (2 jours)'
 $src = Get-Content (Join-Path $ag 'appels-sid.py') -Raw -Encoding UTF8
 Verifier ($src -notmatch 'smtplib|send_message|gmail_api|stripe|webbrowser|os\.system|shell=True|places\.googleapis') 'appels-sid.py : aucun envoi d''e-mail ni de message à une entreprise, aucun Stripe, aucune API payante'
-Verifier ($cfgAgent.partager_avec -match '^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$') 'appels-sid-config.json : partager_avec renseigné (adresse valide) — dossier « Sid » partagé en éditeur avec Sid'
+Verifier (-not $cfgAgent.partager_avec) 'appels-sid-config.json : aucun partager_avec dans le fichier versionné (rien n''est partagé ; l''adresse vit dans appels-sid-config.local.json, ignoré par git)'
 Verifier (@($cfgAgent.jours_appel) -join ',' -eq 'lundi,mardi,vendredi') 'appels-sid-config.json : jours_appel = lundi, mardi, vendredi'
-Verifier ((Get-ScheduledTask -TaskName 'Jarvis-AppelsSid' -ErrorAction SilentlyContinue) -eq $null) 'tâche planifiée Jarvis-AppelsSid NON installée (installer-tache n''a jamais été lancé)'
+# Diagnostic seulement (ne compte pas dans $echecs) : l'activation réelle (tâche planifiée, envoi_automatique local) varie d'une machine à l'autre
+# et ne doit jamais bloquer tests\tout.ps1 / maj-auto.ps1 sur une machine qui n'a pas vocation à être le serveur. Voir `python agents\appels-sid.py etat`.
+$tacheReelle = Get-ScheduledTask -TaskName 'Jarvis-AppelsSid' -ErrorAction SilentlyContinue
+Write-Host "  INFO  tâche planifiée Jarvis-AppelsSid : $(if ($tacheReelle) { 'installée sur cette machine' } else { 'non installée sur cette machine' })"
 $tout = Get-Content (Join-Path $Root 'tests\tout.ps1') -Raw -Encoding UTF8
 Verifier ($tout -match "f = 'appels-sid\.ps1'") 'tests\tout.ps1 lance ce test'
 

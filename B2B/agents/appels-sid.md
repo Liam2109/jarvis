@@ -65,7 +65,7 @@ Elle est produite par `cmd_liste_matin` / `cmd_appels` de `prospection.py`, déc
 
 ## Pour l'activer (Liam)
 1. Autoriser Google une fois (4 étapes ci-dessus).
-2. `agents\appels-sid-config.json` : `partager_avec` = e-mail de Sid (optionnel) puis `envoi_automatique: true`.
+2. **Jamais dans `agents\appels-sid-config.json`** (fichier suivi par git, poussé sur GitHub) : `partager_avec` et `envoi_automatique: true` se mettent dans `agents\appels-sid-config.local.json` (créé à la main, ignoré par git, propre à cette machine) — sinon l'adresse de Sid et le flag d'envoi réel finissent sur GitHub. Le fichier versionné reste `envoi_automatique: false`, `partager_avec: ""`.
 3. `python agents\appels-sid.py rediriger-liste` (plus de liste pour Liam).
 4. `python agents\appels-sid.py installer-tache --oui` (tâche de 8 h 00).
 5. Contrôle le lendemain : `python agents\appels-sid.py etat`, le journal, le dossier « Sid » dans le Drive.
