@@ -44,14 +44,17 @@ if (-not $aGit) { Verifier $true '(git absent : contrôles de la liste blanche s
     $mauvaisI = @($ignores | Where-Object { & git -C $Root check-ignore -q -- $_ 2>$null; $LASTEXITCODE -ne 0 }); $mauvaisN = @($pasIgnores | Where-Object { & git -C $Root check-ignore -q -- $_ 2>$null; $LASTEXITCODE -eq 0 })
     Verifier ($mauvaisI.Count -eq 0) ('git check-ignore : tous les secrets, états, verrous, listes et journaux sont ignorés' + $(if ($mauvaisI.Count) { ' — PAS IGNORÉS : ' + ($mauvaisI -join ', ') }))
     Verifier ($mauvaisN.Count -eq 0) ('git check-ignore : le code et les configs par défaut ne sont pas ignorés' + $(if ($mauvaisN.Count) { ' — IGNORÉS À TORT : ' + ($mauvaisN -join ', ') }))
-    # configs par défaut : aucune valeur secrète ni propre à la machine, tout éteint
+    # configs par défaut : aucune valeur secrète ni propre à la machine, tout éteint — SAUF appels-sid, activé pour de vrai par Liam le 09/11/2026 (envoi_automatique + partager_avec), état voulu et définitif
     $sens = '^(ical_url|partager_avec|salon_.*|utilisateur_id|image_url_base|compte_google|comptes|api|.*token.*|.*secret.*|.*password.*|.*mdp.*)$'; $mal = @()
+    $activesEnvoiAuto = 'B2B\agents\appels-sid-config.json'   # agents déjà activés pour de vrai dans le fichier versionné (liste fermée, à ouvrir seulement sur décision de Liam)
+    $champsActives = @{ 'B2B\agents\appels-sid-config.json' = @('partager_avec') }
     foreach ($f in ($cand | Where-Object { $_ -like 'B2B\agents\*-config.json' })) {
         $j = Lire (Join-Path $Root $f) | ConvertFrom-Json
-        foreach ($p in $j.PSObject.Properties) { if ($p.Name -match $sens -and $null -ne $p.Value -and "$($p.Value | ConvertTo-Json -Compress)" -notin '""', '[]', '{}') { $mal += "$f : $($p.Name)" } }
-        if ($j.PSObject.Properties['envoi_automatique'] -and $j.envoi_automatique -eq $true) { $mal += "$f : envoi_automatique = true" }
+        $okChamps = @(if ($champsActives.ContainsKey($f)) { $champsActives[$f] } else { @() })
+        foreach ($p in $j.PSObject.Properties) { if ($p.Name -match $sens -and $null -ne $p.Value -and "$($p.Value | ConvertTo-Json -Compress)" -notin '""', '[]', '{}' -and $p.Name -notin $okChamps) { $mal += "$f : $($p.Name)" } }
+        if ($j.PSObject.Properties['envoi_automatique'] -and $j.envoi_automatique -eq $true -and $f -notin $activesEnvoiAuto) { $mal += "$f : envoi_automatique = true" }
     }
-    Verifier ($mal.Count -eq 0) ('configs par défaut versionnées : aucun secret, aucun salon, aucune adresse, envoi_automatique = false (tout démarre éteint)' + $(if ($mal.Count) { ' — ' + ($mal -join ' ; ') }))
+    Verifier ($mal.Count -eq 0) ('configs par défaut versionnées : aucun secret, aucun salon, aucune adresse, envoi_automatique = false, sauf appels-sid (activé pour de vrai, exception voulue)' + $(if ($mal.Count) { ' — ' + ($mal -join ' ; ') }))
     # aucun motif de clé ni de jeton dans les fichiers versionnés
     $motifs = 'rk_live_[A-Za-z0-9]{10,}', 'sk_live_[A-Za-z0-9]{10,}', 'AIza[0-9A-Za-z_-]{30,}', 'ya29\.[0-9A-Za-z_-]{20,}', '"refresh_token"\s*:\s*"[^"]{10,}', '"client_secret"\s*:\s*"[^"]{10,}', 'GOCSPX-[0-9A-Za-z_-]{10,}', 'calendar\.google\.com/calendar/ical/[^\s"]*private-[0-9a-f]{20,}',
               'EAA[A-Za-z0-9]{40,}', 'IGQ[A-Za-z0-9_-]{40,}', 'eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}\.', '[A-Za-z0-9_-]{23,28}\.[A-Za-z0-9_-]{6,7}\.[A-Za-z0-9_-]{27,}', '1//0[0-9A-Za-z_-]{30,}'
