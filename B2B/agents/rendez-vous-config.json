@@ -1,5 +1,6 @@
 {
-  "envoi_automatique": false,
+  "envoi_automatique": true,
+  "ical_url": "",
   "cycle_minutes": 5,
   "titre_debut": "Rendez-vous de 15 minutes",
   "rappel_minutes": 30,

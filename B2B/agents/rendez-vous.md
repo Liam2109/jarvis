@@ -6,13 +6,13 @@ Rôle : surveiller l'agenda Google de Liam par son **adresse secrète iCal** (gr
 2. Roue dentée › **Paramètres**.
 3. Dans la colonne de gauche, section « Paramètres de mes agendas », cliquer sur l'agenda **« Liam »**.
 4. Descendre jusqu'à **« Intégrer l'agenda »** et copier **« Adresse secrète au format iCal »** (elle commence par `https://calendar.google.com/calendar/ical/…` et finit par `basic.ics`).
-5. La coller dans `agents\rendez-vous-config.json` › `"ical_url"`. **Jamais ailleurs** : cette adresse donne la lecture de TOUT l'agenda à qui la possède. Si elle fuit : même page › « Réinitialiser » (l'ancienne adresse cesse de marcher), puis recopier la nouvelle.
+5. La coller dans `agents\rendez-vous-config.local.json` (le créer si absent) › `"ical_url"`. **Jamais dans `rendez-vous-config.json`** (suivi par git, doit toujours garder `ical_url` vide) **et jamais ailleurs** : cette adresse donne la lecture de TOUT l'agenda à qui la possède. Si elle fuit : même page › « Réinitialiser » (l'ancienne adresse cesse de marcher), puis recopier la nouvelle dans le fichier local.
 
-L'agent ne l'affiche, ne la journalise, ne la stocke dans l'état et ne l'envoie sur Discord jamais ; le fichier est hors git (`B2B/` est ignoré) ; seules les adresses `https://calendar.google.com/` sont acceptées.
+L'agent ne l'affiche, ne la journalise, ne la stocke dans l'état et ne l'envoie sur Discord jamais ; `rendez-vous-config.local.json` est hors git (`*.local.json`, jamais suivi) et surcharge `rendez-vous-config.json` (suivi par git, sans secret) ; seules les adresses `https://calendar.google.com/` sont acceptées.
 
 ## Architecture (même modèle que devis et Instagram)
 1. Script autonome `agents\rendez-vous.py` : `jour`, `continu`, `etat`, `arreter`, `reprendre`, `--a-blanc` (aucune écriture, aucun message).
-2. Réglages `rendez-vous-config.json` (`envoi_automatique: false` = simulation, `cycle_minutes: 5`, `salon_nom: "rdv"`, `salon_id: ""`, `titre_debut`, `rappel_minutes: 30`), état `rendez-vous-etat.json`, verrou `rendez-vous-continu.verrou`, arrêt de secours `rendez-vous.arret` relu toutes les 5 s.
+2. Réglages `rendez-vous-config.json` (`envoi_automatique: false` = simulation, `cycle_minutes: 5`, `salon_nom: "rdv"`, `salon_id: ""`, `titre_debut`, `rappel_minutes: 30`), surchargés par `rendez-vous-config.local.json` (hors git : `ical_url`, `salon_id` mémorisé après la 1re résolution), état `rendez-vous-etat.json`, verrou `rendez-vous-continu.verrou`, arrêt de secours `rendez-vous.arret` relu toutes les 5 s.
 3. Jarvis lance la boucle par `lib\rendez-vous.ps1` : clé `rendez_vous_actif` de `config.json` (absente = désactivé), un lancement par session 90 s après le démarrage, jamais en mode jeu, journal `logs\rendez-vous-AAAA-MM-JJ.log`.
 4. Messages et alertes : Discord par le bot Jarvis (jeton dans `Jarvis\.env`, jamais affiché), salon **« 📅-rdv »** (catégorie « B2B VENTE SITE WEB »). Le salon est trouvé par son **nom sans emoji ni accents** (`salon_nom: "rdv"`) ou par son **identifiant** (`salon_id`, chiffres seulement, prioritaire s'il est renseigné : aucune recherche). Les alertes (une par motif et par jour) vont dans le salon par défaut de `reponses-config.json`, jamais les messages de rendez-vous.
 
@@ -36,7 +36,7 @@ Le formulaire de la page de réservation n'a que 3 champs : **Prénom, Nom, Adre
 Limite connue : l'adresse iCal de Google n'est pas un flux instantané ; un décalage entre la réservation et sa visibilité dans le fichier est possible (le rappel à 30 minutes peut alors arriver tard, ou pas du tout pour une réservation de dernière minute).
 
 ## Pour l'activer (Liam)
-1. Copier l'adresse iCal dans `agents\rendez-vous-config.json` › `ical_url` (voir plus haut).
+1. Copier l'adresse iCal dans `agents\rendez-vous-config.local.json` › `ical_url` (voir plus haut ; jamais dans le fichier suivi par git).
 2. Le salon Discord **« 📅-rdv »** existe déjà : le bot Jarvis doit pouvoir y écrire et voir la liste des salons. Rien à configurer (`salon_nom: "rdv"`) ; en cas d'ambiguïté ou d'erreur, copier son identifiant dans `salon_id`.
 3. `config.json` › `"rendez_vous_actif": "oui"` (Jarvis lance alors la boucle 90 s après son démarrage). `envoi_automatique` reste à `false` : lire `agents\rendez-vous-journal.log` sur un ou deux vrais rendez-vous.
 4. Quand le journal montre les bons messages : `agents\rendez-vous-config.json` › `envoi_automatique: true`. Au premier passage réel, l'existant est seulement noté.

@@ -257,5 +257,15 @@ assert D.cmd_continu(reel, True) == "à blanc" and not D.VERROU.exists()
 def boum2(u): raise ValueError("bug")
 effacer(); rr, _ = boucle(boum2); assert rr.startswith("suspendu") and len(alertes) == 1, (rr, alertes)                                      # erreur dans la boucle : arrêt + alerte
 
+# --- garde-fou : le vrai fichier suivi par git ne contient jamais l'adresse iCal (secret dans rendez-vous-config.local.json, hors git, *.local.json) ---
+VRAI_CONFIG = Path(__file__).resolve().parent / "rendez-vous-config.json"
+brut_vrai = VRAI_CONFIG.read_text(encoding="utf-8-sig")
+assert json.loads(brut_vrai).get("ical_url", "") == "", "rendez-vous-config.json (suivi par git) ne doit jamais contenir l'adresse iCal"
+assert "calendar.google.com/calendar/ical/" not in brut_vrai and "private-" not in brut_vrai
+VRAI_LOCAL = VRAI_CONFIG.with_name("rendez-vous-config.local.json")
+assert VRAI_LOCAL.name.endswith(".local.json")   # couvert par la règle *.local.json de .gitignore (jamais suivi)
+DOC = (Path(__file__).resolve().parent / "rendez-vous.md").read_text(encoding="utf-8")
+assert "rendez-vous-config.local.json" in DOC and "ical_url" in DOC
+
 import shutil; shutil.rmtree(tmp, ignore_errors=True)
 print("OK : tous les tests de l'agent rendez-vous passent")

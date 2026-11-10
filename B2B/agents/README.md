@@ -2,7 +2,11 @@
 
 Un agent = un script Python autonome (`<agent>.py`) + sa doc (`<agent>.md`) + ses réglages/état/journal JSON. Simulation par défaut (`envoi_automatique: false`).
 
+## Secrets et réglages propres à une machine
+`machine.py` (`surcharge_locale`) fait lire chaque `<agent>-config.json` (suivi par git, jamais de secret) puis le surcharger avec `<agent>-config.local.json` (même dossier, `*.local.json` hors git). Tout secret ou identifiant propre à une machine (adresse iCal, jeton, identifiant de salon mémorisé) va dans le fichier `.local.json`, jamais dans le fichier suivi, qui garde sa clé vide (ex. `rendez-vous-config.json` › `ical_url: ""`, vraie valeur dans `rendez-vous-config.local.json`).
+
 ## Fichiers clés
+- `machine.py` — config locale (`surcharge_locale`, `ecrire_local`) et machine active (`b2b.local.json`), utilisés par tous les agents.
 - `prospection.py` / `.md` — trouve les entreprises, prépare les lots, zones (`zone.py`).
 - `appels-sid.py` / `.md` — liste d'appels quotidienne pour Sid (jamais d'envoi direct).
 - `rendez-vous.py` / `.md` — surveille l'agenda Google, alerte Discord (lecture seule).
