@@ -96,6 +96,23 @@ class Drive:
     def partager(self, dossier, email):
         _appel(self.svc.permissions().create(fileId=dossier, body={"type": "user", "role": "writer", "emailAddress": email}, sendNotificationEmail=True, fields="id"))
 
+    def lire_feuille_csv(self, id_):
+        """Contenu CSV actuel d'une feuille créée par cette app (export Drive, pas l'API Sheets : lecture seule, même portée drive.file). Sert à relire ce que Sid a coché (appels-sid, « A rappeler »)."""
+        r = _appel(self.svc.files().export(fileId=id_, mimeType="text/csv"))
+        return r.decode("utf-8") if isinstance(r, (bytes, bytearray)) else r
+
+    def formater_feuille(self, id_, largeurs_px):
+        """Mise en forme lisible d'une feuille convertie depuis un CSV (un seul onglet, sheetId 0) : ligne 1 figée, largeur de chaque colonne (`largeurs_px`, en pixels, dans l'ordre des
+        colonnes), texte renvoyé à la ligne partout. API Sheets (v4) : la portée drive.file autorise cette API sur un fichier créé par cette app, sans ré-autorisation."""
+        try: from googleapiclient.discovery import build
+        except ImportError: raise GA.BibliothequeManquante("Bibliothèques Google absentes : " + PIP) from None
+        svc = build("sheets", "v4", credentials=credentials(), cache_discovery=False)
+        requetes = [{"updateSheetProperties": {"properties": {"sheetId": 0, "gridProperties": {"frozenRowCount": 1}}, "fields": "gridProperties.frozenRowCount"}}]
+        for i, px in enumerate(largeurs_px):
+            requetes.append({"updateDimensionProperties": {"range": {"sheetId": 0, "dimension": "COLUMNS", "startIndex": i, "endIndex": i + 1}, "properties": {"pixelSize": px}, "fields": "pixelSize"}})
+        requetes.append({"repeatCell": {"range": {"sheetId": 0}, "cell": {"userEnteredFormat": {"wrapStrategy": "WRAP"}}, "fields": "userEnteredFormat.wrapStrategy"}})
+        _appel(svc.spreadsheets().batchUpdate(spreadsheetId=id_, body={"requests": requetes}))
+
 
 def credentials():
     """Jeton valide (rafraîchi et réenregistré si besoin), sinon JetonExpire."""

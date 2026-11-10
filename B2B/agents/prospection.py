@@ -1560,7 +1560,10 @@ DOCS = RACINE / "docs"
 OSM_METIERS = [("électricien", ["craft=electrician"]), ("plombier-chauffagiste", ["craft=plumber", "craft=hvac"]), ("couvreur", ["craft=roofer"]), ("maçon", ["craft=builder", "craft=mason"]),
                ("peintre", ["craft=painter"]), ("menuisier", ["craft=carpenter"]), ("plâtrier", ["craft=plasterer"]), ("restaurant", ["amenity=restaurant", "amenity=fast_food"]),
                ("coiffeur", ["shop=hairdresser"]), ("fleuriste", ["shop=florist"]), ("boulangerie", ["shop=bakery", "shop=pastry"]), ("garage automobile", ["shop=car_repair"]),
-               ("taxi", ["office=taxi"]), ("auto-école", ["amenity=driving_school"]), ("esthéticienne", ["shop=beauty"])]
+               ("taxi", ["office=taxi"]), ("auto-école", ["amenity=driving_school"]), ("esthéticienne", ["shop=beauty"]),
+               # Ajoutés le 10 nov. 2026 pour appels-sid (~20 métiers) : couverture OpenStreetMap plus clairsemée pour ces métiers que pour les premiers, à surveiller.
+               ("carreleur", ["craft=tiler"]), ("onglerie", ["beauty=nails"]), ("traiteur", ["shop=caterer"]), ("boucher", ["shop=butcher"]),
+               ("serrurier", ["craft=locksmith"]), ("paysagiste", ["craft=gardener"]), ("nettoyage", ["craft=cleaner"])]
 ROUEN = (49.4431, 1.0993)
 
 
