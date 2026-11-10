@@ -115,7 +115,8 @@ LABELS = {"plombier": "plombier-chauffagiste", "electricien": "électricien", "c
 # les 10 métiers ajoutés le 10 nov. 2026 ont leur propre repérage par mot, propre à appels-sid.
 MOTS_METIER_SID = [("carrele", "carreleur"), ("esthetic", "estheticienne"), ("ongle", "onglerie"), ("traiteur", "traiteur"), ("bouch", "boucher"),
                     ("serrurie", "serrurier"), ("paysag", "paysagiste"), ("taxi", "taxi"), ("auto ecole", "auto_ecole"), ("auto-ecole", "auto_ecole"),
-                    ("nettoyage", "nettoyage"), ("menage", "nettoyage"), ("proprete", "nettoyage")]
+                    ("nettoyage", "nettoyage"), ("menage", "nettoyage"), ("proprete", "nettoyage"),
+                    ("garagiste", "garage")]   # NOMS["garage"] affiche « Garagiste » (profession) dans le CSV ; R.cle_metier ne reconnaît que « garage automobile » (texte brut des sources) : sans cette entrée, une ligne « A rappeler » relue depuis le CSV ne retrouvait jamais sa clé « garage » et disparaissait au lieu d'être reprise (bug du 10 nov. 2026, corrigé le même jour)
 
 
 def cle_metier_sid(texte):
