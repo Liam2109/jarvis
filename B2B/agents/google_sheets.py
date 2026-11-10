@@ -50,7 +50,7 @@ def _q(texte): return str(texte).replace("\\", "\\\\").replace("'", "\\'")
 
 
 class Drive:
-    """Les seuls appels utilisés : compte, dossier (chercher / créer), feuille (chercher / créer), partage. Interface simple, remplaçable par un faux dans les tests."""
+    """Les seuls appels utilisés : compte, dossier (chercher / créer), feuille (chercher / créer / lire), partage. Interface simple, remplaçable par un faux dans les tests."""
     def __init__(self, svc, adresse=""): self.svc, self.adresse = svc, adresse
 
     def compte(self):
@@ -86,6 +86,12 @@ class Drive:
         except ImportError: raise GA.BibliothequeManquante("Bibliothèques Google absentes : " + PIP) from None
         media = MediaIoBaseUpload(io.BytesIO(contenu_csv.encode("utf-8")), mimetype="text/csv", resumable=False)
         return _appel(self.svc.files().create(body={"name": titre, "mimeType": FEUILLE_MIME, "parents": [dossier]}, media_body=media, fields="id"))["id"]
+
+    def lire_feuille(self, id_):
+        """Contenu CSV (texte, séparateur « , » : c'est Sheets qui régénère l'export) d'une feuille déjà créée par cet agent.
+        La portée drive.file suffit : elle couvre les fichiers créés par ce jeton, même partagés ensuite avec Sid."""
+        brut = _appel(self.svc.files().export(fileId=id_, mimeType="text/csv"))
+        return brut.decode("utf-8") if isinstance(brut, bytes) else str(brut)
 
     def partager(self, dossier, email):
         _appel(self.svc.permissions().create(fileId=dossier, body={"type": "user", "role": "writer", "emailAddress": email}, sendNotificationEmail=True, fields="id"))
