@@ -26,3 +26,6 @@ Une ligne par domaine, avec le fichier à lire (lui seul, pas tout le dossier). 
 | Fichiers isolés par précaution | `quarantaine\` (jamais supprimés automatiquement) |
 
 **Données d'exécution (jamais la doc) :** `lots\`, `memoire\*.json`, `B2B\agents\*-etat.json`, `B2B\agents\*-historique.json`, `B2B\docs\sid\*.csv` — générées par les agents, pas à lire pour comprendre une règle.
+
+## Dossiers (README courts, pour s'orienter)
+[B2B](B2B/README.md) · [B2B/agents](B2B/agents/README.md) · [B2B/docs](B2B/docs/README.md) · [docs](docs/README.md) · [emploi](emploi/README.md) · [instagram](instagram/README.md) · [lib](lib/README.md) · [lots](lots/README.md) · [memoire](memoire/README.md) · [pont-discord](pont-discord/README.md) · [tests](tests/README.md) · [visage](visage/README.md) · [voix](voix/README.md)
