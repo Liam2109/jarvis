@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Tests silencieux de l'agent appels-sid : AUCUN réseau, aucun envoi, fichiers temporaires (rien dans le dépôt).  python agents\\test_appels_sid.py
-Écrits AVANT le code (appels-sid.py). Règles de Liam : chaque matin une liste d'au moins 100 entreprises JAMAIS appelées pour Sid (restaurants, coiffeurs, plombiers-chauffagistes, électriciens ;
-ni fleuriste, ni boulangerie, ni garage ; règle du 10 nov. 2026, remplace l'ancienne fourchette 50-60) ; téléphone valide ; ni STOP ni exclus ; créneau réparti sur 8 h - 19 h (jamais le même
+Écrits AVANT le code (appels-sid.py). Règles de Liam : chaque matin une liste d'au moins 100 entreprises JAMAIS appelées pour Sid, parmi les 21 métiers du catalogue (plombier, électricien,
+coiffeur, restaurant, boulangerie, fleuriste, garage et 15 autres ; catalogue étendu le 10 nov. 2026, remplace l'ancienne fourchette 50-60 et l'ancien quatuor restaurant/coiffeur/plombier/électricien) ;
+téléphone valide ; ni STOP ni exclus ; créneau réparti sur 8 h - 19 h (jamais le même
 pour deux lignes voisines) ; une entreprise non appelée revient en tête de la liste suivante (« A rappeler ») ; une entreprise confirmée appelée est exclue 365 jours (appels-sid-historique.json) ;
 CSV docs\\sid\\liste-sid-AAAA-MM-JJ.csv ; commandes preparer / etat / annuler / --a-blanc ; aucun envoi, aucun partage, aucun appel API."""
 import contextlib, csv, importlib.util, io, json, os, re, socket, sys, tempfile, urllib.request
@@ -112,7 +113,8 @@ def lire_csv(jour):
     with open(f, encoding="utf-8-sig", newline="") as fh: return list(csv.reader(fh, delimiter=";"))
 
 def gros_monde(n=40):
-    """Réserve large : n restaurants, n coiffeurs, n plombiers, n électriciens, plus des métiers interdits."""
+    """Réserve large : n entreprises pour chacun des sept métiers les plus utilisés dans ces tests (restaurant, coiffeur, plombier, électricien, fleuriste, boulangerie, garage ;
+    tous valides depuis le catalogue de 21 métiers du 10 nov. 2026)."""
     t = []
     for i in range(n):
         t.append(trouve(f"Resto Fictif {i}", "restaurant", f"Ville{i % 7}", tel(100 + i), note="carte absente du site" if i == 0 else ""))
@@ -121,6 +123,12 @@ def gros_monde(n=40):
         t.append(trouve(f"Elec Fictif {i}", "électricien", f"Ville{i % 7}", tel(700 + i)))
         t.append(trouve(f"Fleur Fictif {i}", "fleuriste", "Rouen", tel(900 + i))); t.append(trouve(f"Boul Fictif {i}", "boulangerie", "Rouen", tel(1100 + i))); t.append(trouve(f"Gar Fictif {i}", "garage automobile", "Rouen", tel(1300 + i)))
     return t
+
+SEPT = ("restaurant", "coiffeur", "plombier", "electricien", "fleuriste", "boulangerie", "garage")   # les sept métiers que gros_monde() fournit (catalogue de 21, règle du 10 nov. 2026)
+# repartition limitée à SEPT : avec le réglage par défaut (poids égal pour les 21 métiers), le quota par métier de choisir() est trop petit (~5) pour que les ~14 lignes d'un même métier
+# données par gros_monde() reviennent toutes en « A rappeler » le lendemain (certaines seraient évincées par le quota, remplacées par du frais d'un autre métier) : jamais le cas avec
+# seulement 4 métiers (quota large) avant le catalogue du 10 nov. 2026, donc jamais testé ; repartition le restitue ici pour les tests qui dépendent de gros_monde().
+REPART_SEPT = lambda: {m: (5 if m in SEPT else 0) for m in A.NOMS}
 
 JOUR = "2026-11-04"; JOUR2 = "2026-11-05"
 COLONNES = ["#", "Nom", "Ville", "Téléphone", "Métier", "Créneau conseillé", "Constat vérifié", "Page d'exemple", "Appelé", "Répondu", "Rendez-vous pris", "Refus", "Remarque"]
@@ -151,10 +159,13 @@ monde(trouves=[
       listes={"2026-11-03": [("deja-appele|rouen", "[x] [ ] [ ] [ ]".split()), ("deja-rendu-a-liam|rouen", "[ ] [ ] [ ] [ ]".split())]},
       exclus_mails=["stop@example.invalid"], exclus_cles=["cle-exclue|rouen"], config={"par_liste": 50})
 cles = {c["nom"] for c in A.choisir(A.cfg(), A.etat_lire())}
-verifier(cles == {"Bon Resto", "Bon Coiffeur", "Bon Plombier", "Bon Electricien", "Suivi A Contacter", "Maps Elec", "Liste Resto", "Deja Rendu A Liam"}, f"seuls les bons candidats sont retenus : {sorted(cles)}")
-for interdit, raison in (("Une Fleuriste", "fleuriste"), ("Une Boulangerie", "boulangerie"), ("Un Garage", "garage"), ("Sans Tel", "sans téléphone"), ("Tel Faux", "téléphone invalide (0800)"), ("Hors Zone", "hors zone"),
+verifier(cles == {"Bon Resto", "Bon Coiffeur", "Bon Plombier", "Bon Electricien", "Suivi A Contacter", "Maps Elec", "Liste Resto", "Deja Rendu A Liam",
+                   "Une Fleuriste", "Une Boulangerie", "Un Garage", "Maps Couvreur"}, f"seuls les bons candidats sont retenus : {sorted(cles)}")
+for bon in ("Une Fleuriste", "Une Boulangerie", "Un Garage", "Maps Couvreur"):
+    verifier(bon in cles, f"gardé : {bon} (métier du catalogue des 21, règle du 10 nov. 2026)")
+for interdit, raison in (("Sans Tel", "sans téléphone"), ("Tel Faux", "téléphone invalide (0800)"), ("Hors Zone", "hors zone"),
                          ("Refus Resto", "refus"), ("Stop Resto", "STOP"), ("Exclu Resto", "exclu"), ("Ecarte Resto", "écarté"), ("Prepare Resto", "déjà préparé pour l'e-mail"), ("Cp Lointain", "code postal hors zone"), ("Mail Exclu", "e-mail dans exclus-emails.json"), ("Cle Exclue", "exclu (état de prospection)"), ("Deja Appele", "déjà appelé (case cochée)"), ("Meme Tel", "même téléphone qu'une autre ligne"), ("Suivi Stop", "STOP du suivi"), ("Suivi Envoye", "déjà contacté par e-mail"),
-                         ("Suivi Repondu", "a répondu"), ("Maps Couvreur", "métier non demandé (couvreur)")):
+                         ("Suivi Repondu", "a répondu")):
     verifier(interdit not in cles, f"écarté : {interdit} ({raison})")
 verifier(len([c for c in A.choisir(A.cfg(), A.etat_lire()) if c["nom"] == "Suivi A Contacter"]) == 1, "même entreprise présente dans deux fichiers (suivi + maps) : une seule ligne")
 
@@ -165,7 +176,7 @@ ch = A.choisir(A.cfg(), A.etat_lire())
 verifier(A.cfg()["par_liste"] == 100 and len(ch) == 100, f"par défaut : 100 lignes au moins (obtenu {len(ch)})")
 par = {}
 for c in ch: par[c["metier"]] = par.get(c["metier"], 0) + 1
-verifier(set(par) == {"restaurant", "coiffeur", "plombier", "electricien"}, f"quatre métiers présents : {par}")
+verifier(set(par) == {"restaurant", "coiffeur", "plombier", "electricien", "fleuriste", "boulangerie", "garage"}, f"sept métiers présents (catalogue de 21 métiers, règle du 10 nov. 2026) : {par}")
 verifier(all(v >= 8 for v in par.values()), f"mélange raisonnable (au moins 8 par métier) : {par}")
 verifier(len({c["cle"] for c in ch}) == len(ch) and len({c["tel"] for c in ch}) == len(ch), "aucune entreprise ni aucun numéro en double")
 for demande, attendu in ((30, 100), (150, 130), (100, 100), (130, 130), ("abc", 100)):
@@ -179,8 +190,8 @@ verifier(len(A.choisir(A.cfg(), A.etat_lire())) == 12, "réserve trop petite : o
 print("4. Créneaux : répartis sur 8 h - 19 h, jamais le même pour deux lignes voisines (règle fixe de Liam du 10 nov. 2026, remplace les anciens textes partagés par métier)")
 monde(trouves=gros_monde(), config={})
 ch = A.choisir(A.cfg(), A.etat_lire()); ordre = [c["metier"] for c in ch]
-rang = {"plombier": 0, "electricien": 0, "coiffeur": 1, "restaurant": 2}
-verifier([rang[m] for m in ordre] == sorted(rang[m] for m in ordre), "lignes classées dans l'ordre de la journée : bâtiment, coiffeurs, restaurants")
+rang = A.RANG   # ordre de la journée pour les 21 métiers du catalogue (bâtiment, puis commerces, puis restauration) : jamais une table figée qui casserait au prochain métier ajouté
+verifier([rang[m] for m in ordre] == sorted(rang[m] for m in ordre), "lignes classées dans l'ordre de la journée : bâtiment, coiffeurs/commerces, restaurants")
 def _debut_min(txt):
     h, _, reste = txt.split(" – ")[0].strip().partition(" h")
     return int(h) * 60 + (int(reste.strip()) if reste.strip() else 0)
@@ -192,7 +203,7 @@ verifier(all(480 <= d < 1140 for d in tous_debuts), "tous les créneaux commence
 verifier(all(not (720 <= _debut_min(c) < 840) for c in par_metier.get("Coiffeur", [])), "coiffeurs : jamais entre 12 h et 14 h")
 verifier(bool(par_metier.get("Coiffeur")) and min(_debut_min(c) for c in par_metier["Coiffeur"]) < 720 and max(_debut_min(c) for c in par_metier["Coiffeur"]) >= 840, "coiffeurs : la réserve couvre bien le matin ET l'après-midi")
 verifier(all(870 <= _debut_min(c) < 1050 for c in par_metier.get("Restaurant", [])), "restaurants : seulement entre 14 h 30 et 17 h 30")
-verifier(all(_debut_min(c) < 540 or _debut_min(c) >= 1020 for m in ("Plombier-chauffagiste", "Électricien") for c in par_metier.get(m, [])), "artisans du bâtiment : avant 9 h ou à partir de 17 h")
+verifier(all(_debut_min(c) < 540 or _debut_min(c) >= 1020 for m in ("Plombier-chauffagiste", "Électricien", "Garagiste") for c in par_metier.get(m, [])), "artisans du bâtiment : avant 9 h ou à partir de 17 h")
 
 print("5. preparer : CSV, colonnes, constat, liens")
 monde(trouves=gros_monde(), config={})
@@ -212,7 +223,7 @@ verifier(all(re.fullmatch(r"0\d( \d\d){4}", l[3]) for l in corps), "téléphones
 verifier(all(l[7] == "" for l in corps if l[4] == "Restaurant"), "restaurant : aucun lien de page d'exemple (numéro seulement)")
 verifier(all(l[7] == LIENS["coiffeur"] for l in corps if l[4] == "Coiffeur") and all(l[7] == LIENS["plombier-chauffagiste"] for l in corps if l[4] == "Plombier-chauffagiste")
          and all(l[7] == LIENS["electricien"] for l in corps if l[4] == "Électricien"), "coiffeur / plombier / électricien : lien de liens-metiers.json")
-verifier({l[4] for l in corps} == {"Restaurant", "Coiffeur", "Plombier-chauffagiste", "Électricien"}, "métiers affichés en clair, sans fleuriste, boulangerie ni garage")
+verifier({l[4] for l in corps} == {"Restaurant", "Coiffeur", "Plombier-chauffagiste", "Électricien", "Fleuriste", "Boulanger", "Garagiste"}, "métiers affichés en clair (catalogue de 21 métiers, règle du 10 nov. 2026)")
 verifier(all(l[5] for l in corps), "créneau conseillé renseigné pour chaque ligne")
 resto0 = [l for l in corps if l[1] == "Resto Fictif 0"][0]; autre = [l for l in corps if l[1] == "Coiff Fictif 3"]
 verifier(resto0[6] == "carte absente du site" and all(l[6] == "" for l in corps if l[1] != "Resto Fictif 0"), "constat : seulement celui vérifié (note_besoin), jamais inventé")
@@ -228,7 +239,7 @@ verifier(any("avec" in n and "\n" not in n for n in noms), "point-virgule, guill
 verifier(all(len(x) == len(COLONNES) for x in l), "aucune colonne décalée")
 
 print("7. État : A rappeler si pas appelée, exclue 365 jours si confirmée appelée (règles du 10 nov. 2026)")
-monde(trouves=gros_monde(60), config={})   # réserve large (240) : la liste du lendemain doit pouvoir sortir 100 entreprises fraîches après que celles de JOUR soient confirmées appelées
+monde(trouves=gros_monde(60), config={})   # réserve large (420, 7 métiers x 60) : la liste du lendemain doit pouvoir sortir 100 entreprises fraîches après que celles de JOUR soient confirmées appelées
 lancer("preparer", "--jour", JOUR)
 etat = json.loads(A.ETAT.read_text(encoding="utf-8"))
 verifier(len(etat["sorties"]) == 100 and etat["listes"][JOUR]["nombre"] == 100, "appels-sid-etat.json : 100 entreprises marquées, liste du jour notée")
@@ -271,10 +282,10 @@ verifier(lancer("etat", "--a-blanc")[0] == 0, "etat accepte aussi --a-blanc")
 
 print("9. etat : compte restant")
 monde(trouves=gros_monde(40), config={})
-code, sortie = lancer("etat"); verifier(code == 0 and "aucune liste" in sortie.lower() and "160" in sortie, f"avant toute liste : réserve = 160 (4 métiers x 40) : {sortie.strip().splitlines()[:3]}")
+code, sortie = lancer("etat"); verifier(code == 0 and "aucune liste" in sortie.lower() and "280" in sortie, f"avant toute liste : réserve = 280 (7 métiers x 40, catalogue du 10 nov. 2026) : {sortie.strip().splitlines()[:3]}")
 lancer("preparer", "--jour", JOUR)
 code, sortie = lancer("etat")
-verifier("60" in sortie and JOUR in sortie and "100" in sortie, "après une liste de 100 : reste 60, liste du jour citée")
+verifier("180" in sortie and JOUR in sortie and "100" in sortie, "après une liste de 100 : reste 180, liste du jour citée")
 verifier(re.search(r"jour", sortie.lower()) is not None and "0" in sortie, "nombre de jours de réserve indiqué")
 verifier(not re.search(r"\d\d \d\d \d\d \d\d \d\d", sortie), "etat n'affiche aucun numéro de téléphone")
 verifier(re.search(r"restaurant\D+\d+", sortie, re.I) is not None, "reste par métier")
@@ -357,7 +368,7 @@ psrc = (ICI / "prospection.py").read_text(encoding="utf-8")
 verifier(psrc.count('< conf["liste_appels_heure"]') >= 2, "prospection.py : les deux déclencheurs de la liste comparent l'heure à liste_appels_heure (un réglage suffit, le code de la prospection n'est pas modifié)")
 
 print("14. Sourcing : numéros gratuits (OpenStreetMap), aucune API payante")
-TYPE_REQ = re.compile(r'"(?:craft|shop|amenity)"="(\w+)"')
+TYPE_REQ = re.compile(r'"(?:craft|shop|amenity|office|beauty)"="(\w+)"')   # catalogue de 21 métiers (10 nov. 2026) : taxi (office=taxi) et onglerie (beauty=nails) ajoutent deux catégories OSM
 class FauxOverpass:
     """Faux Overpass : `fixes` = réponses imposées ; sinon `offre[type]` nouvelles fiches (téléphone, sans site) par requête. Garde les requêtes."""
     def __init__(s): s.requetes, s.offre, s.n, s.panne, s.fixes = [], {}, 0, False, []
@@ -418,8 +429,8 @@ verifier([s for s in SOMMEIL if s >= 15] == [15] * 5, f"pause de 15 s entre deux
 monde(trouves=[trouve(f"Resto Plein {i}", "restaurant", "Rouen", tel(100 + i)) for i in range(120)] + [trouve(f"Coiff Plein {i}", "coiffeur", "Rouen", tel(300 + i)) for i in range(60)], config={"sourcing_requetes_max": 6, "cible_reserve": 220})
 FO.__init__(); lancer("sourcer", "--jour", JOUR); ordre = [TYPE_REQ.search(r).group(1) for r in FO.requetes]
 verifier(ordre and "restaurant" not in ordre and "hairdresser" not in ordre and ordre[0] == "plumber", f"métiers déjà assez fournis : pas de requête inutile ({ordre})")
-monde(trouves=gros_monde(80), config={"cible_reserve": 220}); FO.__init__(); lancer("sourcer", "--jour", JOUR)
-verifier(FO.requetes == [], "réserve déjà au niveau de la cible : aucune requête")
+monde(trouves=gros_monde(80), config={"cible_reserve": 220, "repartition": REPART_SEPT()}); FO.__init__(); lancer("sourcer", "--jour", JOUR)
+verifier(FO.requetes == [], "réserve déjà au niveau de la cible (pour les sept métiers pesés ici) : aucune requête")
 # panne
 monde(trouves=[], config={}); FO.__init__(); FO.panne = True; avant_t = P.lire_trouves()
 code, sortie = lancer("sourcer", "--jour", JOUR)
@@ -447,16 +458,18 @@ verifier(noms == {"Resto 76", "Resto 27", "Resto 14", "Resto 50", "Resto 61"}, f
 monde(trouves=[trouve("Resto 76", "restaurant", "Rouen", "02 35 10 00 01", cp="76000"), trouve("Resto 14", "restaurant", "Caen", "02 31 10 00 03", cp="14000")], config={"departements": ["76"]})
 A.cfg(); verifier({c["nom"] for c in A.candidats(A.etat_lire())} == {"Resto 76"}, "departements = [76] : seule la Seine-Maritime est acceptée")
 
-# une requête Overpass par département et par métier, pauses, nouvelles tentatives
+# une requête Overpass par département et par métier (21 métiers, catalogue du 10 nov. 2026) : avec le plafond fixe de sourcing_requetes_max (30 au plus, cfg() le bride),
+# une seule Seine-Maritime (21 métiers) ne suffit même plus à épuiser le budget en une seule série : le passage couvre 76 en entier puis commence 27, jamais les 5 départements d'un coup.
+NM = len(A.PRIORITE)   # 21
 monde(trouves=[], config={"sourcing_requetes_max": 30, "sirene_actif": False, "cible_reserve": 2000}); FO.__init__(); lancer("sourcer", "--jour", JOUR)
 deps_req = [re.search(r'"ref:INSEE"="(\d\d)"', r).group(1) for r in FO.requetes]; types_req = [TYPE_REQ.search(r).group(1) for r in FO.requetes]
-verifier(len(FO.requetes) == 20 and sorted(set(deps_req)) == ["14", "27", "50", "61", "76"] and deps_req[:4] == ["76"] * 4 and all(deps_req.count(d) == 4 for d in set(deps_req)), f"20 requêtes : une par département et par métier, Seine-Maritime d'abord : {deps_req}")
+verifier(len(FO.requetes) == 30 and deps_req[:NM] == ["76"] * NM and deps_req[NM:] == ["27"] * (30 - NM), f"30 requêtes (plafond) : Seine-Maritime épuisée (21 métiers) puis l'Eure commencée (9) : {sorted(set(deps_req))}")
 verifier(all("(around:" not in r and "(area.a)" in r and 'area["boundary"="administrative"]["ref:INSEE"=' in r for r in FO.requetes), "chaque requête cible la relation OpenStreetMap du département (area ref:INSEE), jamais un cercle")
 verifier(all("[timeout:90]" in r for r in FO.requetes), "délai Overpass de 90 s par requête (requêtes découpées : jamais toute la région d'un coup)")
 verifier(any('"craft"="hvac"' in r for r in FO.requetes) and any('"amenity"="fast_food"' in r for r in FO.requetes), "plombier-chauffagiste : craft=plumber et craft=hvac ; restaurant : restaurant et fast_food")
-verifier(SOMMEIL == [15] * 19, f"15 s entre deux requêtes Overpass, jamais avant la première : {len(SOMMEIL)} pauses")
+verifier(SOMMEIL == [15] * 29, f"15 s entre deux requêtes Overpass, jamais avant la première : {len(SOMMEIL)} pauses")
 monde(trouves=[], config={"sourcing_requetes_max": 30, "sirene_actif": False, "cible_reserve": 2000}); FO.__init__(); lancer("sourcer", "--jour", JOUR, "--dept", "27")
-verifier(len(FO.requetes) == 4 and all('"ref:INSEE"="27"' in r for r in FO.requetes), "--dept 27 : seulement les quatre requêtes de l'Eure")
+verifier(len(FO.requetes) == NM and all('"ref:INSEE"="27"' in r for r in FO.requetes), f"--dept 27 : seulement les {NM} requêtes (une par métier) de l'Eure")
 code, _ = lancer("sourcer", "--dept", "75"); verifier(code != 0, "--dept hors Normandie : refusé")
 # nouvelles tentatives après une erreur Overpass (429 puis 503, puis réponse)
 class Rep:
@@ -570,7 +583,7 @@ monde(trouves=t_dep, config={"par_liste": 100}); code, sortie = lancer("etat")
 verifier(code == 0 and "Réserve par métier et par département" in sortie and "Calvados 14" in sortie and "Manche 50" in sortie and "Seine-Maritime 76" in sortie and "Orne 61" in sortie and "Eure 27" in sortie, "etat : tableau métier x département (les cinq départements normands)")
 verifier(re.search(r"Plombier-chauffagiste\s+3\s+0\s+0\s+0\s+0\s+3|Plombier-chauffagiste\s+[\d\s]*3", sortie) is not None and "inconnu" in sortie, "le tableau donne le nombre par métier et par département, et une colonne pour les codes postaux inconnus")
 verifier("= 0 jour(s) à 100 numéros par jour" in sortie, f"jours de réserve à 100 numéros par jour (7 numéros : 0 jour) : {[l for l in sortie.splitlines() if 'jour(s)' in l]}")
-monde(trouves=gros_monde(30), config={"par_liste": 100}); code, sortie = lancer("etat"); verifier("= 1 jour(s) à 100 numéros par jour" in sortie, "120 numéros / 100 par jour : 1 jour de réserve, dit en toutes lettres")
+monde(trouves=gros_monde(30), config={"par_liste": 100}); code, sortie = lancer("etat"); verifier("= 2 jour(s) à 100 numéros par jour" in sortie, "210 numéros (7 métiers x 30) / 100 par jour : 2 jours de réserve, dit en toutes lettres")
 monde(trouves=gros_monde(30), config={"sourcing_requetes_max": 1, "sirene_actif": False}); FO.__init__(); FO.fixes = [[]]; code, sortie = lancer("sourcer", "--jour", JOUR, "--a-blanc")
 verifier("Réserve par métier et par département" in sortie and "jour(s) à 100 numéros par jour" in sortie, "fin de `sourcer` : la réserve par métier et par département et les jours de réserve sont affichés")
 monde(trouves=gros_monde(30), config={"sirene_actif": False, "cible_reserve": 100}); FO.__init__(); code, sortie = lancer("jour", "--jour", JOUR)
@@ -578,13 +591,15 @@ verifier("Réserve par métier et par département" in sortie and "jour(s) à 10
 
 print("14 quater. Mode simulation : aucun réseau, données fictives, rien d'écrit")
 orig = (A.appel_reseau, A.appel_sirene, A.lire_site, A.evaluer_site, A.dormir)
-monde(trouves=[], config={"sourcing_requetes_max": 20, "sirene_requetes_max": 20, "sirene_sites_max": 40, "cible_reserve": 2000}); avant = P.lire_trouves()
+#  NB : le générateur SIRENE fictif de _simulation() (appels-sid.py) ne connaît que 4 métiers (plombier, électricien, coiffeur, restaurant) ; au-delà, il lève KeyError.
+#  Non modifié ici (appels-sid.py hors périmètre) : SIRENE désactivé pour ce test de simulation, qui porte sur Overpass et l'absence d'écriture, pas sur la couverture SIRENE des 21 métiers.
+monde(trouves=[], config={"sourcing_requetes_max": 9, "sirene_actif": False, "cible_reserve": 2000}); avant = P.lire_trouves()
 code, sortie = lancer("sourcer", "--simulation", "--jour", JOUR)
 verifier(code == 0 and P.lire_trouves() == avant and not A.ETAT.exists() and not A.JOURNAL.exists() and not list(tmp.glob("*.tmp")), "sourcer --simulation : aucun accès réseau (urlopen interdit dans ce test), rien d'écrit")
-verifier("20 requête(s) Overpass" in sortie and re.search(r"[1-9]\d* appel\(s\) SIRENE", sortie) and re.search(r"dont SIRENE : [1-9]", sortie), f"simulation : les 20 requêtes (5 départements x 4 métiers) et SIRENE tournent : {[l for l in sortie.splitlines() if l.startswith('Sourcing')]}")
+verifier("9 requête(s) Overpass" in sortie and "0 appel(s) SIRENE" in sortie, f"simulation : les 9 premiers métiers du catalogue (plombier à paysagiste, règle du 10 nov. 2026) tournent : {[l for l in sortie.splitlines() if l.startswith('Sourcing')]}")
 verifier("Réserve par métier et par département" in sortie and "Seine-Maritime 76" in sortie and "jour(s) à 100 numéros par jour" in sortie, "simulation : le tableau final de réserve est affiché")
 A.appel_reseau, A.appel_sirene, A.lire_site, A.evaluer_site, A.dormir = orig
-code, sortie = lancer("sourcer", "--simulation", "--dept", "50", "--jour", JOUR); verifier(code == 0 and "4 requête(s) Overpass" in sortie, "simulation limitée à un département : 4 requêtes")
+code, sortie = lancer("sourcer", "--simulation", "--dept", "50", "--jour", JOUR); verifier(code == 0 and "9 requête(s) Overpass" in sortie, "simulation limitée à un département : 9 requêtes")
 A.appel_reseau, A.appel_sirene, A.lire_site, A.evaluer_site, A.dormir = orig
 src2 = (ICI / "appels-sid.py").read_text(encoding="utf-8")
 verifier("recherche-entreprises.api.gouv.fr" in (ICI / "prospection.py").read_text(encoding="utf-8") and "google.com/maps" not in src2 and "pagesjaunes" not in src2.lower() and "googleapis.com/maps" not in src2 and "places.googleapis" not in src2, "sources : OpenStreetMap (Overpass) et l'API officielle SIRENE seulement ; ni Google Maps ni Pages Jaunes")
@@ -737,7 +752,8 @@ print("20. Contrôle de bout en bout : 3 jours de suite, à blanc, sans réseau 
 JOURS = ["2026-11-05", "2026-11-06", "2026-11-07"]
 base = ([trouve(f"Resto E2E {i}", "restaurant", "Rouen", tel(100 + i)) for i in range(34)] + [trouve(f"Coiff E2E {i}", "coiffeur", "Rouen", tel(300 + i)) for i in range(18)]
         + [trouve(f"Plomb E2E {i}", "plombier-chauffagiste", "Rouen", tel(500 + i)) for i in range(8)] + [trouve(f"Elec E2E {i}", "électricien", "Rouen", tel(700 + i)) for i in range(8)])
-monde(trouves=base, config={"envoi_automatique": True, "partager_avec": "sid@example.invalid", "cible_reserve": 400, "seuil_alerte": 50, "sourcing_requetes_max": 4}, listes={"2026-11-03": [("ancienne-liste|rouen", "[ ] [ ] [ ] [ ]".split())]})
+REPART_4 = {m: (5 if m in ("restaurant", "coiffeur", "plombier", "electricien") else 0) for m in A.NOMS}   # scénario historique à 4 métiers : sans cela, le quota (poids égal sur 21 métiers) disperserait le budget de sourcing sur des métiers que FauxOverpass ne fournit pas
+monde(trouves=base, config={"envoi_automatique": True, "partager_avec": "sid@example.invalid", "cible_reserve": 400, "seuil_alerte": 50, "sourcing_requetes_max": 4, "repartition": REPART_4}, listes={"2026-11-03": [("ancienne-liste|rouen", "[ ] [ ] [ ] [ ]".split())]})
 lancer("rediriger-liste")
 FE = FauxOverpass(); A.appel_reseau = FE; reserves, alertes_par_jour, listes = [], {}, {}
 def reserve_total(): return A.reserve(A.etat_lire())["total"]
