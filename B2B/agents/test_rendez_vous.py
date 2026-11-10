@@ -171,6 +171,12 @@ effacer(); fx = Faux(); P(FEED(A), reel, fx); fx.acces = lambda: None; P(FEED(A,
 fx = Faux(); assert D.resoudre_salon(reel, "j", fx.api) == "salon-rdv"                                                                      # nom « rdv » : ni « rdv-archive », ni le salon vocal « rdv », ni « général »
 assert D.resoudre_salon({**reel, "salon_nom": "📅-RDV"}, "j", fx.api) == "salon-rdv" and D.resoudre_salon({**reel, "salon_nom": "📅│rdv"}, "j", fx.api) == "salon-rdv"
 n_get = len(fx.appels); assert D.resoudre_salon({**reel, "salon_id": "123456789012345678", "salon_nom": "autre"}, "j", fx.api) == "123456789012345678" and len(fx.appels) == n_get     # identifiant : aucune recherche
+# --- mémorisation : la 1re résolution par nom écrit salon_id dans rendez-vous-config.local.json (M.ecrire_local), relu par cfg() : plus besoin de rappeler /guilds au passage suivant ---
+assert D.cfg()["salon_id"] == "salon-rdv"
+fx2 = Faux(); fx2.salons = [{"id": "777777777777777777", "name": "📅-rdv", "type": 0}]
+assert D.resoudre_salon({**reel, "salon_nom": "rdv"}, "j", fx2.api) == "777777777777777777" and len(fx2.appels) == 2      # 1re fois : cherché (2 appels GET)
+assert D.cfg()["salon_id"] == "777777777777777777"
+n_get3 = len(fx2.appels); assert D.resoudre_salon(D.cfg(), "j", fx2.api) == "777777777777777777" and len(fx2.appels) == n_get3   # 2e fois : salon_id en cache, aucun appel Discord
 for mauvais, mot in (({"salon_id": "abc/../x"}, "salon_id"), ({"salon_nom": "inexistant"}, "introuvable"), ({"salon_nom": ""}, "salon_nom"), ({"salon_nom": "rdv-archive", "salon_id": "12"}, "salon_id")):
     try: D.resoudre_salon({**reel, **mauvais}, "j", fx.api); assert False, mauvais
     except D.ErreurSalon as e: assert mot in str(e), (mauvais, str(e))

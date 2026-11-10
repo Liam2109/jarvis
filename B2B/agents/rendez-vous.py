@@ -190,7 +190,8 @@ def _norm_salon(t):
 
 def resoudre_salon(conf, jeton, api):
     """Identifiant du salon des rendez-vous : `salon_id` s'il est renseigné (chiffres seulement), sinon le salon texte dont le nom, sans emoji ni accents, est `salon_nom` (« 📅-rdv » = « rdv »).
-    Introuvable, plusieurs salons du même nom ou liste illisible : ErreurSalon. JAMAIS de repli sur le salon par défaut."""
+    Dès la première résolution par nom, l'identifiant trouvé est mémorisé dans `salon_id` (agents\\rendez-vous-config.local.json, hors git) : les passages suivants ne rappellent plus
+    /guilds puis /guilds/{id}/channels (cause des 403 Cloudflare en boucle). Introuvable, plusieurs salons du même nom ou liste illisible : ErreurSalon. JAMAIS de repli sur le salon par défaut."""
     sid = str(conf.get("salon_id") or "").strip()
     if sid:
         if re.fullmatch(r"\d{5,25}", sid): return sid
@@ -206,7 +207,10 @@ def resoudre_salon(conf, jeton, api):
         trouves += [str(c["id"]) for c in canaux if c.get("type") in (0, 5) and _norm_salon(c.get("name")) == nom]
     if not trouves: raise ErreurSalon(f"salon « {conf['salon_nom']} » introuvable (nom comparé sans emoji ni accents) : renseigner salon_id dans agents\\rendez-vous-config.json")
     if len(trouves) > 1: raise ErreurSalon(f"plusieurs salons nommés « {conf['salon_nom']} » : renseigner salon_id dans agents\\rendez-vous-config.json")
-    return trouves[0]
+    salon = trouves[0]
+    try: M.ecrire_local(CONFIG, {"salon_id": salon})
+    except (OSError, ValueError) as e: print(f"  cache du salon « {conf['salon_nom']} » non écrit ({type(e).__name__})")
+    return salon
 
 
 def acces_discord_reel():
