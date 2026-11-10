@@ -68,6 +68,7 @@ def faux_dormir(s): SOMMEIL.append(s)
 A.appel_reseau = reseau; A.alerter_discord = faux_alerte; A.executer = faux_executer; A.dormir = faux_dormir; A.ouvrir_drive = lambda conf: DRIVE
 A.PROSPECTION_CONFIG = tmp / "agents" / "prospection-config.json"
 A.appel_sirene = lambda dept, naf, page: {"results": []}; A.lire_site = lambda url: None      # SIRENE et les sites publics : jamais de réseau ici (section 14 bis : doublures complètes)
+A.chercher_site_web = lambda nom, ville: ""    # vérification d'un site avant d'inscrire une entreprise : aucun résultat par défaut (section 26 : scénarios avec un site trouvé)
 A.M.verifier = lambda *a, **k: (True, "")      # la garde « machine active » (machine.py) est testée dans test_machine.py
 
 echecs = 0
@@ -123,7 +124,7 @@ def gros_monde(n=40):
     return t
 
 JOUR = "2026-11-04"; JOUR2 = "2026-11-05"
-COLONNES = ["#", "Nom", "Ville", "Téléphone", "Métier", "Créneau conseillé", "Constat vérifié", "Page d'exemple", "Appelé", "Répondu", "Rendez-vous pris", "Refus", "Remarque"]
+COLONNES = ["#", "Nom", "Ville", "Téléphone", "Type de numéro", "Métier", "Créneau conseillé", "Constat vérifié", "Page d'exemple", "Appelé", "Répondu", "Rendez-vous pris", "Refus", "Remarque"]
 
 print("1. Téléphone valide")
 ok = {"02 35 62 41 64": "02 35 62 41 64", "0235624164": "02 35 62 41 64", "+33 2 35 62 41 64": "02 35 62 41 64", "0033235624164": "02 35 62 41 64", "06.12.34.56.78": "06 12 34 56 78", " 07-66-39-19-52 ": "07 66 39 19 52", "09 51 23 45 67": "09 51 23 45 67"}
@@ -185,7 +186,7 @@ def _debut_min(txt):
     h, _, reste = txt.split(" – ")[0].strip().partition(" h")
     return int(h) * 60 + (int(reste.strip()) if reste.strip() else 0)
 par_metier = {}
-for l in A.lignes_csv(ch)[1:]: par_metier.setdefault(l[4], []).append(l[5])
+for l in A.lignes_csv(ch)[1:]: par_metier.setdefault(l[5], []).append(l[6])
 verifier(all(len(set(v)) == len(v) for v in par_metier.values()), f"jamais le même créneau pour deux lignes du même métier : {[(k, len(v) - len(set(v))) for k, v in par_metier.items() if len(set(v)) != len(v)]}")
 tous_debuts = [_debut_min(c) for v in par_metier.values() for c in v]
 verifier(all(480 <= d < 1140 for d in tous_debuts), "tous les créneaux commencent entre 8 h et 19 h")
@@ -207,15 +208,16 @@ verifier(lignes[0] == COLONNES, f"colonnes : {lignes[0]}")
 corps = lignes[1:]
 verifier(len(corps) == 100 and [l[0] for l in corps] == [str(i) for i in range(1, 101)], "100 lignes numérotées de 1 à 100 (règle fixe de Liam du 10 nov. 2026)")
 verifier(all(len(l) == len(COLONNES) for l in corps), "toutes les lignes ont toutes les colonnes")
-verifier(all(l[8] == l[9] == l[10] == l[11] == l[12] == "" for l in corps), "appelé / répondu / rendez-vous pris / refus / remarque : vides (pas de colonne STOP)")
+verifier(all(l[9] == l[10] == l[11] == l[12] == l[13] == "" for l in corps), "appelé / répondu / rendez-vous pris / refus / remarque : vides (pas de colonne STOP)")
 verifier(all(re.fullmatch(r"0\d( \d\d){4}", l[3]) for l in corps), "téléphones au format « 02 35 62 41 64 »")
-verifier(all(l[7] == "" for l in corps if l[4] == "Restaurant"), "restaurant : aucun lien de page d'exemple (numéro seulement)")
-verifier(all(l[7] == LIENS["coiffeur"] for l in corps if l[4] == "Coiffeur") and all(l[7] == LIENS["plombier-chauffagiste"] for l in corps if l[4] == "Plombier-chauffagiste")
-         and all(l[7] == LIENS["electricien"] for l in corps if l[4] == "Électricien"), "coiffeur / plombier / électricien : lien de liens-metiers.json")
-verifier({l[4] for l in corps} == {"Restaurant", "Coiffeur", "Plombier-chauffagiste", "Électricien"}, "métiers affichés en clair, sans fleuriste, boulangerie ni garage")
-verifier(all(l[5] for l in corps), "créneau conseillé renseigné pour chaque ligne")
+verifier(all(l[4] in ("fixe", "mobile", "box") and l[4] == A.type_telephone(l[3]) for l in corps), "type de numéro (fixe / mobile / box) cohérent avec le numéro affiché")
+verifier(all(l[8] == "" for l in corps if l[5] == "Restaurant"), "restaurant : aucun lien de page d'exemple (numéro seulement)")
+verifier(all(l[8] == LIENS["coiffeur"] for l in corps if l[5] == "Coiffeur") and all(l[8] == LIENS["plombier-chauffagiste"] for l in corps if l[5] == "Plombier-chauffagiste")
+         and all(l[8] == LIENS["electricien"] for l in corps if l[5] == "Électricien"), "coiffeur / plombier / électricien : lien de liens-metiers.json")
+verifier({l[5] for l in corps} == {"Restaurant", "Coiffeur", "Plombier-chauffagiste", "Électricien"}, "métiers affichés en clair, sans fleuriste, boulangerie ni garage")
+verifier(all(l[6] for l in corps), "créneau conseillé renseigné pour chaque ligne")
 resto0 = [l for l in corps if l[1] == "Resto Fictif 0"][0]; autre = [l for l in corps if l[1] == "Coiff Fictif 3"]
-verifier(resto0[6] == "carte absente du site" and all(l[6] == "" for l in corps if l[1] != "Resto Fictif 0"), "constat : seulement celui vérifié (note_besoin), jamais inventé")
+verifier(resto0[7] == "carte absente du site" and all(l[7] == A.CONSTAT_NEUTRE for l in corps if l[1] != "Resto Fictif 0"), "constat : celui vérifié (note_besoin) sinon le texte neutre, jamais une affirmation inventée")
 verifier("liste-sid-" + JOUR in sortie and "100" in sortie, "la sortie dit le fichier et le nombre de lignes")
 verifier(not any(f.name.endswith(".md") for f in A.SORTIE.iterdir()), "un seul fichier par liste (CSV)")
 
@@ -245,7 +247,7 @@ verifier(len(json.loads(A.ETAT.read_text(encoding="utf-8"))["sorties"]) == 100, 
 monde(trouves=gros_monde(60), config={})
 lancer("preparer", "--jour", JOUR)
 rows = lire_csv(JOUR)
-for l in rows[1:]: l[8] = "x"   # simule ce que Sid aurait coché dans la feuille Google
+for l in rows[1:]: l[9] = "x"   # simule ce que Sid aurait coché dans la feuille Google
 with open(A.SORTIE / f"liste-sid-{JOUR}.csv", "w", encoding="utf-8-sig", newline="") as fh: csv.writer(fh, delimiter=";").writerows(rows)
 code, sortie = lancer("preparer", "--jour", JOUR2)
 n1 = {l[1] for l in lire_csv(JOUR)[1:]}; n2 = {l[1] for l in lire_csv(JOUR2)[1:]}
@@ -292,7 +294,7 @@ code, _ = lancer("preparer", "--jour", JOUR); verifier(code == 0 and lire_csv(JO
 verifier(lancer("annuler", "2026-01-01")[0] == 2, "annuler une date sans liste : erreur, rien changé")
 verifier(lancer("annuler")[0] == 0 and not (A.SORTIE / f"liste-sid-{JOUR}.csv").exists(), "annuler sans date : la liste la plus récente")
 lancer("preparer", "--jour", JOUR)
-rows = lire_csv(JOUR); rows[3][8] = "x"; rows[5][12] = "rappeler jeudi"
+rows = lire_csv(JOUR); rows[3][9] = "x"; rows[5][13] = "rappeler jeudi"
 with open(A.SORTIE / f"liste-sid-{JOUR}.csv", "w", encoding="utf-8-sig", newline="") as fh: csv.writer(fh, delimiter=";").writerows(rows)
 code, sortie = lancer("annuler", JOUR)
 verifier(code == 2 and "utilisée" in sortie and (A.SORTIE / f"liste-sid-{JOUR}.csv").exists() and len(json.loads(A.ETAT.read_text(encoding="utf-8"))["sorties"]) == 100, "liste déjà commencée (case ou remarque remplie) : annulation refusée")
@@ -597,7 +599,7 @@ racine = DRIVE.trouver_dossier("Sid"); jour_d = DRIVE.trouver_dossier(JOUR, raci
 verifier(racine and jour_d and DRIVE.dossiers[jour_d] == (JOUR, racine) and DRIVE.dossiers[racine] == ("Sid", None), "dossier « Sid » à la racine du Drive, puis « AAAA-MM-JJ » dedans")
 fid = DRIVE.trouver_feuille(jour_d, f"Liste d'appels {JOUR}"); verifier(fid is not None, "feuille « Liste d'appels AAAA-MM-JJ » dans le dossier du jour")
 contenu = list(csv.reader(io.StringIO(DRIVE.feuilles[fid][2]))); verifier(contenu == lire_csv(JOUR), "la feuille a exactement le contenu du CSV")
-verifier("STOP" not in contenu[0] and len(contenu[0]) == 13, "13 colonnes, pas de colonne STOP")
+verifier("STOP" not in contenu[0] and len(contenu[0]) == 14, "14 colonnes, pas de colonne STOP")
 verifier(json.loads(A.ETAT.read_text(encoding="utf-8"))["google"][JOUR]["feuille"] == fid, "état : identifiants du dossier et de la feuille")
 n_avant = (len(DRIVE.dossiers), len(DRIVE.feuilles)); A.exporter_google(A.cfg(), A.etat_lire(), JOUR, DRIVE, False)
 verifier((len(DRIVE.dossiers), len(DRIVE.feuilles)) == n_avant, "dossier du jour déjà là : rien recréé, rien écrasé")
@@ -746,7 +748,7 @@ def marquer_appele_sur_sheet(jour):
     racine = DRIVE.trouver_dossier("Sid"); d = DRIVE.trouver_dossier(jour, racine); fid = DRIVE.trouver_feuille(d, f"Liste d'appels {jour}")
     titre, dossier, contenu = DRIVE.feuilles[fid]; lignes = list(csv.reader(io.StringIO(contenu)))
     for l in lignes[1:]:
-        if len(l) > 8: l[8] = "x"
+        if len(l) > 9: l[9] = "x"
     buf = io.StringIO(); csv.writer(buf).writerows(lignes); DRIVE.feuilles[fid] = (titre, dossier, buf.getvalue())
 reserves.append(reserve_total())
 for k, jour in enumerate(JOURS):
@@ -764,12 +766,12 @@ tous = [(l[1], l[3]) for j in JOURS for l in listes[j]]
 total_attendu = sum(len(listes[j]) for j in JOURS)
 verifier(len(tous) == len(set(tous)) == total_attendu and len({t[1] for t in tous}) == total_attendu, f"aucun doublon d'un jour à l'autre (toutes confirmées appelées) : {total_attendu} entreprises et autant de numéros différents")
 verifier(not list((tmp / "docs").glob("liste-appels-2026-11-0[5-7].md")), "aucune liste d'appels générée pour Liam pendant les 3 jours (docs\\liste-appels-*.md)")
-verifier({l[4] for j in JOURS for l in listes[j]} <= {"Restaurant", "Coiffeur", "Plombier-chauffagiste", "Électricien"}, "uniquement les 4 métiers voulus")
+verifier({l[5] for j in JOURS for l in listes[j]} <= {"Restaurant", "Coiffeur", "Plombier-chauffagiste", "Électricien"}, "uniquement les 4 métiers voulus")
 racine = DRIVE.trouver_dossier("Sid")
 verifier(sum(1 for n, p in DRIVE.dossiers.values() if n == "Sid") == 1 and sorted(n for n, p in DRIVE.dossiers.values() if p == racine) == JOURS, "un dossier « Sid » et un sous-dossier par jour")
 for jour in JOURS:
     d = DRIVE.trouver_dossier(jour, racine); f = DRIVE.trouver_feuille(d, f"Liste d'appels {jour}")
-    verifier(f is not None and [l[:8] + [""] + l[9:] for l in list(csv.reader(io.StringIO(DRIVE.feuilles[f][2])))[1:]] == [l[:8] + [""] + l[9:] for l in listes[jour]],
+    verifier(f is not None and [l[:9] + [""] + l[10:] for l in list(csv.reader(io.StringIO(DRIVE.feuilles[f][2])))[1:]] == [l[:9] + [""] + l[10:] for l in listes[jour]],
              f"{jour} : bonne feuille, dans le bon dossier, même contenu que la liste du jour (hors case « Appelé », cochée depuis par le test)")
 verifier(len(DRIVE.feuilles) == 3 and DRIVE.partages == [(racine, "sid@example.invalid")], "3 feuilles « Liste d'appels », dossier « Sid » partagé une seule fois (aucune n'avait de reprise à séparer dans « A rappeler »)")
 verifier(len(json.loads(A.ETAT.read_text(encoding="utf-8"))["sorties"]) == total_attendu, f"état : {total_attendu} entreprises marquées (confirmées appelées via la feuille Google, jamais reprises)")
@@ -843,7 +845,7 @@ print("23. 365 jours écoulés : une entreprise confirmée appelée redevient di
 monde(trouves=gros_monde(60), config={})
 lancer("preparer", "--jour", JOUR)
 rows = lire_csv(JOUR)
-for l in rows[1:]: l[8] = "x"
+for l in rows[1:]: l[9] = "x"
 with open(A.SORTIE / f"liste-sid-{JOUR}.csv", "w", encoding="utf-8-sig", newline="") as fh: csv.writer(fh, delimiter=";").writerows(rows)
 lancer("preparer", "--jour", JOUR2)   # le bilan de JOUR2 confirme JOUR dans l'historique (365 jours)
 loin = "2027-11-10"   # plus de 365 jours après JOUR (2026-11-04)
@@ -857,7 +859,7 @@ print("24. Historique reconstruit automatiquement au premier lancement, à parti
 monde(trouves=gros_monde(), config={})
 lancer("preparer", "--jour", JOUR)
 rows = lire_csv(JOUR)
-for l in rows[1:3]: l[8] = "x"   # seules 2 lignes marquées « Appelé », le reste pas (jamais inventé)
+for l in rows[1:3]: l[9] = "x"   # seules 2 lignes marquées « Appelé », le reste pas (jamais inventé)
 with open(A.SORTIE / f"liste-sid-{JOUR}.csv", "w", encoding="utf-8-sig", newline="") as fh: csv.writer(fh, delimiter=";").writerows(rows)
 A.HISTORIQUE.unlink(missing_ok=True)   # simule une mise à jour de l'agent sur une machine qui a déjà des listes, mais pas encore d'historique
 h = A._historique_reconstruire_tout()
@@ -880,6 +882,80 @@ contenu_r = list(csv.reader(io.StringIO(DRIVE.feuilles[fid_r][2])))
 verifier(len(contenu_r) == 101 and contenu_r[0] == COLONNES, f"« A rappeler » contient les 100 lignes reprises, avec l'en-tête ({len(contenu_r)} ligne(s))")
 noms_r = {l[1] for l in contenu_r[1:]}; noms_jour = {l[1] for l in lire_csv(JOUR)[1:]}
 verifier(noms_r == noms_jour, "« A rappeler » contient exactement les entreprises non appelées de la veille, rien d'autre")
+
+print("26. Type de numéro (fixe / mobile / box), vérification GRATUITE d'un site avant d'inscrire une entreprise (règle de Liam, 10 nov. 2026)")
+for brut, attendu in (("02 35 62 41 64", "fixe"), ("01 40 10 00 06", "fixe"), ("05 61 10 00 00", "fixe"), ("06 12 34 56 78", "mobile"), ("07 66 39 19 52", "mobile"), ("09 51 23 45 67", "box")):
+    verifier(A.type_telephone(brut) == attendu, f"type_telephone(« {brut} ») -> « {attendu} »")
+verifier(A.type_telephone("") == "", "type_telephone('') -> ''")
+
+def _boom(nom, ville): raise AssertionError("chercher_site_web ne doit pas être appelé si site_actuel est déjà connu (tag OpenStreetMap)")
+A.chercher_site_web = _boom
+url, raison = A.verifier_site({"nom": "Connu", "ville": "Rouen", "cp": "76000", "site_actuel": "https://connu.example/"})
+verifier(url == "https://connu.example/" and "OpenStreetMap" in raison, "verifier_site : site déjà connu (tag OpenStreetMap) : jamais de recherche web")
+
+A.chercher_site_web = lambda nom, ville: "https://inconnu.example/"
+A.lire_site = lambda url: (url, {}, "une page qui ne parle pas de la bonne ville")
+url, raison = A.verifier_site({"nom": "Sans Confirmation", "ville": "Rouen", "cp": "76000", "site_actuel": ""})
+verifier(url == "" and raison == "", "verifier_site : page trouvée mais qui ne parle pas de cette entreprise (ni ville ni code postal) : rien n'est affirmé")
+
+A.lire_site = lambda url: (url, {}, "Rouen 76000, bienvenue sur notre site")
+url, raison = A.verifier_site({"nom": "Confirmee", "ville": "Rouen", "cp": "76000", "site_actuel": ""})
+verifier(url == "https://inconnu.example/" and "recherche web" in raison, "verifier_site : page confirmée (sa ville y figure) : site officiel retenu")
+
+A.lire_site = lambda url: None
+url, raison = A.verifier_site({"nom": "Page Illisible", "ville": "Rouen", "cp": "76000", "site_actuel": ""})
+verifier(url == "" and raison == "", "verifier_site : page introuvable après la recherche web : rien n'est affirmé")
+
+A.chercher_site_web = lambda nom, ville: ""
+url, raison = A.verifier_site({"nom": "Rien Trouve", "ville": "Rouen", "cp": "76000", "site_actuel": ""})
+verifier(url == "" and raison == "", "verifier_site : aucun résultat de recherche web : rien n'est affirmé")
+A.lire_site = lambda url: None   # retour à la doublure par défaut (aucun site trouvé)
+
+print("26 bis. choisir : avant d'inscrire une entreprise, vérification du site ; exclusion, remplacement et historique si un site officiel est confirmé")
+monde(trouves=[], config={})
+def _cand(nom, prox): return {"cle": S.cle({"nom": nom, "ville": "Rouen"}), "nom": nom, "ville": "Rouen", "tel": tel(100 + prox), "metier": "restaurant", "brut": "restaurant",
+                               "constat": "", "cp": "76000", "site_actuel": "", "dept": "76", "prox": prox}
+CANDIDATS_FIXES = [_cand("Has Site", 0), _cand("Pas De Site 1", 1), _cand("Pas De Site 2", 2)]
+A_candidats_orig = A.candidats; A.candidats = lambda *a, **k: list(CANDIDATS_FIXES)
+A.chercher_site_web = lambda nom, ville: "https://a-un-site.example/" if nom == "Has Site" else ""
+A.lire_site = lambda url: (url, {}, "Rouen 76000 bienvenue") if url == "https://a-un-site.example/" else None
+hist, trouv = {}, []
+conf_test = {**A.cfg(), "repartition": {"restaurant": 1}}
+choisies = A.choisir(conf_test, A.etat_lire(), n=2, jour=JOUR, historique=hist, sites_trouves=trouv)
+verifier({c["nom"] for c in choisies} == {"Pas De Site 1", "Pas De Site 2"}, f"« Has Site » (site confirmé) écartée, remplacée par les suivantes du même métier : {[c['nom'] for c in choisies]}")
+verifier(len(trouv) == 1 and trouv[0]["metier"] == "restaurant" and "site" in trouv[0]["raison"], f"sites_trouves : une entreprise écartée, métier et raison notés, jamais le nom : {trouv}")
+cle_exclu = S.cle({"nom": "Has Site", "ville": "Rouen"}); tel_exclu = tel(100)
+verifier(hist.get(cle_exclu, {}).get("jour") == JOUR and "site" in hist.get(cle_exclu, {}).get("raison", ""), "historique : la clé de l'entreprise écartée note le jour et la raison")
+verifier(hist.get(tel_exclu, {}).get("jour") == JOUR, "historique : son téléphone aussi (exclusion valable même sous un autre nom)")
+verifier(cle_exclu != S.cle({"nom": "Pas De Site 1", "ville": "Rouen"}) and S.cle({"nom": "Pas De Site 1", "ville": "Rouen"}) not in hist, "les entreprises retenues ne sont pas dans l'historique")
+
+print("26 ter. --a-blanc : la vérification est prévisualisée (l'entreprise avec un site n'est pas proposée) mais rien n'est noté dans l'historique")
+hist2, trouv2 = {}, []
+choisies2 = A.choisir(conf_test, A.etat_lire(), n=2, jour=JOUR, historique=hist2, a_blanc=True, sites_trouves=trouv2)
+verifier({c["nom"] for c in choisies2} == {"Pas De Site 1", "Pas De Site 2"}, "à blanc : « Has Site » est quand même écartée de la prévisualisation")
+verifier(len(trouv2) == 1 and hist2 == {}, "à blanc : l'exclusion est comptée pour le compte rendu, mais rien n'est écrit dans l'historique")
+A.candidats = A_candidats_orig; A.chercher_site_web = lambda nom, ville: ""; A.lire_site = lambda url: None   # retour aux doublures par défaut
+
+print("26 quater. Colonne « Type de numéro », constat neutre, et bout en bout (lancer preparer) avec des entreprises écartées pour site trouvé")
+AVEC_SITE = {f"Resto Fictif {i}" for i in range(40)}   # TOUS les restaurants fictifs ont un site confirmé : garantit qu'aucun n'est jamais appelé (déterministe, quel que soit l'ordre de
+                                                        # proximité), le manque étant comblé par les autres métiers (coiffeur, plombier, électricien), comme en section 3 (métier en manque)
+monde(trouves=gros_monde(), config={})
+A.chercher_site_web = lambda nom, ville: "https://a-deja-un-site.example/" if nom in AVEC_SITE else ""
+A.lire_site = lambda url: (url, {}, "Rouen 76000, notre page d'accueil") if url == "https://a-deja-un-site.example/" else None
+code, sortie = lancer("preparer", "--jour", JOUR)
+lignes = lire_csv(JOUR); corps = lignes[1:]
+noms = {l[1] for l in corps}
+verifier(code == 0 and len(corps) == 100, f"malgré les entreprises écartées, la liste a quand même 100 lignes (code {code})")
+verifier(not (noms & AVEC_SITE), f"aucune des entreprises avec un site officiel confirmé n'est inscrite : {sorted(noms & AVEC_SITE)}")
+verifier(any("écartée" in l and "site officiel" in l for l in sortie.splitlines()), f"la sortie annonce l'exclusion : {[l for l in sortie.splitlines() if 'écart' in l]}")
+verifier(not any(l[5] == "Restaurant" for l in corps), "aucun restaurant dans la liste finale : les 40 avaient tous un site confirmé")
+hist = json.loads(A.HISTORIQUE.read_text(encoding="utf-8")); raisons = [v for v in hist.values() if isinstance(v, dict)]
+verifier(len(raisons) == 80 and all(v["jour"] == JOUR and "site" in v["raison"] for v in raisons), f"historique : clé + téléphone de chacun des 40 restaurants écartés ({len(raisons)} entrée(s))")
+verifier(not any(n in A.JOURNAL.read_text(encoding="utf-8") for n in AVEC_SITE), "journal : aucun nom d'entreprise, même pour une exclusion")
+verifier(lignes[0] == COLONNES and lignes[0][4] == "Type de numéro", f"colonne « Type de numéro » juste après « Téléphone » : {lignes[0]}")
+verifier(all(l[4] in ("fixe", "mobile", "box") and l[4] == A.type_telephone(l[3]) for l in corps), "chaque ligne : fixe, mobile ou box, cohérent avec le numéro affiché")
+verifier(all(l[7] == A.CONSTAT_NEUTRE for l in corps), "aucun constat vérifié dans ce monde fictif : texte neutre (« à confirmer avec vous »), jamais une affirmation inventée")
+A.chercher_site_web = lambda nom, ville: ""; A.lire_site = lambda url: None   # retour aux doublures par défaut
 
 print()
 if echecs: print(f"{echecs} ÉCHEC(S)"); sys.exit(1)

@@ -17,11 +17,14 @@ verrou, arrêt de secours, alerte Discord, journal, tests écrits avant le code.
   python agents\\appels-sid.py installer-tache | retirer-tache [--oui]     tâche planifiée Windows de 8 h 00 : sans --oui, affiche seulement la commande
 
 Sélection (la logique de prospection.py est réutilisée, pas recopiée : exclusions STOP / refus, exclus-emails.json, listes d'appels, zone et vagues, proximité de Rouen) :
-~20 métiers locaux seulement (voir NOMS, 10 nov. 2026) ; Normandie (départements 14, 27, 50, 61, 76) ; téléphone français valide ; jamais appelée ni donnée à Sid (ni son numéro) ; les entreprises des listes docs\\liste-appels-*.md
-JAMAIS appelées sont reprises ; ni STOP, refus, exclue, hors zone, ni déjà contactée par e-mail. Une entreprise sortie reste marquée dans l'état tant qu'elle n'a pas de case « Appelé » cochée
-(elle est alors reprise en tête de la liste suivante, « A rappeler ») ; une fois confirmée appelée (répondu, refus ou sans réponse), elle est exclue 365 jours (réglage `jours_sans_rappel`,
-appels-sid-historique.json), puis redevient un candidat normal. Créneau conseillé : calculé ligne par ligne, réparti sur 8 h - 19 h selon le métier (voir `creneau_ligne`)."""
-import argparse, contextlib, csv, io, json, math, os, re, subprocess, sys, time, urllib.parse
+~20 métiers locaux seulement (voir NOMS, 10 nov. 2026) ; Normandie (départements 14, 27, 50, 61, 76) ; téléphone français valide, type (fixe / mobile / box) affiché ; jamais appelée ni donnée à
+Sid (ni son numéro) ; les entreprises des listes docs\\liste-appels-*.md JAMAIS appelées sont reprises ; ni STOP, refus, exclue, hors zone, ni déjà contactée par e-mail. Avant d'inscrire une
+entreprise, vérification GRATUITE d'un site officiel (tag OpenStreetMap, puis recherche web DuckDuckGo relue pour confirmer qu'elle parle bien de cette entreprise, voir `verifier_site`) :
+si un site est trouvé, elle n'est pas appelée et la raison est notée dans l'historique (365 jours) ; sinon le constat affiché reste neutre, jamais une affirmation non vérifiée (CONSTAT_NEUTRE).
+Une entreprise sortie reste marquée dans l'état tant qu'elle n'a pas de case « Appelé » cochée (elle est alors reprise en tête de la liste suivante, « A rappeler ») ; une fois confirmée appelée
+(répondu, refus ou sans réponse), elle est exclue 365 jours (réglage `jours_sans_rappel`, appels-sid-historique.json), puis redevient un candidat normal. Créneau conseillé : calculé ligne par
+ligne, réparti sur 8 h - 19 h selon le métier (voir `creneau_ligne`)."""
+import argparse, contextlib, csv, html, io, json, math, os, re, subprocess, sys, time, urllib.parse, urllib.request
 from datetime import date, datetime
 from pathlib import Path
 
@@ -34,7 +37,8 @@ import prospection as P, redaction as R, suivi as S, zone as ZN
 SORTIE = RACINE / "docs" / "sid"
 MAPS = RACINE / "prospects_maps.csv"
 CONFIG, ETAT, VERROU, ARRET, JOURNAL = (ICI / "appels-sid-config.json", ICI / "appels-sid-etat.json", ICI / "appels-sid.verrou", ICI / "appels-sid.arret", ICI / "appels-sid-journal.log")
-HISTORIQUE = ICI / "appels-sid-historique.json"   # clé ou téléphone -> jour (AAAA-MM-JJ) du dernier appel CONFIRMÉ (case « Appelé » cochée) ; voir _bilan_veille
+HISTORIQUE = ICI / "appels-sid-historique.json"   # clé ou téléphone -> jour (AAAA-MM-JJ) du dernier appel CONFIRMÉ (case « Appelé » cochée, voir _bilan_veille) OU {"jour": ..., "raison": ...}
+                                                   # quand l'entreprise a été écartée AVANT d'être appelée (site officiel trouvé, voir verifier_site) : les deux formes comptent pour jours_sans_rappel.
 PROSPECTION_CONFIG = ICI / "prospection-config.json"
 NORMANDIE = ("76", "27", "14", "50", "61")   # Seine-Maritime, Eure, Calvados, Manche, Orne : du plus proche de Rouen au plus lointain
 NOMS_DEPT = {"14": "Calvados", "27": "Eure", "50": "Manche", "61": "Orne", "76": "Seine-Maritime"}
@@ -125,9 +129,11 @@ def cle_metier_sid(texte):
     if cle: return cle
     t = P.norm(texte)
     return next((c for m, c in MOTS_METIER_SID if m in t), None)
-COLONNES = ["#", "Nom", "Ville", "Téléphone", "Métier", "Créneau conseillé", "Constat vérifié", "Page d'exemple", "Appelé", "Répondu", "Rendez-vous pris", "Refus", "Remarque"]
-LARGEURS_PX = [40, 160, 120, 120, 150, 160, 260, 220, 80, 80, 110, 70, 220]   # une par colonne de COLONNES : mise en forme de la feuille Google (colonnes larges, texte renvoyé à la ligne)
+COLONNES = ["#", "Nom", "Ville", "Téléphone", "Type de numéro", "Métier", "Créneau conseillé", "Constat vérifié", "Page d'exemple", "Appelé", "Répondu", "Rendez-vous pris", "Refus", "Remarque"]
+LARGEURS_PX = [40, 160, 120, 120, 100, 150, 160, 260, 220, 80, 80, 110, 70, 220]   # une par colonne de COLONNES : mise en forme de la feuille Google (colonnes larges, texte renvoyé à la ligne)
 EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$")
+CONSTAT_NEUTRE = "Aucun site trouvé lors de mes recherches, à confirmer avec vous"   # constat par défaut (rien de vérifié par note_besoin) : n'affirme jamais l'absence d'un site, seulement
+                                                                                        # que la vérification (OpenStreetMap + recherche web, voir verifier_site) n'en a pas trouvé un
 
 
 class ErreurAgent(Exception):
@@ -145,6 +151,25 @@ def appel_reseau(requete):
 
 
 def dormir(s): time.sleep(s)
+
+
+SITE_IGNORE = re.compile(r"facebook\.com|instagram\.com|linkedin\.com|pagesjaunes\.fr|societe\.com|google\.[a-z.]+|goo\.gl|maps\.app|yelp\.[a-z.]+|tripadvisor\.|doctolib\.fr|"
+                          r"pagesblanches\.fr|infogreffe\.fr|verif\.com|kompass\.com|wikipedia\.org|manageo\.fr|service-public\.fr|lefigaro\.fr|ouest-france\.fr|actu\.fr|annuaire", re.I)
+
+
+def chercher_site_web(nom, ville):
+    """Premier résultat DuckDuckGo (HTML, gratuit, sans clé, même mécanisme que prospection.chercher_reseau) pour « <nom> <ville> » dont le domaine n'est ni un réseau social ni un annuaire
+    connu (SITE_IGNORE). Point d'accès réseau (remplacé par une doublure dans les tests) ; l'URL renvoyée n'est pas jugée ici (voir verifier_site, qui relit la page). "" si rien d'exploitable."""
+    try:
+        rq = urllib.request.Request("https://html.duckduckgo.com/html/", data=urllib.parse.urlencode({"q": f"{nom} {ville}"}).encode(),
+                                     headers={"User-Agent": "Mozilla/5.0 (compatible; " + P.UA + ")"})
+        page = urllib.request.urlopen(rq, timeout=15).read(300_000).decode("utf-8", "replace")
+    except Exception:
+        return ""
+    for href in re.findall(r'class="result__a" href="([^"]+)"', page):
+        u = urllib.parse.parse_qs(urllib.parse.urlparse(html.unescape(href)).query).get("uddg", [html.unescape(href)])[0]
+        if u and not SITE_IGNORE.search(u): return u
+    return ""
 
 
 def maintenant_paris():
@@ -290,6 +315,14 @@ def telephone_valide(brut):
     return " ".join(d[i:i + 2] for i in range(0, 10, 2))
 
 
+def type_telephone(tel):
+    """« fixe » (01 à 05), « mobile » (06, 07) ou « box » (09, non géographique / VoIP) d'après un numéro déjà normalisé par telephone_valide ; jamais 08 (surtaxé, déjà écarté). "" si vide."""
+    tel = (tel or "").replace(" ", "")
+    if not tel: return ""
+    chiffre = tel[1:2]
+    return "mobile" if chiffre in ("6", "7") else "box" if chiffre == "9" else "fixe"
+
+
 def _lire_maps():
     if not MAPS.exists(): return []
     with open(MAPS, encoding="utf-8-sig", newline="") as f: return list(csv.DictReader(f, delimiter=";"))
@@ -331,6 +364,23 @@ def _tels_en_circulation(etat):
     return out
 
 
+def verifier_site(c):
+    """Vérifie GRATUITEMENT, sans rien affirmer qui ne soit contrôlé, si (nom, ville) a déjà un site officiel, avant d'inscrire l'entreprise dans une liste d'appel :
+    1. le tag OpenStreetMap website/contact:website déjà lu lors du sourcing (champ `site_actuel` de prospection-trouves.csv, posé par lignes_osm/_sirene) ;
+    2. sinon une recherche web (chercher_site_web) dont la page trouvée est relue et doit vraiment parler de CETTE entreprise (sa ville ou son code postal, comme prospection.verifie_osm) —
+       un résultat qui ne le confirme pas ne compte pour rien.
+    -> (url, raison) si un site officiel est confirmé (l'entreprise n'est alors PAS appelée), sinon ("", "") : le constat affiché reste alors neutre (CONSTAT_NEUTRE), jamais une affirmation
+    plus forte. Points d'accès réseau : chercher_site_web et lire_site (remplacés par des doublures dans les tests)."""
+    site = (c.get("site_actuel") or "").strip()
+    if site: return site, "site déclaré sur sa fiche OpenStreetMap"
+    url = chercher_site_web(c["nom"], c["ville"])
+    if not url: return "", ""
+    pg = lire_site(url)
+    if not pg: return "", ""
+    if not P.verifie_osm(pg[2], {"ville": c["ville"], "cp": c.get("cp", "")}): return "", ""
+    return pg[0], "site officiel trouvé par recherche web"
+
+
 def candidats(etat, extra=(), jour=None, historique=None, jours_sans_rappel=365):
     """Entreprises éligibles, sans doublon (même clé nom|ville ou même numéro), classées par proximité de Rouen. Reprend celles des listes d'appels de Liam jamais appelées.
     `historique` (clé/téléphone -> dernier jour d'appel CONFIRMÉ) exclut une entreprise `jours_sans_rappel` jours après son dernier appel (règle fixe de Liam, 10 nov. 2026) ; une entreprise
@@ -351,7 +401,9 @@ def candidats(etat, extra=(), jour=None, historique=None, jours_sans_rappel=365)
         if cle in cles_exclues or (cle in dans_listes and cle not in reprises) or (l.get("email") or "").lower() in mails or _hors_zone(l.get("cp", "")): continue
         if cle in exclus_hist or tel in exclus_hist: continue
         vus_cles.add(cle); vus_tel.add(tel)
-        out.append({"cle": cle, "nom": l["nom"], "ville": l.get("ville", ""), "tel": tel, "metier": metier, "brut": l["metier"], "constat": (l.get("note_besoin") or "").strip(), "dept": ZN.dept_de_cp(str(l.get("cp", ""))) or "", "prox": ZN.cle_proximite(l.get("cp", ""), l.get("ville", ""))})
+        out.append({"cle": cle, "nom": l["nom"], "ville": l.get("ville", ""), "tel": tel, "metier": metier, "brut": l["metier"], "constat": (l.get("note_besoin") or "").strip(),
+                    "cp": str(l.get("cp", "")), "site_actuel": (l.get("site_actuel") or "").strip(),
+                    "dept": ZN.dept_de_cp(str(l.get("cp", ""))) or "", "prox": ZN.cle_proximite(l.get("cp", ""), l.get("ville", ""))})
     return sorted(out, key=lambda c: c["prox"])
 
 
@@ -383,19 +435,36 @@ def _poids(conf):
     return p if sum(p.values()) else {m: 1 for m in NOMS}
 
 
-def choisir(conf, etat, n=None, jour=None, historique=None):
+def choisir(conf, etat, n=None, jour=None, historique=None, a_blanc=False, sites_trouves=None):
     """n lignes (par défaut conf['par_liste'], au moins 100) : répartition par métier selon `repartition`, complétée par les métiers disponibles si l'un manque, puis classées dans l'ordre
-    de la journée. `jour`/`historique` : voir candidats (exclusion 365 jours)."""
+    de la journée. `jour`/`historique` : voir candidats (exclusion 365 jours). Avant d'inscrire une entreprise, verifier_site est appelé : si un site officiel est confirmé, elle N'EST PAS
+    retenue (le pool passe à la suivante) et son exclusion est notée dans `historique` (365 jours, comme un appel confirmé) — sauf à blanc (`a_blanc`), où rien n'est noté, juste prévisualisé.
+    `sites_trouves`, si une liste est donnée, reçoit un dict par entreprise ainsi écartée ({"metier": ..., "raison": ...}, jamais de nom ni de numéro) pour le compte rendu de fin de passage."""
     n = conf["par_liste"] if n is None else max(0, n); pools = {m: [] for m in NOMS}
+    jour = jour or date.today().isoformat()
+    if historique is None: historique = historique_lire()
     for c in candidats(etat, jour=jour, historique=historique, jours_sans_rappel=conf.get("jours_sans_rappel", 365)): pools[c["metier"]].append(c)
     poids = _poids(conf); total = sum(poids.values())
     quota = {m: int(n * poids[m] / total) for m in NOMS}
     for m in sorted(NOMS, key=lambda m: (n * poids[m] / total) % 1, reverse=True)[:n - sum(quota.values())]: quota[m] += 1
+
+    def prendre(pool, souhaite):
+        pris = []
+        while len(pris) < souhaite and pool:
+            c = pool.pop(0); url, raison = verifier_site(c)
+            if url:
+                if not a_blanc:
+                    for k in (c["cle"], c["tel"]): historique[k] = {"jour": jour, "raison": raison}
+                if sites_trouves is not None: sites_trouves.append({"metier": c["metier"], "raison": raison})
+                continue
+            pris.append(c)
+        return pris
+
     choisies = []
-    for m in NOMS: choisies += [pools[m].pop(0) for _ in range(min(quota[m], len(pools[m])))]
+    for m in NOMS: choisies += prendre(pools[m], quota[m])
     while len(choisies) < n and any(pools.values()):
         for m in sorted(NOMS, key=lambda m: -poids[m]):
-            if pools[m] and len(choisies) < n: choisies.append(pools[m].pop(0))
+            if pools[m] and len(choisies) < n: choisies += prendre(pools[m], 1)
     return sorted(choisies, key=lambda c: (RANG[c["metier"]], c["metier"], c["prox"]))
 
 
@@ -415,7 +484,8 @@ def lignes_csv(choisies):
         lien = "" if c["metier"] == "restaurant" else P.lien_exemple(c["brut"], lien_ok=lambda u: True)   # restaurant : numéro seulement ; lien lu dans liens-metiers.json, aucune page ouverte
         m = c["metier"]; idx = compte[m]; compte[m] += 1
         creneau = creneau_ligne(m, idx, totaux[m])
-        out.append([str(i), cellule(c["nom"]), cellule(c["ville"]), c["tel"], NOMS[m], creneau, cellule(c["constat"]), lien] + [""] * 5)
+        constat = cellule(c["constat"]) if c["constat"] else cellule(CONSTAT_NEUTRE)
+        out.append([str(i), cellule(c["nom"]), cellule(c["ville"]), c["tel"], type_telephone(c["tel"]), NOMS[m], creneau, constat, lien] + [""] * 5)
     return out
 
 
@@ -458,7 +528,7 @@ def _lire_liste_pour_bilan(conf, etat, jour_liste, drive):
     for l in lignes[1:]:
         if len(l) <= 3 or not l[1] or not l[3]: continue
         out.append({"cle": S.cle({"nom": l[1], "ville": l[2] if len(l) > 2 else ""}), "nom": l[1], "ville": l[2] if len(l) > 2 else "",
-                     "tel": telephone_valide(l[3]), "metier": cle_metier_sid(l[4]) if len(l) > 4 else "", "appele": (l[8].strip() if len(l) > 8 else "")})
+                     "tel": telephone_valide(l[3]), "metier": cle_metier_sid(l[5]) if len(l) > 5 else "", "appele": (l[9].strip() if len(l) > 9 else "")})
     return out
 
 
@@ -476,7 +546,7 @@ def _historique_reconstruire_tout():
             with open(f, encoding="utf-8-sig", newline="") as fh: lignes = list(csv.reader(fh, delimiter=";"))
         except OSError: continue
         for l in lignes[1:]:
-            if len(l) <= 8 or not l[1] or not l[3] or not l[8].strip(): continue
+            if len(l) <= 9 or not l[1] or not l[3] or not l[9].strip(): continue
             tel = telephone_valide(l[3]); cle = S.cle({"nom": l[1], "ville": l[2] if len(l) > 2 else ""})
             for k in (cle, tel):
                 if k and (k not in h or h[k] < jour_fichier): h[k] = jour_fichier
@@ -513,13 +583,15 @@ def _preparer(conf, etat, jour, a_blanc, drive=None, complet=True):
     if jour in etat["listes"] or chemin(jour).exists(): raise ErreurAgent(f"la liste du {jour} est déjà préparée ({chemin(jour).name}) : utilisez `annuler {jour}` si elle n'a pas servi")
     a_rappeler, historique = _bilan_veille(conf, etat, jour, drive)
     purgees = _purger_sorties_expirees(etat, jour, historique, conf.get("jours_sans_rappel", 365))
+    sites_trouves = []
+    nouvelles = choisir(conf, etat, n=max(0, conf["par_liste"] - len(a_rappeler)), jour=jour, historique=historique, a_blanc=a_blanc, sites_trouves=sites_trouves)
     if not a_blanc: historique_ecrire(historique)
-    nouvelles = choisir(conf, etat, n=max(0, conf["par_liste"] - len(a_rappeler)), jour=jour, historique=historique)
     choisies = a_rappeler + nouvelles
     if not choisies: raise ErreurAgent("aucune entreprise disponible (téléphone valide, jamais appelée, jamais donnée) : la réserve est épuisée")
     if len(choisies) < conf["par_liste"]: print(f"  ! réserve insuffisante : {len(choisies)} ligne(s) au lieu de {conf['par_liste']}")
     if a_rappeler: print(f"  {len(a_rappeler)} ligne(s) non appelée(s) de la liste précédente, reprises en tête (onglet « A rappeler »)")
     if purgees: print(f"  {purgees} entreprise(s) de nouveau disponible(s) ({conf.get('jours_sans_rappel', 365)} jours écoulés depuis leur dernier appel)")
+    if sites_trouves: print(f"  {len(sites_trouves)} entreprise(s) écartée(s) : un site officiel a été trouvé lors de la vérification (OpenStreetMap, recherche web), notée dans l'historique")
     if a_blanc:
         print(f"Liste du {jour} [à blanc : rien n'est écrit, rien n'est marqué] : {len(choisies)} ligne(s) ({repartition(choisies)})")
         if complet:
@@ -532,7 +604,7 @@ def _preparer(conf, etat, jour, a_blanc, drive=None, complet=True):
         etat["listes"][jour] = {"fichier": fichier.name, "nombre": len(choisies), "cles": [c["cle"] for c in choisies], "a_rappeler": len(a_rappeler)}
         etat_ecrire(etat)
     except OSError: fichier.unlink(missing_ok=True); raise
-    journaliser("preparer", f"{jour} : {len(choisies)} entreprises ({repartition(choisies)}), dont {len(a_rappeler)} reprise(s)")
+    journaliser("preparer", f"{jour} : {len(choisies)} entreprises ({repartition(choisies)}), dont {len(a_rappeler)} reprise(s)" + (f", {len(sites_trouves)} écartée(s) pour site trouvé" if sites_trouves else ""))
     print(f"Liste du {jour} : {len(choisies)} ligne(s) ({repartition(choisies)}) -> {fichier}")
     return choisies
 
@@ -555,6 +627,7 @@ def requete_tel(tags, zone, conf):
 
 
 def _jours_ecoules(jour, ancien):
+    if isinstance(ancien, dict): ancien = ancien.get("jour")
     try: return (date.fromisoformat(jour) - date.fromisoformat(ancien)).days
     except (TypeError, ValueError): return 10 ** 6
 
@@ -884,7 +957,7 @@ def cmd_annuler(jour, force, a_blanc):
         fichier = chemin(jour)
         if fichier.exists() and not force:
             with open(fichier, encoding="utf-8-sig", newline="") as f: lignes = list(csv.reader(f, delimiter=";"))[1:]
-            if any(any(x.strip() for x in l[8:]) for l in lignes if len(l) > 8): raise ErreurAgent(f"la liste du {jour} a déjà été utilisée (une case ou une remarque est remplie) : annulation refusée (--force pour libérer quand même)")
+            if any(any(x.strip() for x in l[9:]) for l in lignes if len(l) > 9): raise ErreurAgent(f"la liste du {jour} a déjà été utilisée (une case ou une remarque est remplie) : annulation refusée (--force pour libérer quand même)")
         cles = etat["listes"][jour]["cles"]
         if a_blanc: print(f"Annulation du {jour} [à blanc : rien n'est changé] : {len(cles)} entreprise(s) seraient libérées"); return 0
         for k in cles: etat["sorties"].pop(k, None)
