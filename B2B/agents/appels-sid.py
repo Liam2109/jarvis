@@ -119,7 +119,8 @@ LABELS = {"plombier": "plombier-chauffagiste", "electricien": "électricien", "c
 # les 10 métiers ajoutés le 10 nov. 2026 ont leur propre repérage par mot, propre à appels-sid.
 MOTS_METIER_SID = [("carrele", "carreleur"), ("esthetic", "estheticienne"), ("ongle", "onglerie"), ("traiteur", "traiteur"), ("bouch", "boucher"),
                     ("serrurie", "serrurier"), ("paysag", "paysagiste"), ("taxi", "taxi"), ("auto ecole", "auto_ecole"), ("auto-ecole", "auto_ecole"),
-                    ("nettoyage", "nettoyage"), ("menage", "nettoyage"), ("proprete", "nettoyage")]
+                    ("nettoyage", "nettoyage"), ("menage", "nettoyage"), ("proprete", "nettoyage"),
+                    ("garagiste", "garage")]   # NOMS["garage"] affiche « Garagiste » (profession) dans le CSV ; R.cle_metier ne reconnaît que « garage automobile » (texte brut des sources) : sans cette entrée, une ligne « A rappeler » relue depuis le CSV ne retrouvait jamais sa clé « garage » et disparaissait au lieu d'être reprise (bug du 10 nov. 2026, corrigé le même jour)
 
 
 def cle_metier_sid(texte):
@@ -153,13 +154,14 @@ def appel_reseau(requete):
 def dormir(s): time.sleep(s)
 
 
-SITE_IGNORE = re.compile(r"facebook\.com|instagram\.com|linkedin\.com|pagesjaunes\.fr|societe\.com|google\.[a-z.]+|goo\.gl|maps\.app|yelp\.[a-z.]+|tripadvisor\.|doctolib\.fr|"
-                          r"pagesblanches\.fr|infogreffe\.fr|verif\.com|kompass\.com|wikipedia\.org|manageo\.fr|service-public\.fr|lefigaro\.fr|ouest-france\.fr|actu\.fr|annuaire", re.I)
+SITE_IGNORE = re.compile(r"linkedin\.com|societe\.com|infogreffe\.fr|verif\.com|kompass\.com|wikipedia\.org|manageo\.fr|service-public\.fr|lefigaro\.fr|ouest-france\.fr|actu\.fr|annuaire", re.I)
+# Les réseaux sociaux et annuaires déjà repérés par prospection.VITRINES (dont Pages Jaunes) sont réutilisés, pas recopiés ici (chercher_site_web applique les deux à l'hôte du résultat).
 
 
 def chercher_site_web(nom, ville):
-    """Premier résultat DuckDuckGo (HTML, gratuit, sans clé, même mécanisme que prospection.chercher_reseau) pour « <nom> <ville> » dont le domaine n'est ni un réseau social ni un annuaire
-    connu (SITE_IGNORE). Point d'accès réseau (remplacé par une doublure dans les tests) ; l'URL renvoyée n'est pas jugée ici (voir verifier_site, qui relit la page). "" si rien d'exploitable."""
+    """Premier résultat DuckDuckGo (HTML, gratuit, sans clé, même mécanisme que prospection.chercher_reseau) pour « <nom> <ville> » dont l'hôte n'est ni un réseau social/annuaire connu
+    (prospection.VITRINES) ni un autre annuaire administratif (SITE_IGNORE). Point d'accès réseau (remplacé par une doublure dans les tests) ; l'URL renvoyée n'est pas jugée ici
+    (voir verifier_site, qui relit la page). "" si rien d'exploitable."""
     try:
         rq = urllib.request.Request("https://html.duckduckgo.com/html/", data=urllib.parse.urlencode({"q": f"{nom} {ville}"}).encode(),
                                      headers={"User-Agent": "Mozilla/5.0 (compatible; " + P.UA + ")"})
@@ -168,7 +170,8 @@ def chercher_site_web(nom, ville):
         return ""
     for href in re.findall(r'class="result__a" href="([^"]+)"', page):
         u = urllib.parse.parse_qs(urllib.parse.urlparse(html.unescape(href)).query).get("uddg", [html.unescape(href)])[0]
-        if u and not SITE_IGNORE.search(u): return u
+        host = urllib.parse.urlparse(u).netloc.lower()
+        if u and host and not P.VITRINES.search(host) and not SITE_IGNORE.search(host): return u
     return ""
 
 

@@ -172,3 +172,15 @@ Contexte : Liam utilise un petit PC portable (celui de Mathéo, avec carte Wi-Fi
 - 2026-11-03 : Liam ne veut AUCUNE offre gratuite (pas de page offerte contre avis) : toujours payant. Agent devis décidé (obligatoire). Planning Google Agenda réservable créé (lundi-vendredi 10 h-16 h, 15 min) : https://calendar.google.com/calendar/appointments/schedules/AcZssZ3xvWSaK8qGD2TTJST9f12yK_AUNGA7Ru59_qoYk2p4O5MM8noDvTqnw9HKVJ-I2t8ddNvMIgF7 . Reste à ajouter : lien Google Meet automatique et 2 questions (entreprise, site ou landing page) dans le formulaire de réservation. Contact appelants : proposer WhatsApp (numéro à donner par Liam).
 
 - 2026-11-04 : Restaurant : page **Le Velours** retenue (https://b2b-demos.vercel.app/le-velours-exemple-ef5bae7c/). A faire : ajouter une vidéo en tête de page (hero vidéo), comme les autres pages métier. Ensuite : lire les réponses du Google Form de Sid.
+
+- 2026-11-05 : Portable serveur : surveillance du Wi-Fi. Si pas de connexion internet pendant 5 minutes, redémarrer la carte Wi-Fi ; si toujours rien, redémarrer le portable (une fois par heure au maximum), et les agents B2B/Jarvis doivent repartir seuls au démarrage. Alerte Discord au retour du réseau. Cause connue : problème de carte Wi-Fi, portable à 84 % d utilisation (4 nov.).
+
+## 2026-11-05 (soir) - Regle des listes d appels (bot)
+- Minimum 40 a 45 lignes par jour d appel (au lieu de 35).
+- Rotation sur une semaine glissante : a chaque nouveau jour, le bot cree la liste du prochain jour d appel et retire celle du meme jour de la semaine precedente (ex. le mardi 7 il retire le fichier du mardi 1 et cree celui du mercredi 8 ; le mercredi 8 il retire celui du mercredi 2 et cree celui du jeudi 9). Il garde donc une semaine de fichiers dans le dossier.
+- Idee de securite : ranger l ancien fichier dans un dossier Archive plutot que le supprimer, pour garder les comptes rendus de Sid.
+
+## 2026-11-09 (nuit) - Idee : vault Obsidian pour Jarvis
+- Liam propose de brancher Obsidian (app de notes markdown avec liens entre notes + vue graphe) sur Jarvis : les journaux, l'historique des idees (ce fichier), les fiches clients/prospects deviendraient des notes liees entre elles au lieu de fichiers .md isoles.
+- Avis Claude (pas encore fait) : pas prioritaire ce soir - ni urgent ni bloquant, scope pas encore cadre (quel contenu dans le vault ? genere automatiquement ou range a la main ?). A spec proprement avant de dev : liste precise de ce qui irait dans le vault et ce que ca apporte de plus que les fichiers .md actuels.
+- Statut : en attente, a rediscuter quand le reste (planning Sid, recrutement, sites) est stabilise.

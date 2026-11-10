@@ -77,6 +77,8 @@ $liste = @(
     @{ n = 'agent devis (démarrage unique, désactivé par défaut, devis PDF + texte, prix des sources seulement, un seul devis en validation, rien envoyé au client, arrêt et alerte sur erreur)'; f = 'devis.ps1' }
     @{ n = 'agent rendez-vous (démarrage unique, désactivé par défaut, lecture iCal, nouveau / déplacé / annulé / rappel annoncés une fois, premier passage sans historique, simulation, adresse secrète jamais affichée)'; f = 'rendez-vous.ps1' }
     @{ n = 'agent appels-sid (liste d''appels du matin pour Sid : 50 à 60 entreprises jamais appelées, restaurants / coiffeurs / plombiers / électriciens, téléphone valide, STOP et exclus écartés, jamais deux fois la même, CSV, preparer / etat / annuler / à blanc, aucun envoi)'; f = 'appels-sid.ps1' }
+    @{ n = 'agent resume-sid (résumé Discord du soir : appels Sid comptés sur la feuille Google en lecture seule, chiffre d''affaires Stripe du jour, désactivé par défaut, aucun chiffre inventé)'; f = 'resume-sid.ps1' }
+    @{ n = 'agent stripe-alerte (alerte Discord sur nouveau paiement Stripe, lecture seule, désactivé par défaut, premier passage sans rafale sur l''historique, jamais deux fois le même paiement)'; f = 'stripe-alerte.ps1' }
     @{ n = 'agents B2B sur le serveur (liste blanche git sans secret, *.local.json, machine active, lanceur serveur 6 Go, tâches Jarvis-B2B idempotentes, intégration maj-auto, transfert)'; f = 'b2b-serveur.ps1' }
     @{ n = 'chemins (protection du dossier Jarvis sous un chemin avec espace et en nom court 8.3 « SERVEU~1 », forme longue)'; f = 'chemins.ps1' }
     @{ n = 'diagnostic Discord du portable (faux serveur local, code 403 expliqué, jeton jamais affiché, rien d''envoyé)'; f = 'diag-discord.ps1' }
@@ -141,6 +143,8 @@ $liste = @(
 #   devis.ps1              garde   agent B2B (requis sur le serveur)
 #   rendez-vous.ps1        garde   agent B2B (requis sur le serveur)
 #   appels-sid.ps1         garde   agent B2B (requis sur le serveur)
+#   resume-sid.ps1         garde   agent B2B, lecture seule (feuille Google + Stripe simulés)
+#   stripe-alerte.ps1      garde   agent B2B, lecture seule (Stripe simulé)
 #   b2b-serveur.ps1        garde   agents B2B sur le serveur (requis sur le serveur)
 #   profil-serveur.ps1     garde   texte de tout.ps1 seulement
 #   diag-discord.ps1       garde   faux serveur local 127.0.0.1 : le diagnostic des alertes Discord sert justement sur le serveur
