@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Tests silencieux de la zone de prospection (aucun réseau, fichiers temporaires, rien d'envoyé) : python agents\\test_zone.py
-Zone de Liam par vagues de départements (02/11/2026) : vague 1 = 76 et 27 ; 2 = 14, 50, 61, 60, 80, 28 ; 3 = Paris et petite couronne, 78, 95, 72, 53, 35 ; 4 = le reste de la France. Hors zone = hors des vagues ouvertes."""
+Zone de Liam par vagues de départements (02/11/2026, vague 2 resserrée à la Normandie le 10/11/2026) : vague 1 = 76 et 27 ; 2 = 14, 50, 61 (Normandie complète avec la vague 1, rien de plus) ;
+3 = 60, 80, 28 puis Paris et petite couronne, 78, 95, 72, 53, 35 ; 4 = le reste de la France. Hors zone = hors des vagues ouvertes."""
 import os, sys, tempfile, json, csv
 os.environ.setdefault("JARVIS_TEST", "1")
 from pathlib import Path
@@ -9,19 +10,21 @@ import zone as ZN
 import prospection as X
 
 # --- zone.py : vagues, codes postaux, coordonnées, communes ---
-assert ZN.VAGUES[1] == ["76", "27"] and ZN.VAGUES[2] == ["14", "50", "61", "60", "80", "28"] and ZN.VAGUES[3] == ["75", "92", "93", "94", "78", "95", "72", "53", "35"]
+assert ZN.VAGUES[1] == ["76", "27"] and ZN.VAGUES[2] == ["14", "50", "61"] and ZN.VAGUES[3] == ["60", "80", "28", "75", "92", "93", "94", "78", "95", "72", "53", "35"]
+assert set(ZN.VAGUES[1]) | set(ZN.VAGUES[2]) == {"76", "27", "14", "50", "61"}                        # vagues 1+2 = exactement la Normandie, jamais plus
 v4 = ZN.depts_vague(4); assert len(v4) == 96 - 17 and not {"76", "27", "14", "35"} & set(v4) and "2A" in v4 and "34" in v4 and "971" not in v4
 assert v4 == sorted(v4, key=lambda d: ZN.distance_m(*ZN.ROUEN, *ZN.CENTRES[d])) and v4[0] in ("91", "77", "62")      # le reste de la France : du plus proche au plus lointain de Rouen
-assert [ZN.vague_de_cp(c) for c in ("76000", "27400", "14000", "50100", "61000", "60000", "80000", "28000", "75001", "92100", "78000", "95000", "72000", "53000", "35000", "34000", "20100", "20200", "13001", "97100", "99999", "")] == [1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 0, 0, 0]
+assert [ZN.vague_de_cp(c) for c in ("76000", "27400", "14000", "50100", "61000", "60000", "80000", "28000", "75001", "92100", "78000", "95000", "72000", "53000", "35000", "34000", "20100", "20200", "13001", "97100", "99999", "")] == [1, 1, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 0, 0, 0]
 assert ZN.VAGUE_MAX == 1                                                                                                  # par défaut seule la vague 1 est ouverte
 for cp in ("76000", "76600", "76500", "76200", "27000", "27400"): assert ZN.dans_zone(cp=cp) and not ZN.cp_hors_zone(cp), cp
 for cp in ("14000", "14100", "50100", "61000", "60000", "80000", "28000", "75001", "35000", "34000", "31000", "30000", "20100", "11120"): assert not ZN.dans_zone(cp=cp) and ZN.cp_hors_zone(cp), cp   # vagues fermées
 assert not ZN.cp_hors_zone("") and not ZN.cp_hors_zone("abc")            # sans code postal on ne conclut pas
 ZN.ouvrir(2)
-for cp in ("14000", "14100", "50100", "61000", "60000", "80000", "28000", "76000"): assert ZN.dans_zone(cp=cp), cp
-for cp in ("75001", "35000", "72000", "34000", "13001"): assert not ZN.dans_zone(cp=cp), cp
+for cp in ("14000", "14100", "50100", "61000", "76000"): assert ZN.dans_zone(cp=cp), cp
+for cp in ("60000", "80000", "28000", "75001", "35000", "72000", "34000", "13001"): assert not ZN.dans_zone(cp=cp), cp   # Oise/Somme/Eure-et-Loir : hors Normandie, pas ouverts avec la seule vague 2
 assert ZN.dans_zone(ville="Caen") and not ZN.dans_zone(ville="Marguerittes")
 ZN.ouvrir(3); assert ZN.dans_zone(cp="75001") and ZN.dans_zone(cp="35000") and ZN.dans_zone(cp="95000") and not ZN.dans_zone(cp="34000")
+assert ZN.dans_zone(cp="60000") and ZN.dans_zone(cp="80000") and ZN.dans_zone(cp="28000")                                # vague 3 ouverte : hors Normandie, mais désormais ouvert
 ZN.ouvrir(4); assert ZN.dans_zone(cp="34000") and ZN.dans_zone(cp="20100") and ZN.dans_zone(cp="13001") and not ZN.dans_zone(cp="97100") and not ZN.dans_zone(cp="99999")
 ZN.ouvrir(1)
 assert ZN.dans_zone(cp="14000", vague_max=2) and not ZN.dans_zone(cp="14000") and ZN.cp_hors_zone("34000", 3) and not ZN.cp_hors_zone("34000", 4)   # vague_max explicite
@@ -33,13 +36,13 @@ assert ZN.cp_depuis_adresse("12 rue X, 34000 Montpellier, France") == "34000"
 assert not ZN.dans_zone(cp="34000", lat=49.44, lon=1.09)                  # le code postal prime sur les coordonnées
 # classement par proximité de Rouen : vague 1 d'abord, puis la plus proche
 cp_tri = ["34000", "76000", "75001", "27000", "14000", "35000", "", "60000"]
-tri = sorted(cp_tri, key=lambda c: ZN.cle_proximite(c)); assert tri[:2] == ["76000", "27000"] and tri[2:4] == ["60000", "14000"] and tri[4:6] == ["75001", "35000"] and tri[6:] == ["34000", ""], tri
-assert ZN.cle_proximite("", "Le Havre")[0] == 1 and ZN.cle_proximite("", "Yvetot")[0] == 1 and ZN.cle_proximite("", "Amiens")[0] == 2   # département déduit de la ville
+tri = sorted(cp_tri, key=lambda c: ZN.cle_proximite(c)); assert tri[:3] == ["76000", "27000", "14000"] and tri[3:6] == ["60000", "75001", "35000"] and tri[6:] == ["34000", ""], tri   # 14000 seul en vague 2 (Normandie) ; 60000 passe en vague 3, derrière
+assert ZN.cle_proximite("", "Le Havre")[0] == 1 and ZN.cle_proximite("", "Yvetot")[0] == 1 and ZN.cle_proximite("", "Amiens")[0] == 3   # département déduit de la ville ; Amiens (80) est hors Normandie, vague 3
 assert ZN.cle_proximite("", "Caen")[0] == 2 and ZN.cle_proximite("", "Inconnue") == (9, 0)
 
 # --- configuration : départements des vagues ouvertes, zones Overpass, villes Places ---
 assert X.DEPARTEMENTS[:8] == ["76", "27", "14", "50", "61", "60", "80", "28"] and len(X.DEPARTEMENTS) == 96 and X.depts_ouverts() == ["76", "27"], X.depts_ouverts()
-ZN.ouvrir(2); assert X.depts_ouverts() == ["76", "27", "14", "50", "61", "60", "80", "28"]; ZN.ouvrir(1)
+ZN.ouvrir(2); assert X.depts_ouverts() == ["76", "27", "14", "50", "61"]; ZN.ouvrir(1)   # Normandie complète, rien d'autre
 assert [z["id"] for z in X.zones_osm()] == ["rouen-40km", "dept-76", "dept-27"], [z["id"] for z in X.zones_osm()]
 ZN.ouvrir(3); ids = [z["id"] for z in X.zones_osm()]; assert ids[3:6] == ["dept-14", "dept-50", "dept-61"] and "dept-35" in ids and "dept-34" not in ids
 assert "Caen" in X.villes_places() and "Rennes" in X.villes_places(); ZN.ouvrir(1)
@@ -151,9 +154,9 @@ tel = lambda i, cp, v: {k: "" for k in X.COLS} | {"nom": f"Appel {i}", "ville": 
 pool = [tel(1, "34000", "Montpellier"), tel(2, "76000", "Rouen"), tel(3, "75001", "Paris"), tel(4, "27000", "Évreux"), tel(5, "14000", "Caen"), tel(6, "35000", "Rennes"), tel(7, "60000", "Beauvais")]
 confa = {**X.DEFAUT, "appels_par_jour": 100}
 ZN.ouvrir(1); assert [l["ville"] for l in X.choisir_appels(pool, {}, confa, set())] == ["Rouen", "Évreux"]                    # vague 1 seule
-ZN.ouvrir(2); assert [l["ville"] for l in X.choisir_appels(pool, {}, confa, set())] == ["Rouen", "Évreux", "Beauvais", "Caen"]
-ZN.ouvrir(4); assert [l["ville"] for l in X.choisir_appels(pool, {}, confa, set())] == ["Rouen", "Évreux", "Beauvais", "Caen", "Paris", "Rennes", "Montpellier"]
-assert [l["ville"] for l in X.choisir_appels(pool, {}, {**confa, "appels_par_jour": 3}, set())] == ["Rouen", "Évreux", "Beauvais"]   # le plafond garde les plus proches
+ZN.ouvrir(2); assert [l["ville"] for l in X.choisir_appels(pool, {}, confa, set())] == ["Rouen", "Évreux", "Caen"]            # Beauvais (60, hors Normandie) pas encore ouvert
+ZN.ouvrir(4); assert [l["ville"] for l in X.choisir_appels(pool, {}, confa, set())] == ["Rouen", "Évreux", "Caen", "Beauvais", "Paris", "Rennes", "Montpellier"]   # Caen (Normandie, vague 2) avant Beauvais (vague 3), même si Beauvais est géographiquement plus proche
+assert [l["ville"] for l in X.choisir_appels(pool, {}, {**confa, "appels_par_jour": 3}, set())] == ["Rouen", "Évreux", "Caen"]   # le plafond garde les plus proches (vague d'abord, distance ensuite)
 ZN.ouvrir(1)
 import shutil; shutil.rmtree(tmp, ignore_errors=True)
 print("OK : tous les tests de zone passent")

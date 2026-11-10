@@ -1766,8 +1766,8 @@ def cmd_decouvrir(a_blanc, conf, ouvrir=urllib.request.urlopen, lire=lire_page, 
 PLACES_URL = "https://places.googleapis.com/v1/places:searchText"
 PLACES_MASQUE = "places.id,places.displayName,places.formattedAddress,places.websiteUri"
 PLACES_VILLES = {1: ["Rouen", "Le Havre", "Évreux", "Dieppe", "Elbeuf", "Sotteville-lès-Rouen", "Mont-Saint-Aignan"],   # villes interrogées par vague ouverte (zone.py) ; la vague 4 n'a pas de liste : annuaire et OpenStreetMap seulement
-                 2: ["Caen", "Lisieux", "Cherbourg-en-Cotentin", "Saint-Lô", "Alençon", "Beauvais", "Compiègne", "Amiens", "Abbeville", "Chartres", "Dreux"],
-                 3: ["Paris", "Boulogne-Billancourt", "Saint-Denis", "Créteil", "Versailles", "Cergy", "Le Mans", "Laval", "Rennes", "Saint-Malo"]}
+                 2: ["Caen", "Lisieux", "Cherbourg-en-Cotentin", "Saint-Lô", "Alençon"],   # Normandie seulement (10/11/2026) : Beauvais/Amiens/Chartres déménagent en vague 3, hors zone
+                 3: ["Beauvais", "Compiègne", "Amiens", "Abbeville", "Chartres", "Dreux", "Paris", "Boulogne-Billancourt", "Saint-Denis", "Créteil", "Versailles", "Cergy", "Le Mans", "Laval", "Rennes", "Saint-Malo"]}
 
 
 def villes_places():

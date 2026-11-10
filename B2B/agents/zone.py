@@ -1,6 +1,7 @@
-"""Zone de prospection de Liam : des vagues de départements, de la plus proche de Rouen à la plus lointaine (décision du 02/11/2026).
-Vague 1 = Seine-Maritime (76) et Eure (27) ; vague 2 = Calvados, Manche, Orne, Oise, Somme, Eure-et-Loir ; vague 3 = Paris et petite couronne, Yvelines, Val-d'Oise, Sarthe, Mayenne, Ille-et-Vilaine ;
-vague 4 = le reste de la France métropolitaine. Le programme n'ouvre la vague suivante que si la vague en cours a moins de `seuil_vague` (15) prospects utilisables par jour (voir prospection.py › vagues).
+"""Zone de prospection de Liam : des vagues de départements, de la plus proche de Rouen à la plus lointaine (décision du 02/11/2026 ; vague 2 resserrée à la Normandie le 10/11/2026).
+Vague 1 = Seine-Maritime (76) et Eure (27) ; vague 2 = Calvados, Manche, Orne (14, 50, 61) : vagues 1+2 couvrent exactement la Normandie (76, 27, 14, 50, 61), jamais plus, tant que Liam ne décide
+pas d'ouvrir la vague 3. Vague 3 = Oise, Somme, Eure-et-Loir (hors Normandie, juste après), puis Paris et petite couronne, Yvelines, Val-d'Oise, Sarthe, Mayenne, Ille-et-Vilaine ; vague 4 = le
+reste de la France métropolitaine. Le programme n'ouvre la vague suivante que si la vague en cours a moins de `seuil_vague` (15) prospects utilisables par jour (voir prospection.py › vagues).
 « Hors zone » = hors des vagues ouvertes (VAGUE_MAX, fixé par prospection.py depuis son état ; 1 par défaut).
 Avec un code postal à 5 chiffres : le département donne la vague. Sans code postal mais avec des coordonnées (OpenStreetMap) : le département de la préfecture (ou de la grande ville côtière) la plus proche, à 100 km au plus.
 Une fiche sans coordonnées ni code postal n'est acceptée que si sa commune est connue de la zone."""
@@ -9,8 +10,8 @@ import math, re, unicodedata
 ROUEN = (49.4431, 1.0993)
 VAGUES = {   # numéro: départements, dans l'ordre où l'annuaire les parcourt (les trois premiers, 76, 27, 14, ne changent pas : les curseurs de prospection-etat.json restent valables)
     1: ["76", "27"],
-    2: ["14", "50", "61", "60", "80", "28"],
-    3: ["75", "92", "93", "94", "78", "95", "72", "53", "35"],
+    2: ["14", "50", "61"],                                                              # Normandie complète avec la vague 1 ; rien d'autre (10/11/2026)
+    3: ["60", "80", "28", "75", "92", "93", "94", "78", "95", "72", "53", "35"],         # hors Normandie : Oise/Somme/Eure-et-Loir d'abord, puis Paris et le reste de l'ancienne vague 3
 }
 CENTRES = {   # département: (latitude, longitude) de la préfecture, pour classer par proximité de Rouen et situer une fiche sans code postal
     "01": (46.205, 5.226), "02": (49.564, 3.620), "03": (46.566, 3.334), "04": (44.092, 6.236), "05": (44.559, 6.079), "06": (43.710, 7.262), "07": (44.735, 4.599), "08": (49.773, 4.720),
