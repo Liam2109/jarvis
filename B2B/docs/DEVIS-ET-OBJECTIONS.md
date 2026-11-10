@@ -1,12 +1,12 @@
 # Devis type, appel de 15 minutes et objections
 Brouillon du 26 oct. 2026, à valider par Liam. Aucun lien de paiement Stripe n'est créé. Les points marqués **[à confirmer]** sont des propositions, pas des faits.
 
-## 1. Devis type : Landing page pro, 590 €
+## 1. Devis type : Landing page pro, 595 €
 **Émetteur :** Liam Emo, LM MULTI-SERVICES, SIRET [à compléter], téléphone [à compléter], e-mail [à compléter].
 **Client :** [nom de l'entreprise, adresse, SIRET du client].
 **Mention TVA :** [à vérifier avec le statut de LM MULTI-SERVICES : « TVA non applicable, art. 293 B du CGI » ou TVA à ajouter].
 
-### Ce qui est livré (590 €)
+### Ce qui est livré (595 €)
 1. Une page web unique, adaptée au mobile : en-tête avec métier, ville et numéro cliquable, barre d'appel fixe sur mobile, services, zone d'intervention, déroulé en étapes, questions fréquentes, formulaire de 4 champs maximum, mentions légales.
 2. Textes rédigés à partir des informations du client. Les avis affichés sont uniquement de vrais avis, avec l'accord de leurs auteurs ; sans avis, la section n'apparaît pas.
 3. Photos : celles du client ; à défaut, photos libres de droits légendées et licence notée.
@@ -22,7 +22,7 @@ Mise en ligne sous [5 à 7 jours ouvrés] après réception de l'acompte et des 
 |---|---|---|
 | Nom de domaine + réglages DNS | 40 € de prestation + prix coûtant du domaine (facturé au prix réel, montré avant achat) | Domaine, pointage vers l'hébergement, HTTPS. Le domaine est au nom du client **[à confirmer]**. |
 | E-mail professionnel | [à décider] + prix coûtant de l'abonnement du fournisseur | Création de l'adresse (contact@domaine), réglages de sécurité (SPF, DKIM, DMARC). |
-| Maintenance | 29 €/mois (changements mineurs, sauvegarde, contrôle de disponibilité) ou 49 €/mois (plus de changements, support prioritaire) | Sans engagement après [3] mois **[à confirmer]**. Le détail de ce qui sépare 29 € et 49 € reste à fixer. |
+| Maintenance | 49 €/mois (hébergement, changements, sauvegarde, contrôle de disponibilité, support) | Sans engagement après [3] mois **[à confirmer]**. Pack unique décidé par Liam le 10 nov. 2026 (remplace la distinction 29 € / 49 € ci-dessous, résolue). |
 
 ### Paiement **[à confirmer]**
 - 50 % à la commande (acompte), 50 % à la livraison avant mise en ligne définitive. Paiement en ligne par Stripe **seulement après l'OK de Liam** : aucun lien n'existe à ce jour.
@@ -42,7 +42,7 @@ Mise en ligne sous [5 à 7 jours ouvrés] après réception de l'acompte et des 
 | 0–1 | Ouverture | « Bonjour, Liam Emo, LM MULTI-SERVICES. Je vous appelle au sujet du message sur votre site web. Vous avez 15 minutes ? » Si non : proposer un autre créneau et arrêter. |
 | 1–4 | Écouter | « Comment les clients vous trouvent aujourd'hui ? » « Vous recevez des demandes par quel canal ? » « Qu'est-ce qui vous manque aujourd'hui ? » Noter ses mots exacts. |
 | 4–8 | Montrer sa maquette | Partager le lien : numéro cliquable, barre d'appel mobile, zone d'intervention, formulaire. Préciser : « C'est un exemple, ce n'est pas votre site officiel ; vos vraies informations remplaceraient les zones à remplacer. » |
-| 8–11 | Proposer | « Landing page pro à 590 €, une page, une série de retouches incluse, délai [à confirmer]. En option : domaine, e-mail professionnel, maintenance. » Aucune promesse de classement Google ni de nombre de clients. |
+| 8–11 | Proposer | « Landing page pro à 595 €, une page, une série de retouches incluse, délai [à confirmer]. En option : domaine, e-mail professionnel, maintenance. » Aucune promesse de classement Google ni de nombre de clients. |
 | 11–14 | Objections | Voir la section 3. Écouter, reformuler, répondre en une ou deux phrases. |
 | 14–15 | Clôture | Au choix : « Je vous envoie le devis par e-mail aujourd'hui », « Je vous rappelle [jour] », ou « Pas intéressé : je vous retire de ma liste (STOP) ». Noter le résultat dans `suivi-prospects.csv` (avec l'OK de Liam pour tout changement de statut). |
 
@@ -54,7 +54,7 @@ Principe : écouter, reconnaître l'objection, répondre avec des faits vérifia
 1. **« J'ai déjà un site. »**
    Réponse : « Très bien. Je ne vous demande pas de le remplacer au téléphone. Regardez simplement la maquette : si votre site actuel fait déjà ce qu'elle fait (numéro cliquable sur mobile, formulaire, zone d'intervention), vous n'avez pas besoin de moi. Sinon, ça vous dit de comparer ? » *(Ne pas critiquer son site sans l'avoir vu.)*
 2. **« C'est trop cher. »**
-   Réponse : « Je comprends. 590 € est un tarif unique, sans abonnement obligatoire : une page, une série de retouches, la mise en ligne. Si un seul chantier obtenu par le site rembourse l'investissement, ça vaut le coup ; sinon, ne le faites pas. Je ne peux pas vous promettre ce chiffre. Vous préférez qu'on regarde ce qui compte vraiment pour vous ? » *(Pas de remise improvisée ; toute remise est décidée avant par Liam.)*
+   Réponse : « Je comprends. 595 € est un tarif unique, sans abonnement obligatoire : une page, une série de retouches, la mise en ligne. Si un seul chantier obtenu par le site rembourse l'investissement, ça vaut le coup ; sinon, ne le faites pas. Je ne peux pas vous promettre ce chiffre. Vous préférez qu'on regarde ce qui compte vraiment pour vous ? » *(Pas de remise improvisée ; toute remise est décidée avant par Liam.)*
 3. **« Je n'ai pas le temps. »**
    Réponse : « C'est justement pour ça que je fais le gros du travail. Il me faut une demi-heure de votre temps en tout : vos infos et vos photos. Le reste, c'est moi. On cale 15 minutes quand vous voulez ? »
 4. **« Facebook me suffit. »**
@@ -75,7 +75,7 @@ Principe : écouter, reconnaître l'objection, répondre avec des faits vérifia
 - Relancer quelqu'un qui a dit STOP ou « non » clairement.
 
 ## 4. À valider par Liam (ordre)
-1. Prix et contenu des options : e-mail pro, différence 29 € / 49 €.
+1. ~~Prix et contenu des options : e-mail pro, différence 29 € / 49 €~~ : résolu le 10 nov. 2026, pack unique 49 €/mois tout compris (site, domaine, e-mail pro, hébergement, maintenance).
 2. Délai de livraison et durée d'engagement de la maintenance.
 3. Acompte 50/50 ou autre schéma, et création ensuite d'un lien Stripe (non fait).
 4. Mention de TVA et texte juridique de rétractation (relecture).

@@ -28,9 +28,9 @@ Partage d'écran sur la page exemple du métier. Dis toujours : « C'est un exem
 Puis : « Pour vous, ce serait avec vos photos, vos tarifs et votre adresse. »
 
 **9 à 12 min : proposer une offre (une seule)**
-- Un seul besoin simple, une vitrine : **Page web 590 €** (acompte 30 % = 177 €).
+- Un seul besoin simple, une vitrine : **Page web 595 €** (acompte 30 % = 178 €).
 - Plusieurs services, plusieurs pages : **Site complet de 990 € à 1 490 €** (acompte 30 %).
-- Option : **maintenance 29 € par mois** (hébergement, petites modifications, sauvegardes). Elle est facultative, jamais imposée.
+- Option : **maintenance 49 € par mois** (hébergement, petites modifications, sauvegardes). Elle est facultative, jamais imposée.
 Dis le prix franchement, sans t'excuser. Puis tais-toi et laisse-le réagir.
 
 **12 à 15 min : conclure**
@@ -38,7 +38,7 @@ Dis le prix franchement, sans t'excuser. Puis tais-toi et laisse-le réagir.
 S'il hésite : « Prenez le temps. Je vous rappelle jeudi, ça vous va ? » Fixe une date précise.
 
 ## 3. Réponses aux objections (courtes, honnêtes)
-- « C'est trop cher » : « Je comprends. La page web à 590 € est la plus simple. Combien de clients en plus par mois la rembourseraient ? » Ne baisse pas le prix le jour même.
+- « C'est trop cher » : « Je comprends. La page web à 595 € est la plus simple. Combien de clients en plus par mois la rembourseraient ? » Ne baisse pas le prix le jour même.
 - « J'ai déjà quelqu'un / un neveu » : « Très bien. Si vous voulez, je vous montre ce que je ferais en plus, vous comparez. »
 - « J'ai pas le temps » : « Vous n'avez rien à faire : vous m'envoyez vos photos et vos horaires, je m'occupe du reste. »
 - « Vous avez des références ? » : « Je démarre : voici mes exemples de pages par métier. Pour ça, je prends l'acompte à 30 % seulement, et le solde à la livraison. » Ne jamais inventer de client ni d'avis.
@@ -47,13 +47,14 @@ S'il hésite : « Prenez le temps. Je vous rappelle jeudi, ça vous va ? » Fixe
 ## 4. Liens de paiement (compte Stripe LM MULTI-SERVICES)
 | Offre | Lien |
 |---|---|
-| Page web, acompte 30 % (177 €) | https://buy.stripe.com/3cI14o4Mt9J3dTVc4g5EY00 |
+| Page web, acompte 30 % (177 €, ancien montant réel du lien) | https://buy.stripe.com/3cI14o4Mt9J3dTVc4g5EY00 |
 | Page web, solde | https://buy.stripe.com/28E9AUbaRdZjg23b0c5EY01 |
 | Site complet, acompte 30 % (297 €, correspond à un site à 990 €) | https://buy.stripe.com/3cI3cwfr708t4jl4BO5EY02 |
 | Site complet, solde | https://buy.stripe.com/fZubJ20wd08tbLNc4g5EY03 |
-| Maintenance 29 €/mois | https://buy.stripe.com/aFaeVe1Ah1cx8zB6JW5EY04 |
+| Maintenance 29 €/mois, ancien montant réel du lien | https://buy.stripe.com/aFaeVe1Ah1cx8zB6JW5EY04 |
 
 Attention : le lien « site complet » est fixé à 297 €. Pour un site de 1 190 € ou plus, il faut un acompte de 30 % qui correspond. Dans ce cas, ne pas envoyer ce lien : demander à Claude de créer le bon lien avant d'envoyer le devis.
+**⚠ Prix mis à jour le 10 nov. 2026 (595 €/49 € au lieu de 590 €/29 €) : les liens Stripe ci-dessus sont les ANCIENS liens, toujours fixés aux anciens montants (177 €, 29 €/mois). Ne pas les envoyer avant que Liam ait créé de nouveaux liens à 178 € et 49 €/mois.**
 
 ## 5. Modèle de devis écrit (à envoyer par e-mail après le Meet)
 > **Objet : Devis page web pour [Nom de l'entreprise]**
@@ -64,8 +65,8 @@ Attention : le lien « site complet » est fixé à 297 €. Pour un site de 1 1
 > **Ce que vous voulez** (vos mots) : [reprendre ce qu'il a dit].
 > **Ce que je réalise** : [page web / site complet], [liste de 3 à 5 éléments : photos, horaires, bouton d'appel, carte, formulaire].
 > **Délai** : [X jours ouvrés] après réception de l'acompte et de vos photos.
-> **Prix** : [590 € / montant]. Acompte de 30 % à la commande : [177 € / montant]. Solde à la livraison.
-> **Maintenance (facultative)** : 29 € par mois.
+> **Prix** : [595 € / montant]. Acompte de 30 % à la commande : [178 € / montant]. Solde à la livraison.
+> **Maintenance (facultative)** : 49 € par mois.
 > **Lien de paiement de l'acompte** : [lien Stripe]
 > Devis valable 15 jours.
 >

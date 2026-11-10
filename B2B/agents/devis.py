@@ -4,7 +4,7 @@ puis montre un aperçu « à valider » à Liam sur Discord. RIEN ne part vers l
 Même architecture que prospection.py et instagram.py : script autonome, réglages, état, verrou, arrêt de secours, alerte Discord, journal.
 
   python agents\\devis.py preparer fiche.txt [--a-blanc]   crée le devis (simulation par défaut : fichiers écrits, rien sur Discord) ; --a-blanc : aucune écriture
-  python agents\\devis.py rapide "Nom | métier | ville | livrables, séparés, par des virgules | délai | oui/non | besoin"   idem à partir d'UNE ligne (page web 590 €) ; aussi « devis : … » dans le salon Discord (mode réel)
+  python agents\\devis.py rapide "Nom | métier | ville | livrables, séparés, par des virgules | délai | oui/non | besoin"   idem à partir d'UNE ligne (page web 595 €) ; aussi « devis : … » dans le salon Discord (mode réel)
   python agents\\devis.py jour [--a-blanc]               un passage : poste l'aperçu « à valider » (mode réel) ou lit le « ok devis » de Liam
   python agents\\devis.py continu [--pid N]                boucle (lancée par Jarvis, lib\\devis.ps1) : un passage toutes les cycle_minutes
   python agents\\devis.py etat                             liste des devis et de leur statut
@@ -12,7 +12,7 @@ Même architecture que prospection.py et instagram.py : script autonome, réglag
   python agents\\devis.py annuler DEV-AAAA-NNN             libère la place d'un devis préparé ou validé (jamais d'un devis envoyé)
   python agents\\devis.py arreter | reprendre              arrêt de secours de la boucle | lève la suspension après une erreur
 
-Prix, acompte (30 %) et liens de paiement : UNIQUEMENT ceux de docs\\KIT-RDV-15MIN.md et docs\\liens-paiement.md (page web 590 €, site complet 990 à 1 490 €, maintenance 29 €/mois). Une information
+Prix, acompte (30 %) et liens de paiement : UNIQUEMENT ceux de docs\\KIT-RDV-15MIN.md et docs\\liens-paiement.md (page web 595 €, site complet 990 à 1 490 €, maintenance 49 €/mois). Une information
 absente de la fiche ou des sources (délai, livrables, prix d'un site, option sans prix, lien d'acompte sur mesure) est SIGNALÉE et l'agent s'arrête : rien n'est inventé.
 Statut de paiement : l'agent n'accède ni à la banque ni à Stripe ; Liam coche « acompte payé » à la main (`marquer`). Un seul devis à la fois « préparé » (en cours de validation).
 envoi_automatique = false (défaut) : SIMULATION (aucun message Discord ; Liam valide en ligne de commande). true : aperçu et lecture du « ok devis » sur Discord (toujours rien vers le client)."""
@@ -32,8 +32,8 @@ DEFAUT = {"envoi_automatique": False, "cycle_minutes": 3, "salon_nom": ""}
 STATUTS = ["préparé", "validé", "envoyé", "accepté", "acompte payé"]
 
 # Sources : docs\KIT-RDV-15MIN.md (section 2 et 4) et docs\liens-paiement.md. Rien d'autre n'est un prix.
-PRIX_PAGE, PRIX_SITE_MIN, PRIX_SITE_MAX, PRIX_SITE_LIEN, MAINTENANCE, ACOMPTE_PCT, VALIDITE_JOURS = 590, 990, 1490, 990, 29, 30, 15
-LIEN_PAGE = "https://buy.stripe.com/3cI14o4Mt9J3dTVc4g5EY00"      # acompte 30 % de la page web : 177 €
+PRIX_PAGE, PRIX_SITE_MIN, PRIX_SITE_MAX, PRIX_SITE_LIEN, MAINTENANCE, ACOMPTE_PCT, VALIDITE_JOURS = 595, 990, 1490, 990, 49, 30, 15
+LIEN_PAGE = "https://buy.stripe.com/3cI14o4Mt9J3dTVc4g5EY00"      # ⚠ lien Stripe réel toujours fixé à 177 € (30 % de l'ancien prix 590 €) ; le calcul en code donne maintenant 178 € (30 % de 595 €) : créer un nouveau lien Stripe à 178 € avant d'envoyer un devis « page web »
 LIEN_SITE = "https://buy.stripe.com/3cI3cwfr708t4jl4BO5EY02"      # acompte 30 % du site complet à 990 € : 297 € (seul montant couvert par ce lien)
 OFFRES = {"page": "Page web", "site": "Site complet"}
 ALIAS = {"entreprise": "entreprise", "nomdelentreprise": "entreprise", "societe": "entreprise", "metier": "metier", "ville": "ville", "contact": "contact", "nom": "contact", "nomducontact": "contact",

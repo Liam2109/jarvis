@@ -6,11 +6,11 @@ Ville :
 Contact :
 E-mail :
 Téléphone :
-# Offre : page web (590 €) ou site complet
+# Offre : page web (595 €) ou site complet
 Offre :
 # Prix : site complet seulement. 990 € a un lien d'acompte prêt ; un autre montant (jusqu'à 1 490 €) demande de créer le lien d'acompte avant
 Prix :
-# Options : aucune, ou maintenance (29 € par mois). Toute autre option n'a pas de prix connu : elle bloque le devis
+# Options : aucune, ou maintenance (49 € par mois). Toute autre option n'a pas de prix connu : elle bloque le devis
 Options : aucune
 # Délai : nombre de jours ouvrés, décidé par Liam (ex. 8 jours ouvrés)
 Délai :

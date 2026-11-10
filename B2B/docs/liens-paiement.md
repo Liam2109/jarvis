@@ -10,5 +10,6 @@ Créés le 27 oct. 2026. Un lien ne prélève rien tant qu'un client ne l'utilis
 | Maintenance et hébergement | 29 €/mois | https://buy.stripe.com/aFaeVe1Ah1cx8zB6JW5EY04 |
 
 Principe : le site n'est mis en ligne qu'après le solde. Sites à plus de 990 € (jusqu'à 1 490 €) : créer un lien sur mesure après le devis.
+**⚠ Prix page web passé à 595 € + 49 €/mois le 10 nov. 2026** (au lieu de 590 € + 29 €/mois) : les montants de ce tableau sont ceux RÉELLEMENT facturés par les liens ci-dessus (inchangés). Avant d'envoyer un devis à 595 €, créer de nouveaux liens à 178 € (acompte), 417 € (solde) et 49 €/mois (maintenance) dans le tableau de bord Stripe.
 Mentions : « TVA non applicable, art. 293 B du CGI » sur les factures. Stripe Managed Payments désactivé sur ces liens (c'est Liam le vendeur).
 À faire dans le tableau de bord Stripe : nom public de l'entreprise (affiché au client) à passer de « Trouve ton produit » à « LM MULTI-SERVICES ».
