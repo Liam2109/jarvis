@@ -41,6 +41,19 @@ B2B/sites/*
 !B2B/sites/moteur/
 B2B/sites/moteur/*
 !B2B/sites/moteur/*.py
+# Site vitrine LM MULTI-SERVICES (11/11/2026) : seules les SOURCES (HTML/CSS/JS/DESIGN.md/build.py) ; jamais identite.json (ailleurs, déjà hors git),
+# dist/ (généré), node_modules, luxe/ (autre projet) ni les photos/polices (laissées hors git, pas demandées).
+!B2B/sites/agence/
+B2B/sites/agence/*
+!B2B/sites/agence/*.html
+!B2B/sites/agence/*.css
+!B2B/sites/agence/*.js
+!B2B/sites/agence/DESIGN.md
+!B2B/sites/agence/build.py
+!B2B/sites/agence/assets/
+B2B/sites/agence/assets/*
+!B2B/sites/agence/assets/*.css
+!B2B/sites/agence/assets/*.js
 # ... puis les refus explicites (le dernier motif gagne) : secrets, jetons, états, verrous, listes, journaux
 B2B/messages-a-valider.md
 B2B/docs/sid/
@@ -65,3 +78,6 @@ gmail-*.json
 google-client.json
 identite.json
 exclus-emails.json
+
+# Local Netlify folder
+.netlify
