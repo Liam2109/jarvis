@@ -27,6 +27,7 @@ def _instantane_dossier(p):
 _AVANT_SID_REEL = _instantane_dossier(ICI.parent / "docs" / "sid")
 import prospection as P, suivi as S
 spec = importlib.util.spec_from_file_location("appels_sid", ICI / "appels-sid.py"); A = importlib.util.module_from_spec(spec); spec.loader.exec_module(A)
+CHERCHER_SITE_WEB_REEL = A.chercher_site_web   # référence vers la vraie implémentation, avant qu'elle soit remplacée plus bas par une doublure (section 31 : test direct du blocage/erreur réseau)
 
 def reseau(*a, **k): raise AssertionError("appel réseau interdit dans les tests")
 urllib.request.urlopen = reseau; socket.create_connection = reseau; P.lien_accessible = reseau   # aucune page exemple n'est ouverte : le lien est lu dans liens-metiers.json
@@ -975,6 +976,86 @@ verifier(lignes[0] == COLONNES and lignes[0][4] == "Type de numéro", f"colonne 
 verifier(all(l[4] in ("fixe", "mobile", "box") and l[4] == A.type_telephone(l[3]) for l in corps), "chaque ligne : fixe, mobile ou box, cohérent avec le numéro affiché")
 verifier(all(l[7] == A.CONSTAT_NEUTRE for l in corps), "aucun constat vérifié dans ce monde fictif : texte neutre (« à confirmer avec vous »), jamais une affirmation inventée")
 A.chercher_site_web = lambda nom, ville: ""; A.lire_site = lambda url: None   # retour aux doublures par défaut
+
+print("27. Robustesse de la vérification de site (règles de Liam, 11 nov. 2026) : délai aléatoire entre deux requêtes web, timeouts")
+verifier((A.DELAI_MIN_S, A.DELAI_MAX_S) == (1, 3), "délai aléatoire de 1 à 3 secondes entre deux requêtes web")
+verifier(A.TIMEOUT_REQUETE_S == 10, "délai maximum de 10 secondes par requête web")
+SOMMEIL.clear()
+A.chercher_site_web = lambda nom, ville: "https://inconnu.example/"; A.lire_site = lambda url: (url, {}, "Rouen 76000, bienvenue")
+url, raison = A.verifier_site({"nom": "Delai Test", "ville": "Rouen", "cp": "76000", "site_actuel": ""})
+verifier(url == "https://inconnu.example/", "verifier_site : site confirmé malgré le délai inséré entre les deux requêtes")
+verifier(len(SOMMEIL) == 1 and A.DELAI_MIN_S <= SOMMEIL[0] <= A.DELAI_MAX_S, f"un seul délai (entre chercher_site_web et lire_site, aucun avant la 1re requête) : {SOMMEIL}")
+etat_pause = A._etat_verif_defaut(); SOMMEIL.clear()
+A._pause_requete(etat_pause); A._pause_requete(etat_pause); A._pause_requete(etat_pause)
+verifier(len(SOMMEIL) == 2 and all(A.DELAI_MIN_S <= s <= A.DELAI_MAX_S for s in SOMMEIL), f"_pause_requete : rien avant la 1re requête, un délai 1-3 s avant chacune des suivantes : {SOMMEIL}")
+A.chercher_site_web = lambda nom, ville: ""; A.lire_site = lambda url: None; SOMMEIL.clear()   # retour aux doublures par défaut
+
+print("28. 3 blocages/erreurs consécutifs du moteur de recherche : arrêt des vérifications web pour cette liste (reprend avec OpenStreetMap seul), sans faire échouer la liste")
+monde(trouves=[], config={})
+def _cand_bloc(nom, prox): return {"cle": S.cle({"nom": nom, "ville": "Rouen"}), "nom": nom, "ville": "Rouen", "tel": tel(1500 + prox), "metier": "restaurant", "brut": "restaurant",
+                                    "constat": "", "cp": "76000", "site_actuel": "", "dept": "76", "prox": prox}
+CAND_BLOQUES = [_cand_bloc(f"Bloc {i}", i) for i in range(5)]
+A_candidats_sauve = A.candidats; A.candidats = lambda *a, **k: list(CAND_BLOQUES)
+appels_recherche = []
+def _bloque(nom, ville):
+    appels_recherche.append(nom); raise A.ErreurRecherche("429")
+A.chercher_site_web = _bloque
+conf_bloc = {**A.cfg(), "repartition": {"restaurant": 1}}
+choisies = A.choisir(conf_bloc, A.etat_lire(), n=5, jour=JOUR, historique={}, sites_trouves=[])
+verifier(len(choisies) == 5, f"malgré des blocages répétés du moteur de recherche, les 5 entreprises sont quand même retenues (liste non cassée) : {len(choisies)}")
+verifier(len(appels_recherche) == A.ECHECS_RECHERCHE_MAX, f"le moteur de recherche n'est plus interrogé après {A.ECHECS_RECHERCHE_MAX} blocages consécutifs (OpenStreetMap seul ensuite) : {len(appels_recherche)} appel(s)")
+A.candidats = A_candidats_sauve; A.chercher_site_web = lambda nom, ville: ""   # retour aux doublures par défaut
+
+print("29. Budget de 8 minutes pour la vérification des sites d'une liste : au-delà, les entreprises restantes sont inscrites sans vérification (constat neutre), rien n'est affirmé")
+appels_recherche_budget = []
+A.chercher_site_web = lambda nom, ville: (appels_recherche_budget.append(nom), "")[1]
+etat_budget = A._etat_verif_defaut(); etat_budget["debut"] -= A.BUDGET_VERIF_S + 1   # budget déjà dépassé avant le premier appel
+url, raison = A.verifier_site(_cand_bloc("Budget 1", 0), etat_budget)
+verifier((url, raison) == ("", ""), "verifier_site : budget dépassé -> rien n'est affirmé (ni site trouvé ni absence de site)")
+verifier(appels_recherche_budget == [], f"verifier_site : budget dépassé -> le moteur de recherche n'est plus interrogé du tout : {appels_recherche_budget}")
+verifier(etat_budget["budget_signale"] is True, "le dépassement de budget est repéré (signalé une seule fois)")
+url2, raison2 = A.verifier_site(_cand_bloc("Budget 2", 1), etat_budget)
+verifier((url2, raison2) == ("", "") and appels_recherche_budget == [], "verifier_site : le budget dépassé reste dépassé pour les entreprises suivantes de la même liste")
+A.chercher_site_web = lambda nom, ville: ""   # retour à la doublure par défaut
+
+print("30. --hors-ligne : aucune requête réseau (vérification de site simulée), implique --a-blanc")
+monde(trouves=gros_monde(), config={})
+appels_recherche_hl = []
+def _boom_hl(nom, ville): appels_recherche_hl.append(nom); raise AssertionError("chercher_site_web ne doit jamais être appelé en --hors-ligne")
+A.chercher_site_web = _boom_hl
+code, sortie = lancer("preparer", "--jour", JOUR, "--hors-ligne")
+verifier(code == 0 and appels_recherche_hl == [], f"--hors-ligne : code {code}, aucune requête réseau (vérification simulée) : {appels_recherche_hl}")
+verifier(not A.chemin(JOUR).exists(), "--hors-ligne : rien n'est écrit, comme --a-blanc")
+url3, raison3 = A.verifier_site({"nom": "Hors Ligne", "ville": "Rouen", "cp": "76000", "site_actuel": ""}, A._etat_verif_defaut(hors_ligne=True))
+verifier((url3, raison3) == ("", "") and appels_recherche_hl == [], "verifier_site hors_ligne=True : aucune requête, vérification simulée")
+A.chercher_site_web = lambda nom, ville: ""   # retour à la doublure par défaut
+
+print("31. chercher_site_web : distingue un blocage/erreur du moteur de recherche (ErreurRecherche) d'une recherche qui n'a simplement rien trouvé")
+class _RepVide:
+    def __enter__(s): return s
+    def __exit__(s, *a): return False
+    def read(s, *a): return b""
+def _ouvrir_429(rq, timeout=0): raise urllib.error.HTTPError("u", 429, "trop vite", {}, None)
+try:
+    CHERCHER_SITE_WEB_REEL("Nom", "Ville", ouvrir=_ouvrir_429); verifier(False, "chercher_site_web : un blocage HTTP 429 doit lever ErreurRecherche")
+except A.ErreurRecherche: verifier(True, "chercher_site_web : blocage HTTP 429 -> ErreurRecherche")
+def _ouvrir_503(rq, timeout=0): raise urllib.error.HTTPError("u", 503, "occupé", {}, None)
+try:
+    CHERCHER_SITE_WEB_REEL("Nom", "Ville", ouvrir=_ouvrir_503); verifier(False, "chercher_site_web : un blocage HTTP 503 doit lever ErreurRecherche")
+except A.ErreurRecherche: verifier(True, "chercher_site_web : blocage HTTP 503 -> ErreurRecherche")
+def _ouvrir_404(rq, timeout=0): raise urllib.error.HTTPError("u", 404, "introuvable", {}, None)
+try:
+    r = CHERCHER_SITE_WEB_REEL("Nom", "Ville", ouvrir=_ouvrir_404)
+    verifier(r == "", "chercher_site_web : une erreur HTTP non bloquante (404) n'est pas un blocage : chaîne vide, pas d'exception")
+except A.ErreurRecherche: verifier(False, "chercher_site_web : 404 ne doit pas lever ErreurRecherche (ce n'est pas un blocage du moteur de recherche)")
+def _ouvrir_reseau(rq, timeout=0): raise urllib.error.URLError("réseau coupé")
+try:
+    CHERCHER_SITE_WEB_REEL("Nom", "Ville", ouvrir=_ouvrir_reseau); verifier(False, "chercher_site_web : une panne réseau doit lever ErreurRecherche")
+except A.ErreurRecherche: verifier(True, "chercher_site_web : panne réseau (URLError) -> ErreurRecherche")
+r = CHERCHER_SITE_WEB_REEL("Nom", "Ville", ouvrir=lambda rq, timeout=0: _RepVide())
+verifier(r == "", "chercher_site_web : page vide, aucun résultat exploitable : chaîne vide, pas d'exception")
+
+monde(trouves=[], config={})   # ne laisse aucun fichier temporaire dans un état inattendu pour la suite
 
 print()
 if echecs: print(f"{echecs} ÉCHEC(S)"); sys.exit(1)

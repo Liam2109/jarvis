@@ -13,7 +13,7 @@ Rôle : **tous les appels vont à Sid**. Chaque matin, l'agent cherche de nouvel
 | Commande | Effet |
 |---|---|
 | `python agents\appels-sid.py jour [--jour AAAA-MM-JJ] [--a-blanc]` | **Le passage du matin** : sourcer, préparer la liste, créer le dossier et la feuille Google, mettre à la corbeille les dossiers Google de plus de 7 jours, alerte de réserve. C'est ce que lance la tâche planifiée. Un jour hors `jours_appel` (réglage) : rien n'est fait, juste noté dans le journal (voir plus bas). `--a-blanc` : décrit chaque étape, aucune écriture, aucun réseau. |
-| `preparer [--jour …] [--a-blanc]` | Seulement la liste du jour (une par jour). |
+| `preparer [--jour …] [--a-blanc] [--hors-ligne]` | Seulement la liste du jour (une par jour). `--hors-ligne` : prévisualisation, aucune requête réseau (vérification de site simulée), implique `--a-blanc`. |
 | `sourcer [--jour …] [--a-blanc] [--dept 27] [--simulation]` | Cherche de nouvelles entreprises avec téléphone dans toute la Normandie (OpenStreetMap + SIRENE). `--dept` : un seul département. `--simulation` : aucun réseau, données fictives. `--a-blanc` : interroge Overpass et SIRENE (lecture seule) et dit combien seraient ajoutées, sans rien écrire. |
 | `etat` | Réserve par métier, jours de réserve, liste de Liam (active ou redirigée), Google, partage, dernière liste. |
 | `annuler [AAAA-MM-JJ] [--force] [--a-blanc]` | Libère les entreprises d'une liste non utilisée (refusé si une case ou une remarque du CSV est remplie). Le CSV est conservé en `.annulee.csv` ; un dossier Google déjà créé reste en place. |
@@ -22,11 +22,18 @@ Rôle : **tous les appels vont à Sid**. Chaque matin, l'agent cherche de nouvel
 | `installer-tache` / `retirer-tache` `[--oui]` | Tâche planifiée Windows. **Sans `--oui` : affiche seulement la commande PowerShell, n'exécute rien.** |
 
 ## Réserve et sélection (la logique de `prospection.py` est réutilisée, pas recopiée)
-- **Métiers** : restaurants (numéro seulement, aucune page d'exemple), coiffeurs, plombiers-chauffagistes, électriciens. Jamais fleuriste, boulangerie ni garage. Répartition par poids (`repartition` : 12 / 12 / 13 / 18) ; si un métier manque, les autres complètent.
+- **Métiers** : ~21 du catalogue (`NOMS`, règle fixe du 10 nov. 2026) — plombier-chauffagiste, électricien, maçon, peintre, couvreur, menuisier, carreleur, serrurier, paysagiste, garage, coiffeur, esthéticienne, onglerie, fleuriste, boucher, nettoyage, auto-école, restaurant, traiteur, boulangerie, taxi (restaurant : numéro seulement, aucune page d'exemple). Répartition par poids (`repartition`, environ 5 lignes chacun par défaut) ; si un métier manque, les autres complètent.
 - **Reprise des listes de Liam** : les entreprises de `docs\liste-appels-*.md` **jamais appelées** (aucune case « appelé » ni « répondu ») entrent dans la réserve, avec leur ligne de `prospection-trouves.csv`. Appelées, refus ou STOP : jamais reprises.
 - **Écartées** : déjà sorties pour Sid (état : ne ressortent jamais, sauf `annuler`), numéro invalide (10 chiffres français 01 à 07 ou 09, +33 accepté, jamais 08), même numéro déjà pris, STOP, refus, exclu, écarté, hors zone et vagues fermées (`zone.py`), e-mail dans `exclus-emails.json`, déjà contactée par e-mail ou ayant répondu (suivi).
 - **Sources** : `prospection-trouves.csv` (« sans site, téléphone », « téléphone seulement », « listé »), `suivi-prospects.csv` (« à contacter »), `prospects_maps.csv`, et les lignes des listes d'appels.
 - **Ordre de la liste = ordre de la journée de Sid** : artisans du bâtiment (avant 9 h ou vers 17 h), coiffeurs (milieu de matinée), restaurants (14 h – 16 h). Créneaux indicatifs, non mesurés.
+
+## Vérification de site : robustesse et ses limites (11 nov. 2026)
+Avant d'inscrire une entreprise (`verifier_site`, voir règle du 10 nov. 2026 ci-dessus), la recherche web (DuckDuckGo, `chercher_site_web`) et la lecture de la page trouvée (`lire_site`) sont encadrées pour ne jamais ralentir ni bloquer une génération de liste :
+- **Délai entre requêtes** : 1 à 3 secondes aléatoires entre deux requêtes web (jamais avant la toute première de la liste). **Délai maximum par requête** : 10 secondes (`TIMEOUT_REQUETE_S`).
+- **Budget de 8 minutes par liste** (`BUDGET_VERIF_S`) : passé ce temps, les entreprises restantes sont inscrites **sans vérification**, avec le constat prudent habituel (« Aucun site trouvé lors de mes recherches, à confirmer avec vous », `CONSTAT_NEUTRE`) — rien n'est jamais affirmé sans contrôle.
+- **3 blocages ou erreurs d'affilée du moteur de recherche** (429, 403, 503, panne réseau, délai dépassé : `ErreurRecherche`, `ECHECS_RECHERCHE_MAX`) : les vérifications web s'arrêtent pour le reste de cette liste, qui continue avec le tag OpenStreetMap (`site_actuel`) seul — la liste n'échoue jamais pour cette raison. Une recherche qui ne trouve simplement rien (page vide, erreur HTTP non bloquante comme 404) ne compte pas comme un blocage.
+- **`preparer --hors-ligne`** : prévisualisation, **aucune requête réseau**, vérification de site simulée (toujours « non trouvé ») ; implique `--a-blanc` (rien n'est écrit). Différent de `--a-blanc` seul, qui interroge vraiment le réseau pour prévisualiser ce qui serait exclu.
 
 ## Sourcing : de nouveaux numéros dans toute la Normandie, gratuit (4 nov. 2026)
 - **Zone** : la Normandie, départements **76, 27, 14, 50, 61** (réglage `departements`, `zone: "Normandie"` ; `rayon_osm_m`, le cercle de 40 km autour de Rouen, n'existe plus). Une entreprise dont le code postal est dans un autre département (Paris, Oise, Eure-et-Loir, Bretagne…) n'est jamais retenue ; sans code postal, on ne conclut pas.

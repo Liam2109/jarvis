@@ -24,7 +24,7 @@ si un site est trouvé, elle n'est pas appelée et la raison est notée dans l'h
 Une entreprise sortie reste marquée dans l'état tant qu'elle n'a pas de case « Appelé » cochée (elle est alors reprise en tête de la liste suivante, « A rappeler ») ; une fois confirmée appelée
 (répondu, refus ou sans réponse), elle est exclue 365 jours (réglage `jours_sans_rappel`, appels-sid-historique.json), puis redevient un candidat normal. Créneau conseillé : calculé ligne par
 ligne, réparti sur 8 h - 19 h selon le métier (voir `creneau_ligne`)."""
-import argparse, contextlib, csv, html, io, json, math, os, re, subprocess, sys, time, urllib.parse, urllib.request
+import argparse, contextlib, csv, html, io, json, math, os, random, re, subprocess, sys, time, urllib.error, urllib.parse, urllib.request
 from datetime import date, datetime
 from pathlib import Path
 
@@ -135,6 +135,11 @@ LARGEURS_PX = [40, 160, 120, 120, 100, 150, 160, 260, 220, 80, 80, 110, 70, 220]
 EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$")
 CONSTAT_NEUTRE = "Aucun site trouvé lors de mes recherches, à confirmer avec vous"   # constat par défaut (rien de vérifié par note_besoin) : n'affirme jamais l'absence d'un site, seulement
                                                                                         # que la vérification (OpenStreetMap + recherche web, voir verifier_site) n'en a pas trouvé un
+# --- robustesse de la vérification de site (règles de Liam, 11 nov. 2026, voir verifier_site) ---------------------------
+DELAI_MIN_S, DELAI_MAX_S = 1, 3   # délai aléatoire entre deux requêtes web de verifier_site
+TIMEOUT_REQUETE_S = 10            # délai maximum par requête web de verifier_site (recherche DuckDuckGo)
+BUDGET_VERIF_S = 8 * 60           # budget total pour vérifier les sites d'UNE liste ; dépassé, les entreprises restantes sont inscrites sans vérification (CONSTAT_NEUTRE)
+ECHECS_RECHERCHE_MAX = 3          # blocages/erreurs consécutifs du moteur de recherche avant d'arrêter la vérification web pour cette liste (reprend avec OpenStreetMap seul)
 
 
 class ErreurAgent(Exception):
@@ -143,6 +148,11 @@ class ErreurAgent(Exception):
 
 class ErreurSourcing(Exception):
     """Le sourcing a échoué (type de l'erreur seulement, jamais le détail)."""
+
+
+class ErreurRecherche(Exception):
+    """Le moteur de recherche (DuckDuckGo, dans chercher_site_web) a renvoyé un blocage (429, 403, 503…) ou une erreur réseau/délai dépassé : distinct d'une recherche qui n'a simplement
+    rien trouvé (chaîne vide). ECHECS_RECHERCHE_MAX d'affilée arrêtent la vérification web pour la liste en cours (voir verifier_site), sans jamais faire échouer la liste."""
 
 
 # --- points d'accès au monde extérieur (remplacés par des doublures dans les tests) ---------------------------------------
@@ -158,16 +168,20 @@ SITE_IGNORE = re.compile(r"linkedin\.com|societe\.com|infogreffe\.fr|verif\.com|
 # Les réseaux sociaux et annuaires déjà repérés par prospection.VITRINES (dont Pages Jaunes) sont réutilisés, pas recopiés ici (chercher_site_web applique les deux à l'hôte du résultat).
 
 
-def chercher_site_web(nom, ville):
+def chercher_site_web(nom, ville, ouvrir=urllib.request.urlopen):
     """Premier résultat DuckDuckGo (HTML, gratuit, sans clé, même mécanisme que prospection.chercher_reseau) pour « <nom> <ville> » dont l'hôte n'est ni un réseau social/annuaire connu
-    (prospection.VITRINES) ni un autre annuaire administratif (SITE_IGNORE). Point d'accès réseau (remplacé par une doublure dans les tests) ; l'URL renvoyée n'est pas jugée ici
-    (voir verifier_site, qui relit la page). "" si rien d'exploitable."""
+    (prospection.VITRINES) ni un autre annuaire administratif (SITE_IGNORE). Point d'accès réseau (`ouvrir`, remplacé par une doublure dans les tests) ; l'URL renvoyée n'est pas jugée ici
+    (voir verifier_site, qui relit la page). "" si rien d'exploitable. Délai maximum TIMEOUT_REQUETE_S (10 s, règle du 11 nov. 2026) ; lève ErreurRecherche si le moteur de recherche
+    bloque (429, 403, 503…) ou si la requête échoue (réseau, délai dépassé) — distinct d'une recherche qui n'a simplement rien trouvé."""
     try:
         rq = urllib.request.Request("https://html.duckduckgo.com/html/", data=urllib.parse.urlencode({"q": f"{nom} {ville}"}).encode(),
                                      headers={"User-Agent": "Mozilla/5.0 (compatible; " + P.UA + ")"})
-        page = urllib.request.urlopen(rq, timeout=15).read(300_000).decode("utf-8", "replace")
-    except Exception:
+        with ouvrir(rq, timeout=TIMEOUT_REQUETE_S) as r: page = r.read(300_000).decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        if e.code in (403, 429, 500, 502, 503, 504): raise ErreurRecherche(str(e.code))
         return ""
+    except (urllib.error.URLError, TimeoutError, OSError):
+        raise ErreurRecherche("réseau")
     for href in re.findall(r'class="result__a" href="([^"]+)"', page):
         u = urllib.parse.parse_qs(urllib.parse.urlparse(html.unescape(href)).query).get("uddg", [html.unescape(href)])[0]
         host = urllib.parse.urlparse(u).netloc.lower()
@@ -367,17 +381,52 @@ def _tels_en_circulation(etat):
     return out
 
 
-def verifier_site(c):
+def _etat_verif_defaut(hors_ligne=False):
+    """Un nouvel état de vérification, un par liste générée (créé dans choisir, jamais persisté) : départ du budget de temps, compteur de requêtes (pour le délai aléatoire) et d'échecs
+    consécutifs du moteur de recherche (règles de robustesse du 11 nov. 2026, voir verifier_site)."""
+    return {"debut": time.time(), "requetes": 0, "echecs_recherche": 0, "web_actif": True, "hors_ligne": hors_ligne, "budget_signale": False}
+
+
+def _pause_requete(etat_verif):
+    """Délai aléatoire DELAI_MIN_S-DELAI_MAX_S avant toute requête web de verifier_site qui n'est pas la première de la liste en cours (robustesse, 11 nov. 2026)."""
+    if etat_verif["requetes"]: dormir(random.uniform(DELAI_MIN_S, DELAI_MAX_S))
+    etat_verif["requetes"] += 1
+
+
+def verifier_site(c, etat_verif=None):
     """Vérifie GRATUITEMENT, sans rien affirmer qui ne soit contrôlé, si (nom, ville) a déjà un site officiel, avant d'inscrire l'entreprise dans une liste d'appel :
     1. le tag OpenStreetMap website/contact:website déjà lu lors du sourcing (champ `site_actuel` de prospection-trouves.csv, posé par lignes_osm/_sirene) ;
     2. sinon une recherche web (chercher_site_web) dont la page trouvée est relue et doit vraiment parler de CETTE entreprise (sa ville ou son code postal, comme prospection.verifie_osm) —
        un résultat qui ne le confirme pas ne compte pour rien.
     -> (url, raison) si un site officiel est confirmé (l'entreprise n'est alors PAS appelée), sinon ("", "") : le constat affiché reste alors neutre (CONSTAT_NEUTRE), jamais une affirmation
-    plus forte. Points d'accès réseau : chercher_site_web et lire_site (remplacés par des doublures dans les tests)."""
+    plus forte. Points d'accès réseau : chercher_site_web et lire_site (remplacés par des doublures dans les tests).
+
+    `etat_verif` (voir _etat_verif_defaut ; un par liste, créé dans choisir) applique trois limites de robustesse (11 nov. 2026), jamais bloquantes pour la liste en cours :
+    un délai aléatoire DELAI_MIN_S-DELAI_MAX_S entre deux requêtes web ; un budget total BUDGET_VERIF_S (8 min) passé lequel les entreprises restantes ne sont plus vérifiées (constat
+    neutre, rien n'est affirmé) ; l'arrêt des vérifications web (retour au tag OpenStreetMap `site_actuel` seul) après ECHECS_RECHERCHE_MAX blocages/erreurs consécutifs du moteur de
+    recherche (ErreurRecherche). `hors_ligne` (voir --hors-ligne de `preparer`) : aucune requête réseau, vérification simulée (toujours « non trouvé »)."""
     site = (c.get("site_actuel") or "").strip()
     if site: return site, "site déclaré sur sa fiche OpenStreetMap"
-    url = chercher_site_web(c["nom"], c["ville"])
+    etat_verif = etat_verif if etat_verif is not None else _etat_verif_defaut()
+    if etat_verif["hors_ligne"]: return "", ""
+    if time.time() - etat_verif["debut"] >= BUDGET_VERIF_S:
+        if not etat_verif["budget_signale"]:
+            etat_verif["budget_signale"] = True
+            print(f"  ! budget de {BUDGET_VERIF_S // 60} min dépassé pour la vérification des sites : les entreprises restantes sont inscrites sans vérification")
+        return "", ""
+    if not etat_verif["web_actif"]: return "", ""
+    _pause_requete(etat_verif)
+    try:
+        url = chercher_site_web(c["nom"], c["ville"])
+    except ErreurRecherche:
+        etat_verif["echecs_recherche"] += 1
+        if etat_verif["echecs_recherche"] >= ECHECS_RECHERCHE_MAX:
+            etat_verif["web_actif"] = False
+            print(f"  ! moteur de recherche bloqué {ECHECS_RECHERCHE_MAX} fois de suite : vérification de site arrêtée pour cette liste (OpenStreetMap seul)")
+        return "", ""
+    etat_verif["echecs_recherche"] = 0
     if not url: return "", ""
+    _pause_requete(etat_verif)
     pg = lire_site(url)
     if not pg: return "", ""
     if not P.verifie_osm(pg[2], {"ville": c["ville"], "cp": c.get("cp", "")}): return "", ""
@@ -438,11 +487,13 @@ def _poids(conf):
     return p if sum(p.values()) else {m: 1 for m in NOMS}
 
 
-def choisir(conf, etat, n=None, jour=None, historique=None, a_blanc=False, sites_trouves=None):
+def choisir(conf, etat, n=None, jour=None, historique=None, a_blanc=False, sites_trouves=None, hors_ligne=False):
     """n lignes (par défaut conf['par_liste'], au moins 100) : répartition par métier selon `repartition`, complétée par les métiers disponibles si l'un manque, puis classées dans l'ordre
     de la journée. `jour`/`historique` : voir candidats (exclusion 365 jours). Avant d'inscrire une entreprise, verifier_site est appelé : si un site officiel est confirmé, elle N'EST PAS
     retenue (le pool passe à la suivante) et son exclusion est notée dans `historique` (365 jours, comme un appel confirmé) — sauf à blanc (`a_blanc`), où rien n'est noté, juste prévisualisé.
-    `sites_trouves`, si une liste est donnée, reçoit un dict par entreprise ainsi écartée ({"metier": ..., "raison": ...}, jamais de nom ni de numéro) pour le compte rendu de fin de passage."""
+    `sites_trouves`, si une liste est donnée, reçoit un dict par entreprise ainsi écartée ({"metier": ..., "raison": ...}, jamais de nom ni de numéro) pour le compte rendu de fin de passage.
+    Un seul `etat_verif` (voir _etat_verif_defaut) est créé pour tout l'appel : budget de 8 min et compteur d'échecs du moteur de recherche partagés par toutes les entreprises de cette
+    liste (règles de robustesse du 11 nov. 2026). `hors_ligne` : vérification de site simulée, aucune requête réseau (voir --hors-ligne, cmd_preparer)."""
     n = conf["par_liste"] if n is None else max(0, n); pools = {m: [] for m in NOMS}
     jour = jour or date.today().isoformat()
     if historique is None: historique = historique_lire()
@@ -450,11 +501,12 @@ def choisir(conf, etat, n=None, jour=None, historique=None, a_blanc=False, sites
     poids = _poids(conf); total = sum(poids.values())
     quota = {m: int(n * poids[m] / total) for m in NOMS}
     for m in sorted(NOMS, key=lambda m: (n * poids[m] / total) % 1, reverse=True)[:n - sum(quota.values())]: quota[m] += 1
+    etat_verif = _etat_verif_defaut(hors_ligne)
 
     def prendre(pool, souhaite):
         pris = []
         while len(pris) < souhaite and pool:
-            c = pool.pop(0); url, raison = verifier_site(c)
+            c = pool.pop(0); url, raison = verifier_site(c, etat_verif)
             if url:
                 if not a_blanc:
                     for k in (c["cle"], c["tel"]): historique[k] = {"jour": jour, "raison": raison}
@@ -582,12 +634,12 @@ def _purger_sorties_expirees(etat, jour, historique, jours_sans_rappel):
 
 
 # --- la liste du jour ----------------------------------------------------------------------------------------------
-def _preparer(conf, etat, jour, a_blanc, drive=None, complet=True):
+def _preparer(conf, etat, jour, a_blanc, drive=None, complet=True, hors_ligne=False):
     if jour in etat["listes"] or chemin(jour).exists(): raise ErreurAgent(f"la liste du {jour} est déjà préparée ({chemin(jour).name}) : utilisez `annuler {jour}` si elle n'a pas servi")
     a_rappeler, historique = _bilan_veille(conf, etat, jour, drive)
     purgees = _purger_sorties_expirees(etat, jour, historique, conf.get("jours_sans_rappel", 365))
     sites_trouves = []
-    nouvelles = choisir(conf, etat, n=max(0, conf["par_liste"] - len(a_rappeler)), jour=jour, historique=historique, a_blanc=a_blanc, sites_trouves=sites_trouves)
+    nouvelles = choisir(conf, etat, n=max(0, conf["par_liste"] - len(a_rappeler)), jour=jour, historique=historique, a_blanc=a_blanc, sites_trouves=sites_trouves, hors_ligne=hors_ligne)
     if not a_blanc: historique_ecrire(historique)
     choisies = a_rappeler + nouvelles
     if not choisies: raise ErreurAgent("aucune entreprise disponible (téléphone valide, jamais appelée, jamais donnée) : la réserve est épuisée")
@@ -612,12 +664,13 @@ def _preparer(conf, etat, jour, a_blanc, drive=None, complet=True):
     return choisies
 
 
-def cmd_preparer(conf, jour, a_blanc):
+def cmd_preparer(conf, jour, a_blanc, hors_ligne=False):
     if ARRET.exists(): raise ErreurAgent(f"arrêt de secours présent ({ARRET.name}) : rien n'est généré (supprimez le fichier pour reprendre)")
+    if hors_ligne: a_blanc = True   # --hors-ligne : aucune requête réseau (vérification de site simulée), donc rien n'est écrit non plus
     with sous_verrou(a_blanc):
         etat = etat_lire()
         drive = None if (a_blanc or not conf["envoi_automatique"]) else ouvrir_drive(conf)
-        _preparer(conf, etat, jour, a_blanc, drive)
+        _preparer(conf, etat, jour, a_blanc, drive, hors_ligne=hors_ligne)
         if not a_blanc: print("À importer dans une feuille Google (Fichier > Importer, séparateur « ; ») ou laissez `jour` la créer. Rien n'a été envoyé ni partagé.")
         return 0
 
@@ -1067,13 +1120,14 @@ def main(argv=None):
     sp = p.add_subparsers(dest="cmd", required=True)
     for nom in ("preparer", "sourcer", "jour"): sp.add_parser(nom, parents=[base]).add_argument("--jour", default=None)
     sc = sp.choices["sourcer"]; sc.add_argument("--dept", default=None, choices=list(NORMANDIE), help="limite le sourcing à un département"); sc.add_argument("--simulation", action="store_true", help="aucun réseau, données fictives, rien n'est écrit")
+    sp.choices["preparer"].add_argument("--hors-ligne", action="store_true", help="aucune requête réseau, vérification de site simulée (implique --a-blanc)")
     for nom in ("etat", "google-autoriser", "rediriger-liste", "rendre-liste"): sp.add_parser(nom, parents=[base])
     c = sp.add_parser("annuler", parents=[base]); c.add_argument("jour", nargs="?"); c.add_argument("--force", action="store_true")
     for nom in ("installer-tache", "retirer-tache"): sp.add_parser(nom, parents=[base]).add_argument("--oui", action="store_true")
-    args = p.parse_args(argv); M.exiger("appels-sid", args.cmd, getattr(args, "a_blanc", False) or getattr(args, "simulation", False))      # --simulation n'écrit rien et n'ouvre aucun réseau : permise sur toute machine, comme --a-blanc
+    args = p.parse_args(argv); M.exiger("appels-sid", args.cmd, getattr(args, "a_blanc", False) or getattr(args, "simulation", False) or getattr(args, "hors_ligne", False))      # --simulation et --hors-ligne n'écrivent rien et n'ouvrent aucun réseau : permises sur toute machine, comme --a-blanc
     try:
         conf = cfg(); jour = date_valide(getattr(args, "jour", None) or date.today().isoformat()) if args.cmd in ("preparer", "sourcer", "jour") else None
-        if args.cmd == "preparer": return cmd_preparer(conf, jour, args.a_blanc)
+        if args.cmd == "preparer": return cmd_preparer(conf, jour, args.a_blanc, getattr(args, "hors_ligne", False))
         if args.cmd == "sourcer":
             if args.simulation: _simulation()
             return cmd_sourcer(conf, jour, args.a_blanc or args.simulation, [args.dept] if args.dept else None)
