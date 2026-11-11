@@ -342,7 +342,7 @@ verifier(not re.search(r"print\([^)]*(jeton|token|password|mot de passe)", src, 
 cfg_reel = json.loads((ICI / "appels-sid-config.json").read_text(encoding="utf-8-sig"))
 verifier(cfg_reel.get("envoi_automatique") is False, "appels-sid-config.json : envoi_automatique = false (fichier versionné ; activation réelle par machine dans appels-sid-config.local.json, ignoré par git)")
 verifier(not cfg_reel.get("partager_avec"), "appels-sid-config.json : aucun partager_avec dans le fichier versionné (l'adresse vit dans appels-sid-config.local.json)")
-verifier(cfg_reel.get("jours_appel") == ["lundi", "mardi", "jeudi"], "appels-sid-config.json : jours_appel = lundi, mardi, jeudi")
+verifier(cfg_reel.get("jours_appel") == ["lundi", "mardi", "vendredi"], "appels-sid-config.json : jours_appel = lundi, mardi, vendredi")
 verifier(cfg_reel.get("par_liste") == 100 and cfg_reel.get("jours_sans_rappel") == 365, "appels-sid-config.json : règles fixes du 10 nov. 2026 écrites (par_liste 100, jours_sans_rappel 365)")
 verifier(all(_etat_fichier(ICI / n) == _AVANT_REEL[n] for n in ("appels-sid-etat.json", "appels-sid.verrou", "appels-sid-journal.log", "appels-sid-historique.json")), "les tests n'ont rien écrit dans le dépôt (un fichier d'agent déjà présent, car l'agent tourne pour de vrai sur le serveur, reste inchangé)")
 verifier(_instantane_dossier(ICI.parent / "docs" / "sid") == _AVANT_SID_REEL, "docs\\sid du dépôt : rien ajouté, modifié ni supprimé par les tests (une vraie liste de l'agent, s'il tourne sur le serveur, reste inchangée)")
@@ -797,7 +797,7 @@ j = A.JOURNAL.read_text(encoding="utf-8"); verifier(not re.search(r"\d\d \d\d \d
 A.appel_reseau = reseau
 
 print("21. jours_appel : jour hors planning (aucune liste, aucun accès réseau ni Google, aucune alerte)")
-MERCREDI, SAMEDI, LUNDI, VENDREDI = date(2026, 11, 4), date(2026, 11, 7), date(2026, 11, 2), date(2026, 11, 6)
+MERCREDI, JEUDI, SAMEDI, LUNDI, VENDREDI = date(2026, 11, 4), date(2026, 11, 5), date(2026, 11, 7), date(2026, 11, 2), date(2026, 11, 6)
 reel_maintenant = A.maintenant_paris
 monde(trouves=gros_monde(), config={"envoi_automatique": True, "jours_appel": ["lundi", "mardi", "vendredi"]})
 A.maintenant_paris = lambda: MERCREDI
@@ -806,6 +806,9 @@ verifier(code == 0 and "hors planning" in sortie.lower(), f"mercredi hors jours_
 verifier(not (A.SORTIE / f"liste-sid-{JOUR}.csv").exists() and not A.ETAT.exists(), "mercredi : aucune liste générée, aucun état écrit")
 verifier(DRIVE.appels == 0 and ALERTES == [], "mercredi : aucun accès Drive, aucune alerte Discord")
 verifier("jour hors planning" in A.JOURNAL.read_text(encoding="utf-8").lower(), "le journal note le jour hors planning")
+A.maintenant_paris = lambda: JEUDI
+code, sortie = lancer("jour", "--jour", JOUR)
+verifier(code == 0 and "hors planning" in sortie.lower() and not (A.SORTIE / f"liste-sid-{JOUR}.csv").exists(), "jeudi hors jours_appel (remplacé par vendredi, 9/11/2026) : aucune liste générée")
 A.maintenant_paris = lambda: SAMEDI
 code, sortie = lancer("jour", "--jour", JOUR2)
 verifier(code == 0 and "hors planning" in sortie.lower() and not (A.SORTIE / f"liste-sid-{JOUR2}.csv").exists(), "samedi (hors liste) : pareil, rien généré")
