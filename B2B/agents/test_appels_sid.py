@@ -343,7 +343,7 @@ verifier(not re.search(r"print\([^)]*(jeton|token|password|mot de passe)", src, 
 cfg_reel = json.loads((ICI / "appels-sid-config.json").read_text(encoding="utf-8-sig"))
 verifier(cfg_reel.get("envoi_automatique") is False, "appels-sid-config.json : envoi_automatique = false (fichier versionné ; activation réelle par machine dans appels-sid-config.local.json, ignoré par git)")
 verifier(not cfg_reel.get("partager_avec"), "appels-sid-config.json : aucun partager_avec dans le fichier versionné (l'adresse vit dans appels-sid-config.local.json)")
-verifier(cfg_reel.get("jours_appel") == ["lundi", "mardi", "vendredi"], "appels-sid-config.json : jours_appel = lundi, mardi, vendredi")
+verifier(cfg_reel.get("jours_appel") == ["lundi", "mardi", "jeudi", "vendredi"], "appels-sid-config.json : jours_appel = lundi, mardi, jeudi, vendredi")
 verifier(cfg_reel.get("par_liste") == 100 and cfg_reel.get("jours_sans_rappel") == 365, "appels-sid-config.json : règles fixes du 10 nov. 2026 écrites (par_liste 100, jours_sans_rappel 365)")
 verifier(all(_etat_fichier(ICI / n) == _AVANT_REEL[n] for n in ("appels-sid-etat.json", "appels-sid.verrou", "appels-sid-journal.log", "appels-sid-historique.json")), "les tests n'ont rien écrit dans le dépôt (un fichier d'agent déjà présent, car l'agent tourne pour de vrai sur le serveur, reste inchangé)")
 verifier(_instantane_dossier(ICI.parent / "docs" / "sid") == _AVANT_SID_REEL, "docs\\sid du dépôt : rien ajouté, modifié ni supprimé par les tests (une vraie liste de l'agent, s'il tourne sur le serveur, reste inchangée)")
