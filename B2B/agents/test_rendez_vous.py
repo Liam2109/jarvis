@@ -67,6 +67,19 @@ for cn_vide, appelant in (("Sid", "Sid"), ("", ""), ("   ", ""), ("sid@exemple.i
 assert F("Sid Autre Nom", desc="Entreprise : Garage Priorité\\nNotes : x")["entreprise"] == "Garage Priorité" and F("Sid Autre Nom", desc="Entreprise : Garage Priorité")["prenom"] == "Sid"   # la description a priorité
 assert F("Sid Boulangerie", desc="Notes : rien")["entreprise"] == "Boulangerie" and F("Sid Boulangerie", mail="")["email"] == ""                   # description sans « Entreprise » : le formulaire sert
 assert F("Sid Boulangerie", desc="E-mail : direction@boulangerie.example")["email"] == "direction@boulangerie.example"                               # « E-mail » de la description prime aussi
+
+# --- 3 nouveaux champs du formulaire (11/11/2026) : Entreprise (déjà géré), Appelant, Remarque ; format exact non confirmé -> tolère « Étiquette : valeur » ET « Étiquette » seule suivie de la valeur ---
+app1 = F("Sid Boulangerie", desc="Appelant : Nina\\nEntreprise : Garage Fictif Query"); assert app1["prenom"] == "Nina" and app1["entreprise"] == "Garage Fictif Query"                  # « Appelant » = même champ que « Prénom » (même case du message : « Appelant : » déjà le libellé affiché)
+app2 = F("Sid Boulangerie", desc="ENTREPRISE\\nGarage Fictif Query\\nAPPELANT\\nNina\\nREMARQUE\\nRappeler apres midi")
+assert (app2["entreprise"], app2["prenom"], app2["remarque"]) == ("Garage Fictif Query", "Nina", "Rappeler apres midi"), app2                            # étiquette seule sur sa ligne + valeur sur la suivante, insensible à la casse/aux accents
+app3 = F("Sid Boulangerie", desc="Remarque : Devis urgent, merci de rappeler vite")
+assert app3["remarque"] == "Devis urgent, merci de rappeler vite"
+sans_remarque = F("Sid Boulangerie", desc=""); assert sans_remarque["remarque"] == "" and "Remarque" not in D.message("nouveau", sans_remarque)         # sans remarque : pas de ligne dans le message
+mr = D.message("nouveau", app3); assert "Remarque : Devis urgent, merci de rappeler vite" in mr and mr.splitlines()[4] == "Remarque : Devis urgent, merci de rappeler vite"             # ligne ajoutée après E-mail, avant Quand
+sale = F("Sid Boulangerie", desc="Remarque : @everyone `<@999>` **x** " + "A" * 300); ms = D.message("nouveau", sale)
+assert "<" not in ms and "`" not in ms and "@everyone" not in ms and "A" * 160 not in ms                                                                # remarque = donnée d'un tiers : nettoyée (mentions/markdown) et bornée
+notes = F("Sid Boulangerie", desc="Notes : ne pas afficher")
+assert notes["remarque"] == "" and "ne pas afficher" not in D.message("nouveau", notes)                                                                 # « Notes » reste un champ distinct, toujours tu (inchangé)
 assert "Rendez-vous déplacé" in D.message("deplace", a, avant=datetime(2026, 11, 4, 9, 0, tzinfo=UTC)) and "Avant : mercredi 04/11/2026 à 10 h 00" in D.message("deplace", a, avant=datetime(2026, 11, 4, 9, 0, tzinfo=UTC))
 assert "Rendez-vous annulé" in D.message("annule", a) and "Rappel" in D.message("rappel", a) and "30 minutes" in D.message("rappel", a)
 mal = {**a, "prenom": "@everyone `<@123>` **x**", "entreprise": "A" * 300, "email": "pas un mail"}; mm = D.message("nouveau", mal)

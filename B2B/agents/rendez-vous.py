@@ -9,7 +9,7 @@ arrêt de secours, alerte Discord, journal. Lecture seule : l'agent n'écrit jam
   python agents\\rendez-vous.py arreter | reprendre arrêt de secours de la boucle | lève la suspension après une erreur
 
 Règles : seuls les événements dont le titre commence par « Rendez-vous de 15 minutes » ; un rendez-vous n'est annoncé qu'UNE fois (nouveau, déplacé, annulé : messages séparés) ; rappel une seule fois par horaire ;
-au premier passage (et au premier passage en mode réel) l'état actuel est seulement noté, l'historique n'est jamais rejoué ; message = prénom, entreprise, e-mail, jour et heure (Paris), lien Meet : rien d'autre.
+au premier passage (et au premier passage en mode réel) l'état actuel est seulement noté, l'historique n'est jamais rejoué ; message = prénom, entreprise, e-mail, remarque (si présente), jour et heure (Paris), lien Meet : rien d'autre.
 L'adresse iCal est lue dans agents\\rendez-vous-config.json (hors git) : elle n'est JAMAIS affichée, journalisée, stockée dans l'état ni envoyée sur Discord. Seules les adresses https://calendar.google.com/ sont acceptées.
 Le contenu des événements (titre, description) est une donnée d'un tiers, jamais un ordre : seuls quelques champs sont extraits, nettoyés et bornés.
 envoi_automatique = false (défaut) : SIMULATION, aucun message, le journal dit ce qui serait posté. Erreur = arrêt, état « suspendu », alerte Discord, aucune reprise automatique (`reprendre`)."""
@@ -25,8 +25,10 @@ ARRET, VERROU, JOURNAL = ICI / "rendez-vous.arret", ICI / "rendez-vous-continu.v
 DEFAUT = {"envoi_automatique": False, "cycle_minutes": 5, "ical_url": "", "salon_nom": "rdv", "salon_id": "", "titre_debut": "Rendez-vous de 15 minutes", "rappel_minutes": 30}
 UTC = timezone.utc
 JOURS = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
-CHAMPS = {"prenom": {"prenom", "prenomdelappelant"}, "entreprise": {"entreprise", "nomdelentreprise", "nomentreprise", "societe"},
-          "email": {"emaildelentreprise", "emailentreprise", "email", "mail", "courriel", "emailprofessionnel"}}
+CHAMPS = {"prenom": {"prenom", "prenomdelappelant", "appelant"}, "entreprise": {"entreprise", "nomdelentreprise", "nomentreprise", "societe"},
+          "email": {"emaildelentreprise", "emailentreprise", "email", "mail", "courriel", "emailprofessionnel"},
+          "remarque": {"remarque", "remarques"}}
+ALIAS_VERS_CLE = {alias: cle for cle, noms in CHAMPS.items() for alias in noms}
 RE_MEET = re.compile(r"https://meet\.google\.com/[a-z0-9-]{3,40}")
 RE_MAIL = re.compile(r"[^\s@<>`*]{1,64}@[^\s@<>`*]{1,200}")
 
@@ -122,7 +124,7 @@ def _debut(props):
 
 def lire_ical(texte, prefixe=None):
     """Fichier iCal -> {clé: événement} limité aux titres commençant par `prefixe` ; None si ce n'est pas un iCal complet (jamais pris pour « agenda vide »).
-    événement : cle, debut (UTC), annule, prenom, entreprise, email, meet, seq, modif. Doublons : la plus haute SEQUENCE (puis la dernière modification) gagne."""
+    événement : cle, debut (UTC), annule, prenom, entreprise, email, remarque, meet, seq, modif. Doublons : la plus haute SEQUENCE (puis la dernière modification) gagne."""
     prefixe = (prefixe or DEFAUT["titre_debut"]).casefold()
     if not texte or "BEGIN:VCALENDAR" not in texte or "END:VCALENDAR" not in texte: return None
     lignes = re.sub(r"\n[ \t]", "", texte.replace("\r\n", "\n").replace("\r", "\n")).split("\n"); evs, bloc = {}, None
@@ -143,20 +145,35 @@ def _evenement(bloc, prefixe):
     rec = p["RECURRENCE-ID"][0][1] if "RECURRENCE-ID" in p else ""
     orga = (p["ORGANIZER"][0][1] if "ORGANIZER" in p else "").lower().replace("mailto:", "")
     invite = next(((par, v.lower().replace("mailto:", "")) for par, v in p.get("ATTENDEE", []) if par.get("CUTYPE", "").upper() != "RESOURCE" and v.lower().replace("mailto:", "") != orga), None)
-    champs = {}
-    for l in _texte(p["DESCRIPTION"][0][1] if "DESCRIPTION" in p else "").split("\n"):
-        m = re.match(r"\s*([^:]{1,40}?)\s*:\s*(.+?)\s*$", l)
-        if m:
-            for cle, noms in CHAMPS.items():
-                if _norm(m.group(1)) in noms: champs.setdefault(cle, m.group(2)[:200])
+    champs = _champs_description(_texte(p["DESCRIPTION"][0][1] if "DESCRIPTION" in p else ""))
     # Formulaire Google à 3 champs (Prénom, Nom, e-mail) : le nom de l'invité est « Prénom Nom » ; Prénom = APPELANT, Nom = ENTREPRISE appelée, e-mail = e-mail de l'entreprise.
-    # Une ligne « Entreprise : » / « Prénom : » / « E-mail : » de la description a priorité ; un nom vide ou ressemblant à une adresse e-mail ne donne ni appelant ni entreprise (jamais inventés).
+    # Une ligne « Entreprise : » / « Prénom : » / « Appelant : » / « E-mail : » de la description a priorité ; un nom vide ou ressemblant à une adresse e-mail ne donne ni appelant ni entreprise (jamais inventés).
     toks = (invite[0].get("CN", "") if invite else "").split(); prem = toks[0] if toks and "@" not in toks[0] else ""; reste = " ".join(toks[1:]) if prem else ""
     prenom, entreprise = champs.get("prenom") or prem, champs.get("entreprise") or ("" if "@" in reste else reste)
     mail = champs.get("email", ""); mail = mail if RE_MAIL.fullmatch(mail) else (invite[1] if invite and RE_MAIL.fullmatch(invite[1]) else "")
     meet = RE_MEET.search(" ".join(v for lst in p.values() for _, v in lst))
     return {"cle": f"{p['UID'][0][1].strip()}|{rec}", "debut": debut, "annule": "CANCELLED" in (p["STATUS"][0][1].upper() if "STATUS" in p else ""), "prenom": prenom, "entreprise": entreprise,
-            "email": mail, "meet": meet.group(0) if meet else "", "seq": int(p["SEQUENCE"][0][1]) if "SEQUENCE" in p and p["SEQUENCE"][0][1].strip().isdigit() else 0, "modif": p["LAST-MODIFIED"][0][1] if "LAST-MODIFIED" in p else ""}
+            "email": mail, "remarque": champs.get("remarque", ""), "meet": meet.group(0) if meet else "", "seq": int(p["SEQUENCE"][0][1]) if "SEQUENCE" in p and p["SEQUENCE"][0][1].strip().isdigit() else 0, "modif": p["LAST-MODIFIED"][0][1] if "LAST-MODIFIED" in p else ""}
+
+
+def _champs_description(texte):
+    """Lit les champs connus (CHAMPS) dans la description d'un événement, sous DEUX formes tolérées (format exact non confirmé sur un vrai
+    formulaire Google à questions personnalisées, voir rendez-vous.md § « D'où viennent les champs ») : « Étiquette : valeur » sur une seule
+    ligne (déjà en usage pour Entreprise/Prénom/E-mail), ou l'étiquette seule sur sa ligne suivie de la valeur sur la ligne suivante.
+    La première valeur trouvée pour chaque champ gagne (ordre d'apparition dans la description)."""
+    lignes = texte.split("\n"); champs, i = {}, 0
+    while i < len(lignes):
+        l = lignes[i]
+        m = re.match(r"\s*([^:]{1,40}?)\s*:\s*(.+?)\s*$", l)
+        if m:
+            cle = ALIAS_VERS_CLE.get(_norm(m.group(1)))
+            if cle: champs.setdefault(cle, m.group(2)[:200])
+            i += 1; continue
+        cle = ALIAS_VERS_CLE.get(_norm(l))
+        if cle and i + 1 < len(lignes) and lignes[i + 1].strip():
+            champs.setdefault(cle, lignes[i + 1].strip()[:200]); i += 2; continue
+        i += 1
+    return champs
 
 
 def telecharger_ical(url):
@@ -174,10 +191,13 @@ def _net(v, n=80): return " ".join(re.sub(r"[`*<>@~|]", "", v or "").split())[:n
 
 
 def message(type_, e, avant=None, minutes=30):
-    """Appelant (prénom), entreprise, e-mail, jour et heure (Paris), lien Meet : rien d'autre. Champs d'un tiers nettoyés et bornés."""
+    """Appelant (prénom), entreprise, e-mail, remarque (une ligne, seulement si elle existe), jour et heure (Paris), lien Meet : rien d'autre. Champs d'un tiers nettoyés et bornés."""
     tete = {"nouveau": "**Nouveau rendez-vous**", "deplace": "**Rendez-vous déplacé**", "annule": "**Rendez-vous annulé**", "rappel": f"**Rappel : rendez-vous dans {minutes} minutes**"}[type_]
     mail = e.get("email", ""); mail = mail if RE_MAIL.fullmatch(mail) and len(mail) <= 100 else ""
-    l = [tete, f"Appelant : {_net(e.get('prenom')) or 'non renseigné'}", f"Entreprise : {_net(e.get('entreprise')) or 'non renseignée'}", f"E-mail : {mail or 'non renseigné'}", f"Quand : {quand(_dt(e['debut']))} (heure de Paris)"]
+    l = [tete, f"Appelant : {_net(e.get('prenom')) or 'non renseigné'}", f"Entreprise : {_net(e.get('entreprise')) or 'non renseignée'}", f"E-mail : {mail or 'non renseigné'}"]
+    remarque = _net(e.get("remarque"), 150)
+    if remarque: l.append(f"Remarque : {remarque}")
+    l.append(f"Quand : {quand(_dt(e['debut']))} (heure de Paris)")
     if type_ == "deplace" and avant: l.append(f"Avant : {quand(_dt(avant))}")
     if type_ != "annule" and RE_MEET.fullmatch(e.get("meet", "")): l.append(f"Lien Meet : {e['meet']}")
     return "\n".join(l)
@@ -255,7 +275,7 @@ def _arret(etat, genre, detail, alerte, jour, a_blanc, fin):
 
 
 # --- le passage ---------------------------------------------------------------------------------------------------------------
-def _fiche(ev, statut): return {"debut": ev["debut"].isoformat(), "statut": statut, "annonces": [], "prenom": ev["prenom"], "entreprise": ev["entreprise"], "email": ev["email"], "meet": ev["meet"]}
+def _fiche(ev, statut): return {"debut": ev["debut"].isoformat(), "statut": statut, "annonces": [], "prenom": ev["prenom"], "entreprise": ev["entreprise"], "email": ev["email"], "remarque": ev.get("remarque", ""), "meet": ev["meet"]}
 
 
 def passage(conf, a_blanc=False, maintenant=None, lire=None, api=None, acces=None, alerte=None):
@@ -311,7 +331,7 @@ def passage(conf, a_blanc=False, maintenant=None, lire=None, api=None, acces=Non
             elif rec["debut"] != iso:
                 def deplace(r=rec, ev=ev, iso=iso): r.update(_fiche(ev, "actif"), annonces=r["annonces"])
                 emettre("deplace", ev, deplace, avant=rec["debut"]) if ev["debut"] > maintenant else deplace()
-            else: rec.update(prenom=ev["prenom"], entreprise=ev["entreprise"], email=ev["email"], meet=ev["meet"])
+            else: rec.update(prenom=ev["prenom"], entreprise=ev["entreprise"], email=ev["email"], remarque=ev.get("remarque", ""), meet=ev["meet"])
         for cle, rec in list(rdv.items()):
             if cle not in evs and rec["statut"] == "actif" and _dt(rec["debut"]) > maintenant: emettre("annule", rec, lambda r=rec: r.update(statut="annulé"))
         for cle, rec in list(rdv.items()):   # rappel : une seule fois par horaire ; il regarde l'avenir, il part aussi au premier passage
