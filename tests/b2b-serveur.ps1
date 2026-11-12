@@ -28,30 +28,35 @@ if (-not $aGit) { Verifier $true '(git absent : contrôles de la liste blanche s
     Verifier ($total -lt 4MB -and (($tailles | Measure-Object -Maximum).Maximum) -lt 1MB) 'B2B : moins de 4 Mo au total, aucun fichier de plus de 1 Mo'
     $doit = @('CLAUDE.md', 'requirements.txt', 'generer.py', 'sourcing.py', 'docs\MEMOIRE-B2B.md', 'docs\INSTAGRAM-PLAN.md', 'docs\KIT-RDV-15MIN.md', 'sites\moteur\generer.py', 'sites\moteur\modeles3.py',
               'agents\liens-metiers.json', 'agents\serveur-taches.json', 'agents\serveur-b2b.ps1', 'agents\machine.py', 'agents\test_machine.py', 'agents\identite.exemple.json', 'agents\devis-fiche-modele.txt')
+    $agence = 'DESIGN.md', 'assets\slider.js', 'assets\style.css', 'build.py', 'confidentialite.html', 'index.html', 'mentions-legales.html', 'merci.html'   # site de l'agence : versionné
+    $doit += @($agence | ForEach-Object { "sites\agence\$_" })
     $doit += @(Get-ChildItem $AG -File | Where-Object { $_.Extension -in '.py', '.md' -or $_.Name -like '*-config.json' } | ForEach-Object { "agents\$($_.Name)" })
     $manque = @($doit | Select-Object -Unique | Where-Object { $_ -notin ($cand | ForEach-Object { $_ -replace '^B2B\\', '' }) })
-    Verifier ($manque.Count -eq 0) ('versionné : agents\*.py, *.md, tests, configs par défaut, liens-metiers.json, docs, requirements, code de sites\moteur' + $(if ($manque.Count) { ' — MANQUE : ' + ($manque -join ', ') }))
+    Verifier ($manque.Count -eq 0) ('versionné : agents\*.py, *.md, tests, configs par défaut, liens-metiers.json, docs, requirements, code de sites\moteur, site sites\agence' + $(if ($manque.Count) { ' — MANQUE : ' + ($manque -join ', ') }))
     $interdit = '(^|\\)(gmail-(token|client)[^\\]*|instagram-token[^\\]*|google-sheets-token[^\\]*|google-client[^\\]*|ical_url[^\\]*)$', '\.local\.json$', '-etat\.json$', '\.verrou$', '\.arret$', 'prospection-retours', 'exclus', '\.csv$', '\.log$', '^B2B\\lots\\', 'messages-a-valider',
                 '^B2B\\docs\\sid\\', '^B2B\\docs\\liste-appels', '(^|\\)\.env', 'identite\.json$', 'reponses-traitees', 'liens-metiers\.avant', '__pycache__', '\.(png|jpe?g|gif|mp4|zip|pdf|ico|woff2?)$', '^B2B\\(maquettes|instagram|facebook|jarvis-ref|skills|recherche-sites|devis)\\', 'apercu-lot', 'suivi-prospects', 'prospects[^\\]*\.html$'
-    $sorti = @($cand | Where-Object { $c = $_; ($interdit | Where-Object { $c -match $_ }).Count }); $sorti += @($cand | Where-Object { $_ -like 'B2B\sites\*' -and $_ -notmatch '^B2B\\sites\\moteur\\[^\\]+\.py$' })
+    $sorti = @($cand | Where-Object { $c = $_; ($interdit | Where-Object { $c -match $_ }).Count }); $sorti += @($cand | Where-Object { $_ -like 'B2B\sites\*' -and $_ -notmatch '^B2B\\sites\\moteur\\[^\\]+\.py$' -and ($_ -replace '^B2B\\sites\\agence\\', '') -notin $agence })
     Verifier ($sorti.Count -eq 0) ('rien de secret, d''état, de prospect, de journal, de média ni de site n''est versionné' + $(if ($sorti.Count) { ' — À EXAMINER : ' + (($sorti | Select-Object -First 5) -join ', ') }))
     # git check-ignore : chemins (même inexistants) qui DOIVENT être ignorés / suivis
     $ignores = 'B2B/agents/gmail-token-x@y.fr.json', 'B2B/agents/gmail-token.json', 'B2B/agents/gmail-client.json', 'B2B/agents/gmail-client-ancien.json', 'B2B/agents/instagram-token.json', 'B2B/agents/google-sheets-token.json', 'B2B/agents/google-client.json', 'B2B/agents/ical_url',
                'B2B/agents/ical_url.txt', 'B2B/agents/b2b.local.json', 'B2B/agents/rendez-vous-config.local.json', 'B2B/agents/devis-etat.json', 'B2B/agents/prospection-etat.json', 'B2B/agents/instagram-continu.verrou', 'B2B/agents/devis.arret', 'B2B/agents/prospection-retours.json',
                'B2B/agents/exclus-emails.json', 'B2B/agents/exclus-x.json', 'B2B/agents/reponses-traitees.json', 'B2B/agents/identite.json', 'B2B/agents/appels-sid-journal.log', 'B2B/agents/serveur-b2b.log', 'B2B/prospects.csv', 'B2B/suivi-prospects.csv', 'B2B/lots/lot-1.csv', 'B2B/sites/x/index.html', 'B2B/sites/moteur/photos/a.jpg',
                'B2B/sites/moteur/base.css', 'B2B/messages-a-valider.md', 'B2B/docs/sid/a.csv', 'B2B/docs/liste-appels-2026-11-04.md', 'B2B/.env', 'B2B/devis/DEV-1.pdf', 'B2B/instagram/01-intro.png', 'B2B/maquettes/a.html', 'B2B/agents/__pycache__/a.pyc', 'B2B/docs/instagram-photo-profil.png'
-    $pasIgnores = 'B2B/agents/prospection.py', 'B2B/agents/prospection.md', 'B2B/agents/liens-metiers.json', 'B2B/agents/test_devis.py', 'B2B/agents/rendez-vous-config.json', 'B2B/agents/serveur-taches.json', 'B2B/agents/serveur-b2b.ps1', 'B2B/docs/MEMOIRE-B2B.md', 'B2B/CLAUDE.md', 'B2B/sites/moteur/generer.py', 'B2B/requirements.txt', 'B2B/agents/identite.exemple.json'
+    $pasIgnores = 'B2B/agents/prospection.py', 'B2B/agents/prospection.md', 'B2B/agents/liens-metiers.json', 'B2B/agents/test_devis.py', 'B2B/agents/rendez-vous-config.json', 'B2B/agents/serveur-taches.json', 'B2B/agents/serveur-b2b.ps1', 'B2B/docs/MEMOIRE-B2B.md', 'B2B/CLAUDE.md', 'B2B/sites/moteur/generer.py', 'B2B/requirements.txt', 'B2B/agents/identite.exemple.json', 'B2B/sites/agence/index.html', 'B2B/sites/agence/assets/style.css', 'B2B/sites/agence/build.py'
+    $ignores += 'B2B/sites/agence/identite.json', 'B2B/sites/agence/x.local.json'
     $mauvaisI = @($ignores | Where-Object { & git -C $Root check-ignore -q -- $_ 2>$null; $LASTEXITCODE -ne 0 }); $mauvaisN = @($pasIgnores | Where-Object { & git -C $Root check-ignore -q -- $_ 2>$null; $LASTEXITCODE -eq 0 })
     Verifier ($mauvaisI.Count -eq 0) ('git check-ignore : tous les secrets, états, verrous, listes et journaux sont ignorés' + $(if ($mauvaisI.Count) { ' — PAS IGNORÉS : ' + ($mauvaisI -join ', ') }))
     Verifier ($mauvaisN.Count -eq 0) ('git check-ignore : le code et les configs par défaut ne sont pas ignorés' + $(if ($mauvaisN.Count) { ' — IGNORÉS À TORT : ' + ($mauvaisN -join ', ') }))
     # configs par défaut : aucune valeur secrète ni propre à la machine, tout éteint
-    $sens = '^(ical_url|partager_avec|salon_.*|utilisateur_id|image_url_base|compte_google|comptes|api|.*token.*|.*secret.*|.*password.*|.*mdp.*)$'; $mal = @()
+    $sens = '^(ical_url|partager_avec|salon_(?!nom$).*|utilisateur_id|image_url_base|compte_google|comptes|api|.*token.*|.*secret.*|.*password.*|.*mdp.*)$'; $mal = @()
     foreach ($f in ($cand | Where-Object { $_ -like 'B2B\agents\*-config.json' })) {
         $j = Lire (Join-Path $Root $f) | ConvertFrom-Json
         foreach ($p in $j.PSObject.Properties) { if ($p.Name -match $sens -and $null -ne $p.Value -and "$($p.Value | ConvertTo-Json -Compress)" -notin '""', '[]', '{}') { $mal += "$f : $($p.Name)" } }
-        if ($j.PSObject.Properties['envoi_automatique'] -and $j.envoi_automatique -eq $true) { $mal += "$f : envoi_automatique = true" }
+        # rendez-vous : true voulu dans le fichier suivi (le serveur poste sur Discord sans fichier local ; surchargeable par rendez-vous-config.local.json)
+        if ($j.PSObject.Properties['envoi_automatique'] -and $j.envoi_automatique -eq $true -and $f -ne 'B2B\agents\rendez-vous-config.json') { $mal += "$f : envoi_automatique = true" }
+        if (Select-String -Path (Join-Path $Root $f) -Pattern 'calendar/ical' -SimpleMatch -Quiet) { $mal += "$f : URL iCal" }
     }
-    Verifier ($mal.Count -eq 0) ('configs par défaut versionnées : aucun secret, aucun salon, aucune adresse, envoi_automatique = false (tout démarre éteint)' + $(if ($mal.Count) { ' — ' + ($mal -join ' ; ') }))
+    Verifier ($mal.Count -eq 0) ('configs par défaut versionnées : aucun secret, aucun identifiant de salon, aucune URL iCal, envoi_automatique = false (sauf rendez-vous, voulu)' + $(if ($mal.Count) { ' — ' + ($mal -join ' ; ') }))
     # aucun motif de clé ni de jeton dans les fichiers versionnés
     $motifs = 'rk_live_[A-Za-z0-9]{10,}', 'sk_live_[A-Za-z0-9]{10,}', 'AIza[0-9A-Za-z_-]{30,}', 'ya29\.[0-9A-Za-z_-]{20,}', '"refresh_token"\s*:\s*"[^"]{10,}', '"client_secret"\s*:\s*"[^"]{10,}', 'GOCSPX-[0-9A-Za-z_-]{10,}', 'calendar\.google\.com/calendar/ical/[^\s"]*private-[0-9a-f]{20,}',
               'EAA[A-Za-z0-9]{40,}', 'IGQ[A-Za-z0-9_-]{40,}', 'eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}\.', '[A-Za-z0-9_-]{23,28}\.[A-Za-z0-9_-]{6,7}\.[A-Za-z0-9_-]{27,}', '1//0[0-9A-Za-z_-]{30,}'

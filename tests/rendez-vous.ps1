@@ -8,6 +8,7 @@ $TR = Join-Path $env:TEMP ('jarvis-test-' + [guid]::NewGuid().ToString('N').Subs
 $Config = Get-Content $(if ($env:JARVIS_CONFIG -and (Test-Path $env:JARVIS_CONFIG)) { $env:JARVIS_CONFIG } else { Join-Path $Root 'config.json' }) -Raw -Encoding UTF8 | ConvertFrom-Json
 . (Join-Path $Root 'lib\rendez-vous.ps1')
 $echecs = 0
+$verrouRdv = Join-Path $Root 'B2B\agents\rendez-vous-continu.verrou'; $verrouAvant = $(if (Test-Path $verrouRdv) { (Get-Content $verrouRdv -Raw).Trim() } else { $null })
 $etatRdv = Join-Path $Root 'B2B\agents\rendez-vous-etat.json'; $etatRdvAvant = $(if (Test-Path $etatRdv) { (Get-Item $etatRdv).Length } else { -1 }); $jrnRdv = Join-Path $Root 'B2B\agents\rendez-vous-journal.log'; $jrnAvant = $(if (Test-Path $jrnRdv) { (Get-Item $jrnRdv).Length } else { -1 })      # le vrai journal peut exister (refus de la machine inactive écrit par Jarvis) : on vérifie qu'il ne bouge pas
 function Verifier([bool]$cond, [string]$msg) { if ($cond) { Write-Host "  OK    $msg" } else { Write-Host "  ECHEC $msg" -ForegroundColor Red; $script:echecs++ } }
 function Fixer([string]$cle, $val) { if ($Config.PSObject.Properties[$cle]) { $Config.$cle = $val } else { $Config | Add-Member -NotePropertyName $cle -NotePropertyValue $val } }
@@ -38,7 +39,9 @@ try {
     Verifier ($j -match '\[void\]\(Update-RendezVous\)') 'jarvis.ps1 appelle Update-RendezVous dans la boucle'
     Verifier (Test-Path (Join-Path $Root 'B2B\agents\rendez-vous.py')) 'B2B\agents\rendez-vous.py présent'
     $cfgAgent = Get-Content (Join-Path $Root 'B2B\agents\rendez-vous-config.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-    Verifier ($cfgAgent.envoi_automatique -eq $false) 'rendez-vous-config.json : envoi_automatique = false par défaut (simulation)'
+    # envoi_automatique = true est VOULU dans le fichier suivi (le serveur poste sur Discord sans fichier local) ; le secret, lui, n'y est jamais
+    Verifier ($cfgAgent.envoi_automatique -is [bool]) 'rendez-vous-config.json : envoi_automatique est un booléen (true accepté : le serveur poste sans fichier local)'
+    Verifier (-not (Select-String -Path (Join-Path $Root 'B2B\agents\rendez-vous-config.json') -Pattern 'calendar/ical' -SimpleMatch -Quiet)) 'rendez-vous-config.json (suivi par git) : aucune URL iCal'
     $src = Get-Content (Join-Path $Root 'B2B\agents\rendez-vous.py') -Raw -Encoding UTF8
     Verifier ($src -notmatch 'print\([^)]*(jeton|token|password)') 'rendez-vous.py n''affiche jamais de jeton ni de mot de passe'
     Verifier (-not $cfgAgent.ical_url -and $cfgAgent.cycle_minutes -eq 5 -and -not $cfgAgent.salon_id) 'rendez-vous-config.json : aucune adresse iCal ni salon dans le fichier versionné (ils vivent dans rendez-vous-config.local.json, ignoré par git), vérification toutes les 5 min'
@@ -51,9 +54,20 @@ try {
         $env:PYTHONIOENCODING = 'utf-8'
         $sortie = & $py.Source -I (Join-Path $Root 'B2B\agents\test_rendez_vous.py') 2>&1 | Out-String
         Verifier ($LASTEXITCODE -eq 0 -and $sortie -match 'OK : tous les tests de l''agent rendez-vous passent') 'agents\test_rendez_vous.py : tous les tests passent'
+        # surcharge : rendez-vous-config.local.json (copies temporaires) remplace envoi_automatique du fichier suivi
+        $tmpSur = Join-Path ([IO.Path]::GetTempPath()) ('jarvis-rdv-' + [guid]::NewGuid().ToString('N')); New-Item -ItemType Directory $tmpSur | Out-Null
+        Copy-Item (Join-Path $Root 'B2B\agents\rendez-vous-config.json') $tmpSur
+        [IO.File]::WriteAllText((Join-Path $tmpSur 'rendez-vous-config.local.json'), '{"envoi_automatique": false}')
+        $codeSur = "import sys; sys.path.insert(0, sys.argv[1]); import machine as M; print(M.lire_fusionnee(sys.argv[2])['envoi_automatique'])"
+        $sur = (& $py.Source -I -c $codeSur (Join-Path $Root 'B2B\agents') (Join-Path $tmpSur 'rendez-vous-config.json') 2>&1 | Out-String).Trim()
+        Remove-Item $tmpSur -Recurse -Force -ErrorAction SilentlyContinue
+        Verifier ($sur -eq 'False') 'envoi_automatique reste surchargeable par rendez-vous-config.local.json (local false > suivi true)'
         Remove-Item Env:PYTHONIOENCODING -ErrorAction SilentlyContinue
     } else { Write-Host '  (python introuvable : tests Python sautés)' }
-    Verifier (-not (Test-Path (Join-Path $Root 'B2B\agents\rendez-vous-continu.verrou'))) 'aucun verrou de boucle laissé'
+    # un verrou n'est une faute que s'il a été créé par les tests : celui d'une boucle vivante (ou un verrou périmé déjà présent avant) est ignoré
+    $verrouApres = $(if (Test-Path $verrouRdv) { (Get-Content $verrouRdv -Raw).Trim() } else { $null })
+    $verrouVivant = $verrouApres -match '^\d+$' -and [bool](Get-Process -Id ([int]$verrouApres) -ErrorAction SilentlyContinue)
+    Verifier ($null -eq $verrouApres -or $verrouVivant -or $verrouApres -eq $verrouAvant) 'aucun verrou de boucle laissé par les tests (celui d''une boucle en cours est ignoré)'
     Verifier ($etatRdvAvant -eq $(if (Test-Path $etatRdv) { (Get-Item $etatRdv).Length } else { -1 })) 'aucun état écrit dans le dépôt par les tests (un état existant est inchangé)'
     Verifier ($jrnAvant -eq $(if (Test-Path $jrnRdv) { (Get-Item $jrnRdv).Length } else { -1 })) 'aucun journal écrit dans le dépôt par les tests (le journal existant, s''il y en a un, est inchangé)'
 
