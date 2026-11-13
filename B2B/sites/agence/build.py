@@ -49,6 +49,15 @@ MSG_BTN = f'<a class="btn btn-line" href="{e(MESSENGER)}" target="_blank" rel="n
 RDV_BTN = f'<a class="btn btn-main" href="{e(RDV_URL)}" target="_blank" rel="noopener">Réserver un appel de 15 min</a>' if RDV_URL else ""
 RDV_HREF = e(RDV_URL) if RDV_URL else (("" ) + "#contact")
 siret_txt = SIRET or a_completer()
+# forme juridique et zone (pas d'adresse postale précise : choix de Liam, 12/11/2026)
+FORME = (ID.get("forme_juridique") or "").strip()
+ADRESSE = (ID.get("adresse") or "").strip()
+forme_txt = e(FORME) if FORME else a_completer()
+adresse_txt = e(ADRESSE) if ADRESSE else a_completer()
+# le domaine lmlsmulti-services.com est hébergé chez Netlify (adresse : conditions d'utilisation Netlify, vérifiée le 12/11/2026)
+HEBERGEUR = 'Netlify, Inc., 101 2nd Street, San Francisco, CA 94105, États-Unis. Site : <a href="https://www.netlify.com" rel="noopener">netlify.com</a>.'
+HEBERGEUR_COURT = "Netlify, Inc., États-Unis"
+DATE_LEGAL = "12 novembre 2026"
 
 ICO = {
     "ok": '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -294,48 +303,54 @@ def accueil():
 
 
 # ---------------------------------------------------------------- mentions légales
-def mentions():
-    h = tete("Mentions légales — Liam Emo, LM MULTI-SERVICES", "Mentions légales du site : éditeur, SIRET, hébergeur.", racine=False)
-    h += f"""<article class="doc"><div class="w narrow">
-<h1>Mentions légales</h1>
-<p class="maj">Dernière mise à jour : {DATE_MAJ}</p>
+PROP_ANCIEN = f"""<p>Les textes et la mise en page de ce site sont la propriété de {e(NOM)}. Les pages présentées comme exemples sont des maquettes de démonstration : les entreprises, numéros et chiffres qu'elles contiennent sont fictifs. Les photos d'illustration de ces exemples sont des photos libres de droits (licence Unsplash), dont les auteurs sont indiqués sur chaque exemple. Les polices Bricolage Grotesque et Hanken Grotesk sont sous licence SIL Open Font 1.1 et hébergées avec le site.</p>"""
+PROP_LUXE2 = f"""<p>Les textes et la mise en page de ce site sont la propriété de {e(NOM)}. Les pages présentées comme exemples sont des maquettes de démonstration : les entreprises, numéros et chiffres qu'elles contiennent sont fictifs. Les photos d'illustration de ces exemples sont des photos libres de droits, dont les auteurs sont indiqués sur chaque exemple. Les polices Archivo et IBM Plex Mono sont sous licence SIL Open Font 1.1 ; les bibliothèques GSAP, Lenis et three.js (licence MIT) sont hébergées avec le site. La scène 3D de la page d'accueil affiche une capture de la page exemple « Velin », coiffeur (entreprise fictive), réalisée par {e(ENTREPRISE)}. Les contours des départements viennent du projet france-geojson (données publiques IGN/Etalab, licence ouverte).</p>"""
+
+
+def corps_mentions(propriete, racine="/"):
+    return f"""<h1>Mentions légales</h1>
+<p class="maj">Dernière mise à jour : {DATE_LEGAL}</p>
 <h2>Éditeur du site</h2>
 <dl class="fiche">
 <dt>Nom</dt><dd>{e(NOM)}</dd>
 <dt>Nom commercial</dt><dd>{e(ENTREPRISE)}</dd>
 <dt>SIRET</dt><dd>{siret_txt}</dd>
-<dt>Forme juridique</dt><dd>{a_completer()}</dd>
-<dt>Adresse</dt><dd>{a_completer()}</dd>
+<dt>Forme juridique</dt><dd>{forme_txt}</dd>
+<dt>Adresse</dt><dd>{adresse_txt}</dd>
 <dt>TVA</dt><dd>TVA non applicable, article 293 B du CGI</dd>
 <dt>Téléphone</dt><dd>{lien_tel}</dd>
 <dt>E-mail</dt><dd>{lien_mail}</dd>
 <dt>Directeur de la publication</dt><dd>{e(NOM)}</dd>
 </dl>
 <h2>Hébergeur</h2>
-<p>Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, États-Unis. Site : <a href="https://vercel.com" rel="noopener">vercel.com</a>.</p>
+<p>{HEBERGEUR}</p>
 <h2>Propriété intellectuelle</h2>
-<p>Les textes et la mise en page de ce site sont la propriété de {e(NOM)}. Les pages présentées comme exemples sont des maquettes de démonstration : les entreprises, numéros et chiffres qu'elles contiennent sont fictifs. Les photos d'illustration de ces exemples sont des photos libres de droits (licence Unsplash), dont les auteurs sont indiqués sur chaque exemple. Les polices Bricolage Grotesque et Hanken Grotesk sont sous licence SIL Open Font 1.1 et hébergées avec le site.</p>
+{propriete}
 <h2>Responsabilité</h2>
 <p>Je m'efforce de fournir des informations exactes et à jour, sans garantie d'exhaustivité. Les liens vers des sites externes (par exemple les pages d'exemple) sont donnés à titre d'information : je ne contrôle pas leur contenu après leur publication.</p>
 <h2>Données personnelles</h2>
-<p>Voir la page <a href="/confidentialite.html">Confidentialité et droit d'opposition</a>.</p>
-</div></article>
+<p>Voir la page <a href="{racine}confidentialite.html">Confidentialité et droit d'opposition</a>.</p>
 """
+
+
+def mentions():
+    h = tete("Mentions légales — Liam Emo, LM MULTI-SERVICES", "Mentions légales du site : éditeur, SIRET, hébergeur.", racine=False)
+    h += '<article class="doc"><div class="w narrow">\n' + corps_mentions(PROP_ANCIEN) + "</div></article>\n"
     return h + pied()
 
 
 # ---------------------------------------------------------------- confidentialité
-def confidentialite():
-    h = tete("Confidentialité et droit d'opposition — Liam Emo", "Politique de confidentialité : données collectées, droits, et droit d'opposition à la prospection (répondez STOP).", racine=False)
-    h += f"""<article class="doc"><div class="w narrow">
-<h1>Politique de confidentialité</h1>
-<p class="maj">Dernière mise à jour : {DATE_MAJ}</p>
+def corps_confidentialite(formulaire):
+    formulaire_ou = " ou utilisez le formulaire de contact de ce site," if formulaire else ","
+    formulaire_phrase = " Le formulaire de contact est traité par le service Netlify Forms (mon hébergeur) pour me transmettre votre demande ; il n'est utilisé pour aucune autre fin." if formulaire else ""
+    return f"""<h1>Politique de confidentialité</h1>
+<p class="maj">Dernière mise à jour : {DATE_LEGAL}</p>
 <h2>Qui est responsable de vos données</h2>
 <p>{e(NOM)}, sous le nom {e(ENTREPRISE)}, SIRET {siret_txt}. Pour toute question : {lien_mail}.</p>
 <h2>Ce site</h2>
-<p>Ce site n'utilise aucun cookie, aucun traceur ni aucun outil de mesure d'audience. L'hébergeur (Vercel Inc., États-Unis) enregistre des journaux techniques (adresse IP, date et page demandée) pour assurer la sécurité et le fonctionnement du service.</p>
+<p>Ce site n'utilise aucun cookie, aucun traceur ni aucun outil de mesure d'audience. L'hébergeur ({HEBERGEUR_COURT}) enregistre des journaux techniques (adresse IP, date et page demandée) pour assurer la sécurité et le fonctionnement du service.</p>
 <h2>Si vous me contactez</h2>
-<p>Si vous m'écrivez, m'appelez ou utilisez le formulaire de contact de ce site, je traite les informations que vous me donnez (nom, téléphone, métier, ville, créneau souhaité, message, ou nom, entreprise, coordonnées et contenu de votre demande) uniquement pour vous rappeler, vous répondre, établir un devis et, si vous acceptez, réaliser votre site. Le formulaire de contact est traité par le service Netlify Forms (mon hébergeur) pour me transmettre votre demande ; il n'est utilisé pour aucune autre fin. La base légale est la demande de mesures précontractuelles puis l'exécution du contrat. Je conserve ces informations pendant la relation, puis jusqu'à 3 ans après le dernier échange si nous n'avons pas travaillé ensemble ; les pièces comptables sont conservées selon les durées légales.</p>
+<p>Si vous m'écrivez, m'appelez{formulaire_ou} je traite les informations que vous me donnez (nom, téléphone, métier, ville, créneau souhaité, message, ou nom, entreprise, coordonnées et contenu de votre demande) uniquement pour vous rappeler, vous répondre, établir un devis et, si vous acceptez, réaliser votre site.{formulaire_phrase} La base légale est la demande de mesures précontractuelles puis l'exécution du contrat. Je conserve ces informations pendant la relation, puis jusqu'à 3 ans après le dernier échange si nous n'avons pas travaillé ensemble ; les pièces comptables sont conservées selon les durées légales.</p>
 <p>Si vous payez en ligne, le paiement est assuré par un prestataire de paiement sécurisé. Je ne vois ni ne conserve votre numéro de carte.</p>
 <h2 id="stop">Prospection et droit d'opposition : répondez STOP</h2>
 <p>Je peux contacter des professionnels (artisans, commerçants) par e-mail ou par message professionnel pour leur proposer la création d'un site, en rapport avec leur activité. Dans ce cas :</p>
@@ -350,8 +365,12 @@ def confidentialite():
 <p>Vous pouvez demander l'accès à vos données, leur rectification, leur effacement, la limitation de leur traitement, leur portabilité, et vous opposer à leur traitement. Écrivez-moi à {lien_mail}. Vous pouvez aussi saisir la CNIL : <a href="https://www.cnil.fr" rel="noopener">cnil.fr</a>.</p>
 <h2>Destinataires</h2>
 <p>Vos données ne sont ni vendues ni cédées. Elles peuvent être traitées par mon hébergeur, mon prestataire de messagerie et, si vous payez en ligne, mon prestataire de paiement, uniquement pour fournir le service.</p>
-</div></article>
 """
+
+
+def confidentialite():
+    h = tete("Confidentialité et droit d'opposition — Liam Emo", "Politique de confidentialité : données collectées, droits, et droit d'opposition à la prospection (répondez STOP).", racine=False)
+    h += '<article class="doc"><div class="w narrow">\n' + corps_confidentialite(True) + "</div></article>\n"
     return h + pied()
 
 
@@ -367,9 +386,77 @@ def merci():
     return h + pied()
 
 
+# ---------------------------------------------------------------- site luxe2 (pages légales et confirmation, mêmes données)
+LUXE2 = ICI / "luxe2"
+RDV_LUXE2 = RDV_URL or "https://calendar.app.google/kmCmw8PKKkK7pjMn6"
+
+def luxe2_page(titre, desc, corps):
+    contact = " · ".join(x for x in (lien_tel, lien_mail) if x).replace(" · ", "<br>")
+    return f"""<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{e(titre)}</title>
+<meta name="description" content="{e(desc)}">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="theme-color" content="#14110F">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="assets/polices/Archivo-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body class="legal">
+<a class="saut" href="#contenu">Aller au contenu</a>
+
+<header class="tete">
+  <a class="marque" href="index.html" aria-label="{e(ENTREPRISE)}, retour à l'accueil">
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 3v18h7M13 21V3l4 8 4-8v18" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+    <span>{e(ENTREPRISE)}</span>
+  </a>
+  <nav class="tete-nav" aria-label="Sections">
+    <a href="index.html#recherche">La recherche</a>
+    <a href="index.html#exemples">Exemples</a>
+    <a href="index.html#offre">L'offre</a>
+    <a href="#contact">Contact</a>
+  </nav>
+  <a class="bouton bouton-s" href="{e(RDV_LUXE2)}" target="_blank" rel="noopener">Réserver un appel<span class="vh"> de 15 minutes (s'ouvre dans un nouvel onglet)</span></a>
+</header>
+
+<main id="contenu">
+<article class="doc">
+{corps}</article></main>
+
+<footer id="contact" class="pied">
+  <div class="pied-in">
+    <p class="pied-marque affiche">{e(ENTREPRISE)}</p>
+    <p class="pied-qui">{e(NOM)} · sites pour artisans et commerçants</p>
+    <div class="pied-cols">
+      <div><p class="mono">Zone</p><p>Normandie&nbsp;: Seine-Maritime, Eure, Calvados, Manche, Orne. Rendez-vous par téléphone et par e-mail.</p></div>
+      <div><p class="mono">Contact</p><p>{contact}</p></div>
+      <div><p class="mono">Entreprise</p><p>SIRET {siret_txt}<br><a href="mentions-legales.html">Mentions légales</a> · <a href="confidentialite.html">Confidentialité</a></p></div>
+    </div>
+    <p class="mono pied-credits">Pages montrées&nbsp;: exemples LM, entreprises fictives, photos libres de droits créditées sur chaque exemple · Contours des départements&nbsp;: IGN via france-geojson</p>
+  </div>
+</footer>
+
+</body>
+</html>
+"""
+
+def luxe2_pages():
+    pages = {
+        "mentions-legales.html": luxe2_page(f"Mentions légales · {ENTREPRISE}", "Mentions légales du site : éditeur, SIRET, hébergeur.", corps_mentions(PROP_LUXE2, racine="")),
+        "confidentialite.html": luxe2_page(f"Confidentialité · {ENTREPRISE}", "Politique de confidentialité : données, droits, et droit d'opposition à la prospection (répondez STOP).", corps_confidentialite(False)),
+        "merci.html": luxe2_page(f"Merci · {ENTREPRISE}", "Votre demande a bien été envoyée.", f"<h1>Merci, votre demande est envoyée</h1>\n<p>Je vous rappelle dès que possible. Si c'est urgent, appelez-moi directement : {lien_tel}.</p>\n<p><a class=\"bouton\" href=\"index.html\">Retour à l'accueil</a></p>\n"),
+    }
+    for nom, h in pages.items(): (LUXE2 / nom).write_text(h, encoding="utf-8")
+    return list(pages)
+
+
 if __name__ == "__main__":
     for nom, f in (("index.html", accueil), ("mentions-legales.html", mentions), ("confidentialite.html", confidentialite), ("merci.html", merci)):
         (ICI / nom).write_text(f(), encoding="utf-8")
-    manque = [x for x, v in (("téléphone", TEL), ("e-mail", MAIL), ("SIRET", SIRET), ("page Facebook (lien Messenger)", MESSENGER)) if not v]
+    manque = [x for x, v in (("téléphone", TEL), ("e-mail", MAIL), ("SIRET", SIRET), ("page Facebook (lien Messenger)", MESSENGER), ("forme juridique", FORME), ("adresse", ADRESSE)) if not v]
     print("4 pages écrites dans", ICI)
+    print(len(luxe2_pages()), "pages légales écrites dans", LUXE2)
     if manque: print("  ! À COMPLÉTER dans agents/identite.json :", ", ".join(manque))

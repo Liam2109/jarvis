@@ -17,7 +17,7 @@ Fond graphite #0E1113, texte #F2F4F5, accent menthe #52D4B4, police Figtree, mon
 | N° | Fichier | État | Date |
 |---|---|---|---|
 | 1 | 01-intro.png | publié | 2026-11-03 |
-| 2 | 02-video-electricien.mp4 | à publier | |
+| 2 | 02-video-electricien.mp4 | publié | 2026-11-05 |
 | 3 | 03-plombier.png | à publier | |
 | 4 | 04-deroule.png | à publier | |
 | 5 | 05-contenu.png | à publier | |

@@ -81,3 +81,6 @@ exclus-emails.json
 
 # Local Netlify folder
 .netlify
+
+# Copie pour clé USB vers le serveur (secrets, jetons, états) : jamais dans git
+transfert-serveur/

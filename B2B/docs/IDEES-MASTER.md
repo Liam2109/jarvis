@@ -171,7 +171,16 @@ Contexte : Liam utilise un petit PC portable (celui de Mathéo, avec carte Wi-Fi
 
 - 2026-11-03 : Liam ne veut AUCUNE offre gratuite (pas de page offerte contre avis) : toujours payant. Agent devis décidé (obligatoire). Planning Google Agenda réservable créé (lundi-vendredi 10 h-16 h, 15 min) : https://calendar.google.com/calendar/appointments/schedules/AcZssZ3xvWSaK8qGD2TTJST9f12yK_AUNGA7Ru59_qoYk2p4O5MM8noDvTqnw9HKVJ-I2t8ddNvMIgF7 . Reste à ajouter : lien Google Meet automatique et 2 questions (entreprise, site ou landing page) dans le formulaire de réservation. Contact appelants : proposer WhatsApp (numéro à donner par Liam).
 
+- 2026-11-03 : Appel de lancement avec Sid jeudi 5 nov 14 h en Google Meet (fiche : docs\APPEL-SID.md). Agenda de Liam = emoliam255@gmail.com. Mise en ligne des pages : Liam dit « ok vercel » et Claude déploie (jamais Liam lui-même). Prochaines pages métier : fleuriste puis garage, validées une par une. Agent devis : décidé, à faire construire par Claude Code.
+
+- 2026-11-04 : appels-sid : sourcer les numéros sur TOUTE la Normandie (14, 27, 50, 61, 76) pour avoir environ un mois de réserve (objectif : 50-60 numéros/jour x 4 métiers). Liam veut Google Maps en plus d OpenStreetMap. Contrainte : Google Places API demande un compte de facturation (carte), or Liam refuse de mettre sa carte ; scraper Maps est contraire aux CGU. Piste gratuite : OSM sur toute la Normandie + annuaire officiel SIRENE (entreprises par code NAF, sans téléphone) à croiser.
+
 - 2026-11-04 : Restaurant : page **Le Velours** retenue (https://b2b-demos.vercel.app/le-velours-exemple-ef5bae7c/). A faire : ajouter une vidéo en tête de page (hero vidéo), comme les autres pages métier. Ensuite : lire les réponses du Google Form de Sid.
+
+## 2026-11-05 (soir) - Listes d appels et bot 24h/24
+- Page restaurant a creer (aucune page exemple pour les restaurants, Sid les appelle sans page).
+- Bot qui tourne 24h/24 sur le portable serveur : genere chaque soir la liste d appels du lendemain (artisans du batiment en Normandie via SIRENE + OSM) et la depose dans le Drive de Sid ; a activer samedi apres reinitialisation des tokens.
+- Listes plus longues : la liste de lundi n a que 35 lignes (seulement 10 artisans du batiment avec numero dans les fichiers locaux), viser plus de lignes par jour.
 
 - 2026-11-05 : Portable serveur : surveillance du Wi-Fi. Si pas de connexion internet pendant 5 minutes, redémarrer la carte Wi-Fi ; si toujours rien, redémarrer le portable (une fois par heure au maximum), et les agents B2B/Jarvis doivent repartir seuls au démarrage. Alerte Discord au retour du réseau. Cause connue : problème de carte Wi-Fi, portable à 84 % d utilisation (4 nov.).
 
@@ -180,7 +189,27 @@ Contexte : Liam utilise un petit PC portable (celui de Mathéo, avec carte Wi-Fi
 - Rotation sur une semaine glissante : a chaque nouveau jour, le bot cree la liste du prochain jour d appel et retire celle du meme jour de la semaine precedente (ex. le mardi 7 il retire le fichier du mardi 1 et cree celui du mercredi 8 ; le mercredi 8 il retire celui du mercredi 2 et cree celui du jeudi 9). Il garde donc une semaine de fichiers dans le dossier.
 - Idee de securite : ranger l ancien fichier dans un dossier Archive plutot que le supprimer, pour garder les comptes rendus de Sid.
 
+## 2026-11-08 (soir) - Recherche d'un autre cold caller
+- ZillaSales inutile (couvre seulement USA/Canada), abandonne.
+- Pistes retenues : Malt, Codeur.com, en plus des 2 groupes Facebook deja utilises pour Sid.
+- Annonce prete a poster :
+  Titre : Commercial terrain / teleprospecteur independant - commission 15% (Rouen, Normandie)
+  LM MULTI-SERVICES (micro-entreprise, creation de sites web pour artisans et commerces locaux) cherche un commercial independant pour de la prospection telephonique en Normandie (76, 27, 14, 50, 61).
+  - Mission : appeler des entreprises sans site web (plombiers, electriciens, coiffeurs, restaurants), proposer un rendez-vous visio de 15 minutes.
+  - Pas de vente ni de prix a donner au telephone : uniquement la prise de rendez-vous.
+  - Remuneration : 15% du prix reellement encaisse par client apporte, verse sous 30 jours apres paiement. Aucun salaire, aucune avance.
+  - Listes d'appels fournies chaque jour, aucune prospection a faire soi-meme.
+  - Independance totale : horaires et rythme libres.
+  - Statut requis : micro-entreprise (SIRET).
+  Contact : [e-mail / WhatsApp de Liam]
+- A faire par Liam : creer compte Malt et/ou Codeur.com, coller l'annonce (compte + paiement = action personnelle, non faite par Claude).
+
 ## 2026-11-09 (nuit) - Idee : vault Obsidian pour Jarvis
 - Liam propose de brancher Obsidian (app de notes markdown avec liens entre notes + vue graphe) sur Jarvis : les journaux, l'historique des idees (ce fichier), les fiches clients/prospects deviendraient des notes liees entre elles au lieu de fichiers .md isoles.
 - Avis Claude (pas encore fait) : pas prioritaire ce soir - ni urgent ni bloquant, scope pas encore cadre (quel contenu dans le vault ? genere automatiquement ou range a la main ?). A spec proprement avant de dev : liste precise de ce qui irait dans le vault et ce que ca apporte de plus que les fichiers .md actuels.
 - Statut : en attente, a rediscuter quand le reste (planning Sid, recrutement, sites) est stabilise.
+
+- 2026-11-13 (Liam) : ARCHITECTURE TYPE OBSIDIAN a refaire pour utiliser moins de tokens : coffre = dossier Jarvis, INDEX.md comme hub, notes courtes avec liens [[...]], une note par agent et par decision. Obsidian (gratuit) sert seulement a VOIR le graphe ; Claude n'a pas besoin de l'installer, il lit les fichiers .md. A faire avant le reste.
+- 2026-11-13 (Liam) : ARCHITECTURE A PARTIR DU CEO : Jarvis. Les TikTok donnes a Claude contenaient l'architecture complete (contenu perdu avec la conversation supprimee, a redonner). Jarvis doit tourner 24/24 sur le serveur Liam, pas seulement quand le gros PC est allume.
+- 2026-11-13 (Liam) : les prompts Claude Code doivent se terminer par la machine : « gros PC » ou « serveur Liam ».
+- 2026-11-13 (Liam) : tout ce qui est a faire est note dans TODO-B2B.md, JOURNAL-B2B.md et IDEES-MASTER.md (fichiers deja crees), pour le garder a vie. Ne jamais supprimer de conversation : l'historique n'est pas une sauvegarde, les fichiers le sont.

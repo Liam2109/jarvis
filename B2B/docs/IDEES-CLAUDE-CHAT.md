@@ -7,3 +7,8 @@
 - 26 oct. 2026 — Skills enregistrés par Liam : site-local-conversion, site-local-animation-3d, site-local-direction-artistique (« local » = sites de commerces et artisans locaux). À proposer ensuite : familles d'activités, sécurité sans PHP, qualité et livraison. Copie des fichiers dans B2B\skills\ pour Claude Code (.claude\skills\ ne peut pas être écrit à distance).
 - 26 oct. 2026 — Règle de Liam : ne JAMAIS afficher son lieu d'habitation ni une adresse personnelle dans un site (ni dans les maquettes ni dans le site de l'agence) ; zone d'intervention de l'artisan seulement.
 - 26 oct. 2026 — Liam veut un aperçu avec une vue téléphone ET une vue ordinateur côte à côte, plus beau que le panneau de droite habituel, pour juger tout de suite la qualité d'un site.
+
+- 2026-11-13 (Liam) : ARCHITECTURE TYPE OBSIDIAN a refaire pour utiliser moins de tokens : coffre = dossier Jarvis, INDEX.md comme hub, notes courtes avec liens [[...]], une note par agent et par decision. Obsidian (gratuit) sert seulement a VOIR le graphe ; Claude n'a pas besoin de l'installer, il lit les fichiers .md. A faire avant le reste.
+- 2026-11-13 (Liam) : ARCHITECTURE A PARTIR DU CEO : Jarvis. Les TikTok donnes a Claude contenaient l'architecture complete (contenu perdu avec la conversation supprimee, a redonner). Jarvis doit tourner 24/24 sur le serveur Liam, pas seulement quand le gros PC est allume.
+- 2026-11-13 (Liam) : les prompts Claude Code doivent se terminer par la machine : « gros PC » ou « serveur Liam ».
+- 2026-11-13 (Liam) : tout ce qui est a faire est note dans TODO-B2B.md, JOURNAL-B2B.md et IDEES-MASTER.md (fichiers deja crees), pour le garder a vie. Ne jamais supprimer de conversation : l'historique n'est pas une sauvegarde, les fichiers le sont.

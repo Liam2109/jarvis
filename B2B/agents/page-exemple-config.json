@@ -1,0 +1,7 @@
+{
+  "cycle_minutes": 3,
+  "salon_nom": "pages",
+  "modele": "sonnet",
+  "minutes_par_tache": 20,
+  "_aide": "salon_nom : salon Discord où Liam écrit « métier, ville, nom » (ex. « plombier, Yvetot, Dupont Plomberie ») ; vide = salon par défaut de reponses-config.json. cycle_minutes : un passage toutes les 3 minutes. modele : modèle Claude utilisé par le sous-agent qui écrit et déploie la page (claude -p). minutes_par_tache : délai maximum par page avant abandon (copie + réécriture + déploiement Vercel). Métiers disponibles et leur modèle validé : voir METIERS dans page-exemple.py (plombier, electricien, coiffeur, fleuriste, boulangerie, garage, restaurant). Suivi : pages-exemple\\suivi.csv. Arrêt de secours : python agents\\page-exemple.py arreter. Reprise après une erreur : python agents\\page-exemple.py reprendre."
+}

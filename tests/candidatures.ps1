@@ -205,6 +205,12 @@ $js = Get-Content (Join-Path $Root 'jarvis.ps1') -Raw -Encoding UTF8; $run = Get
 Verifier ($js -match "lib\\candidatures\.ps1" -and $js -match "'candidatures-test'" -and $run -match "lib\\candidatures\.ps1") 'jarvis.ps1 charge le module et expose candidatures-test ; le processus de veille aussi'
 Verifier ($nt -match '--ping' -and $nt -match 'DISCORD_USER_ID' -and $nt -match '\\d\{15,25\}' -and $nt -match '"parse": \[\], "users": \[uid\]') 'notifier.py --ping : seule la mention de DISCORD_USER_ID est permise'
 Verifier ($vraie.discord_salons.PSObject.Properties.Name -contains 'candidatures') 'config.json : salon « candidatures » prévu (à renseigner avec l''identifiant du salon)'
+[IO.File]::WriteAllText("$TR\config.json", '{"discord_salons":{"candidatures":"","annonces-train":"333333"}}', [Text.UTF8Encoding]::new($false))
+[IO.File]::WriteAllText("$TR\config.local.json", '{"discord_salons":{"candidatures":"444444"}}', [Text.UTF8Encoding]::new($false))
+$pyCand = "import sys; sys.path.insert(0, r'$Root\pont-discord'); import notifier; print(notifier.identifiant_salon(r'$TR', 'candidatures'))"
+$oCand = "$(& python -I -c $pyCand)"
+Verifier ($oCand -match '444444' -and $oCand -notmatch '333333') 'notifier.py : salon « candidatures » (config.local.json) distinct du salon « annonces-train », ne s''y replie jamais'
+Remove-Item "$TR\config.json", "$TR\config.local.json" -Force -ErrorAction SilentlyContinue
 Verifier ((Get-Content (Join-Path $Root 'README.md') -Raw -Encoding UTF8) -match 'candidatures-test') 'README : commande décrite'
 Verifier ((Get-FileHash (Join-Path $Root 'config.json')).Hash -eq $hashConfig) 'config.json réel inchangé par le test'
 Remove-Item Env:GMAIL_CLIENT_ID, Env:GMAIL_CLIENT_SECRET -ErrorAction SilentlyContinue

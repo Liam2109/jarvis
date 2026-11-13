@@ -7,5 +7,7 @@
   "base_url_maquettes": "",
   "facebook_page": "",
   "rdv_url": "",
-  "_aide": "Modèle : copier ce fichier en identite.json (ignoré par git, à copier à la main sur le serveur) et le remplir. Champs vides = marqués « À COMPLÉTER » par les agents. rdv_url : lien de réservation d'un appel de 15 minutes, vide = bouton masqué sur le site vitrine."
+  "_aide": "Modèle : copier ce fichier en identite.json (ignoré par git, à copier à la main sur le serveur) et le remplir. Champs vides = marqués « À COMPLÉTER » par les agents. rdv_url : lien de réservation d'un appel de 15 minutes, vide = bouton masqué sur le site vitrine.",
+  "forme_juridique": "Entrepreneur individuel (micro-entreprise), TVA non applicable, art. 293 B du CGI",
+  "adresse": "Ville et département, France (adresse précise facultative)"
 }

@@ -57,6 +57,7 @@ $script:ReponseTest = $ReponseTest   # crochet de test : réponse automatique au
 . (Join-Path $Root 'lib\bureau.ps1')
 . (Join-Path $Root 'lib\salle-marche.ps1')
 . (Join-Path $Root 'lib\matin.ps1')
+. (Join-Path $Root 'lib\pouls.ps1')
 . (Join-Path $Root 'lib\discord.ps1')
 . (Join-Path $Root 'lib\saas.ps1')
 . (Join-Path $Root 'lib\dev-agent.ps1')
@@ -65,6 +66,7 @@ $script:ReponseTest = $ReponseTest   # crochet de test : réponse automatique au
 . (Join-Path $Root 'lib\prospection.ps1')
 . (Join-Path $Root 'lib\instagram.ps1')
 . (Join-Path $Root 'lib\devis.ps1')
+. (Join-Path $Root 'lib\page-exemple.ps1')
 . (Join-Path $Root 'lib\rendez-vous.ps1')
 . (Join-Path $Root 'lib\candidatures.ps1')
 . (Join-Path $Root 'lib\cv-candidature.ps1')
@@ -165,7 +167,8 @@ switch ($Commande.ToLower()) {
         if ($veilleBureau) { if ($script:Actif) { Set-Actif $false 'démarrage en veille (bureau)' }; Update-VeilleReveil; Start-PreChauffageBureau } elseif (Test-GardeOllamaChaud) { Start-OllamaReveil -Force }      # veille : écoute légère ; Ollama (keep_alive long), Piper et cache vocal préchauffés
         Initialize-Memoire                          # session précédente interrompue ? elle sera résumée au démarrage
         try { [void](Initialize-BriefingMatin) } catch { Write-Journal -Action 'Briefing du matin' -Resultat "indisponible : $($_.Exception.Message)" }     # affiché au tableau dès le démarrage, SANS voix (dit à la première activation de la journée)
-        [void](Start-VeilleFond)                    # processus de fond léger, sans voix : seulement si marche_actif = true (même en sourdine)
+        if (-not $serveur) { try { [void](Initialize-OuverturePouls) } catch { Write-Journal -Action 'Pouls du jour' -Resultat "indisponible : $($_.Exception.Message)" } }      # ouvre le pouls (page Claude) dans le navigateur par défaut, une fois par jour, au premier démarrage après 7 h (ouvrir_pouls_au_demarrage)
+        [void](Start-VeilleFond)                  # processus de fond léger, sans voix : seulement si marche_actif = true (même en sourdine)
         if (-not $serveur -and -not $veilleBureau) { Start-PrechauffageClaude }      # claude chaud démarré dès le lancement (hors serveur léger et veille)
         [void](Start-PontDiscord)                   # pont Discord (processus séparé) : seulement si discord_actif = true ; identifiants manquants = désactivé poliment, sans planter
         if ($serveur) { if (Get-MicroServeur) { Start-Ecoute } }
@@ -213,7 +216,8 @@ switch ($Commande.ToLower()) {
                 [void](Update-Prospection)                               # agent Prospection (désactivé par défaut : prospection_actif) : lance B2B\agents\prospection.py demarrage UNE fois, 90 s après le démarrage, dans un processus caché séparé ; aucun envoi sans « ok lot » de Liam
                 [void](Update-Instagram)                                  # agent Instagram (désactivé par défaut : instagram_actif) : lance B2B\agents\instagram.py continu UNE fois, 90 s après le démarrage ; SIMULATION tant que envoi_automatique = false
                 [void](Update-Devis)                                      # agent devis (désactivé par défaut : devis_actif) : lance B2B\agents\devis.py continu UNE fois, 90 s après le démarrage ; aperçu et « ok devis » sur Discord seulement si envoi_automatique = true ; rien n'est jamais envoyé au client
-                [void](Update-RendezVous)                                 # agent rendez-vous (désactivé par défaut : rendez_vous_actif) : lance B2B\agents\rendez-vous.py continu UNE fois, 90 s après le démarrage ; lecture seule de l'agenda iCal ; messages Discord seulement si envoi_automatique = true
+                [void](Update-PageExemple)                                # agent page exemple (désactivé par défaut : page_exemple_actif) : lance B2B\agents\page-exemple.py continu UNE fois, 90 s après le démarrage ; « métier, ville, nom » sur Discord -> page déployée sur b2b-demos (noindex), seul le lien est renvoyé
+                [void](Update-RendezVous)                          # agent rendez-vous (désactivé par défaut : rendez_vous_actif) : lance B2B\agents\rendez-vous.py continu UNE fois, 90 s après le démarrage ; lecture seule de l'agenda iCal ; messages Discord seulement si envoi_automatique = true
                 Update-Discord                                           # alertes regroupées et briefing planifié sur Discord (tout est désactivé par défaut)
                 if (((Get-Date) - $dernierCoeur).TotalMinutes -ge 5) { $dernierCoeur = Get-Date; Save-HeureArret }      # « dernière activité » (si Jarvis est arrêté de force)
                 Update-ModeJeu                                           # jeu / plein écran / heures : lecture seule du premier plan, toutes les 3 s
