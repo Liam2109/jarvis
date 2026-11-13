@@ -1,11 +1,11 @@
 ﻿# Sauvegarde de Jarvis : zip daté du dossier du projet, SANS le fichier .env (clés et jetons) ni les gros fichiers recréables.
-#   powershell -ExecutionPolicy Bypass -File jarvis-sauvegarde.ps1                  -> C:\Users\Liam\Jarvis-sauvegardes\jarvis-AAAAMMJJ-HHMMSS.zip
+#   powershell -ExecutionPolicy Bypass -File jarvis-sauvegarde.ps1                  -> <profil>\Jarvis-sauvegardes\jarvis-AAAAMMJJ-HHMMSS.zip (<profil> = $env:USERPROFILE, ex. C:\Users\Liam)
 #   powershell -ExecutionPolicy Bypass -File jarvis-sauvegarde.ps1 -Dossier D:\sauv  -> ailleurs
 #   ... -Garder 10                                                                   -> ne garde que les 10 zips les plus récents de CE dossier
 # Exclus : .env (jamais sauvegardé ici : gardez-le dans votre coffre), voix\models (modèle Vosk, à retélécharger), sounds\cache (voix pré-synthétisées),
 #          .git. Inclus : scripts, config.json, memoire\ (notes, to-do, résumés, rappels), logs\ (journal), sounds\ (vos sons), README.
 # Restauration : dézippez dans un dossier, copiez votre .env à côté de jarvis.ps1 et remettez le modèle Vosk dans voix\models.
-param([string]$Dossier = 'C:\Users\Liam\Jarvis-sauvegardes', [string]$Source = '', [int]$Garder = 0)
+param([string]$Dossier = (Join-Path $env:USERPROFILE 'Jarvis-sauvegardes'), [string]$Source = '', [int]$Garder = 0)
 $ErrorActionPreference = 'Stop'
 if (-not $Source) { $Source = $PSScriptRoot }
 # Forme longue des chemins (un %TEMP% ou un profil en nom court 8.3, ex. C:\Users\SERVEU~1, ferait mal calculer les noms relatifs et manquer l'exclusion de .env)
