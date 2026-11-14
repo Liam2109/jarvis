@@ -22,6 +22,7 @@ description: Fiche de rôle de l'agent Liste d'appels de Sid (pôle Prospection)
   - RDV pris : sort de la liste, signalé dans le résumé du soir.
   - Non catégorique, Trop cher, Déjà un site : oubliée 1 an.
   - Case vide : revient dans la liste suivante.
+  - Les reprises comptent dans les 20 par métier ; celles en trop attendent la liste suivante.
 - **Le tableur :** il crée **un seul** tableur Google « Appels AAAA-MM-JJ », posé directement dans le dossier Drive de Sid (`dossier_sid_id`), sans sous-dossier.
   - Les lignes sont triées par créneau, de 8 h à 19 h.
   - Les colonnes sont toujours, dans cet ordre : Créneau, Entreprise, Métier, Ville, Téléphone, Détail fiche, Résultat, Note.

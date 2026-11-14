@@ -588,7 +588,8 @@ def _index_colonnes(entete):
     if "Entreprise" in entete:
         return {"nom": entete.index("Entreprise"), "ville": entete.index("Ville"), "tel": entete.index("Téléphone"), "metier": entete.index("Métier"),
                 "resultat": entete.index("Résultat"), "note": entete.index("Note") if "Note" in entete else None, "creneau": entete.index("Créneau") if "Créneau" in entete else None, "ancien": False}
-    return {"nom": 1, "ville": 2, "tel": 3, "metier": 5, "resultat": 9, "note": 13, "creneau": None, "ancien": True}
+    pos = lambda nom, defaut: entete.index(nom) if nom in entete else defaut   # anciennes listes : deux formats (avec ou sans « Type de numéro ») ; repérées par l'en-tête (correctif du 14/11/2026)
+    return {"nom": pos("Nom", 1), "ville": pos("Ville", 2), "tel": pos("Téléphone", 3), "metier": pos("Métier", 5), "resultat": pos("Appelé", 9), "note": pos("Remarque", 13), "creneau": None, "ancien": True}
 
 
 def _appele(valeur, ancien):
@@ -716,6 +717,22 @@ def _bilan_veille(conf, etat, jour, drive):
     return a_rappeler, historique
 
 
+def _filtrer_reprises(conf, etat, jour, reprises):
+    """Reprises gardées pour la liste du jour : jamais un STOP ni une commune hors zone (76, 27, 14, 50, 61) ; au plus max_par_metier par métier et par_liste en tout.
+    Celles en trop ne sont pas perdues : elles restent en attente (etat['reprises']) pour la liste suivante, dans le même ordre."""
+    stop = _tels_stop(); villes = {}
+    for l in P.lire_trouves() + _lire_maps():
+        d = ZN.dept_de_cp(str(l.get("cp", "")))
+        if d and l.get("ville"): villes.setdefault(ZN.norm(l["ville"]), d)
+    gardees, compte, attente = [], {}, etat.setdefault("reprises", {})
+    for r in reprises:
+        if r["tel"] in stop or _hors_zone("", r["ville"], villes): etat["sorties"].pop(r["cle"], None); continue   # hors zone ou STOP : ne revient plus
+        if compte.get(r["metier"], 0) >= conf.get("max_par_metier", 20) or len(gardees) >= conf["par_liste"]:
+            attente[r["cle"]] = {**r, "retour": jour}; continue
+        compte[r["metier"]] = compte.get(r["metier"], 0) + 1; gardees.append(r)
+    return gardees
+
+
 def _purger_sorties_expirees(etat, jour, historique, jours_sans_rappel):
     """Libère (etat['sorties']) les entreprises confirmées appelées il y a plus de `jours_sans_rappel` jours : elles redeviennent de vrais candidats (règle fixe de Liam, 10 nov. 2026)."""
     expirees = [cle for cle in list(etat["sorties"]) if cle in historique and _jours_ecoules(jour, historique[cle]) >= jours_sans_rappel]
@@ -727,6 +744,7 @@ def _purger_sorties_expirees(etat, jour, historique, jours_sans_rappel):
 def _preparer(conf, etat, jour, a_blanc, drive=None, complet=True, hors_ligne=False):
     if jour in etat["listes"] or chemin(jour).exists(): raise ErreurAgent(f"la liste du {jour} est déjà préparée ({chemin(jour).name}) : utilisez `annuler {jour}` si elle n'a pas servi")
     a_rappeler, historique = _bilan_veille(conf, etat, jour, drive)
+    a_rappeler = _filtrer_reprises(conf, etat, jour, a_rappeler)
     purgees = _purger_sorties_expirees(etat, jour, historique, conf.get("jours_sans_rappel", 365))
     sites_trouves = []
     deja = {}
@@ -737,7 +755,7 @@ def _preparer(conf, etat, jour, a_blanc, drive=None, complet=True, hors_ligne=Fa
     if not choisies: raise ErreurAgent("aucune entreprise disponible (téléphone valide, jamais appelée, jamais donnée) : la réserve est épuisée")
     if len(choisies) < conf["par_liste"]: print(f"  ! réserve insuffisante : {len(choisies)} ligne(s) au lieu de {conf['par_liste']}")
     if a_rappeler: print(f"  {len(a_rappeler)} ligne(s) reprise(s) (non appelées, pas de réponse, à rappeler, à réfléchir) : Détail fiche « Reprise de la liste du … »")
-    if etat.get("reprises"): print(f"  {len(etat['reprises'])} reprise(s) en attente d'un jour suivant (Pas de réponse : +2 jours ouvrés ; Je dois réfléchir / Pas le temps : +7 jours)")
+    if etat.get("reprises"): print(f"  {len(etat['reprises'])} reprise(s) en attente d'une prochaine liste (plafond de 20 par métier atteint, Pas de réponse : +2 jours ouvrés, Je dois réfléchir / Pas le temps : +7 jours)")
     if purgees: print(f"  {purgees} entreprise(s) de nouveau disponible(s) ({conf.get('jours_sans_rappel', 365)} jours écoulés depuis leur dernier appel)")
     if sites_trouves: print(f"  {len(sites_trouves)} entreprise(s) écartée(s) : un site officiel a été trouvé lors de la vérification (OpenStreetMap, recherche web), notée dans l'historique")
     if a_blanc:
@@ -1105,7 +1123,7 @@ def cmd_annuler(jour, force, a_blanc):
         fichier = chemin(jour)
         if fichier.exists() and not force:
             with open(fichier, encoding="utf-8-sig", newline="") as f: lignes = list(csv.reader(f, delimiter=";"))
-            debut = I_RESULTAT if lignes and "Entreprise" in lignes[0] else 9   # Résultat et Note (tableur du 14/11/2026) ; cases et remarque (anciennes listes)
+            debut = I_RESULTAT if lignes and "Entreprise" in lignes[0] else _index_colonnes(lignes[0] if lignes else [])["resultat"]   # Résultat et Note (tableur du 14/11/2026) ; cases et remarque (anciennes listes)
             if any(any(x.strip() for x in l[debut:]) for l in lignes[1:] if len(l) > debut): raise ErreurAgent(f"la liste du {jour} a déjà été utilisée (une case ou une remarque est remplie) : annulation refusée (--force pour libérer quand même)")
         cles = etat["listes"][jour]["cles"]
         if a_blanc: print(f"Annulation du {jour} [à blanc : rien n'est changé] : {len(cles)} entreprise(s) seraient libérées"); return 0

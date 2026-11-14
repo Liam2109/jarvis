@@ -1105,6 +1105,17 @@ hist = json.loads(A.HISTORIQUE.read_text(encoding="utf-8")); e = json.loads(A.ET
 verifier(all(l16[x][TEL] in hist for x in (pdr, ref, tps, rdv, nc, cher, site)), "oubliées 1 an : téléphone noté dans l'historique")
 verifier(not e.get("tentatives") and not any(r["nom"] in (pdr, ref, tps) for r in e.get("reprises", {}).values()), "plus aucun compteur ni reprise en attente pour elles")
 
+print("34. Anciennes listes : colonnes repérées par l'en-tête ; reprises plafonnées à 20 par métier, le reste attend (14/11/2026)")
+ix = A._index_colonnes(["#", "Nom", "Ville", "Téléphone", "Métier", "Créneau conseillé", "Constat vérifié", "Page d'exemple", "Appelé", "Répondu", "Rendez-vous pris", "Refus", "Remarque"])
+verifier((ix["metier"], ix["resultat"], ix["note"]) == (4, 8, 12), f"liste du 10/11 (sans « Type de numéro ») : Métier, Appelé, Remarque bien repérés ({ix})")
+ix = A._index_colonnes(["#", "Nom", "Ville", "Téléphone", "Type de numéro", "Métier", "Créneau conseillé", "Constat vérifié", "Page d'exemple", "Appelé", "Répondu", "Rendez-vous pris", "Refus", "Remarque"])
+verifier((ix["metier"], ix["resultat"], ix["note"]) == (5, 9, 13), "liste avec « Type de numéro » : Métier, Appelé, Remarque bien repérés")
+monde(trouves=[], config={}); e_r = A.etat_lire()
+rep = [{"cle": f"c{i}|rouen", "nom": f"Coiff Repris {i}", "ville": "Rouen", "tel": tel(3000 + i), "metier": "coiffeur", "constat": "", "dept": "", "prox": -1} for i in range(30)] +       [{"cle": "dreux|dreux", "nom": "Hors Zone Repris", "ville": "Dreux", "tel": tel(3100), "metier": "coiffeur", "constat": "", "dept": "", "prox": -1}]
+gard = A._filtrer_reprises(A.cfg(), e_r, "2026-11-16", rep)
+verifier(len(gard) == 20 and len(e_r["reprises"]) == 10 and all(r["retour"] == "2026-11-16" for r in e_r["reprises"].values()) and "Hors Zone Repris" not in {r["nom"] for r in gard},
+         "reprises : 20 coiffeurs au plus, les 10 autres attendent la liste suivante, une commune hors zone (Dreux) ne revient pas")
+
 print("33. Mise en forme refusée par Google (API Sheets désactivée, HTTP 403) : le tableur reste, l'échec est dit clairement")
 class _DriveSansSheets:
     def formater_feuille(self, *a, **k): raise Exception("HTTP 403")
