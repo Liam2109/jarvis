@@ -8,13 +8,14 @@ Même architecture que prospection.py et instagram.py : script autonome, réglag
   python agents\\devis.py jour [--a-blanc]               un passage : poste l'aperçu « à valider » (mode réel) ou lit le « ok devis » de Liam
   python agents\\devis.py continu [--pid N]                boucle (lancée par Jarvis, lib\\devis.ps1) : un passage toutes les cycle_minutes
   python agents\\devis.py etat                             liste des devis et de leur statut
-  python agents\\devis.py marquer DEV-AAAA-NNN valide|envoye|accepte|acompte   Liam coche à la main (statuts dans l'ordre, jamais de saut)
+  python agents\\devis.py marquer DEV-AAAA-NNN valide|envoye|accepte|paye   Liam coche à la main (statuts dans l'ordre, jamais de saut)
   python agents\\devis.py annuler DEV-AAAA-NNN             libère la place d'un devis préparé ou validé (jamais d'un devis envoyé)
   python agents\\devis.py arreter | reprendre              arrêt de secours de la boucle | lève la suspension après une erreur
 
-Prix, acompte (30 %) et liens de paiement : UNIQUEMENT ceux de docs\\KIT-RDV-15MIN.md et docs\\liens-paiement.md (page web 595 €, site complet 990 à 1 490 €, maintenance 49 €/mois). Une information
-absente de la fiche ou des sources (délai, livrables, prix d'un site, option sans prix, lien d'acompte sur mesure) est SIGNALÉE et l'agent s'arrête : rien n'est inventé.
-Statut de paiement : l'agent n'accède ni à la banque ni à Stripe ; Liam coche « acompte payé » à la main (`marquer`). Un seul devis à la fois « préparé » (en cours de validation).
+Prix et liens de paiement : UNIQUEMENT ceux de docs\\KIT-RDV-15MIN.md et docs\\liens-paiement.md (page web 595 €, site complet 990 à 1 490 €, maintenance 49 €/mois). Paiement en une fois (décision
+de Liam, 14/11/2026) : le devis donne directement le lien de paiement du prix complet. Une information absente de la fiche ou des sources (délai, livrables, prix d'un site, option sans prix,
+lien de paiement sur mesure) est SIGNALÉE et l'agent s'arrête : rien n'est inventé.
+Statut de paiement : l'agent n'accède ni à la banque ni à Stripe ; Liam coche « payé » à la main (`marquer`). Un seul devis à la fois « préparé » (en cours de validation).
 envoi_automatique = false (défaut) : SIMULATION (aucun message Discord ; Liam valide en ligne de commande). true : aperçu et lecture du « ok devis » sur Discord (toujours rien vers le client)."""
 import argparse, json, re, sys, time, unicodedata
 from datetime import datetime, timedelta
@@ -29,12 +30,12 @@ DOSSIER = RACINE / "devis"
 CONFIG, ETAT, IDENTITE = ICI / "devis-config.json", ICI / "devis-etat.json", ICI / "identite.json"
 ARRET, VERROU, JOURNAL = ICI / "devis.arret", ICI / "devis-continu.verrou", ICI / "devis-journal.log"
 DEFAUT = {"envoi_automatique": False, "cycle_minutes": 3, "salon_nom": ""}
-STATUTS = ["préparé", "validé", "envoyé", "accepté", "acompte payé"]
+STATUTS = ["préparé", "validé", "envoyé", "accepté", "payé"]
 
-# Sources : docs\KIT-RDV-15MIN.md (section 2 et 4) et docs\liens-paiement.md. Rien d'autre n'est un prix.
-PRIX_PAGE, PRIX_SITE_MIN, PRIX_SITE_MAX, PRIX_SITE_LIEN, MAINTENANCE, ACOMPTE_PCT, VALIDITE_JOURS = 595, 990, 1490, 990, 49, 30, 15
-LIEN_PAGE = "https://buy.stripe.com/3cI14o4Mt9J3dTVc4g5EY00"      # ⚠ lien Stripe réel toujours fixé à 177 € (30 % de l'ancien prix 590 €) ; le calcul en code donne maintenant 178 € (30 % de 595 €) : créer un nouveau lien Stripe à 178 € avant d'envoyer un devis « page web »
-LIEN_SITE = "https://buy.stripe.com/3cI3cwfr708t4jl4BO5EY02"      # acompte 30 % du site complet à 990 € : 297 € (seul montant couvert par ce lien)
+# Sources : docs\KIT-RDV-15MIN.md (section 2 et 4) et docs\liens-paiement.md. Rien d'autre n'est un prix. Paiement en une fois : un lien = le prix complet.
+PRIX_PAGE, PRIX_SITE_MIN, PRIX_SITE_MAX, PRIX_SITE_LIEN, MAINTENANCE, VALIDITE_JOURS = 595, 990, 1490, 994, 49, 15
+LIEN_PAGE = "https://buy.stripe.com/bJebJ2ceVdZjbLN0ly5EY06"      # « Pack landing page » 595 € (liens-paiement.md, 12/11/2026)
+LIEN_SITE = "https://buy.stripe.com/7sYaEY2ElaN7179d8k5EY07"      # « Site complet » 994 € (seul montant de site couvert par un lien)
 OFFRES = {"page": "Page web", "site": "Site complet"}
 ALIAS = {"entreprise": "entreprise", "nomdelentreprise": "entreprise", "societe": "entreprise", "metier": "metier", "ville": "ville", "contact": "contact", "nom": "contact", "nomducontact": "contact",
          "client": "contact", "email": "email", "mail": "email", "courriel": "email", "telephone": "telephone", "tel": "telephone", "offre": "offre", "offrechoisie": "offre", "prix": "prix",
@@ -109,7 +110,7 @@ def construire(f, ident, numero, jour, rapide=False):
     elif offre == "site":
         if not pv: m.append(f"prix du site complet à fixer par Liam ({euros(PRIX_SITE_MIN)} à {euros(PRIX_SITE_MAX)}) : aucun prix inventé")
         elif not PRIX_SITE_MIN <= pv <= PRIX_SITE_MAX: m.append(f"prix : le site complet va de {euros(PRIX_SITE_MIN)} à {euros(PRIX_SITE_MAX)}, pas {euros(pv)}")
-        elif pv != PRIX_SITE_LIEN: m.append(f"lien d'acompte à créer : le lien « site complet » est fixé à 297 € (site à {euros(PRIX_SITE_LIEN)}) ; pour {euros(pv)}, demander à Claude de créer le bon lien d'acompte")
+        elif pv != PRIX_SITE_LIEN: m.append(f"lien de paiement à créer par Liam : le lien « site complet » est fixé à {euros(PRIX_SITE_LIEN)} ; pour {euros(pv)}, créer le lien Stripe de ce montant puis l'ajouter à docs\\liens-paiement.md")
         else: prix, lien = pv, LIEN_SITE
     dj = _entier((re.search(r"\d+\s*jours?", f.get("delai", "")) or [""])[0])
     if not dj: m.append("délai : un nombre de jours ouvrés est nécessaire dans la fiche (aucun délai n'est inventé)")
@@ -122,10 +123,9 @@ def construire(f, ident, numero, jour, rapide=False):
         if "maintenance" in _norm(o): maintenance = True
         else: m.append(f"option « {o} » : aucun prix dans docs\\KIT-RDV-15MIN.md ni docs\\liens-paiement.md (jamais inventé)")
     if m: return None, m
-    acompte = prix * ACOMPTE_PCT // 100
     return {"numero": numero, "date": str(jour.date()), "date_fr": f"{jour:%d/%m/%Y}", "valide_jusqu": str((jour + timedelta(days=VALIDITE_JOURS)).date()), "valide_fr": f"{jour + timedelta(days=VALIDITE_JOURS):%d/%m/%Y}",
-            "entreprise": f["entreprise"], "metier": f["metier"], "ville": f["ville"], "contact": f.get("contact", ""), "offre": offre, "offre_nom": OFFRES[offre], "prix": prix, "acompte": acompte, "solde": prix - acompte,
-            "lien_acompte": lien, "maintenance": maintenance, "delai_jours": dj, "livrables": livrables, "besoin": f.get("besoin", "").strip(), "emetteur": {k: str(ident[k]).strip() for k in ("prenom_nom", "entreprise", "siret", "telephone", "email_reponse")}}, []
+            "entreprise": f["entreprise"], "metier": f["metier"], "ville": f["ville"], "contact": f.get("contact", ""), "offre": offre, "offre_nom": OFFRES[offre], "prix": prix,
+            "lien_paiement": lien, "maintenance": maintenance, "delai_jours": dj, "livrables": livrables, "besoin": f.get("besoin", "").strip(), "emetteur": {k: str(ident[k]).strip() for k in ("prenom_nom", "entreprise", "siret", "telephone", "email_reponse")}}, []
 
 
 # --- le devis écrit : mêmes blocs pour le texte et le PDF ---------------------------------------------------------------
@@ -140,13 +140,12 @@ def blocs_devis(d):
     if d["besoin"]: b += [("sep", ""), ("h2", "Ce que vous souhaitez"), ("p", d["besoin"])]
     b += [("sep", ""), ("h2", "Ce qui est livré"), ("p", f"{d['offre_nom']} pour {d['entreprise']} :")] + [("li", x) for x in d["livrables"]]
     b += [("sep", ""), ("h2", "Prix"), ("p", f"Prix {'de la' if d['offre'] == 'page' else 'du'} {d['offre_nom'].lower()} : {euros(d['prix'])}"),
-          ("p", f"Acompte de {ACOMPTE_PCT} % à la commande : {euros(d['acompte'])}"), ("p", f"Solde à la validation de l'aperçu, avant la mise en ligne : {euros(d['solde'])}")]
+          ("p", f"Paiement en une fois à la commande : {euros(d['prix'])}, avec le lien ci-dessous.")]
     if d["maintenance"]: b.append(("p", f"Maintenance (facultative, non comprise dans le prix ci-dessus) : {MAINTENANCE} € par mois (hébergement, petites modifications, sauvegardes)."))
-    b += [("sep", ""), ("h2", "Délai"), ("p", f"{d['delai_jours']} jours ouvrés après réception de l'acompte et de vos photos."), ("sep", ""), ("h2", "Régler l'acompte"),
-          ("p", f"Lien de paiement de l'acompte ({euros(d['acompte'])}) :"), ("p", d["lien_acompte"]), ("sep", ""), ("h2", "Conditions"),
-          ("li", f"Vous validez ce devis et réglez l'acompte de {ACOMPTE_PCT} % avec le lien ci-dessus ; je commence dès l'acompte reçu."),
-          ("li", "Je vous montre un aperçu privé : l'aperçu est validé par vous avant le solde."),
-          ("li", "Le solde est réglé après cette validation ; la mise en ligne a lieu après réception du solde."),
+    b += [("sep", ""), ("h2", "Délai"), ("p", f"{d['delai_jours']} jours ouvrés après réception du paiement et de vos photos."), ("sep", ""), ("h2", "Régler"),
+          ("p", f"Lien de paiement ({euros(d['prix'])}) :"), ("p", d["lien_paiement"]), ("sep", ""), ("h2", "Conditions"),
+          ("li", "Vous validez ce devis et réglez avec le lien ci-dessus ; je commence dès le paiement reçu."),
+          ("li", "Je vous montre un aperçu privé : la mise en ligne a lieu après votre validation de l'aperçu."),
           ("li", f"Devis valable {VALIDITE_JOURS} jours.")]
     return b
 
@@ -169,10 +168,10 @@ def texte_message(d):
     e = d["emetteur"]; kind = d["offre_nom"].lower()
     l = [f"Objet : Devis {kind} pour {d['entreprise']}", "", (f"Bonjour {d['contact']}," if d["contact"] else "Bonjour,"), "Merci pour notre échange. Voici ce que je vous propose, comme convenu.", ""]
     if d["besoin"]: l.append(f"Ce que vous voulez (vos mots) : {d['besoin']}")
-    l += [f"Ce que je réalise : {d['offre_nom']} : " + ", ".join(d["livrables"]) + ".", f"Délai : {d['delai_jours']} jours ouvrés après réception de l'acompte et de vos photos.",
-          f"Prix : {euros(d['prix'])}. Acompte de {ACOMPTE_PCT} % à la commande : {euros(d['acompte'])}. Solde à la validation de l'aperçu, avant la mise en ligne."]
+    l += [f"Ce que je réalise : {d['offre_nom']} : " + ", ".join(d["livrables"]) + ".", f"Délai : {d['delai_jours']} jours ouvrés après réception du paiement et de vos photos.",
+          f"Prix : {euros(d['prix'])}, réglé en une fois à la commande. Je vous montre un aperçu privé ; la mise en ligne a lieu après votre validation."]
     if d["maintenance"]: l.append(f"Maintenance (facultative) : {MAINTENANCE} € par mois.")
-    l += [f"Lien de paiement de l'acompte : {d['lien_acompte']}", f"Le devis n° {d['numero']} est joint (PDF). Devis valable {VALIDITE_JOURS} jours, jusqu'au {d['valide_fr']}.", "",
+    l += [f"Lien de paiement : {d['lien_paiement']}", f"Le devis n° {d['numero']} est joint (PDF). Devis valable {VALIDITE_JOURS} jours, jusqu'au {d['valide_fr']}.", "",
           "Cordialement,", f"{e['prenom_nom']}, {e['entreprise']}, SIRET {_siret(e['siret'])}", "TVA non applicable, art. 293 B du CGI."]
     return "\n".join(l) + "\n"
 
@@ -245,8 +244,8 @@ OK_DEVIS = re.compile(r"\s*ok\s+devis(?:\s+(DEV-\d{4}-\d{3}))?\s*[.!]*\s*", re.I
 
 
 def texte_apercu(num, v, uid):
-    return (f"<@{uid}> **Devis {num} : à valider** — {v['entreprise']} ({v['ville']})\n{v['offre_nom']} {euros(v['prix'])} · acompte 30 % {euros(v['acompte'])} · solde {euros(v['solde'])} · délai {v['delai_jours']} jours ouvrés"
-            + (f" · maintenance {MAINTENANCE} €/mois" if v.get("maintenance") else "") + f"\nLien d'acompte : {v['lien_acompte']}\nFichiers : devis\\{num}.pdf, devis\\{num}.txt, devis\\{num}-message.txt\n"
+    return (f"<@{uid}> **Devis {num} : à valider** — {v['entreprise']} ({v['ville']})\n{v['offre_nom']} {euros(v['prix'])} en une fois · délai {v['delai_jours']} jours ouvrés"
+            + (f" · maintenance {MAINTENANCE} €/mois" if v.get("maintenance") else "") + f"\nLien de paiement : {v.get('lien_paiement', '')}\nFichiers : devis\\{num}.pdf, devis\\{num}.txt, devis\\{num}-message.txt\n"
             f"Réponds `ok devis` (ou ✅ sur ce message) pour valider. **Rien ne part vers le client** : tu l'envoies toi-même, puis `python agents\\devis.py marquer {num} envoye`.")[:1900]
 
 
@@ -312,11 +311,11 @@ def cmd_preparer(conf, texte_fiche, a_blanc=False, maintenant=None, ident=None, 
         return fin("information manquante", f"{len(manques)} point(s) : " + " | ".join(manques)[:300], manques=manques)
     cours = [n for n, v in etat["devis"].items() if v.get("statut") == "préparé"]
     if cours: return fin("refusé", f"un seul devis à la fois en cours de validation : {cours[0]} attend le « ok » de Liam (valider avec `marquer {cours[0]} valide` ou annuler)", raison=f"{cours[0]} attend la validation", numero=cours[0])
-    if a_blanc: return fin("à blanc", f"{num} serait préparé : {d['offre_nom']} {euros(d['prix'])}, acompte {euros(d['acompte'])} (rien écrit)", numero=num)
+    if a_blanc: return fin("à blanc", f"{num} serait préparé : {d['offre_nom']} {euros(d['prix'])} en une fois (rien écrit)", numero=num)
     try:
         ecrire_sortie(d)
         etat["devis"][num] = {"statut": "préparé", "historique": {"préparé": jour}, "entreprise": d["entreprise"], "metier": d["metier"], "ville": d["ville"], "offre_nom": d["offre_nom"], "prix": d["prix"],
-                              "acompte": d["acompte"], "solde": d["solde"], "maintenance": d["maintenance"], "delai_jours": d["delai_jours"], "lien_acompte": d["lien_acompte"]}
+                              "maintenance": d["maintenance"], "delai_jours": d["delai_jours"], "lien_paiement": d["lien_paiement"]}
         etat_ecrire(etat)
     except Exception as ex: return _arret(etat, "erreur", f"écriture du devis impossible ({type(ex).__name__})", alerte, jour, a_blanc, fin)
     return fin("préparé", f"{num} | {d['entreprise']} | {d['offre_nom']} {euros(d['prix'])}", numero=num, dossier=str(DOSSIER))
@@ -387,14 +386,14 @@ def cmd_jour(conf, a_blanc=False, maintenant=None, api=None, acces=None, alerte=
 
 
 def statut_court(s):
-    n = _norm(s or ""); return next((x for x in STATUTS if _norm(x) == n or (n == "acompte" and x == "acompte payé")), None)
+    n = _norm(s or ""); return next((x for x in STATUTS if _norm(x) == n or (n == "paye" and x == "payé")), None)
 
 
 def cmd_marquer(num, statut, maintenant=None):
-    """Liam coche à la main : statuts dans l'ordre (préparé > validé > envoyé > accepté > acompte payé), jamais de saut ni de retour. Aucune lecture de Stripe ni de banque."""
+    """Liam coche à la main : statuts dans l'ordre (préparé > validé > envoyé > accepté > payé), jamais de saut ni de retour. Aucune lecture de Stripe ni de banque."""
     maintenant = maintenant or datetime.now(); jour = str(maintenant.date()); etat = etat_lire(); fin = _fin(False); st = statut_court(statut); v = etat["devis"].get(num)
     if not v: return fin("refusé", f"{num} : devis inconnu")
-    if not st: return fin("refusé", f"statut « {statut} » inconnu (valide, envoye, accepte, acompte)")
+    if not st: return fin("refusé", f"statut « {statut} » inconnu (valide, envoye, accepte, paye)")
     cur = v.get("statut")
     if cur not in STATUTS or STATUTS.index(st) != STATUTS.index(cur) + 1: return fin("refusé", f"{num} est « {cur} » : le statut suivant est « {STATUTS[STATUTS.index(cur) + 1] if cur in STATUTS and cur != STATUTS[-1] else 'aucun'} » (jamais de saut ni de retour)")
     _passer(v, st, jour); etat_ecrire(etat); return fin("marqué", f"{num} : {st}", numero=num, statut=st)
@@ -415,7 +414,7 @@ def reprendre():
 def cmd_etat():
     e = etat_lire()
     print("Suspendu : " + e["suspendu"]["raison"] if e.get("suspendu") else "Agent actif (aucune suspension).")
-    for n, v in sorted(e["devis"].items()): print(f"  {n} | {v['statut']:<12} | {v['entreprise']} | {v['offre_nom']} {euros(v['prix'])} | acompte {euros(v['acompte'])}")
+    for n, v in sorted(e["devis"].items()): print(f"  {n} | {v['statut']:<12} | {v['entreprise']} | {v['offre_nom']} {euros(v['prix'])}")
     if not e["devis"]: print("  aucun devis.")
 
 
@@ -488,7 +487,7 @@ def main():
     elif a.cmd in ("marquer", "annuler"):
         if a.cmd == "marquer" and len(a.args) == 2: sys.exit(0 if cmd_marquer(a.args[0].upper(), a.args[1])["action"] == "marqué" else 2)
         elif a.cmd == "annuler" and len(a.args) == 1: sys.exit(0 if cmd_annuler(a.args[0].upper())["action"] == "annulé" else 2)
-        else: print("Usage : marquer DEV-AAAA-NNN valide|envoye|accepte|acompte  ·  annuler DEV-AAAA-NNN"); sys.exit(2)
+        else: print("Usage : marquer DEV-AAAA-NNN valide|envoye|accepte|paye  ·  annuler DEV-AAAA-NNN"); sys.exit(2)
     elif a.cmd == "arreter":
         if boucle_active(): ARRET.write_text(str(int(time.time())), encoding="utf-8"); print("Arrêt demandé : la boucle s'arrête dans quelques secondes.")
         else: ARRET.unlink(missing_ok=True); VERROU.unlink(missing_ok=True); print("Aucune boucle devis en cours.")

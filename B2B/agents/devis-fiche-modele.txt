@@ -8,7 +8,7 @@ E-mail :
 Téléphone :
 # Offre : page web (595 €) ou site complet
 Offre :
-# Prix : site complet seulement. 990 € a un lien d'acompte prêt ; un autre montant (jusqu'à 1 490 €) demande de créer le lien d'acompte avant
+# Prix : site complet seulement. 994 € a un lien de paiement prêt ; un autre montant (990 à 1 490 €) demande de créer d'abord le lien de paiement de ce montant
 Prix :
 # Options : aucune, ou maintenance (49 € par mois). Toute autre option n'a pas de prix connu : elle bloque le devis
 Options : aucune

@@ -213,3 +213,40 @@ Contexte : Liam utilise un petit PC portable (celui de Mathéo, avec carte Wi-Fi
 - 2026-11-13 (Liam) : ARCHITECTURE A PARTIR DU CEO : Jarvis. Les TikTok donnes a Claude contenaient l'architecture complete (contenu perdu avec la conversation supprimee, a redonner). Jarvis doit tourner 24/24 sur le serveur Liam, pas seulement quand le gros PC est allume.
 - 2026-11-13 (Liam) : les prompts Claude Code doivent se terminer par la machine : « gros PC » ou « serveur Liam ».
 - 2026-11-13 (Liam) : tout ce qui est a faire est note dans TODO-B2B.md, JOURNAL-B2B.md et IDEES-MASTER.md (fichiers deja crees), pour le garder a vie. Ne jamais supprimer de conversation : l'historique n'est pas une sauvegarde, les fichiers le sont.
+
+
+## 2026-11-14 (nuit) - Session Opus : tout ce qui fait vendre vite
+
+### Argent qui fuit aujourd'hui (a corriger avant la 1re vente)
+- Aucun lien Stripe pour l'abonnement 49 EUR/mois. Les liens 595 EUR et 994 EUR n'encaissent que la partie unique : le recurrent n'est jamais preleve. Perte = 588 EUR par an et par client. A creer dans Stripe : prix recurrent 49 EUR/mois, et un lien unique "595 EUR a la commande + 49 EUR/mois".
+- Nom public Stripe encore "Trouve ton produit" : le client voit un nom inconnu au moment de payer, juste avant de valider. A passer a LM MULTI-SERVICES.
+- Decision du 14/11 : plus d'acompte. Lien de paiement complet envoye directement avec le devis. Les liens acompte/solde (177/413/297/693) deviennent inutiles.
+- Manque pour rassurer un commercant : mentions legales + SIRET sur le site et sur les devis, conditions de vente ecrites (ce que comprend le pack, duree et resiliation de l'abonnement 49 EUR/mois).
+
+### Ce qui fait signer le premier client
+- Offre fondateur (3 premiers clients) : 295 EUR au lieu de 595 EUR + 49 EUR/mois inchange, en echange du droit de montrer le site en reference et d'un temoignage video de 30 secondes. La 1re vente vaut une preuve, pas un revenu ; le recurrent est preserve.
+- Garantie zero risque : "si la page ne vous plait pas, vous ne payez rien". Supprime l'objection principale quand on n'a aucune reference.
+- Page deja en ligne a leur nom + QR code imprime : en passage physique, le patron voit sa page sur son propre telephone en 10 secondes.
+- Avant/apres chiffre : capture de leur site actuel (ou absence de site) + score PageSpeed a cote de la nouvelle page. Argument mesure, pas un avis esthetique.
+- Ciblage par ordre de facilite : fiche Google avec au moins 20 avis et 4,2 etoiles, mais pas de site. Ils ont deja des clients et rien pour les capter.
+- Horaires reels : samedi matin 10h-12h = artisans (souvent au depot), 14h30-16h30 = commerces calmes. Ne pas appeler coiffeurs et restaurants le samedi (rush). Appels telephoniques : lundi et mardi 9h-11h.
+- Cercle proche d'abord : un ami, un parent, un commercant deja connu. C'est le chemin le plus court vers la 1re vente et la 1re preuve.
+
+### Agents a creer, par rentabilite
+1. Relance J+3 et J+7 : la majorite des reponses viennent des relances, pas du 1er message. Agent le plus rentable a construire.
+2. Pre-generation de pages en masse : 20 pages au nom des prospects d'avance, URL prete avant l'appel.
+3. Signaux d'achat - entreprises nouvellement immatriculees dans la zone (API Sirene, gratuite) : besoin de site immediat et budget de lancement.
+4. Detection de site mort : erreur, certificat expire, pas mobile, PageSpeed sous 50 -> prospect avec argument chiffre.
+5. Rappel de closing : devis envoye et non paye sous 48h -> alerte pour rappeler.
+6. CEO Jarvis : resume Discord matin et soir, alerte si un agent plante, tableau de bord revenu.
+
+### Sites
+- Un seul objectif par page : appeler. Numero cliquable collant en bas sur mobile.
+- Une page de demonstration par metier = cout marginal nul pour chaque nouveau prospect du meme metier.
+- Preuve sociale honnete : ne jamais inventer de temoignage. Utiliser les pages d'exemple reellement realisees et les scores de vitesse.
+
+### Obsidian et vue 3D de l'entreprise (demande de Liam le 14/11)
+- Obsidian : gratuit, coffre = dossier Jarvis, vue graphe native. Notes courtes avec liens [[...]] = moins de tokens pour Claude.
+- Tableau de bord 3D cliquable : page HTML locale (three.js), icone sur le bureau, lit un agents.json genere par un script qui scanne les agents et leurs etats. CEO Jarvis au centre, agents en orbite, vert/rouge selon l'etat, clic = details. Se met a jour tout seul quand un agent est cree. Script sans tokens Claude.
+- 2026-11-14 (Liam) : coffre Obsidian sur le dossier Jarvis (INDEX.md hub, notes agents et décisions) et tableau de bord 3D local sans token (dashboard\index.html, mis à jour toutes les 5 min). Suite possible : voir l'état du serveur en direct (petit fichier d'état publié par le serveur, à décider).
+- 2026-11-14 (Liam) : tableau de bord 2D de l'entreprise (organigramme par pôles, pipeline, à faire, journal, décisions, idées), servi par le serveur sur le port 8080 pour voir son état en direct depuis le gros PC (tâches à créer là-bas avec outils\taches-dashboard-serveur.ps1 -Oui).

@@ -11,7 +11,7 @@ Durée prévue : 10 à 15 minutes. Caméra facultative. Message envoyé à Sid l
 
 ## Déroulé (ce que tu dis)
 1. Présentation (1 min) : LM Multi-Services crée des pages web pour les artisans et commerçants de Normandie. Tu ne lui demandes pas de vendre : il décroche un rendez-vous de 15 minutes, c'est toi qui présentes et qui conclus.
-2. Les offres (2 min) : page web 595 € (acompte de 30 %), site 990 à 1 490 €, maintenance 49 € par mois. Sa commission : 15 % du prix payé, soit environ 90 à 220 € par client, versée après le paiement du client.
+2. Les offres (2 min) : page web 595 € (prix complet réglé en une fois, lien de paiement direct dans le devis), site 990 à 1 490 €, maintenance 49 € par mois. Sa commission : 15 % du prix payé, soit environ 90 à 220 € par client, versée après le paiement du client.
 3. L'essai (2 min) : une semaine, jusqu'au vendredi 13 novembre (à confirmer avec lui). Suivi chiffré : appels, conversations, rendez-vous.
 4. Ce que tu lui donnes (2 min) : liste de commerces à appeler, script, maquettes (plombier, électricien), ton planning de rendez-vous.
 5. Ses questions (3 min), puis la suite : l'accord écrit, sa micro, le premier jour.

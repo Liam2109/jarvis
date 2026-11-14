@@ -36,4 +36,4 @@ Si oui :
 - Signer ou engager LM Multi-Services : c'est Liam qui présente l'offre et qui conclut.
 
 ## Ce que Liam présentera au rendez-vous
-Page web 595 € (acompte de 30 %), site 990 à 1 490 €, maintenance 49 €/mois facultative. Devis écrit avant de commencer.
+Page web 595 €, site 990 à 1 490 €, maintenance 49 €/mois facultative. Devis écrit avant de commencer, avec un lien de paiement direct : le prix complet est réglé en une fois.

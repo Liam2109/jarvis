@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jarvis - Mon entreprise</title>
+<style>
+  :root {
+    --fond: #13110F; --surface: #1B1815; --surface-2: #221E1A; --bord: #2E2823; --texte: #EFE8DA; --doux: #A89D8B; --faible: #6F665A;
+    --petrole: #5E8C8E; --sauge: #8DAE97; --ocre: #E0A458; --brique: #C8553D;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--fond); color: var(--texte); font: 14px/1.55 "Segoe UI", system-ui, sans-serif; }
+  a { color: var(--ocre); }
+  header { position: sticky; top: 0; z-index: 5; background: rgba(19,17,15,.94); backdrop-filter: blur(6px); border-bottom: 1px solid var(--bord); }
+  .barre { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 14px 32px; }
+  h1 { margin: 0; font-size: 16px; font-weight: 600; }
+  .meta { color: var(--faible); font-size: 12px; }
+  .outils { margin-left: auto; display: flex; gap: 8px; }
+  input, select { background: var(--surface); color: var(--texte); border: 1px solid var(--bord); border-radius: 6px; padding: 7px 10px; font: inherit; }
+  input { width: 220px; }
+  input:focus, select:focus, button:focus-visible { outline: 2px solid var(--petrole); outline-offset: 1px; }
+  nav { display: flex; gap: 4px; padding: 0 28px; overflow-x: auto; }
+  nav button { background: none; border: 0; border-bottom: 2px solid transparent; color: var(--doux); padding: 9px 10px; font: inherit; cursor: pointer; white-space: nowrap; }
+  nav button[aria-selected="true"] { color: var(--texte); border-color: var(--ocre); }
+  main { padding: 28px 32px 48px; max-width: 1400px; }
+  .alerte { color: var(--doux); font-size: 12.5px; border-left: 2px solid var(--ocre); padding: 4px 12px; margin: 0 0 24px; }
+  .ceo { display: flex; justify-content: center; margin-bottom: 8px; }
+  .ceo div { border: 1px solid var(--bord); background: var(--surface-2); border-radius: 10px; padding: 12px 28px; text-align: center; }
+  .ceo b { display: block; font-size: 15px; } .ceo span { color: var(--doux); font-size: 12px; }
+  .lien-ceo { height: 24px; width: 1px; background: var(--bord); margin: 0 auto 16px; }
+  .poles { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+  .pole h2 { margin: 0 0 12px; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--doux); display: flex; justify-content: space-between; border-bottom: 1px solid var(--bord); padding-bottom: 8px; }
+  .carte { display: block; width: 100%; text-align: left; font: inherit; color: inherit; background: var(--surface); border: 1px solid var(--bord); border-radius: 8px; padding: 14px 16px; margin-bottom: 10px; cursor: pointer; transition: border-color .15s; }
+  .carte:hover, .carte[aria-pressed="true"] { border-color: var(--petrole); }
+  .carte .haut { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+  .carte p { margin: 6px 0 10px; color: var(--doux); font-size: 12.5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .carte .bas { display: flex; justify-content: space-between; color: var(--faible); font-size: 12px; }
+  .carte .bas b { color: var(--texte); font-weight: 600; }
+  .pt { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .actif { background: var(--sauge); } .inactif { background: var(--ocre); } .erreur { background: var(--brique); }
+  .tuiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 28px; }
+  .tuile { background: var(--surface); border: 1px solid var(--bord); border-radius: 8px; padding: 12px 14px; }
+  .tuile span { color: var(--doux); font-size: 12px; } .tuile b { display: block; font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .entonnoir { max-width: 760px; }
+  .etape { display: grid; grid-template-columns: 170px 1fr 60px; align-items: center; gap: 14px; margin-bottom: 12px; }
+  .etape .piste { background: var(--surface); border-radius: 4px; height: 26px; overflow: hidden; }
+  .etape .rempli { height: 100%; background: linear-gradient(90deg, var(--petrole), #46706F); border-radius: 4px; min-width: 3px; }
+  .etape b { text-align: right; font-variant-numeric: tabular-nums; }
+  .etape span { color: var(--doux); }
+  details { border-bottom: 1px solid var(--bord); padding: 10px 2px; }
+  summary { cursor: pointer; color: var(--texte); }
+  summary::marker { color: var(--faible); }
+  .corps { color: var(--doux); padding: 10px 0 4px 18px; white-space: pre-wrap; word-break: break-word; font-size: 13px; }
+  code { background: var(--surface-2); padding: 1px 4px; border-radius: 4px; font-size: 12px; }
+  .vide { color: var(--faible); }
+  #panneau { position: fixed; top: 0; right: 0; height: 100%; width: min(420px, 100%); background: var(--surface); border-left: 1px solid var(--bord); padding: 24px; overflow-y: auto; z-index: 10; transform: translateX(100%); transition: transform .2s; }
+  #panneau.ouvert { transform: none; box-shadow: -20px 0 40px rgba(0,0,0,.4); }
+  #panneau h2 { margin: 0; font-size: 18px; display: flex; align-items: center; gap: 10px; }
+  #panneau dl { display: grid; grid-template-columns: 120px 1fr; gap: 8px 12px; font-size: 13px; margin: 18px 0; }
+  #panneau dt { color: var(--doux); } #panneau dd { margin: 0; }
+  .boutons { display: flex; flex-wrap: wrap; gap: 8px; }
+  .bouton { background: var(--surface-2); color: var(--texte); border: 1px solid var(--bord); border-radius: 6px; padding: 7px 12px; font: inherit; cursor: pointer; text-decoration: none; }
+  .bouton:hover { border-color: var(--petrole); }
+  .fermer { position: absolute; top: 16px; right: 16px; }
+  .journal-agent { margin-top: 16px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  .journal-agent div { display: flex; gap: 12px; padding: 4px 0; border-bottom: 1px solid var(--bord); } .journal-agent span { color: var(--faible); }
+  [hidden] { display: none !important; }
+  @media (max-width: 720px) {
+    .barre, nav, main { padding-left: 16px; padding-right: 16px; }
+    .outils { margin-left: 0; width: 100%; } input { flex: 1; width: auto; }
+    .etape { grid-template-columns: 110px 1fr 44px; gap: 8px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="barre">
+    <h1>Jarvis — Mon entreprise</h1>
+    <span class="meta" id="meta">Chargement…</span>
+    <div class="outils">
+      <input type="search" id="recherche" placeholder="Rechercher…" aria-label="Rechercher">
+      <select id="filtre" aria-label="Filtrer par pôle"><option value="">Tous les pôles</option></select>
+    </div>
+  </div>
+  <nav role="tablist" id="onglets"></nav>
+</header>
+<main id="contenu"></main>
+<aside id="panneau" aria-label="Détail de l'agent" aria-hidden="true"></aside>
+<script src="agents.js"></script>
+<script src="docs.js"></script>
+<script>
+(function () {
+  "use strict";
+  var POLES = ["Trouver", "Vendre", "Encaisser", "Communiquer", "Autres"];
+  var ONGLETS = [["org", "Organisation"], ["pipeline", "Pipeline"], ["a_faire", "À faire"], ["journal", "Journal"], ["decisions", "Décisions"], ["idees", "Idées"]];
+  var MOT = { actif: "actif", inactif: "inactif", erreur: "en erreur" };
+  var A = null, D = null, onglet = "org", choisi = null;
+  try { onglet = localStorage.getItem("jarvis-onglet") || "org"; } catch (e) {}
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function md(s) {   // rendu léger : gras, code, liens [[note|titre]]
+    return esc(s).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\[\[(?:[^\]|]*\\?\|)?([^\]]+)\]\]/g, "$1");
+  }
+  function q() { return $("recherche").value.trim().toLowerCase(); }
+  function val(v) { return v == null ? "—" : v; }
+
+  function vueOrg() {
+    var f = $("filtre").value, r = q();
+    var h = '<div class="ceo"><div><b>Jarvis (CEO)</b><span>machine active : ' + esc(A.machine_active || "aucune") + "</span></div></div><div class=\"lien-ceo\"></div><div class=\"poles\">";
+    POLES.forEach(function (p) {
+      if (f && f !== p) return;
+      var ag = A.agents.filter(function (a) { return a.pole === p && (!r || (a.nom + " " + a.role).toLowerCase().indexOf(r) >= 0); });
+      if (!ag.length && p === "Autres") return;
+      h += '<section class="pole"><h2>' + p + "<span>" + ag.length + "</span></h2>" + (ag.length ? ag.map(carte).join("") : '<p class="vide">Aucun agent.</p>') + "</section>";
+    });
+    return h + "</div>";
+  }
+  function carte(a) {
+    var c = a.chiffre_du_jour || {};
+    return '<button class="carte" data-nom="' + esc(a.nom) + '" aria-pressed="' + (a.nom === choisi) + '"><div class="haut"><i class="pt ' + a.statut + '"></i>' + esc(a.nom) +
+      '</div><p>' + esc(a.role) + '</p><div class="bas"><span>' + esc(a.dernier_passage || "aucun passage ici") + "</span><span>" + esc(c.libelle || "") + " <b>" + val(c.valeur) + "</b></span></div></button>";
+  }
+  function vuePipeline() {
+    var c = A.chiffres, p = c.pipeline || [], max = Math.max.apply(null, p.map(function (x) { return x[1] || 0; }).concat([1]));
+    var t = [["Rendez-vous à venir", c.rendez_vous_a_venir], ["E-mails envoyés (total)", c.emails_envoyes_total], ["Devis en cours", c.devis_en_cours], ["Appels Sid du jour", c.appels_sid_aujourdhui]];
+    return '<div class="tuiles">' + t.map(function (x) { return '<div class="tuile"><span>' + x[0] + "</span><b>" + val(x[1]) + "</b></div>"; }).join("") + "</div>" +
+      '<div class="entonnoir">' + p.map(function (x) {
+        return '<div class="etape"><span>' + esc(x[0]) + '</span><div class="piste"><div class="rempli" style="width:' + (x[1] ? Math.max(3, 100 * x[1] / max) : 0) + '%"></div></div><b>' + val(x[1]) + "</b></div>";
+      }).join("") + '</div><p class="meta">Chiffres du jour (' + esc(c.jour) + "), comptes seulement. « — » : pas de donnée sur ce PC.</p>";
+  }
+  function vueDoc(cle) {
+    var r = q(), l = ((D || {})[cle] || []).filter(function (s) { return !r || (s.titre + " " + s.texte).toLowerCase().indexOf(r) >= 0; });
+    if (!D) return '<p class="vide">docs.js absent : lancez outils\\agents-json.py.</p>';
+    return l.length ? l.map(function (s) { return "<details><summary>" + md(s.titre) + '</summary><div class="corps">' + (md(s.texte) || '<span class="vide">(vide)</span>') + "</div></details>"; }).join("") : '<p class="vide">Rien ne correspond.</p>';
+  }
+
+  function panneau(nom) {
+    choisi = nom; var a = A.agents.filter(function (x) { return x.nom === nom; })[0], p = $("panneau");
+    if (!a) { p.classList.remove("ouvert"); p.setAttribute("aria-hidden", "true"); return; }
+    var e = a.derniere_erreur ? esc(a.derniere_erreur.action) + " · " + esc(a.derniere_erreur.date) : "aucune", c = a.chiffre_du_jour || {};
+    p.innerHTML = '<button class="bouton fermer" id="fermer" aria-label="Fermer">✕</button><h2><i class="pt ' + a.statut + '"></i>' + esc(a.nom) + '</h2><div class="meta">' + esc(a.pole) + " · " + MOT[a.statut] + (a.suspendu ? " · suspendu" : "") +
+      "</div><p>" + esc(a.role) + "</p><dl><dt>Horaires</dt><dd>" + esc(a.horaire) + "</dd><dt>Machine</dt><dd>" + esc(a.machine) + "</dd><dt>Sur ce PC</dt><dd>" + (a.tourne_sur_ce_pc ? "tourne" : "ne tourne pas") + (a.planifie_sur_ce_pc ? ", planifié" : "") +
+      "</dd><dt>Dernier passage</dt><dd>" + esc(a.dernier_passage || "aucun ici") + "</dd><dt>Dernier résultat</dt><dd>" + esc(a.dernier_resultat || "—") + "</dd><dt>Dernière erreur</dt><dd>" + e + "</dd><dt>" + esc(c.libelle || "Chiffre du jour") + "</dt><dd>" + val(c.valeur) + "</dd></dl>" +
+      '<div class="boutons">' + (a.note_obsidian ? '<a class="bouton" href="' + esc(a.note_obsidian) + '">Ouvrir sa note</a>' : "") + '<button class="bouton" id="voir-journal">Voir son journal</button></div><div class="journal-agent" id="journal-agent" hidden>' +
+      ((a.journal || []).slice().reverse().map(function (l) { return "<div><span>" + esc(l[0]) + "</span>" + esc(l[1]) + "</div>"; }).join("") || '<p class="vide">Aucune ligne de journal sur ce PC.</p>') + "</div>";
+    p.classList.add("ouvert"); p.setAttribute("aria-hidden", "false");
+    $("fermer").onclick = function () { choisi = null; panneau(null); rendre(); };
+    $("voir-journal").onclick = function () { $("journal-agent").hidden = !$("journal-agent").hidden; };
+  }
+
+  function rendre() {
+    $("onglets").innerHTML = ONGLETS.map(function (o) { return '<button role="tab" data-o="' + o[0] + '" aria-selected="' + (o[0] === onglet) + '">' + o[1] + "</button>"; }).join("");
+    $("filtre").disabled = onglet !== "org";
+    if (!A) { $("contenu").innerHTML = '<p class="vide">Pas encore de données : lancez outils\\agents-json.py (ou l\'icône du bureau).</p>'; return; }
+    var alerte = A.source && A.source.indexOf("pas visible") >= 0 ? '<p class="alerte">' + esc(A.source) + ".</p>" : "";
+    $("contenu").innerHTML = alerte + (onglet === "org" ? vueOrg() : onglet === "pipeline" ? vuePipeline() : vueDoc(onglet));
+  }
+
+  function appliquer() {
+    A = window.JARVIS_AGENTS || null; D = window.JARVIS_DOCS || null;
+    $("meta").textContent = A ? "Mis à jour " + A.genere_le + " · ce PC " + A.ce_pc : "";
+    rendre(); if (choisi) panneau(choisi);
+  }
+  $("filtre").innerHTML += POLES.map(function (p) { return '<option value="' + p + '">' + p + "</option>"; }).join("");
+  $("onglets").addEventListener("click", function (e) { var b = e.target.closest("[data-o]"); if (!b) return; onglet = b.dataset.o; try { localStorage.setItem("jarvis-onglet", onglet); } catch (x) {} rendre(); });
+  $("contenu").addEventListener("click", function (e) { var c = e.target.closest(".carte"); if (c) { panneau(c.dataset.nom); rendre(); } });
+  $("recherche").addEventListener("input", rendre); $("filtre").addEventListener("change", rendre);
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && choisi) { choisi = null; panneau(null); rendre(); } });
+  function recharger() {   // toutes les 5 min : relit agents.js et docs.js (réécrits par la tâche planifiée)
+    var n = 0;
+    ["agents.js", "docs.js"].forEach(function (f) {
+      var s = document.createElement("script"); s.src = f + "?t=" + Date.now();
+      s.onload = s.onerror = function () { s.remove(); if (++n === 2) appliquer(); };
+      document.body.appendChild(s);
+    });
+  }
+  appliquer(); setInterval(recharger, 5 * 60 * 1000);
+})();
+</script>
+</body>
+</html>
