@@ -1,9 +1,10 @@
 # Index — hub du coffre Jarvis
 Lire ce fichier, puis **seulement** la note du sujet en cours (jamais tous les docs). Créé le 10 nov. 2026, hub Obsidian depuis le 14 nov. 2026 (`CLAUDE.md` § 9).
 
-## Au centre : [[docs/agents/Jarvis (CEO)|Jarvis (CEO)]]
+## Au centre : [[docs/agents/🧠 Jarvis (CEO)|🧠 Jarvis (CEO)]]
 **Agents B2B** : notes dans `docs\agents\` (reliées à Jarvis (CEO) dans le graphe)
-**Décisions** : [[docs/decisions/Offre 595 + 49|Offre 595 + 49]] · [[docs/decisions/Sans acompte|Sans acompte]] · [[docs/decisions/Serveur HLQSTAU|Serveur HLQSTAU]] · [[docs/decisions/Validation à la main|Validation à la main]] · [[docs/decisions/INDEX d'abord|INDEX d'abord]]
+**Décisions** : [[docs/decisions/📌 Offre 595 + 49|📌 Offre 595 + 49]] · [[docs/decisions/📌 Sans acompte|📌 Sans acompte]] · [[docs/decisions/📌 Serveur HLQSTAU|📌 Serveur HLQSTAU]] · [[docs/decisions/📌 Validation à la main|📌 Validation à la main]] · [[docs/decisions/📌 INDEX d'abord|📌 INDEX d'abord]]
+**Docs clés** : [[liens-paiement]] · [[KIT-RDV-15MIN]] · [[DEVIS-ET-OBJECTIONS]] · [[TODO-B2B]] · [[JOURNAL-B2B]] · [[IDEES-MASTER]]
 **Tableau de bord** : `dashboard\index.html` (icône « Jarvis - Mon entreprise »), données `outils\agents-json.py`
 
 ## Où chercher selon le sujet
