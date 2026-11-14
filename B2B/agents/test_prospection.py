@@ -486,7 +486,8 @@ for l in choisies: par_m[l["metier"]] = par_m.get(l["metier"], 0) + 1
 assert len(choisies) == 20 and min(par_m.values()) >= 6 and len({X.S.cle(l) for l in choisies}) == 20 and set(par_m) == {"électricien", "restaurant", "coiffeur"}, par_m
 exclue = {X.S.cle(choisies[0])}; assert X.S.cle(choisies[0]) not in {X.S.cle(l) for l in X.choisir_appels(lignes_a, {}, conf20, exclue)}
 etat_t = X.etat_lire(); etat_t.pop("appels", None); X.etat_ecrire(etat_t, False)
-conf3 = {**conf3, "appels_par_jour": 20}
+assert X.cmd_appels(False, conf3, jour="2026-10-27") == 0 and not (X.DOCS / "liste-appels-2026-10-27.md").exists()   # par défaut (14/11/2026) : plus aucun liste-appels-*.md
+conf3 = {**conf3, "appels_par_jour": 20, "liste_appels_md": True}
 assert X.cmd_appels(False, conf3, jour="2026-10-28") == 20 and X.cmd_appels(False, conf3, jour="2026-10-28") == 0   # une seule liste par jour
 fichier = X.DOCS / "liste-appels-2026-10-28.md"; md = fichier.read_text(encoding="utf-8")
 assert "e-mail trouvé (à remplir par Liam)" in md and "lien Facebook / fiche Google (à remplir)" in md and md.count("<!-- k:") == 20 and md.count("[ ] | [ ] | [ ] | [ ]") == 20 and "OpenStreetMap" in md and "ODbL" in md

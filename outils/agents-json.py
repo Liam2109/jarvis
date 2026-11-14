@@ -191,6 +191,7 @@ def construire(maintenant=None):
             "statut": statut, "suspendu": suspendu,
             "dernier_passage": dernier, "dernier_resultat": resultat, "derniere_erreur": erreur,
             "pole": POLES.get(nom, "Autres"), "journal": lignes_journal,
+            "responsable": frontmatter(note).get("responsable") or None,   # « responsable: prospection » dans l'en-tête de la note docs/agents (organigramme du 14/11/2026), None sinon
             "note": str(note.relative_to(RACINE)).replace("\\", "/") if note.exists() else None,
             "note_obsidian": ("obsidian://open?path=" + quote(str(note), safe="")) if note.exists() else None,
         })

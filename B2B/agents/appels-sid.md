@@ -1,6 +1,13 @@
 # Agent appels-sid (3 nov. 2026, règles fixes complétées le 10 nov. 2026)
 Rôle : **tous les appels vont à Sid**. Chaque matin, l'agent cherche de nouvelles entreprises avec un numéro de téléphone, prépare la **liste d'appels de Sid** (au moins 100 entreprises, règle fixe de Liam), la dépose dans `docs\sid\liste-sid-AAAA-MM-JJ.csv` et, une fois autorisé, dans une **feuille Google** du dossier racine (`dossier_sid_id`, voir plus bas). **Il n'envoie rien à une entreprise ni à Sid** (pas d'e-mail, pas de message) : le seul message qu'il poste est l'alerte Discord de réserve. Code : `agents\appels-sid.py` + `agents\google_sheets.py` ; tests : `agents\test_appels_sid.py` + `tests\appels-sid.ps1` (listé dans `tests\tout.ps1`) ; réglages : `agents\appels-sid-config.json` ; état : `agents\appels-sid-etat.json` ; historique des appels (365 jours) : `agents\appels-sid-historique.json` ; journal : `agents\appels-sid-journal.log`.
 
+## Tableur du jour (décision de Liam, 14 nov. 2026 : prime sur les sections plus bas)
+- **Un seul tableur par jour**, « Appels AAAA-MM-JJ », posé **directement** dans le dossier de Sid (`dossier_sid_id`) : plus de sous-dossier daté ni de feuille « A rappeler ». Créé par `jour` à 8 h, **du lundi au vendredi** (`jours_appel`).
+- **Colonnes, toujours dans cet ordre** : Créneau, Entreprise, Métier, Ville, Téléphone, Détail fiche, Résultat (liste : Pas de réponse, Refus, À rappeler, RDV pris), Note. Lignes **triées par créneau** (8 h - 19 h), colonnes larges, en-tête figé, aucune cellule fusionnée.
+- **Appelée** = Résultat rempli (Pas de réponse, Refus, RDV pris) : oubliée 365 jours. Résultat vide ou « À rappeler » : reprise dans la liste suivante (Détail fiche « Reprise de la liste du … », avec la note de Sid). Les anciennes listes (case « Appelé ») restent lues.
+- **Corbeille** (jamais une suppression) des tableurs « Appels » de plus de 7 jours et des anciens sous-dossiers datés. Portée Google inchangée (`drive.file`) : aucune nouvelle autorisation.
+- Plus aucun `docs\liste-appels-*.md` n'est écrit (`liste_appels_md` = false dans prospection.py) ; les anciens restent relus. Essai à blanc : `python agentsppels-sid.py preparer --jour AAAA-MM-JJ --a-blanc --hors-ligne`. Fiche de rôle : `.claude\skillsgent-appels-sid\SKILL.md`.
+
 **Simulation par défaut** (`envoi_automatique: false`) : ni Google, ni partage, ni message Discord ; le journal dit ce qui serait fait. Le sourcing et la liste CSV, eux, sont écrits (ce sont des fichiers locaux). **Rien n'est installé ni partagé tant que Liam n'a pas dit « active ».**
 
 ## Règles fixes de Liam (10 nov. 2026, écrites ici et dans `appels-sid-config.json` : ne plus être redemandées)

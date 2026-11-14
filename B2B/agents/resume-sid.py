@@ -99,6 +99,10 @@ def stats_appels(conf, jour, drive=None):
     lignes = list(csv.reader(io.StringIO(brut)))
     if not lignes: return False, f"feuille du {jour} vide"
     entete = lignes[0]
+    if "Résultat" in entete:   # tableur « Appels AAAA-MM-JJ » (14/11/2026) : une liste Résultat (Pas de réponse, Refus, À rappeler, RDV pris) au lieu des cases
+        i = entete.index("Résultat"); r = [(l[i].strip() if i < len(l) else "") for l in lignes[1:]]
+        return True, {"total": len(r), "Appelé": sum(1 for v in r if v), "Répondu": sum(1 for v in r if v in ("Refus", "À rappeler", "RDV pris")),
+                      "Rendez-vous pris": r.count("RDV pris"), "Refus": r.count("Refus")}
     try: idx = {c: entete.index(c) for c in COLONNES_SUIVIES}
     except ValueError: return False, f"feuille du {jour} : colonnes inattendues"
     compte = {c: 0 for c in COLONNES_SUIVIES}

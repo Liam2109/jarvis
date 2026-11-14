@@ -21,7 +21,7 @@ Verifier ($cfgAgent.jours_sans_rappel -eq 365) 'appels-sid-config.json : jours_s
 $src = Get-Content (Join-Path $ag 'appels-sid.py') -Raw -Encoding UTF8
 Verifier ($src -notmatch 'smtplib|send_message|gmail_api|stripe|webbrowser|os\.system|shell=True|places\.googleapis') 'appels-sid.py : aucun envoi d''e-mail ni de message à une entreprise, aucun Stripe, aucune API payante'
 Verifier (-not $cfgAgent.partager_avec) 'appels-sid-config.json : aucun partager_avec dans le fichier versionné (rien n''est partagé ; l''adresse vit dans appels-sid-config.local.json, ignoré par git)'
-Verifier (@($cfgAgent.jours_appel) -join ',' -eq 'lundi,mardi,jeudi,vendredi') 'appels-sid-config.json : jours_appel = lundi, mardi, jeudi, vendredi'
+Verifier (@($cfgAgent.jours_appel) -join ',' -eq 'lundi,mardi,mercredi,jeudi,vendredi') 'appels-sid-config.json : jours_appel = lundi à vendredi (14/11/2026)'
 # Diagnostic seulement (ne compte pas dans $echecs) : l'activation réelle (tâche planifiée, envoi_automatique local) varie d'une machine à l'autre
 # et ne doit jamais bloquer tests\tout.ps1 / maj-auto.ps1 sur une machine qui n'a pas vocation à être le serveur. Voir `python agents\appels-sid.py etat`.
 $tacheReelle = Get-ScheduledTask -TaskName 'Jarvis-AppelsSid' -ErrorAction SilentlyContinue

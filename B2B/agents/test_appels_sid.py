@@ -55,13 +55,14 @@ class FauxDrive:
     def compte(s): s._controle(); return s.compte_reel
     def trouver_dossier(s, nom, parent=None): s._controle(); return next((i for i, (n, p) in s.dossiers.items() if n == nom and p == parent and i not in s.corbeille), None)
     def creer_dossier(s, nom, parent=None): s._controle(); i = s._nouveau("D"); s.dossiers[i] = (nom, parent); return i
-    def trouver_feuille(s, dossier, titre): s._controle(); return next((i for i, (t, d, _) in s.feuilles.items() if t == titre and d == dossier), None)
+    def trouver_feuille(s, dossier, titre): s._controle(); return next((i for i, (t, d, _) in s.feuilles.items() if t == titre and d == dossier and i not in s.corbeille), None)
+    def lister_feuilles(s, parent): s._controle(); return [(i, t) for i, (t, d, _) in s.feuilles.items() if d == parent and i not in s.corbeille]
     def creer_feuille(s, dossier, titre, contenu): s._controle(); i = s._nouveau("F"); s.feuilles[i] = (titre, dossier, contenu); return i
     def partager(s, dossier, email): s._controle(); s.partages.append((dossier, email))
     def lister_dossiers(s, parent): s._controle(); return [(i, n) for i, (n, p) in s.dossiers.items() if p == parent and i not in s.corbeille]
     def mettre_corbeille(s, id_): s._controle(); s.corbeille.add(id_)
     def lire_feuille_csv(s, id_): s._controle(); return s.feuilles[id_][2]
-    def formater_feuille(s, id_, largeurs_px): s._controle(); s.mises_en_forme.append((id_, tuple(largeurs_px)))
+    def formater_feuille(s, id_, largeurs_px, liste=None): s._controle(); s.mises_en_forme.append((id_, tuple(largeurs_px), liste))
 DRIVE = FauxDrive()
 ALERTES, EXEC, SOMMEIL = [], [], []
 def faux_alerte(texte): ALERTES.append(texte); return True
@@ -133,7 +134,8 @@ SEPT = ("restaurant", "coiffeur", "plombier", "electricien", "fleuriste", "boula
 REPART_SEPT = lambda: {m: (5 if m in SEPT else 0) for m in A.NOMS}
 
 JOUR = "2026-11-04"; JOUR2 = "2026-11-05"
-COLONNES = ["#", "Nom", "Ville", "Téléphone", "Type de numéro", "Métier", "Créneau conseillé", "Constat vérifié", "Page d'exemple", "Appelé", "Répondu", "Rendez-vous pris", "Refus", "Remarque"]
+COLONNES = ["Créneau", "Entreprise", "Métier", "Ville", "Téléphone", "Détail fiche", "Résultat", "Note"]   # tableur « Appels AAAA-MM-JJ » (décision de Liam, 14 nov. 2026)
+CR, NOM, MET, VIL, TEL, DET, RES, NOTE = range(8)
 
 print("1. Téléphone valide")
 ok = {"02 35 62 41 64": "02 35 62 41 64", "0235624164": "02 35 62 41 64", "+33 2 35 62 41 64": "02 35 62 41 64", "0033235624164": "02 35 62 41 64", "06.12.34.56.78": "06 12 34 56 78", " 07-66-39-19-52 ": "07 66 39 19 52", "09 51 23 45 67": "09 51 23 45 67"}
@@ -198,7 +200,9 @@ def _debut_min(txt):
     h, _, reste = txt.split(" – ")[0].strip().partition(" h")
     return int(h) * 60 + (int(reste.strip()) if reste.strip() else 0)
 par_metier = {}
-for l in A.lignes_csv(ch)[1:]: par_metier.setdefault(l[5], []).append(l[6])
+for l in A.lignes_csv(ch)[1:]: par_metier.setdefault(l[MET], []).append(l[CR])
+debuts_csv = [_debut_min(l[CR]) for l in A.lignes_csv(ch)[1:]]
+verifier(debuts_csv == sorted(debuts_csv), "tableur : lignes triées par créneau (heure de début croissante)")
 verifier(all(len(set(v)) == len(v) for v in par_metier.values()), f"jamais le même créneau pour deux lignes du même métier : {[(k, len(v) - len(set(v))) for k, v in par_metier.items() if len(set(v)) != len(v)]}")
 tous_debuts = [_debut_min(c) for v in par_metier.values() for c in v]
 verifier(all(480 <= d < 1140 for d in tous_debuts), "tous les créneaux commencent entre 8 h et 19 h")
@@ -218,18 +222,14 @@ verifier(brut.startswith(b"\xef\xbb\xbf") and b";" in brut.splitlines()[0], "UTF
 lignes = lire_csv(JOUR)
 verifier(lignes[0] == COLONNES, f"colonnes : {lignes[0]}")
 corps = lignes[1:]
-verifier(len(corps) == 100 and [l[0] for l in corps] == [str(i) for i in range(1, 101)], "100 lignes numérotées de 1 à 100 (règle fixe de Liam du 10 nov. 2026)")
+verifier(len(corps) == 100 and [_debut_min(l[CR]) for l in corps] == sorted(_debut_min(l[CR]) for l in corps), "100 lignes triées par créneau (règle fixe de Liam du 10 nov. 2026 ; tri du 14 nov. 2026)")
 verifier(all(len(l) == len(COLONNES) for l in corps), "toutes les lignes ont toutes les colonnes")
-verifier(all(l[9] == l[10] == l[11] == l[12] == l[13] == "" for l in corps), "appelé / répondu / rendez-vous pris / refus / remarque : vides (pas de colonne STOP)")
-verifier(all(re.fullmatch(r"0\d( \d\d){4}", l[3]) for l in corps), "téléphones au format « 02 35 62 41 64 »")
-verifier(all(l[4] in ("fixe", "mobile", "box") and l[4] == A.type_telephone(l[3]) for l in corps), "type de numéro (fixe / mobile / box) cohérent avec le numéro affiché")
-verifier(all(l[8] == "" for l in corps if l[5] == "Restaurant"), "restaurant : aucun lien de page d'exemple (numéro seulement)")
-verifier(all(l[8] == LIENS["coiffeur"] for l in corps if l[5] == "Coiffeur") and all(l[8] == LIENS["plombier-chauffagiste"] for l in corps if l[5] == "Plombier-chauffagiste")
-         and all(l[8] == LIENS["electricien"] for l in corps if l[5] == "Électricien"), "coiffeur / plombier / électricien : lien de liens-metiers.json")
-verifier({l[5] for l in corps} == {"Restaurant", "Coiffeur", "Plombier-chauffagiste", "Électricien", "Fleuriste", "Boulanger", "Garagiste"}, "métiers affichés en clair (catalogue de 21 métiers, règle du 10 nov. 2026)")
-verifier(all(l[6] for l in corps), "créneau conseillé renseigné pour chaque ligne")
+verifier(all(l[RES] == l[NOTE] == "" for l in corps), "Résultat / Note : vides (Sid les remplit ; pas de colonne STOP)")
+verifier(all(re.fullmatch(r"0\d( \d\d){4}", l[TEL]) for l in corps), "téléphones au format « 02 35 62 41 64 »")
+verifier({l[MET] for l in corps} == {"Restaurant", "Coiffeur", "Plombier-chauffagiste", "Électricien", "Fleuriste", "Boulanger", "Garagiste"}, "métiers affichés en clair (catalogue de 21 métiers, règle du 10 nov. 2026)")
+verifier(all(l[CR] for l in corps), "créneau renseigné pour chaque ligne")
 resto0 = [l for l in corps if l[1] == "Resto Fictif 0"][0]; autre = [l for l in corps if l[1] == "Coiff Fictif 3"]
-verifier(resto0[7] == "carte absente du site" and all(l[7] == A.CONSTAT_NEUTRE for l in corps if l[1] != "Resto Fictif 0"), "constat : celui vérifié (note_besoin) sinon le texte neutre, jamais une affirmation inventée")
+verifier(resto0[DET] == "carte absente du site" and all(l[DET] == A.CONSTAT_NEUTRE for l in corps if l[1] != "Resto Fictif 0"), "constat : celui vérifié (note_besoin) sinon le texte neutre, jamais une affirmation inventée")
 verifier("liste-sid-" + JOUR in sortie and "100" in sortie, "la sortie dit le fichier et le nombre de lignes")
 verifier(not any(f.name.endswith(".md") for f in A.SORTIE.iterdir()), "un seul fichier par liste (CSV)")
 
@@ -259,12 +259,12 @@ verifier(len(json.loads(A.ETAT.read_text(encoding="utf-8"))["sorties"]) == 100, 
 monde(trouves=gros_monde(60), config={})
 lancer("preparer", "--jour", JOUR)
 rows = lire_csv(JOUR)
-for l in rows[1:]: l[9] = "x"   # simule ce que Sid aurait coché dans la feuille Google
+for l in rows[1:]: l[RES] = "Pas de réponse"   # simule ce que Sid aurait choisi dans la feuille Google
 with open(A.SORTIE / f"liste-sid-{JOUR}.csv", "w", encoding="utf-8-sig", newline="") as fh: csv.writer(fh, delimiter=";").writerows(rows)
 code, sortie = lancer("preparer", "--jour", JOUR2)
 n1 = {l[1] for l in lire_csv(JOUR)[1:]}; n2 = {l[1] for l in lire_csv(JOUR2)[1:]}
 verifier(code == 0 and "non appelée" not in sortie and not (n1 & n2), "case « Appelé » cochée : plus aucune reprise, le lendemain tire 100 nouvelles entreprises")
-tel1 = {l[3] for l in lire_csv(JOUR)[1:]}; tel2 = {l[3] for l in lire_csv(JOUR2)[1:]}
+tel1 = {l[TEL] for l in lire_csv(JOUR)[1:]}; tel2 = {l[TEL] for l in lire_csv(JOUR2)[1:]}
 verifier(not (tel1 & tel2), "ni le même numéro")
 hist = json.loads(A.HISTORIQUE.read_text(encoding="utf-8"))
 verifier(len(hist) == 200 and all(v == JOUR for v in hist.values()), f"historique : les 100 clés et les 100 numéros de JOUR notés avec sa date ({len(hist)} entrée(s))")
@@ -306,7 +306,7 @@ code, _ = lancer("preparer", "--jour", JOUR); verifier(code == 0 and lire_csv(JO
 verifier(lancer("annuler", "2026-01-01")[0] == 2, "annuler une date sans liste : erreur, rien changé")
 verifier(lancer("annuler")[0] == 0 and not (A.SORTIE / f"liste-sid-{JOUR}.csv").exists(), "annuler sans date : la liste la plus récente")
 lancer("preparer", "--jour", JOUR)
-rows = lire_csv(JOUR); rows[3][9] = "x"; rows[5][13] = "rappeler jeudi"
+rows = lire_csv(JOUR); rows[3][RES] = "Refus"; rows[5][NOTE] = "rappeler jeudi"
 with open(A.SORTIE / f"liste-sid-{JOUR}.csv", "w", encoding="utf-8-sig", newline="") as fh: csv.writer(fh, delimiter=";").writerows(rows)
 code, sortie = lancer("annuler", JOUR)
 verifier(code == 2 and "utilisée" in sortie and (A.SORTIE / f"liste-sid-{JOUR}.csv").exists() and len(json.loads(A.ETAT.read_text(encoding="utf-8"))["sorties"]) == 100, "liste déjà commencée (case ou remarque remplie) : annulation refusée")
@@ -343,7 +343,7 @@ verifier(not re.search(r"print\([^)]*(jeton|token|password|mot de passe)", src, 
 cfg_reel = json.loads((ICI / "appels-sid-config.json").read_text(encoding="utf-8-sig"))
 verifier(cfg_reel.get("envoi_automatique") is False, "appels-sid-config.json : envoi_automatique = false (fichier versionné ; activation réelle par machine dans appels-sid-config.local.json, ignoré par git)")
 verifier(not cfg_reel.get("partager_avec"), "appels-sid-config.json : aucun partager_avec dans le fichier versionné (l'adresse vit dans appels-sid-config.local.json)")
-verifier(cfg_reel.get("jours_appel") == ["lundi", "mardi", "jeudi", "vendredi"], "appels-sid-config.json : jours_appel = lundi, mardi, jeudi, vendredi")
+verifier(cfg_reel.get("jours_appel") == ["lundi", "mardi", "mercredi", "jeudi", "vendredi"], "appels-sid-config.json : jours_appel = lundi à vendredi (14 nov. 2026)")
 verifier(cfg_reel.get("par_liste") == 100 and cfg_reel.get("jours_sans_rappel") == 365, "appels-sid-config.json : règles fixes du 10 nov. 2026 écrites (par_liste 100, jours_sans_rappel 365)")
 verifier(all(_etat_fichier(ICI / n) == _AVANT_REEL[n] for n in ("appels-sid-etat.json", "appels-sid.verrou", "appels-sid-journal.log", "appels-sid-historique.json")), "les tests n'ont rien écrit dans le dépôt (un fichier d'agent déjà présent, car l'agent tourne pour de vrai sur le serveur, reste inchangé)")
 verifier(_instantane_dossier(ICI.parent / "docs" / "sid") == _AVANT_SID_REEL, "docs\\sid du dépôt : rien ajouté, modifié ni supprimé par les tests (une vraie liste de l'agent, s'il tourne sur le serveur, reste inchangée)")
@@ -571,7 +571,7 @@ verifier(callable(A.evaluer_site), "evaluer_site : constat vérifié de la prosp
 
 print("14 ter. Jamais redonner un numéro, STOP par numéro, réserve par département")
 monde(trouves=gros_monde(30), config={"par_liste": 100}); lancer("preparer", "--jour", JOUR)
-donnes = {l[3] for l in lire_csv(JOUR)[1:]}; verifier(len(donnes) == 100, "liste du jour préparée (100 numéros)")
+donnes = {l[TEL] for l in lire_csv(JOUR)[1:]}; verifier(len(donnes) == 100, "liste du jour préparée (100 numéros)")
 nom_donne = next(l[1] for l in lire_csv(JOUR)[1:])
 P.ecrire_trouves(P.lire_trouves() + [trouve("Autre Nom Meme Numero", "restaurant", "Autre Ville", next(iter(donnes)))], P.TROUVES)
 verifier("Autre Nom Meme Numero" not in {c["nom"] for c in A.candidats(A.etat_lire())}, "un numéro déjà donné à Sid ne ressort jamais, même sous un autre nom d'entreprise")
@@ -608,23 +608,25 @@ src2 = (ICI / "appels-sid.py").read_text(encoding="utf-8")
 verifier("recherche-entreprises.api.gouv.fr" in (ICI / "prospection.py").read_text(encoding="utf-8") and "google.com/maps" not in src2 and "pagesjaunes" not in src2.lower() and "googleapis.com/maps" not in src2 and "places.googleapis" not in src2, "sources : OpenStreetMap (Overpass) et l'API officielle SIRENE seulement ; ni Google Maps ni Pages Jaunes")
 A.appel_reseau = reseau; A.appel_sirene = lambda dept, naf, page: {"results": []}; A.lire_site = lambda url: None
 
-print("15. Google Drive : dossier « Sid » > date, feuille du jour, partage")
+print("15. Google Drive : un tableur « Appels AAAA-MM-JJ » par jour, directement dans le dossier « Sid » (aucun sous-dossier), partage")
 monde(trouves=gros_monde(), config={"envoi_automatique": True})
 lancer("preparer", "--jour", JOUR); A.exporter_google(A.cfg(), A.etat_lire(), JOUR, DRIVE, False)
-racine = DRIVE.trouver_dossier("Sid"); jour_d = DRIVE.trouver_dossier(JOUR, racine)
-verifier(racine and jour_d and DRIVE.dossiers[jour_d] == (JOUR, racine) and DRIVE.dossiers[racine] == ("Sid", None), "dossier « Sid » à la racine du Drive, puis « AAAA-MM-JJ » dedans")
-fid = DRIVE.trouver_feuille(jour_d, f"Liste d'appels {JOUR}"); verifier(fid is not None, "feuille « Liste d'appels AAAA-MM-JJ » dans le dossier du jour")
+racine = DRIVE.trouver_dossier("Sid")
+verifier(racine and DRIVE.dossiers[racine] == ("Sid", None) and len(DRIVE.dossiers) == 1, "dossier « Sid » à la racine du Drive, aucun sous-dossier par jour")
+fid = DRIVE.trouver_feuille(racine, f"Appels {JOUR}"); verifier(fid is not None and len(DRIVE.feuilles) == 1, "un seul tableur « Appels AAAA-MM-JJ », posé directement dans le dossier")
 contenu = list(csv.reader(io.StringIO(DRIVE.feuilles[fid][2]))); verifier(contenu == lire_csv(JOUR), "la feuille a exactement le contenu du CSV")
-verifier("STOP" not in contenu[0] and len(contenu[0]) == 14, "14 colonnes, pas de colonne STOP")
+verifier(contenu[0] == COLONNES, "colonnes dans l'ordre : Créneau, Entreprise, Métier, Ville, Téléphone, Détail fiche, Résultat, Note")
+verifier(DRIVE.mises_en_forme == [(fid, tuple(A.LARGEURS_PX), (6, ["Pas de réponse", "Refus", "À rappeler", "RDV pris"]))] and min(A.LARGEURS_PX) >= 120,
+         "mise en forme : colonnes larges, en-tête figé, Résultat en liste (Pas de réponse, Refus, À rappeler, RDV pris)")
 verifier(json.loads(A.ETAT.read_text(encoding="utf-8"))["google"][JOUR]["feuille"] == fid, "état : identifiants du dossier et de la feuille")
 n_avant = (len(DRIVE.dossiers), len(DRIVE.feuilles)); A.exporter_google(A.cfg(), A.etat_lire(), JOUR, DRIVE, False)
-verifier((len(DRIVE.dossiers), len(DRIVE.feuilles)) == n_avant, "dossier du jour déjà là : rien recréé, rien écrasé")
+verifier((len(DRIVE.dossiers), len(DRIVE.feuilles)) == n_avant, "tableur du jour déjà là : rien recréé, rien écrasé")
 etat = A.etat_lire(); etat["google"] = {}; A.etat_ecrire(etat); A.exporter_google(A.cfg(), A.etat_lire(), JOUR, DRIVE, False)
-verifier((len(DRIVE.dossiers), len(DRIVE.feuilles)) == n_avant, "état perdu : le Drive est consulté, le dossier existant est reconnu (aucun doublon)")
+verifier((len(DRIVE.dossiers), len(DRIVE.feuilles)) == n_avant, "état perdu : le Drive est consulté, le tableur existant est reconnu (aucun doublon)")
 DRIVE.feuilles.pop(fid); etat = A.etat_lire(); etat["google"] = {}; A.etat_ecrire(etat); A.exporter_google(A.cfg(), A.etat_lire(), JOUR, DRIVE, False)
-verifier(len(DRIVE.dossiers) == n_avant[0] and len(DRIVE.feuilles) == 1, "dossier présent mais feuille manquante : seule la feuille est créée")
+verifier(len(DRIVE.dossiers) == n_avant[0] and len(DRIVE.feuilles) == 1, "tableur manquant : il est recréé, rien d'autre")
 lancer("preparer", "--jour", JOUR2); A.exporter_google(A.cfg(), A.etat_lire(), JOUR2, DRIVE, False)
-verifier(sum(1 for n, p in DRIVE.dossiers.values() if n == "Sid") == 1 and DRIVE.trouver_dossier(JOUR2, racine), "le lendemain : « Sid » réutilisé, nouveau dossier de date")
+verifier(len(DRIVE.dossiers) == 1 and DRIVE.trouver_feuille(racine, f"Appels {JOUR2}"), "le lendemain : « Sid » réutilisé, nouveau tableur, toujours aucun sous-dossier")
 DRIVE.__init__(); etat = A.etat_lire(); etat["google"] = {}; A.etat_ecrire(etat)
 A.exporter_google(A.cfg(), A.etat_lire(), JOUR, DRIVE, True)
 verifier(DRIVE.appels == 0, "--a-blanc : le Drive n'est pas contacté")
@@ -639,7 +641,7 @@ lancer("preparer", "--jour", JOUR2); A.exporter_google(A.cfg(), A.etat_lire(), J
 verifier(len(DRIVE.partages) == 1, "partage fait une seule fois")
 monde(trouves=gros_monde(), config={"envoi_automatique": False, "partager_avec": "sid@example.invalid"}); lancer("preparer", "--jour", JOUR); lancer("jour", "--jour", JOUR); verifier(DRIVE.partages == [] and DRIVE.appels == 0, "simulation : jamais de partage, même avec une adresse")
 monde(trouves=gros_monde(), config={"envoi_automatique": True, "partager_avec": "pas une adresse"}); lancer("preparer", "--jour", JOUR); A.exporter_google(A.cfg(), A.etat_lire(), JOUR, DRIVE, False)
-verifier(DRIVE.partages == [] and DRIVE.trouver_dossier(JOUR, DRIVE.trouver_dossier("Sid")), "adresse invalide : rien partagé, le dossier et la feuille sont quand même créés")
+verifier(DRIVE.partages == [] and DRIVE.trouver_feuille(DRIVE.trouver_dossier("Sid"), f"Appels {JOUR}"), "adresse invalide : rien partagé, le tableur est quand même créé")
 monde(trouves=gros_monde(), config={"envoi_automatique": True}); DRIVE.compte_reel = "autre@example.invalid"; lancer("preparer", "--jour", JOUR)
 try: A.exporter_google(A.cfg(), A.etat_lire(), JOUR, DRIVE, False); verifier(False, "jeton d'un autre compte : refusé")
 except A.ErreurAgent as e: verifier("contact.lmsites@gmail.com" in str(e) and not DRIVE.dossiers, "jeton d'un autre compte : refusé avant toute création")
@@ -700,6 +702,8 @@ d.mettre_corbeille(j3); maj = [k for n, k in sv.journal if n == "update"][-1]
 verifier(maj == {"fileId": j3, "body": {"trashed": True}, "fields": "id"}, "mettre_corbeille : trashed=true (jamais une suppression définitive)")
 verifier(d.trouver_dossier("2026-10-01", i) is None and j3 not in [x for x, _ in d.lister_dossiers(i)], "dossier à la corbeille : plus retrouvé ni listé")
 verifier(d.trouver_dossier("2026-11-04", i) == j2, "les autres dossiers ne sont pas touchés")
+f2 = d.creer_feuille(i, "Appels 2026-11-04", "a,b\n1,2\n")
+verifier([n for _, n in d.lister_feuilles(i)] == ["Appels 2026-11-04"] and all(n == "Liste d'appels 2026-11-04" for _, n in d.lister_feuilles(j2)), "lister_feuilles : les feuilles directement dans un dossier")
 class Boom(Exception): pass
 class SvcPanne(FauxSvc):
     def list(s, **k): return Req(lambda: (_ for _ in ()).throw(Boom("TOKEN-SECRET-123 ya29.xyz")))
@@ -744,11 +748,11 @@ verifier((A.SORTIE / f"liste-sid-{JOUR}.csv").exists() and code == 0, "sourcing 
 verifier(sum("sourcing" in a.lower() for a in ALERTES) == 1 and sum("google" in a.lower() for a in ALERTES) == 1, "une alerte pour le sourcing, une pour Google")
 verifier(not A.VERROU.exists(), "verrou libéré malgré les pannes")
 DRIVE.panne = False; FP.panne = False; code, _ = lancer("jour", "--jour", JOUR)
-verifier(code == 0 and DRIVE.trouver_feuille(DRIVE.trouver_dossier(JOUR, DRIVE.trouver_dossier("Sid")), f"Liste d'appels {JOUR}"), "le passage suivant rattrape Google (la liste existante n'est ni refaite ni re-marquée)")
+verifier(code == 0 and DRIVE.trouver_feuille(DRIVE.trouver_dossier("Sid"), f"Appels {JOUR}"), "le passage suivant rattrape Google (la liste existante n'est ni refaite ni re-marquée)")
 verifier(len(json.loads(A.ETAT.read_text(encoding="utf-8"))["sorties"]) == 100, "toujours 100 entreprises marquées (pas de seconde liste)")
 A.appel_reseau = reseau
 code, sortie = lancer("jour", "--jour", JOUR2, "--a-blanc"); verifier(code == 0 and "à blanc" in sortie.lower() and "sourcing" in sortie.lower() and "google" in sortie.lower(), "jour --a-blanc : décrit chaque étape, sans réseau")
-monde(trouves=gros_monde(), config={"envoi_automatique": True}); A.ARRET.write_text("stop", encoding="utf-8"); verifier(lancer("jour", "--jour", JOUR)[0] == 2 and not DRIVE.dossiers, "arrêt de secours : rien n'est fait")
+monde(trouves=gros_monde(), config={"envoi_automatique": True}); A.ARRET.write_text("stop", encoding="utf-8"); verifier(lancer("jour", "--jour", JOUR)[0] == 2 and not DRIVE.dossiers and not DRIVE.feuilles, "arrêt de secours : rien n'est fait")
 verifier(lancer("google-autoriser", "--a-blanc")[0] == 0, "google-autoriser --a-blanc : n'ouvre rien")
 
 print("20. Contrôle de bout en bout : 3 jours de suite, à blanc, sans réseau ni Google réel")
@@ -761,11 +765,11 @@ lancer("rediriger-liste")
 FE = FauxOverpass(); A.appel_reseau = FE; reserves, alertes_par_jour, listes = [], {}, {}
 def reserve_total(): return A.reserve(A.etat_lire())["total"]
 def marquer_appele_sur_sheet(jour):
-    """Simule Sid qui coche « Appelé » sur toute la liste du jour, DANS LA FEUILLE GOOGLE (pas le fichier local) : c'est elle que relit le bilan du lendemain quand envoi_automatique=true."""
-    racine = DRIVE.trouver_dossier("Sid"); d = DRIVE.trouver_dossier(jour, racine); fid = DRIVE.trouver_feuille(d, f"Liste d'appels {jour}")
+    """Simule Sid qui remplit « Résultat » sur toute la liste du jour, DANS LA FEUILLE GOOGLE (pas le fichier local) : c'est elle que relit le bilan du lendemain quand envoi_automatique=true."""
+    racine = DRIVE.trouver_dossier("Sid"); fid = DRIVE.trouver_feuille(racine, f"Appels {jour}")
     titre, dossier, contenu = DRIVE.feuilles[fid]; lignes = list(csv.reader(io.StringIO(contenu)))
     for l in lignes[1:]:
-        if len(l) > 9: l[9] = "x"
+        if len(l) > RES: l[RES] = "Pas de réponse"
     buf = io.StringIO(); csv.writer(buf).writerows(lignes); DRIVE.feuilles[fid] = (titre, dossier, buf.getvalue())
 reserves.append(reserve_total())
 for k, jour in enumerate(JOURS):
@@ -779,18 +783,18 @@ for k, jour in enumerate(JOURS):
 verifier(reserves[1] < reserves[0] and reserves[2] > reserves[1] and reserves[3] < reserves[2], f"réserve : diminue (jour 1), se remplit (jour 2), diminue encore (jour 3) : {reserves}")
 verifier(alertes_par_jour[JOURS[0]] and alertes_par_jour[JOURS[2]], "alerte déclenchée quand la réserve passe sous le seuil (jours 1 et 3)")
 verifier(not alertes_par_jour[JOURS[1]], "pas d'alerte le jour où la réserve est remplie")
-tous = [(l[1], l[3]) for j in JOURS for l in listes[j]]
+tous = [(l[NOM], l[TEL]) for j in JOURS for l in listes[j]]
 total_attendu = sum(len(listes[j]) for j in JOURS)
 verifier(len(tous) == len(set(tous)) == total_attendu and len({t[1] for t in tous}) == total_attendu, f"aucun doublon d'un jour à l'autre (toutes confirmées appelées) : {total_attendu} entreprises et autant de numéros différents")
 verifier(not list((tmp / "docs").glob("liste-appels-2026-11-0[5-7].md")), "aucune liste d'appels générée pour Liam pendant les 3 jours (docs\\liste-appels-*.md)")
-verifier({l[5] for j in JOURS for l in listes[j]} <= {"Restaurant", "Coiffeur", "Plombier-chauffagiste", "Électricien"}, "uniquement les 4 métiers voulus")
+verifier({l[MET] for j in JOURS for l in listes[j]} <= {"Restaurant", "Coiffeur", "Plombier-chauffagiste", "Électricien"}, "uniquement les 4 métiers voulus")
 racine = DRIVE.trouver_dossier("Sid")
-verifier(sum(1 for n, p in DRIVE.dossiers.values() if n == "Sid") == 1 and sorted(n for n, p in DRIVE.dossiers.values() if p == racine) == JOURS, "un dossier « Sid » et un sous-dossier par jour")
+verifier(sum(1 for n, p in DRIVE.dossiers.values() if n == "Sid") == 1 and len(DRIVE.dossiers) == 1, "un seul dossier « Sid », aucun sous-dossier par jour")
 for jour in JOURS:
-    d = DRIVE.trouver_dossier(jour, racine); f = DRIVE.trouver_feuille(d, f"Liste d'appels {jour}")
-    verifier(f is not None and [l[:9] + [""] + l[10:] for l in list(csv.reader(io.StringIO(DRIVE.feuilles[f][2])))[1:]] == [l[:9] + [""] + l[10:] for l in listes[jour]],
-             f"{jour} : bonne feuille, dans le bon dossier, même contenu que la liste du jour (hors case « Appelé », cochée depuis par le test)")
-verifier(len(DRIVE.feuilles) == 3 and DRIVE.partages == [(racine, "sid@example.invalid")], "3 feuilles « Liste d'appels », dossier « Sid » partagé une seule fois (aucune n'avait de reprise à séparer dans « A rappeler »)")
+    f = DRIVE.trouver_feuille(racine, f"Appels {jour}")
+    verifier(f is not None and [l[:RES] + l[RES + 1:] for l in list(csv.reader(io.StringIO(DRIVE.feuilles[f][2])))[1:]] == [l[:RES] + l[RES + 1:] for l in listes[jour]],
+             f"{jour} : bon tableur, dans le dossier « Sid », même contenu que la liste du jour (hors Résultat, rempli depuis par le test)")
+verifier(len(DRIVE.feuilles) == 3 and DRIVE.partages == [(racine, "sid@example.invalid")], "3 tableurs « Appels », un par jour, dossier « Sid » partagé une seule fois")
 verifier(len(json.loads(A.ETAT.read_text(encoding="utf-8"))["sorties"]) == total_attendu, f"état : {total_attendu} entreprises marquées (confirmées appelées via la feuille Google, jamais reprises)")
 hist = json.loads(A.HISTORIQUE.read_text(encoding="utf-8"))
 verifier(len(hist) == 2 * (len(listes[JOURS[0]]) + len(listes[JOURS[1]])), f"historique : clés et numéros des deux premiers jours notés (le 3e n'a pas de lendemain dans ce test pour le lire) : {len(hist)}")
@@ -832,7 +836,7 @@ verifier(set(A.cfg()["jours_appel"]) == set(A.JOURS_SEMAINE), "jours_appel enti�
 A.maintenant_paris = reel_maintenant
 verifier(callable(A.maintenant_paris) and A.maintenant_paris() is not None, "maintenant_paris restauré (fonction réelle)")
 
-print("22. Nettoyage Drive : sous-dossiers « Sid » de plus de 7 jours mis à la corbeille (jamais supprimés)")
+print("22. Nettoyage Drive : tableurs « Appels » et anciens sous-dossiers de plus de 7 jours mis à la corbeille (jamais supprimés)")
 monde(trouves=gros_monde(), config={})   # simulation
 avant = DRIVE.appels; A.nettoyer_dossiers_drive(A.cfg(), A.etat_lire(), JOUR, DRIVE, False)
 verifier(DRIVE.appels == avant, "simulation (envoi_automatique=false) : le Drive n'est pas contacté pour le nettoyage")
@@ -846,10 +850,12 @@ vieux = DRIVE.creer_dossier("2026-10-20", racine)      # 15 jours avant JOUR (20
 pile = DRIVE.creer_dossier("2026-10-28", racine)       # exactement 7 jours avant JOUR : gardé (pas « plus de » 7)
 recent = DRIVE.creer_dossier("2026-10-30", racine)     # 5 jours avant JOUR : gardé
 autre = DRIVE.creer_dossier("pas-une-date", racine)    # nom non daté : jamais touché
+f_vieux = DRIVE.creer_feuille(racine, "Appels 2026-10-20", "a\n"); f_pile = DRIVE.creer_feuille(racine, "Appels 2026-10-28", "a\n"); f_autre = DRIVE.creer_feuille(racine, "Guide d'appel", "a\n")
 etat = A.etat_lire(); etat["google"]["racine"] = racine; A.etat_ecrire(etat)
 A.nettoyer_dossiers_drive(A.cfg(), A.etat_lire(), JOUR, DRIVE, False)
 verifier(vieux in DRIVE.corbeille and DRIVE.trouver_dossier("2026-10-20", racine) is None, "dossier de 15 jours : mis à la corbeille, plus retrouvé")
 verifier(pile not in DRIVE.corbeille and recent not in DRIVE.corbeille and autre not in DRIVE.corbeille, "7 jours exactement, 5 jours, et nom non daté : conservés")
+verifier(f_vieux in DRIVE.corbeille and f_pile not in DRIVE.corbeille and f_autre not in DRIVE.corbeille, "tableur « Appels » de 15 jours : corbeille ; 7 jours exactement et autre feuille : conservés")
 verifier("corbeille" in A.JOURNAL.read_text(encoding="utf-8").lower(), "le nettoyage est journalisé")
 n = len(ALERTES); A.nettoyer_dossiers_drive(A.cfg(), A.etat_lire(), JOUR, DRIVE, False)
 verifier(len(ALERTES) == n, "rien à nettoyer la seconde fois : pas d'erreur, pas d'alerte")
@@ -865,7 +871,7 @@ print("23. 365 jours écoulés : une entreprise confirmée appelée redevient di
 monde(trouves=gros_monde(60), config={})
 lancer("preparer", "--jour", JOUR)
 rows = lire_csv(JOUR)
-for l in rows[1:]: l[9] = "x"
+for l in rows[1:]: l[RES] = "RDV pris"
 with open(A.SORTIE / f"liste-sid-{JOUR}.csv", "w", encoding="utf-8-sig", newline="") as fh: csv.writer(fh, delimiter=";").writerows(rows)
 lancer("preparer", "--jour", JOUR2)   # le bilan de JOUR2 confirme JOUR dans l'historique (365 jours)
 loin = "2027-11-10"   # plus de 365 jours après JOUR (2026-11-04)
@@ -879,7 +885,7 @@ print("24. Historique reconstruit automatiquement au premier lancement, à parti
 monde(trouves=gros_monde(), config={})
 lancer("preparer", "--jour", JOUR)
 rows = lire_csv(JOUR)
-for l in rows[1:3]: l[9] = "x"   # seules 2 lignes marquées « Appelé », le reste pas (jamais inventé)
+for l in rows[1:3]: l[RES] = "Refus"   # seules 2 lignes avec un Résultat, le reste pas (jamais inventé)
 with open(A.SORTIE / f"liste-sid-{JOUR}.csv", "w", encoding="utf-8-sig", newline="") as fh: csv.writer(fh, delimiter=";").writerows(rows)
 A.HISTORIQUE.unlink(missing_ok=True)   # simule une mise à jour de l'agent sur une machine qui a déjà des listes, mais pas encore d'historique
 h = A._historique_reconstruire_tout()
@@ -888,20 +894,23 @@ A.HISTORIQUE.unlink(missing_ok=True)
 code, sortie = lancer("preparer", "--jour", JOUR2, "--a-blanc")   # premier appel réel après la mise à jour : doit reconstituer puis faire son bilan, sans planter
 verifier(code == 0, f"preparer après mise à jour (historique absent, listes existantes) : code {code} ({sortie.strip()[:160]})")
 
-print("25. Google : feuille séparée « A rappeler AAAA-MM-JJ » quand des lignes sont reprises, mise en forme (ligne 1 figée, colonnes larges) sur chaque feuille créée")
+print("25. Google : un seul tableur par jour ; les lignes reprises (non appelées ou « À rappeler ») sont dedans, Détail fiche « Reprise de la liste du … »")
 monde(trouves=gros_monde(60), config={"envoi_automatique": True})
 lancer("preparer", "--jour", JOUR); A.exporter_google(A.cfg(), A.etat_lire(), JOUR, DRIVE, False)
-verifier(len(DRIVE.mises_en_forme) == 1 and len(DRIVE.mises_en_forme[0][1]) == len(COLONNES), f"la feuille « Liste d'appels » est mise en forme (une largeur par colonne) : {DRIVE.mises_en_forme}")
-racine = DRIVE.trouver_dossier("Sid"); dossier_jour = DRIVE.trouver_dossier(JOUR, racine)
-verifier(DRIVE.trouver_feuille(dossier_jour, f"A rappeler {JOUR}") is None, "premier jour (rien à reprendre) : pas de feuille « A rappeler »")
+racine = DRIVE.trouver_dossier("Sid"); fid1 = DRIVE.trouver_feuille(racine, f"Appels {JOUR}")
+titre, dossier, contenu = DRIVE.feuilles[fid1]; lignes = list(csv.reader(io.StringIO(contenu)))
+for k, l in enumerate(lignes[1:]): l[RES] = ("À rappeler" if k < 3 else "Refus" if k < 5 else "")
+lignes[1][NOTE] = "rappeler après 17 h"
+buf = io.StringIO(); csv.writer(buf).writerows(lignes); DRIVE.feuilles[fid1] = (titre, dossier, buf.getvalue())
 lancer("preparer", "--jour", JOUR2); A.exporter_google(A.cfg(), A.etat_lire(), JOUR2, DRIVE, False)
-dossier_jour2 = DRIVE.trouver_dossier(JOUR2, racine); fid_r = DRIVE.trouver_feuille(dossier_jour2, f"A rappeler {JOUR2}")
-verifier(fid_r is not None, "lendemain (rien de marqué « Appelé ») : une feuille « A rappeler AAAA-MM-JJ » est créée, dans le même dossier daté que la liste du jour")
-verifier(len(DRIVE.mises_en_forme) == 3 and fid_r in [m[0] for m in DRIVE.mises_en_forme], f"la feuille « Liste d'appels » ET la feuille « A rappeler » de JOUR2 sont mises en forme (3 feuilles créées en tout) : {len(DRIVE.mises_en_forme)}")
-contenu_r = list(csv.reader(io.StringIO(DRIVE.feuilles[fid_r][2])))
-verifier(len(contenu_r) == 101 and contenu_r[0] == COLONNES, f"« A rappeler » contient les 100 lignes reprises, avec l'en-tête ({len(contenu_r)} ligne(s))")
-noms_r = {l[1] for l in contenu_r[1:]}; noms_jour = {l[1] for l in lire_csv(JOUR)[1:]}
-verifier(noms_r == noms_jour, "« A rappeler » contient exactement les entreprises non appelées de la veille, rien d'autre")
+fid2 = DRIVE.trouver_feuille(racine, f"Appels {JOUR2}")
+verifier(fid2 is not None and len(DRIVE.feuilles) == 2 and DRIVE.trouver_feuille(racine, f"A rappeler {JOUR2}") is None and len(DRIVE.dossiers) == 1, "lendemain : un seul nouveau tableur, aucune feuille « A rappeler », aucun sous-dossier")
+c2 = list(csv.reader(io.StringIO(DRIVE.feuilles[fid2][2])))
+reprises = {l[NOM] for l in c2[1:] if l[DET].startswith(f"Reprise de la liste du {JOUR}")}
+attendues = {l[NOM] for l in lignes[1:] if l[RES] in ("", "À rappeler")}
+verifier(reprises == attendues and len(reprises) == 98, f"reprises : non appelées + « À rappeler » ({len(reprises)}), jamais Refus")
+verifier(any("note : rappeler après 17 h" in l[DET] for l in c2[1:] if l[NOM] == lignes[1][NOM]), "la note de Sid suit la ligne reprise")
+verifier([_debut_min(l[CR]) for l in c2[1:]] == sorted(_debut_min(l[CR]) for l in c2[1:]), "tableur du lendemain : toujours trié par créneau")
 
 print("26. Type de numéro (fixe / mobile / box), vérification GRATUITE d'un site avant d'inscrire une entreprise (règle de Liam, 10 nov. 2026)")
 for brut, attendu in (("02 35 62 41 64", "fixe"), ("01 40 10 00 06", "fixe"), ("05 61 10 00 00", "fixe"), ("06 12 34 56 78", "mobile"), ("07 66 39 19 52", "mobile"), ("09 51 23 45 67", "box")):
@@ -968,13 +977,12 @@ noms = {l[1] for l in corps}
 verifier(code == 0 and len(corps) == 100, f"malgré les entreprises écartées, la liste a quand même 100 lignes (code {code})")
 verifier(not (noms & AVEC_SITE), f"aucune des entreprises avec un site officiel confirmé n'est inscrite : {sorted(noms & AVEC_SITE)}")
 verifier(any("écartée" in l and "site officiel" in l for l in sortie.splitlines()), f"la sortie annonce l'exclusion : {[l for l in sortie.splitlines() if 'écart' in l]}")
-verifier(not any(l[5] == "Restaurant" for l in corps), "aucun restaurant dans la liste finale : les 40 avaient tous un site confirmé")
+verifier(not any(l[MET] == "Restaurant" for l in corps), "aucun restaurant dans la liste finale : les 40 avaient tous un site confirmé")
 hist = json.loads(A.HISTORIQUE.read_text(encoding="utf-8")); raisons = [v for v in hist.values() if isinstance(v, dict)]
 verifier(len(raisons) == 80 and all(v["jour"] == JOUR and "site" in v["raison"] for v in raisons), f"historique : clé + téléphone de chacun des 40 restaurants écartés ({len(raisons)} entrée(s))")
 verifier(not any(n in A.JOURNAL.read_text(encoding="utf-8") for n in AVEC_SITE), "journal : aucun nom d'entreprise, même pour une exclusion")
-verifier(lignes[0] == COLONNES and lignes[0][4] == "Type de numéro", f"colonne « Type de numéro » juste après « Téléphone » : {lignes[0]}")
-verifier(all(l[4] in ("fixe", "mobile", "box") and l[4] == A.type_telephone(l[3]) for l in corps), "chaque ligne : fixe, mobile ou box, cohérent avec le numéro affiché")
-verifier(all(l[7] == A.CONSTAT_NEUTRE for l in corps), "aucun constat vérifié dans ce monde fictif : texte neutre (« à confirmer avec vous »), jamais une affirmation inventée")
+verifier(lignes[0] == COLONNES, f"colonnes du tableur : {lignes[0]}")
+verifier(all(l[DET] == A.CONSTAT_NEUTRE for l in corps), "aucun constat vérifié dans ce monde fictif : texte neutre (« à confirmer avec vous »), jamais une affirmation inventée")
 A.chercher_site_web = lambda nom, ville: ""; A.lire_site = lambda url: None   # retour aux doublures par défaut
 
 print("27. Robustesse de la vérification de site (règles de Liam, 11 nov. 2026) : délai aléatoire entre deux requêtes web, timeouts")

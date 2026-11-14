@@ -42,7 +42,7 @@ DEPARTEMENTS = ZN.departements_ouverts(4)   # tous les départements de l'annuai
 def depts_ouverts():
     return ZN.departements_ouverts()
 PETITS = "NN,00,01,02,03,11"  # sans salarié à moins de 20 : artisans, pas de grands groupes
-DEFAUT = {"par_boite_par_jour": 10, "reseaux_par_jour": 10, "pause_envoi_s": [90, 300], "cible_trouves": 30, "max_examinees": 300, "osm_requetes_par_passage": 3, "pause_overpass_s": 15, "osm_max_examinees": 40, "osm_max_jour": 300, "decouverte_places": False, "places_max_jour": 30, "places_requetes_par_passage": 1, "pause_site_s": 3, "rayon_osm_m": 40000, "appels_par_jour": 100, "liste_appels_heure": "08:00", "decouverte_osm": False, "formulaires_par_jour": 10, "pagespeed_par_jour": 30, "seuil_pagespeed": 50, "lent_secondes": 4, "lourd_octets": 1500000,
+DEFAUT = {"par_boite_par_jour": 10, "reseaux_par_jour": 10, "pause_envoi_s": [90, 300], "cible_trouves": 30, "max_examinees": 300, "osm_requetes_par_passage": 3, "pause_overpass_s": 15, "osm_max_examinees": 40, "osm_max_jour": 300, "decouverte_places": False, "places_max_jour": 30, "places_requetes_par_passage": 1, "pause_site_s": 3, "rayon_osm_m": 40000, "appels_par_jour": 100, "liste_appels_heure": "08:00", "liste_appels_md": False, "decouverte_osm": False, "formulaires_par_jour": 10, "pagespeed_par_jour": 30, "seuil_pagespeed": 50, "lent_secondes": 4, "lourd_octets": 1500000,
           "recherches_reseaux_par_jour": 40, "ans_site_vieux": 4, "envoi_automatique": False, "ecoute_max_heures": 12, "ecoute_pause_s": 60,
           "heure_limite": "17:00", "lot_attendre_les_deux_boites": False, "seuil_faiblesse": 25, "mesure_images": True, "verifier_sitemap": False, "montee_pas": 10, "montee_plafond": 50, "taux_alerte_retours": 0.05, "plaintes_max": 1, "retours_min_envois": 20,
           "quota_par_boite": 10, "cycle_minutes": 10, "recul_max_minutes": 60, "lot_min_emails": 5, "epuise_apres": 3, "seuil_vague": 15}
@@ -1952,7 +1952,9 @@ def integrer_saisies(a_blanc, conf):
 
 
 def cmd_appels(a_blanc, conf, jour=None, api=None):
-    """Liste du jour : docs\\liste-appels-AAAA-MM-JJ.md (appels_par_jour lignes au plus, tous métiers actifs). Une seule liste par jour ; rien n'est envoyé. Elle est postée sur Discord par cmd_liste_matin."""
+    """Liste du jour : docs\\liste-appels-AAAA-MM-JJ.md (appels_par_jour lignes au plus, tous métiers actifs). Une seule liste par jour ; rien n'est envoyé. Elle est postée sur Discord par cmd_liste_matin.
+    Arrêtée le 14/11/2026 (liste_appels_md = false par défaut) : la liste d'appels est le tableur Google « Appels AAAA-MM-JJ » de appels-sid.py ; les anciens .md restent relus (saisies, reprises)."""
+    if not conf.get("liste_appels_md"): print("  liste d'appels .md arrêtée : tableur « Appels AAAA-MM-JJ » (appels-sid.py)"); return 0
     if not jour and heure_paris().strftime("%H:%M") < conf["liste_appels_heure"] and __import__("os").environ.get("JARVIS_TEST") != "1": print(f"  liste d'appels : écrite à partir de {conf['liste_appels_heure']}"); return 0
     jour = jour or aujourdhui(); fichier = DOCS / f"liste-appels-{jour}.md"
     if fichier.exists(): print(f"  liste du jour déjà écrite : {fichier}"); return 0
@@ -2057,7 +2059,8 @@ def poster_liste(fichier, jour, api):
 
 
 def cmd_liste_matin(conf, api=None, force=False, paris=None):
-    """À partir de liste_appels_heure (08:00, heure de Paris) : écrit la liste du jour (appels_par_jour numéros, la liste non appelée la plus récente d'abord) puis la poste UNE fois (état : appels.postee). -> 1 si postée."""
+    """À partir de liste_appels_heure (08:00, heure de Paris) : écrit la liste du jour (appels_par_jour numéros, la liste non appelée la plus récente d'abord) puis la poste UNE fois (état : appels.postee). -> 1 si postée. Arrêtée avec liste_appels_md = false (14/11/2026)."""
+    if not conf.get("liste_appels_md"): return 0
     etat = etat_lire(); jour = aujourdhui()
     if etat.get("appels", {}).get("postee") == jour and not force: return 0
     if not force and (paris or heure_paris()).strftime("%H:%M") < conf["liste_appels_heure"]: return 0

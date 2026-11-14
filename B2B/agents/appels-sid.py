@@ -3,7 +3,7 @@
 Aucun message n'est envoyé à une entreprise ni à Sid, aucune API payante. Même modèle que devis et rendez-vous : script autonome, réglages (appels-sid-config.json), état (appels-sid-etat.json),
 verrou, arrêt de secours, alerte Discord, journal, tests écrits avant le code. `envoi_automatique: false` (défaut) = SIMULATION : ni Google, ni partage, ni Discord (le journal dit ce qui serait fait).
 
-  python agents\\appels-sid.py jour [--jour AAAA-MM-JJ] [--a-blanc]       le passage du matin : sourcer, préparer la liste, dossier + feuille Google, corbeille des dossiers Google de plus de 7 jours,
+  python agents\\appels-sid.py jour [--jour AAAA-MM-JJ] [--a-blanc]       le passage du matin : sourcer, préparer la liste, tableur Google « Appels AAAA-MM-JJ » (dans le dossier de Sid), corbeille au-delà de 7 jours,
                                                                           alerte de réserve (c'est ce que lance la tâche planifiée) ; un jour hors `jours_appel` (réglage) : rien n'est généré, noté dans le journal
   python agents\\appels-sid.py preparer [--jour AAAA-MM-JJ] [--a-blanc]   seulement la liste du jour (docs\\sid\\liste-sid-AAAA-MM-JJ.csv) ; --a-blanc : affiche sans rien écrire
   python agents\\appels-sid.py sourcer [--jour AAAA-MM-JJ] [--a-blanc] [--dept 27] [--simulation]
@@ -43,7 +43,7 @@ PROSPECTION_CONFIG = ICI / "prospection-config.json"
 NORMANDIE = ("76", "27", "14", "50", "61")   # Seine-Maritime, Eure, Calvados, Manche, Orne : du plus proche de Rouen au plus lointain
 NOMS_DEPT = {"14": "Calvados", "27": "Eure", "50": "Manche", "61": "Orne", "76": "Seine-Maritime"}
 JOURS_SEMAINE = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
-JOURS_DOSSIER_MAX = 7   # un sous-dossier Google « Sid » plus vieux que ça (nom AAAA-MM-JJ) est mis à la corbeille à chaque passage de `jour`
+JOURS_DOSSIER_MAX = 7   # un tableur « Appels AAAA-MM-JJ » (ou un ancien sous-dossier AAAA-MM-JJ) plus vieux que ça est mis à la corbeille à chaque passage de `jour`
 # --- ~20 métiers locaux (règle fixe de Liam, 10 nov. 2026) : quatre fenêtres horaires types, 8 h - 19 h -------------------------------------------------------------------
 _CHANTIER = [(8 * 60, 9 * 60), (17 * 60, 19 * 60)]          # artisans de chantier : avant 9 h ou 17 h - 19 h, jamais en plein travail
 _COMMERCE = [(8 * 60, 12 * 60), (14 * 60, 19 * 60)]         # boutiques et salons : hors la pause de midi (12 h - 14 h)
@@ -130,8 +130,12 @@ def cle_metier_sid(texte):
     if cle: return cle
     t = P.norm(texte)
     return next((c for m, c in MOTS_METIER_SID if m in t), None)
-COLONNES = ["#", "Nom", "Ville", "Téléphone", "Type de numéro", "Métier", "Créneau conseillé", "Constat vérifié", "Page d'exemple", "Appelé", "Répondu", "Rendez-vous pris", "Refus", "Remarque"]
-LARGEURS_PX = [40, 160, 120, 120, 100, 150, 160, 260, 220, 80, 80, 110, 70, 220]   # une par colonne de COLONNES : mise en forme de la feuille Google (colonnes larges, texte renvoyé à la ligne)
+# Tableur du jour « Appels AAAA-MM-JJ » (décision de Liam, 14 nov. 2026) : colonnes toujours dans cet ordre, lignes triées par créneau, Résultat = liste déroulante.
+COLONNES = ["Créneau", "Entreprise", "Métier", "Ville", "Téléphone", "Détail fiche", "Résultat", "Note"]
+LARGEURS_PX = [130, 240, 170, 150, 130, 380, 150, 300]   # une par colonne de COLONNES : mise en forme de la feuille Google (colonnes larges, texte renvoyé à la ligne)
+RESULTATS = ["Pas de réponse", "Refus", "À rappeler", "RDV pris"]   # choix de la colonne Résultat ; vide ou « À rappeler » = reprise le jour d'appel suivant
+I_RESULTAT = COLONNES.index("Résultat")
+TITRE_FEUILLE = "Appels {}"   # un seul tableur par jour, posé directement dans le dossier Drive de Sid (aucun sous-dossier)
 EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$")
 CONSTAT_NEUTRE = "Aucun site trouvé lors de mes recherches, à confirmer avec vous"   # constat par défaut (rien de vérifié par note_besoin) : n'affirme jamais l'absence d'un site, seulement
                                                                                         # que la vérification (OpenStreetMap + recherche web, voir verifier_site) n'en a pas trouvé un
@@ -375,8 +379,10 @@ def _tels_en_circulation(etat):
         if not f.exists(): continue
         try:
             with open(f, encoding="utf-8-sig", newline="") as fh:
-                for l in list(csv.reader(fh, delimiter=";"))[1:]:
-                    if len(l) > 3 and telephone_valide(l[3]): out.add(telephone_valide(l[3]))
+                lignes = list(csv.reader(fh, delimiter=";"))
+                it = _index_colonnes(lignes[0])["tel"] if lignes else 3
+                for l in lignes[1:]:
+                    if len(l) > it and telephone_valide(l[it]): out.add(telephone_valide(l[it]))
         except OSError: pass
     return out
 
@@ -530,18 +536,37 @@ def cellule(v):
     return "'" + s if s[:1] in ("=", "+", "-", "@") else s
 
 
+def _debut_minutes(creneau):
+    """« 08 h 10 – 08 h 20 » -> 490 (minutes depuis minuit) : clé de tri des lignes par créneau."""
+    m = re.match(r"(\d{1,2}) h(?: (\d{2}))?", creneau or "")
+    return int(m.group(1)) * 60 + int(m.group(2) or 0) if m else 24 * 60
+
+
 def lignes_csv(choisies):
-    out = [COLONNES]
+    """En-tête COLONNES + une ligne par entreprise, triées par créneau (heure de début ; à égalité, l'ordre de choix est gardé)."""
     totaux = {}
     for c in choisies: totaux[c["metier"]] = totaux.get(c["metier"], 0) + 1
-    compte = {m: 0 for m in totaux}
-    for i, c in enumerate(choisies, 1):
-        lien = "" if c["metier"] == "restaurant" else P.lien_exemple(c["brut"], lien_ok=lambda u: True)   # restaurant : numéro seulement ; lien lu dans liens-metiers.json, aucune page ouverte
+    compte = {m: 0 for m in totaux}; corps = []
+    for c in choisies:
         m = c["metier"]; idx = compte[m]; compte[m] += 1
         creneau = creneau_ligne(m, idx, totaux[m])
         constat = cellule(c["constat"]) if c["constat"] else cellule(CONSTAT_NEUTRE)
-        out.append([str(i), cellule(c["nom"]), cellule(c["ville"]), c["tel"], type_telephone(c["tel"]), NOMS[m], creneau, constat, lien] + [""] * 5)
-    return out
+        corps.append([creneau, cellule(c["nom"]), NOMS[m], cellule(c["ville"]), c["tel"], constat, "", ""])
+    return [COLONNES] + sorted(corps, key=lambda l: _debut_minutes(l[0]))
+
+
+def _index_colonnes(entete):
+    """Indices (nom, ville, tel, metier, resultat, note) d'après l'en-tête : tableur « Appels » (14/11/2026) ou ancienne liste (« Appelé » en 10e colonne)."""
+    if "Entreprise" in entete:
+        return {"nom": entete.index("Entreprise"), "ville": entete.index("Ville"), "tel": entete.index("Téléphone"), "metier": entete.index("Métier"),
+                "resultat": entete.index("Résultat"), "note": entete.index("Note") if "Note" in entete else None, "ancien": False}
+    return {"nom": 1, "ville": 2, "tel": 3, "metier": 5, "resultat": 9, "note": 13, "ancien": True}
+
+
+def _appele(valeur, ancien):
+    """Ancienne liste : case « Appelé » non vide. Tableur : Résultat rempli, sauf « À rappeler » (la ligne est reprise, comme une ligne non appelée)."""
+    v = (valeur or "").strip()
+    return bool(v) if ancien else bool(v) and v != "À rappeler"
 
 
 def chemin(jour, suffixe=""): return SORTIE / f"liste-sid-{jour}{suffixe}.csv"
@@ -579,11 +604,13 @@ def _lire_liste_pour_bilan(conf, etat, jour_liste, drive):
         except OSError: return []
     sep = ";" if texte.split("\n", 1)[0].count(";") >= texte.split("\n", 1)[0].count(",") else ","   # Drive exporte en « , », le CSV local en « ; »
     lignes = list(csv.reader(io.StringIO(texte), delimiter=sep))
-    out = []
+    if not lignes: return []
+    ix = _index_colonnes(lignes[0]); out = []
+    v = lambda l, k: (l[ix[k]].strip() if ix[k] is not None and len(l) > ix[k] else "")
     for l in lignes[1:]:
-        if len(l) <= 3 or not l[1] or not l[3]: continue
-        out.append({"cle": S.cle({"nom": l[1], "ville": l[2] if len(l) > 2 else ""}), "nom": l[1], "ville": l[2] if len(l) > 2 else "",
-                     "tel": telephone_valide(l[3]), "metier": cle_metier_sid(l[5]) if len(l) > 5 else "", "appele": (l[9].strip() if len(l) > 9 else "")})
+        if not v(l, "nom") or not v(l, "tel"): continue
+        out.append({"cle": S.cle({"nom": v(l, "nom"), "ville": v(l, "ville")}), "nom": v(l, "nom"), "ville": v(l, "ville"), "tel": telephone_valide(v(l, "tel")),
+                    "metier": cle_metier_sid(v(l, "metier")) or "", "appele": _appele(v(l, "resultat"), ix["ancien"]), "note": v(l, "note")})
     return out
 
 
@@ -600,9 +627,11 @@ def _historique_reconstruire_tout():
         try:
             with open(f, encoding="utf-8-sig", newline="") as fh: lignes = list(csv.reader(fh, delimiter=";"))
         except OSError: continue
+        if not lignes: continue
+        ix = _index_colonnes(lignes[0])
         for l in lignes[1:]:
-            if len(l) <= 9 or not l[1] or not l[3] or not l[9].strip(): continue
-            tel = telephone_valide(l[3]); cle = S.cle({"nom": l[1], "ville": l[2] if len(l) > 2 else ""})
+            if len(l) <= max(ix["nom"], ix["tel"], ix["resultat"], ix["ville"]) or not l[ix["nom"]] or not l[ix["tel"]] or not _appele(l[ix["resultat"]], ix["ancien"]): continue
+            tel = telephone_valide(l[ix["tel"]]); cle = S.cle({"nom": l[ix["nom"]], "ville": l[ix["ville"]]})
             for k in (cle, tel):
                 if k and (k not in h or h[k] < jour_fichier): h[k] = jour_fichier
     return h
@@ -622,7 +651,8 @@ def _bilan_veille(conf, etat, jour, drive):
             for k in (l["cle"], l["tel"]):
                 if k and (k not in historique or historique[k] < avant): historique[k] = avant
         elif l["cle"] and l["tel"] and l["metier"] in NOMS:
-            a_rappeler.append({"cle": l["cle"], "nom": l["nom"], "ville": l["ville"], "tel": l["tel"], "metier": l["metier"], "brut": LABELS.get(l["metier"], ""), "constat": "", "dept": "", "prox": -1})
+            constat = f"Reprise de la liste du {avant}" + (f" ; note : {l['note']}" if l.get("note") else "")
+            a_rappeler.append({"cle": l["cle"], "nom": l["nom"], "ville": l["ville"], "tel": l["tel"], "metier": l["metier"], "brut": LABELS.get(l["metier"], ""), "constat": constat, "dept": "", "prox": -1})
     return a_rappeler, historique
 
 
@@ -649,8 +679,10 @@ def _preparer(conf, etat, jour, a_blanc, drive=None, complet=True, hors_ligne=Fa
     if sites_trouves: print(f"  {len(sites_trouves)} entreprise(s) écartée(s) : un site officiel a été trouvé lors de la vérification (OpenStreetMap, recherche web), notée dans l'historique")
     if a_blanc:
         print(f"Liste du {jour} [à blanc : rien n'est écrit, rien n'est marqué] : {len(choisies)} ligne(s) ({repartition(choisies)})")
-        if complet:
-            for i, c in enumerate(choisies, 1): print(f"  {i:>2}. {c['nom']} · {c['ville']} · {c['tel']} · {NOMS[c['metier']]}")
+        if complet:   # le tableur « Appels AAAA-MM-JJ » tel qu'il serait créé : colonnes, ordre (tri par créneau), nombre de lignes
+            t = lignes_csv(choisies)
+            print(f"Tableur « {TITRE_FEUILLE.format(jour)} » : {len(t) - 1} ligne(s), colonnes : {' | '.join(t[0])} (Résultat : liste {' / '.join(RESULTATS)})")
+            for l in t[1:]: print("  " + " | ".join(l[:I_RESULTAT]))
         return choisies
     SORTIE.mkdir(parents=True, exist_ok=True); fichier = chemin(jour)
     with open(fichier, "x", encoding="utf-8-sig", newline="") as f: csv.writer(f, delimiter=";").writerows(lignes_csv(choisies))
@@ -883,66 +915,60 @@ def cmd_sourcer(conf, jour, a_blanc, depts=None):
 
 
 def _formater_sans_bloquer(drive, id_):
-    """Ligne 1 figée, colonnes larges, texte renvoyé à la ligne (google_sheets.Drive.formater_feuille) : jamais bloquant, une feuille créée mais mal mise en forme reste exploitable."""
-    try: drive.formater_feuille(id_, LARGEURS_PX)
+    """Ligne 1 figée, colonnes larges, texte renvoyé à la ligne, Résultat en liste déroulante (google_sheets.Drive.formater_feuille) : jamais bloquant, une feuille créée mais mal mise
+    en forme reste exploitable."""
+    try: drive.formater_feuille(id_, LARGEURS_PX, liste=(I_RESULTAT, RESULTATS))
     except Exception as e: journaliser("google", f"mise en forme ignorée ({type(e).__name__})")
 
 
-# --- Google Drive : dossier « Sid » > date, feuille du jour --------------------------------------------------------------
+# --- Google Drive : un tableur « Appels AAAA-MM-JJ » par jour, directement dans le dossier de Sid --------------------------
+def _racine(conf, etat, drive, creer=True):
+    """Dossier Drive de Sid : dossier_sid_id (réglage, l'ID fixe du dossier où Sid regarde déjà), sinon le dossier « Sid » à la racine du Drive (trouvé, ou créé si `creer`)."""
+    return conf["dossier_sid_id"] or etat["google"].get("racine") or drive.trouver_dossier("Sid") or (drive.creer_dossier("Sid") if creer else None)
+
+
 def exporter_google(conf, etat, jour, drive, a_blanc):
-    """Crée (une seule fois) <dossier racine> > AAAA-MM-JJ > « Liste d'appels AAAA-MM-JJ » depuis le CSV du jour. Ce qui existe déjà n'est ni recréé ni écrasé. Partage du dossier racine avec
-    partager_avec (éditeur, une fois) seulement s'il est renseigné. Simulation (envoi_automatique=false) et --a-blanc : aucun contact avec Google. Dossier racine : dossier_sid_id (réglage,
-    l'ID fixe du dossier Drive où Sid regarde déjà) s'il est renseigné, sinon le dossier « Sid » trouvé ou créé à la racine du Drive (ancien comportement, avant son onboarding du 5 nov. 2026)."""
-    fichier = chemin(jour); titre = f"Liste d'appels {jour}"; cible = conf["partager_avec"].lower()
+    """Crée (une seule fois) le tableur « Appels AAAA-MM-JJ » directement dans le dossier de Sid, sans sous-dossier, depuis le CSV du jour (déjà trié par créneau), puis le met en forme :
+    en-tête figé, colonnes larges, Résultat en liste déroulante (RESULTATS). Ce qui existe déjà n'est ni recréé ni écrasé. Partage du dossier avec partager_avec (éditeur, une fois) seulement
+    s'il est renseigné. Simulation (envoi_automatique=false) et --a-blanc : aucun contact avec Google. Portée Google : drive.file (inchangée)."""
+    fichier = chemin(jour); titre = TITRE_FEUILLE.format(jour); cible = conf["partager_avec"].lower()
     if not conf["envoi_automatique"] or a_blanc:
-        print(f"  Google : {'à blanc' if a_blanc else 'simulation (envoi_automatique=false)'} : serait créé <dossier racine> > {jour} > « {titre} »" + (f", dossier racine partagé avec une adresse ({'valide' if EMAIL.match(cible) else 'INVALIDE'})" if cible else ", aucun partage"))
+        print(f"  Google : {'à blanc' if a_blanc else 'simulation (envoi_automatique=false)'} : serait créé « {titre} » directement dans le dossier de Sid" + (f", dossier partagé avec une adresse ({'valide' if EMAIL.match(cible) else 'INVALIDE'})" if cible else ", aucun partage"))
         if not a_blanc: journaliser("google", f"{jour} : simulation, rien créé")
         return
     if not fichier.exists(): raise ErreurAgent(f"la liste du {jour} n'existe pas ({fichier.name}) : rien à envoyer à Google")
     if (drive.compte() or "").lower() != conf["compte_google"].lower(): raise ErreurAgent(f"le jeton Google appartient à un autre compte que {conf['compte_google']} : relancez google-autoriser avec le bon compte")
     g = etat["google"]
-    racine = conf["dossier_sid_id"] or g.get("racine") or drive.trouver_dossier("Sid") or drive.creer_dossier("Sid"); g["racine"] = racine; etat_ecrire(etat)
+    racine = _racine(conf, etat, drive); g["racine"] = racine; etat_ecrire(etat)
     if cible:
         if not EMAIL.match(cible): print("  ! partager_avec n'est pas une adresse e-mail valide : rien n'est partagé"); journaliser("google", "partage ignoré : adresse invalide")
         elif g.get("partage") != cible: drive.partager(racine, cible); g["partage"] = cible; etat_ecrire(etat); journaliser("google", "dossier racine partagé (éditeur)")
     jg = g.setdefault(jour, {})
-    jg["dossier"] = jg.get("dossier") or drive.trouver_dossier(jour, racine) or drive.creer_dossier(jour, racine); etat_ecrire(etat)
     if not jg.get("feuille"):
-        jg["feuille"] = drive.trouver_feuille(jg["dossier"], titre) or None
+        jg["feuille"] = drive.trouver_feuille(racine, titre) or None
         if not jg["feuille"]:
             with open(fichier, encoding="utf-8-sig", newline="") as f: lignes = list(csv.reader(f, delimiter=";"))
             tampon = io.StringIO(); csv.writer(tampon).writerows(lignes)
-            jg["feuille"] = drive.creer_feuille(jg["dossier"], titre, tampon.getvalue())
+            jg["feuille"] = drive.creer_feuille(racine, titre, tampon.getvalue())
             _formater_sans_bloquer(drive, jg["feuille"])
         etat_ecrire(etat)
-    n_rappel = (etat["listes"].get(jour) or {}).get("a_rappeler", 0)
-    if n_rappel and not jg.get("feuille_rappel"):
-        # Feuille séparée « A rappeler AAAA-MM-JJ », dans le même dossier daté : pas un onglet au sens strict (ce projet n'ouvre que l'API Drive pour la création, jamais l'API Sheets
-        # pour une opération en écriture multi-onglets ; formater_feuille s'en sert uniquement pour la mise en forme, sur un fichier déjà créé par cette app, portée drive.file).
-        titre_r = f"A rappeler {jour}"
-        jg["feuille_rappel"] = drive.trouver_feuille(jg["dossier"], titre_r) or None
-        if not jg["feuille_rappel"]:
-            with open(fichier, encoding="utf-8-sig", newline="") as f: lignes = list(csv.reader(f, delimiter=";"))
-            tampon = io.StringIO(); csv.writer(tampon).writerows([lignes[0]] + lignes[1:1 + n_rappel])
-            jg["feuille_rappel"] = drive.creer_feuille(jg["dossier"], titre_r, tampon.getvalue())
-            _formater_sans_bloquer(drive, jg["feuille_rappel"])
-        etat_ecrire(etat)
-    journaliser("google", f"{jour} : dossier et feuille en place" + (f", {n_rappel} ligne(s) dans « A rappeler »" if n_rappel else ""))
-    print(f"  Google : <dossier racine> > {jour} > « {titre} » en place" + (f" (+ « {('A rappeler ' + jour)} », {n_rappel} ligne(s))" if n_rappel else ""))
+    journaliser("google", f"{jour} : tableur en place")
+    print(f"  Google : « {titre} » en place dans le dossier de Sid")
 
 
 def nettoyer_dossiers_drive(conf, etat, jour, drive, a_blanc):
-    """Met à la corbeille (jamais une suppression définitive) les sous-dossiers du dossier racine (dossier_sid_id, ou « Sid » à la racine du Drive à défaut) nommés AAAA-MM-JJ datant de plus de
-    JOURS_DOSSIER_MAX jours. Simulation (envoi_automatique=false) et --a-blanc : aucun contact avec Google. Aucun dossier racine encore trouvé : rien à faire."""
+    """Met à la corbeille (jamais une suppression définitive) ce qui, dans le dossier de Sid, date de plus de JOURS_DOSSIER_MAX jours : les tableurs « Appels AAAA-MM-JJ » et les anciens
+    sous-dossiers AAAA-MM-JJ (avant le 14/11/2026). Portée drive.file : seuls les fichiers créés par cet agent sont listés, donc touchés. Simulation et --a-blanc : aucun contact avec Google."""
     if not conf["envoi_automatique"] or a_blanc:
         print(f"  Google (nettoyage) : {'à blanc' if a_blanc else 'simulation (envoi_automatique=false)'} : rien n'est listé ni mis à la corbeille")
         return
-    racine = conf["dossier_sid_id"] or etat["google"].get("racine") or drive.trouver_dossier("Sid")
+    racine = _racine(conf, etat, drive, creer=False)
     if not racine: print("  Google (nettoyage) : aucun dossier racine pour l'instant"); return
-    vieux = [(i, n) for i, n in drive.lister_dossiers(racine) if re.fullmatch(r"\d{4}-\d{2}-\d{2}", n) and _jours_ecoules(jour, n) > JOURS_DOSSIER_MAX]
+    date_de = lambda n: (re.fullmatch(r"(?:Appels )?(\d{4}-\d{2}-\d{2})", n) or [None, None])[1]
+    vieux = [(i, n) for i, n in drive.lister_dossiers(racine) + drive.lister_feuilles(racine) if date_de(n) and _jours_ecoules(jour, date_de(n)) > JOURS_DOSSIER_MAX]
     for i, _ in vieux: drive.mettre_corbeille(i)
-    if vieux: journaliser("nettoyage", f"{jour} : {len(vieux)} dossier(s) mis à la corbeille ({', '.join(sorted(n for _, n in vieux))})")
-    print(f"  Google (nettoyage) : {len(vieux)} dossier(s) de plus de {JOURS_DOSSIER_MAX} jours mis à la corbeille" if vieux else "  Google (nettoyage) : aucun dossier de plus de 7 jours")
+    if vieux: journaliser("nettoyage", f"{jour} : {len(vieux)} élément(s) mis à la corbeille ({', '.join(sorted(n for _, n in vieux))})")
+    print(f"  Google (nettoyage) : {len(vieux)} élément(s) de plus de {JOURS_DOSSIER_MAX} jours mis à la corbeille" if vieux else "  Google (nettoyage) : rien de plus de 7 jours")
 
 
 # --- le passage du matin -------------------------------------------------------------------------------------------
@@ -1012,8 +1038,9 @@ def cmd_annuler(jour, force, a_blanc):
         if not jour or jour not in etat["listes"]: raise ErreurAgent(f"aucune liste à annuler{' pour le ' + jour if jour else ''}")
         fichier = chemin(jour)
         if fichier.exists() and not force:
-            with open(fichier, encoding="utf-8-sig", newline="") as f: lignes = list(csv.reader(f, delimiter=";"))[1:]
-            if any(any(x.strip() for x in l[9:]) for l in lignes if len(l) > 9): raise ErreurAgent(f"la liste du {jour} a déjà été utilisée (une case ou une remarque est remplie) : annulation refusée (--force pour libérer quand même)")
+            with open(fichier, encoding="utf-8-sig", newline="") as f: lignes = list(csv.reader(f, delimiter=";"))
+            debut = I_RESULTAT if lignes and "Entreprise" in lignes[0] else 9   # Résultat et Note (tableur du 14/11/2026) ; cases et remarque (anciennes listes)
+            if any(any(x.strip() for x in l[debut:]) for l in lignes[1:] if len(l) > debut): raise ErreurAgent(f"la liste du {jour} a déjà été utilisée (une case ou une remarque est remplie) : annulation refusée (--force pour libérer quand même)")
         cles = etat["listes"][jour]["cles"]
         if a_blanc: print(f"Annulation du {jour} [à blanc : rien n'est changé] : {len(cles)} entreprise(s) seraient libérées"); return 0
         for k in cles: etat["sorties"].pop(k, None)

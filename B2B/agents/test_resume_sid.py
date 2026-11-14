@@ -107,6 +107,9 @@ DRIVE.feuilles["F1"] = csv_sid([
 ])
 dispo, detail = A.stats_appels(A.cfg(), JOUR, DRIVE)
 verifier(dispo is True and detail == {"total": 3, "Appelé": 2, "Répondu": 1, "Rendez-vous pris": 1, "Refus": 1}, f"3 lignes comptées par en-tête : {detail}")
+DRIVE.feuilles["F1"] = "Créneau,Entreprise,Métier,Ville,Téléphone,Détail fiche,Résultat,Note\n08 h,A,,,,,RDV pris,\n08 h 10,B,,,,,Refus,\n08 h 20,C,,,,,Pas de réponse,\n08 h 30,D,,,,,,\n"
+dispo, detail = A.stats_appels(A.cfg(), JOUR, DRIVE)
+verifier(dispo is True and detail == {"total": 4, "Appelé": 3, "Répondu": 2, "Rendez-vous pris": 1, "Refus": 1}, f"tableur « Appels » (colonne Résultat, 14/11/2026) : {detail}")
 
 print("4. stats_appels : pannes sans jamais inventer de chiffre")
 monde(appels_sid_etat={"google": {JOUR: {"feuille": "F2"}}})
