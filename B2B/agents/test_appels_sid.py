@@ -584,7 +584,12 @@ t_dep = [trouve(f"Plomb Calvados {i}", "plombier-chauffagiste", "Caen", tel(2000
         [trouve("Coiff Rouen", "coiffeur", "Rouen", tel(2200), cp="76000"), trouve("Elec Sans Cp", "électricien", "Quelque Part", tel(2300), cp="")]
 monde(trouves=t_dep, config={"par_liste": 100}); code, sortie = lancer("etat")
 verifier(code == 0 and "Réserve par métier et par département" in sortie and "Calvados 14" in sortie and "Manche 50" in sortie and "Seine-Maritime 76" in sortie and "Orne 61" in sortie and "Eure 27" in sortie, "etat : tableau métier x département (les cinq départements normands)")
-verifier(re.search(r"Plombier-chauffagiste\s+3\s+0\s+0\s+0\s+0\s+3|Plombier-chauffagiste\s+[\d\s]*3", sortie) is not None and "inconnu" in sortie, "le tableau donne le nombre par métier et par département, et une colonne pour les codes postaux inconnus")
+verifier(re.search(r"Plombier-chauffagiste\s+3\s+0\s+0\s+0\s+0\s+3|Plombier-chauffagiste\s+[\d\s]*3", sortie) is not None and "inconnu" not in sortie, "le tableau donne le nombre par métier et par département ; une fiche sans code postal d'une commune inconnue n'est pas dans la réserve (hors zone, 14/11/2026)")
+t_z = [trouve("Plomb Nogent", "plombier-chauffagiste", "Nogent Le Roi", tel(2400), cp=""), trouve("Elec Vacheresses", "électricien", "Vacheresses-les-Basses", tel(2401), cp=""),
+       trouve("Resto Oise", "restaurant", "Beauvais", tel(2402), cp="60000"), trouve("Resto Dreux", "restaurant", "Dreux", tel(2403), cp="28100"),
+       trouve("Coiff Elbeuf", "coiffeur", "Elbeuf", tel(2404), cp=""), trouve("Coiff Bernay A", "coiffeur", "Bernay", tel(2405), cp="27300"), trouve("Coiff Bernay B", "coiffeur", "Bernay", tel(2406), cp="")]
+monde(trouves=t_z, config={}); noms_z = {c["nom"] for c in A.candidats(A.etat_lire())}
+verifier(noms_z == {"Coiff Elbeuf", "Coiff Bernay A", "Coiff Bernay B"}, f"zone : seuls 14, 27, 50, 61, 76 ; Eure-et-Loir, Oise et communes inconnues sans code postal écartées ({sorted(noms_z)})")
 verifier("= 0 jour(s) à 100 numéros par jour" in sortie, f"jours de réserve à 100 numéros par jour (7 numéros : 0 jour) : {[l for l in sortie.splitlines() if 'jour(s)' in l]}")
 monde(trouves=gros_monde(30), config={"par_liste": 100}); code, sortie = lancer("etat"); verifier("= 2 jour(s) à 100 numéros par jour" in sortie, "210 numéros (7 métiers x 30) / 100 par jour : 2 jours de réserve, dit en toutes lettres")
 monde(trouves=gros_monde(30), config={"sourcing_requetes_max": 1, "sirene_actif": False}); FO.__init__(); FO.fixes = [[]]; code, sortie = lancer("sourcer", "--jour", JOUR, "--a-blanc")

@@ -2082,7 +2082,7 @@ def vagues_etat(etat):
 
 def appliquer_vagues(etat=None):
     """Fixe les vagues ouvertes de zone.py d'après l'état (prospection-etat.json › vagues › ouverte ; 1 au départ)."""
-    ZN.ouvrir(vagues_etat(etat if etat is not None else etat_lire())["ouverte"])
+    ZN.ouvrir(min(ZN.VAGUE_PLAFOND, vagues_etat(etat if etat is not None else etat_lire())["ouverte"]))   # plafond : Normandie seulement (14/11/2026), même si l'état dit plus
 
 
 def utilisables_par_vague(lignes, jour=None, cles=(), mails=()):
@@ -2100,7 +2100,7 @@ def utilisables_par_vague(lignes, jour=None, cles=(), mails=()):
 def vague_suivante_si_besoin(conf, jour=None, epuisee=True):
     """Ouvre la vague suivante si la vague en cours (la dernière ouverte) a moins de seuil_vague prospects utilisables trouvés aujourd'hui ET que la recherche n'y trouve plus de nouveau prospect (epuisee). -> n° de la vague ouverte, sinon 0."""
     etat = etat_lire(); v = vagues_etat(etat); jour = jour or aujourdhui(); n = v["ouverte"]
-    if n >= 4 or not epuisee: return 0
+    if n >= min(4, ZN.VAGUE_PLAFOND) or not epuisee: return 0   # jamais au-delà de VAGUE_PLAFOND (Normandie, décision de Liam du 14/11/2026)
     cles, mails = exclusions(); nb = utilisables_par_vague(lire_trouves(), jour, cles, mails)[n]
     if nb >= conf["seuil_vague"]: return 0
     v["ouverte"] = n + 1; v["ouvertures"][str(n + 1)] = {"jour": jour, "utilisables_vague_precedente": nb}; etat_ecrire(etat, False); ZN.ouvrir(n + 1)
@@ -2110,7 +2110,7 @@ def vague_suivante_si_besoin(conf, jour=None, epuisee=True):
 
 def cmd_vagues(conf):
     """Récapitulatif : départements de chaque vague, ouverte ou fermée, prospects utilisables (au total et collectés aujourd'hui). Lecture seule."""
-    etat = etat_lire(); v = vagues_etat(etat); cles, mails = exclusions(); lignes = lire_trouves(); jour = aujourdhui()
+    etat = etat_lire(); v = dict(vagues_etat(etat)); v["ouverte"] = min(ZN.VAGUE_PLAFOND, v["ouverte"]); cles, mails = exclusions(); lignes = lire_trouves(); jour = aujourdhui()
     tot, auj = utilisables_par_vague(lignes, None, cles, mails), utilisables_par_vague(lignes, jour, cles, mails)
     reste = utilisables_par_vague([l for l in lignes if l.get("statut") in ("trouvé",) + STATUTS_TEL], None, cles, mails)   # pas encore préparés ni contactés
     for n in range(1, 5):
@@ -2126,14 +2126,14 @@ VILLES_ZONE_SANS_CP = {"eslettes", "bois-d-ennebourg", "saint-martin-du-manoir",
 
 
 def hors_zone_ligne(l, villes_ok):
-    return not ZN.dans_zone(cp=l.get("cp", ""), ville=l.get("ville", ""), villes_ok=villes_ok, vague_max=4)   # vagues fermées : gardées (elles s'ouvriront)
+    return not ZN.dans_zone(cp=l.get("cp", ""), ville=l.get("ville", ""), villes_ok=villes_ok, vague_max=ZN.VAGUE_PLAFOND)   # hors des 5 départements normands : retiré (14/11/2026)
 
 
 def cmd_zone(a_blanc, conf):
     """Retire de la liste des prospects, du suivi (jamais contactés seulement) et des blocs « à valider » tout ce qui est hors zone ; marque leur ligne « hors zone » (ils ne reviennent jamais),
     rend leur place au lot du jour, vide les réserves de découverte. Un prospect hors zone DÉJÀ contacté n'est jamais effacé : il est seulement signalé. -> dict de comptes."""
     etat = etat_lire(); lignes = lire_trouves(); texte = MESSAGES.read_text(encoding="utf-8") if MESSAGES.exists() else ""
-    ok_v = {ZN.norm(l["ville"]) for l in lignes if l.get("cp") and not ZN.cp_hors_zone(l["cp"], 4)} | VILLES_ZONE_SANS_CP
+    ok_v = {ZN.norm(l["ville"]) for l in lignes if l.get("cp") and not ZN.cp_hors_zone(l["cp"], ZN.VAGUE_PLAFOND)} | VILLES_ZONE_SANS_CP
     hors = {S.cle(l): l for l in lignes if hors_zone_ligne(l, ok_v)}
     r = {"trouves_hors_zone": len(hors), "suivi_retires": 0, "suivi_deja_contactes": [], "blocs_retires": {}, "blocs_deja_envoyes": [], "villes": sorted({l["ville"] + " " + l.get("cp", "") for l in hors.values()})}
     # 1) blocs « à valider » hors zone
@@ -2160,8 +2160,8 @@ def cmd_zone(a_blanc, conf):
             if l.get("osm"): etat["vus"]["osm:" + l["osm"]] = "hors zone"
             for m in etat.get("sans_site_telephone", {}).values(): m.pop(S.cle(l).replace("|", "~"), None)
     if not a_blanc:
-        osm = etat.get("osm", {}); osm["tampon"] = [c for c in osm.get("tampon", []) if ZN.dans_zone(cp=c.get("cp", ""), ville=c.get("ville", ""), villes_ok=ok_v, vague_max=4)]
-        for naf, tamp in list(etat.get("tampon", {}).items()): etat["tampon"][naf] = [x for x in tamp if ZN.dans_zone(cp=x.get("cp", ""), vague_max=4)]
+        osm = etat.get("osm", {}); osm["tampon"] = [c for c in osm.get("tampon", []) if ZN.dans_zone(cp=c.get("cp", ""), ville=c.get("ville", ""), villes_ok=ok_v, vague_max=ZN.VAGUE_PLAFOND)]
+        for naf, tamp in list(etat.get("tampon", {}).items()): etat["tampon"][naf] = [x for x in tamp if ZN.dans_zone(cp=x.get("cp", ""), vague_max=ZN.VAGUE_PLAFOND)]
         MESSAGES.write_text(re.sub(r"\n{3,}", "\n\n", texte), encoding="utf-8"); S.ecrire(gardes); ecrire_trouves(lignes); etat_ecrire(etat, False)
     return r
 

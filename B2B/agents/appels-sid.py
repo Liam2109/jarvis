@@ -244,7 +244,7 @@ def cfg():
     _entier(c, "pause_overpass_s", 5, 600); _entier(c, "sourcing_refaire_jours", 1, 365)
     _entier(c, "sirene_requetes_max", 0, 200); _entier(c, "sirene_pages_max", 1, 40); _entier(c, "sirene_sites_max", 0, 300); _entier(c, "pause_sirene_s", 0, 60); _entier(c, "pause_site_s", 0, 60)
     c["sirene_actif"] = c.get("sirene_actif") is not False
-    deps = [str(d).strip() for d in c.get("departements") or [] if str(d).strip() in NORMANDIE]
+    deps = [str(d).strip() for d in c.get("departements") or [] if str(d).strip() in NORMANDIE and str(d).strip() in ZN.DEPTS_AUTORISES]
     c["departements"] = [d for d in NORMANDIE if d in deps] or list(NORMANDIE); ZONE["departements"] = list(c["departements"])
     c["envoi_automatique"] = c.get("envoi_automatique") is True; c["avec_site"] = c.get("avec_site") is True
     jrs = [str(j).strip().lower() for j in c.get("jours_appel") or [] if str(j).strip().lower() in JOURS_SEMAINE]
@@ -363,10 +363,14 @@ def _lignes_des_listes():
     return out
 
 
-def _hors_zone(cp):
-    """Vrai seulement si un code postal à 5 chiffres est donné ET que son département n'est pas dans la zone (Normandie par défaut) ; code postal absent : on ne conclut pas."""
+def _hors_zone(cp, ville="", villes_dept=None):
+    """Vrai si le département de l'entreprise n'est pas dans la zone (76, 27, 14, 50, 61 au plus ; décision de Liam du 14 nov. 2026). Code postal d'abord ; sans code postal, la commune
+    doit être connue (une autre fiche de la même commune avec un code postal de la zone, ou une commune connue de zone.py) : une commune inconnue est hors zone, jamais acceptée par défaut."""
     cp = (cp or "").strip()
-    return bool(re.fullmatch(r"\d{5}", cp)) and ZN.dept_de_cp(cp) not in ZONE["departements"]
+    if re.fullmatch(r"\d{5}", cp): return ZN.dept_de_cp(cp) not in ZONE["departements"]
+    v = ZN.norm(ville)
+    d = (villes_dept or {}).get(v) or ZN.VILLES_DEPT.get(v) or ("14" if v in ZN.COMMUNES_CAEN else "")
+    return d not in ZONE["departements"]
 
 
 def _tels_stop():
@@ -459,10 +463,14 @@ def candidats(etat, extra=(), jour=None, historique=None, jours_sans_rappel=365)
     autres = {S.cle(l) for l in trouves if l.get("statut") not in eligibles} - reprises   # déjà préparée pour l'e-mail, etc. (sauf si elle était dans une liste d'appels jamais appelée)
     sources = [l for l in trouves if l.get("statut") in eligibles] + [l for l in S.lire() if l.get("statut") == "à contacter"] + _lire_maps() + _lignes_des_listes() + list(extra)      # extra : lignes trouvées à blanc (pas encore écrites), pour projeter la réserve
     vus_cles, vus_tel, out = set(), set(), []; vus_tel |= _tels_stop() | _tels_en_circulation(etat)
+    villes_dept = {}   # commune -> département, d'après les fiches qui ont un code postal (pour juger une fiche sans code postal)
+    for l in sources:
+        d = ZN.dept_de_cp(str(l.get("cp", "")))
+        if d and l.get("ville"): villes_dept.setdefault(ZN.norm(l["ville"]), d)
     for l in sources:
         cle = S.cle(l); metier = cle_metier_sid(l.get("metier", "")); tel = telephone_valide(l.get("telephone", ""))
         if metier not in NOMS or not tel or cle in vus_cles or tel in vus_tel or cle in donnees or cle in ecartees or cle in autres: continue
-        if cle in cles_exclues or (cle in dans_listes and cle not in reprises) or (l.get("email") or "").lower() in mails or _hors_zone(l.get("cp", "")): continue
+        if cle in cles_exclues or (cle in dans_listes and cle not in reprises) or (l.get("email") or "").lower() in mails or _hors_zone(l.get("cp", ""), l.get("ville", ""), villes_dept): continue
         if cle in exclus_hist or tel in exclus_hist: continue
         vus_cles.add(cle); vus_tel.add(tel)
         out.append({"cle": cle, "nom": l["nom"], "ville": l.get("ville", ""), "tel": tel, "metier": metier, "brut": l["metier"], "constat": (l.get("note_besoin") or "").strip(),

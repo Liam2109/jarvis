@@ -119,13 +119,13 @@ def bloc(l, box):
     return f"## {l['nom']} — {l['ville']}\n<!-- id:{cle(l)} -->\n<!-- meta:{X.meta_texte(m)} -->\n**Statut : à valider**\n\ntexte\n"
 X.MESSAGES.write_text("# Messages\n\n" + "\n".join(bloc(l, "a@x" if i % 2 else "b@x") for i, l in enumerate(rows)), encoding="utf-8")
 X.ETAT.write_text(json.dumps({"lots": {auj: {"a@x": 2, "b@x": 3}}, "vus": {}}), encoding="utf-8")
-r = X.cmd_zone(True, X.DEFAUT); assert r["trouves_hors_zone"] == 3 and sum(r["blocs_retires"].values()) == 3 and X.lire_trouves()[1]["statut"] == "préparé"   # à blanc : rien d'écrit
+r = X.cmd_zone(True, X.DEFAUT); assert r["trouves_hors_zone"] == 4 and sum(r["blocs_retires"].values()) == 4 and X.lire_trouves()[1]["statut"] == "préparé"   # à blanc : rien d'écrit
 r = X.cmd_zone(False, X.DEFAUT)
-assert r["trouves_hors_zone"] == 3 and r["suivi_retires"] == 2 and len(r["suivi_deja_contactes"]) == 1, r                       # B et C retirés ; D déjà contacté, gardé et signalé
-assert sorted(b["meta"]["nom"] for b in X.lire_blocs(X.MESSAGES.read_text(encoding="utf-8"))) == ["Elec A", "Elec E", "Elec F"]
-assert {l["nom"]: l["statut"] for l in X.lire_trouves()} == {"Elec A": "préparé", "Elec B": "hors zone", "Elec C": "hors zone", "Elec D": "hors zone", "Elec E": "préparé", "Elec F": "préparé"}   # vagues fermées (Caen, Montpellier) : jamais touchées
-suivi = {x["nom"]: x["statut"] for x in X.S.lire()}; assert "Elec B" not in suivi and "Elec C" not in suivi and suivi["Elec D"] == "envoyé" and suivi["Elec A"] == "à contacter", suivi
-e = json.loads(X.ETAT.read_text(encoding="utf-8")); assert e["vus"]["B00"] == "hors zone" and sum(e["lots"][auj].values()) == 5 - 3
+assert r["trouves_hors_zone"] == 4 and r["suivi_retires"] == 3 and len(r["suivi_deja_contactes"]) == 1, r                       # B, C et F (Montpellier, hors Normandie) retirés ; D déjà contacté, gardé et signalé
+assert sorted(b["meta"]["nom"] for b in X.lire_blocs(X.MESSAGES.read_text(encoding="utf-8"))) == ["Elec A", "Elec E"]
+assert {l["nom"]: l["statut"] for l in X.lire_trouves()} == {"Elec A": "préparé", "Elec B": "hors zone", "Elec C": "hors zone", "Elec D": "hors zone", "Elec E": "préparé", "Elec F": "hors zone"}   # Caen (Normandie) gardé ; Montpellier hors des 5 départements autorisés (14/11/2026) : retiré
+suivi = {x["nom"]: x["statut"] for x in X.S.lire()}; assert "Elec B" not in suivi and "Elec C" not in suivi and "Elec F" not in suivi and suivi["Elec D"] == "envoyé" and suivi["Elec A"] == "à contacter", suivi
+e = json.loads(X.ETAT.read_text(encoding="utf-8")); assert e["vus"]["B00"] == "hors zone" and sum(e["lots"][auj].values()) == 2   # a@x : 2 - 3 blocs (B, D, F) -> 0 ; b@x : 3 - 1 (C) -> 2
 assert X.cmd_zone(False, X.DEFAUT)["suivi_retires"] == 0                                                                        # idempotent
 
 # --- ouverture des vagues : seulement si la vague en cours a moins de 15 prospects utilisables par jour ET que la recherche n'y trouve plus rien ---
@@ -142,10 +142,11 @@ assert X.vague_suivante_si_besoin(conf, auj) == 2 and ZN.VAGUE_MAX == 2 and X.et
 X.ecrire_trouves([lg(i, "14000") for i in range(15)])                                                      # la vague en cours (2) donne 15 utilisables aujourd'hui : on reste dessus
 assert X.vague_suivante_si_besoin(conf, auj) == 0 and ZN.VAGUE_MAX == 2
 X.ecrire_trouves([lg(i, "14000") for i in range(14)] + [lg(50 + i, "76000") for i in range(30)])           # la vague 1 en donne beaucoup, mais c'est la vague en cours (2) qui compte
-assert X.vague_suivante_si_besoin(conf, auj) == 3 and X.vague_suivante_si_besoin(conf, auj) == 4 and X.vague_suivante_si_besoin(conf, auj) == 0 and ZN.VAGUE_MAX == 4   # la 4 est la dernière
+assert X.vague_suivante_si_besoin(conf, auj) == 0 and ZN.VAGUE_MAX == 2 and X.vagues_etat(X.etat_lire())["ouverte"] == 2   # plafond (14/11/2026) : jamais au-delà de la Normandie
 assert X.vague_suivante_si_besoin({**conf, "seuil_vague": 0}, auj) == 0
-ZN.ouvrir(1); X.appliquer_vagues(); assert ZN.VAGUE_MAX == 4                                                # relu depuis l'état au démarrage
-r = X.cmd_vagues(conf); assert r["ouverte"] == 4 and r["utilisables_total"][2] == 14 and r["utilisables_total"][1] == 30
+ZN.ouvrir(1); X.appliquer_vagues(); assert ZN.VAGUE_MAX == 2                                                # relu depuis l'état au démarrage
+X.etat_ecrire({**X.etat_lire(), "vagues": {"ouverte": 4, "ouvertures": {}}}, False); X.appliquer_vagues(); assert ZN.VAGUE_MAX == 2   # un ancien état « vague 4 » reste plafonné
+r = X.cmd_vagues(conf); assert r["ouverte"] == 2 and r["utilisables_total"][2] == 14 and r["utilisables_total"][1] == 30
 ZN.ouvrir(1)
 
 # --- liste d'appels : jamais hors des vagues ouvertes, toujours classée par proximité de Rouen (vague 1 d'abord) ---

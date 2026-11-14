@@ -1,6 +1,6 @@
 """Zone de prospection de Liam : des vagues de départements, de la plus proche de Rouen à la plus lointaine (décision du 02/11/2026 ; vague 2 resserrée à la Normandie le 10/11/2026).
 Vague 1 = Seine-Maritime (76) et Eure (27) ; vague 2 = Calvados, Manche, Orne (14, 50, 61) : vagues 1+2 couvrent exactement la Normandie (76, 27, 14, 50, 61), jamais plus, tant que Liam ne décide
-pas d'ouvrir la vague 3. Vague 3 = Oise, Somme, Eure-et-Loir (hors Normandie, juste après), puis Paris et petite couronne, Yvelines, Val-d'Oise, Sarthe, Mayenne, Ille-et-Vilaine ; vague 4 = le
+pas d'ouvrir la vague 3 ; depuis le 14/11/2026, VAGUE_PLAFOND = 2 l'interdit (seuls 76, 27, 14, 50, 61). Vague 3 = Oise, Somme, Eure-et-Loir (hors Normandie, juste après), puis Paris et petite couronne, Yvelines, Val-d'Oise, Sarthe, Mayenne, Ille-et-Vilaine ; vague 4 = le
 reste de la France métropolitaine. Le programme n'ouvre la vague suivante que si la vague en cours a moins de `seuil_vague` (15) prospects utilisables par jour (voir prospection.py › vagues).
 « Hors zone » = hors des vagues ouvertes (VAGUE_MAX, fixé par prospection.py depuis son état ; 1 par défaut).
 Avec un code postal à 5 chiffres : le département donne la vague. Sans code postal mais avec des coordonnées (OpenStreetMap) : le département de la préfecture (ou de la grande ville côtière) la plus proche, à 100 km au plus.
@@ -30,8 +30,11 @@ CENTRES = {   # département: (latitude, longitude) de la préfecture, pour clas
 ANCRES = [("76", 49.4938, 0.1077), ("76", 49.9229, 1.0775), ("76", 49.7570, 0.3740), ("14", 49.1460, 0.2290), ("50", 49.6337, -1.6221), ("28", 48.7370, 1.3670), ("60", 49.4179, 2.8261), ("80", 50.1060, 1.8350), ("35", 48.6493, -2.0257)]   # villes que la préfecture la plus proche situerait dans le mauvais département : Le Havre, Dieppe, Fécamp, Lisieux, Cherbourg, Dreux, Compiègne, Abbeville, Saint-Malo
 COMMUNES_CAEN = {"caen", "mondeville", "ifs", "herouville-saint-clair", "colombelles", "bretteville-sur-odon", "demouville", "verson", "carpiquet", "cormelles-le-royal", "fleury-sur-orne", "saint-contest", "epron"}   # commune seule : vague 2
 VILLES_DEPT = {"rouen": "76", "le-havre": "76", "deville-les-rouen": "76", "bonsecours": "76", "sotteville-les-rouen": "76", "boos": "76", "sainte-marie-des-champs": "76", "saint-martin-du-manoir": "76",
-               "yvetot": "76", "elbeuf": "76", "dieppe": "76", "mont-saint-aignan": "76", "evreux": "27", "louviers": "27", "caen": "14", "cherbourg-en-cotentin": "50", "alencon": "61", "beauvais": "60", "amiens": "80", "chartres": "28"}   # communes sans ambiguïté : département déduit d'une fiche sans code postal
+               "yvetot": "76", "elbeuf": "76", "dieppe": "76", "mont-saint-aignan": "76", "evreux": "27", "louviers": "27", "caen": "14", "cherbourg-en-cotentin": "50", "alencon": "61", "beauvais": "60", "amiens": "80", "chartres": "28",
+               "beuvillers": "14", "saint-hymer": "14", "brecey": "50", "creances": "50", "les-pieux": "50", "pirou": "50", "pirou-plage": "50", "martigny": "50", "guichainville": "27", "heudreville-sur-eure": "27", "miserey": "27", "pont-de-l-arche": "27", "saint-aubin-les-elbeuf": "76", "crevecur-le-grand": "60", "cuvilly": "60", "montataire": "60", "picquigny": "80", "luisant": "28", "maintenon": "28", "nogent-le-roi": "28", "saint-georges-sur-eure": "28", "saint-luperce": "28", "vacheresses-les-basses": "28", "epernon": "28"}   # 14/11/2026 : communes des fiches sans code postal de la réserve (Normandie ; Oise, Somme, Eure-et-Loir = hors zone) ; communes sans ambiguïté : département déduit d'une fiche sans code postal
 VAGUE_MAX = 1   # vagues ouvertes (1 à 4) ; fixé au démarrage et à chaque cycle par prospection.py (état › vagues)
+VAGUE_PLAFOND = 2   # décision de Liam (14 nov. 2026) : seuls 76, 27, 14, 50, 61 sont autorisés ; la vague 3 (Oise, Somme, Eure-et-Loir…) ne s'ouvre plus jamais d'elle-même
+DEPTS_AUTORISES = ("76", "27", "14", "50", "61")
 
 
 def norm(s):
@@ -106,6 +109,7 @@ def dans_zone(cp="", ville="", lat=None, lon=None, villes_ok=(), vague_max=None)
         if lat is not None and lon is not None and str(lat) != "" and str(lon) != "": return 1 <= vague_coord(float(lat), float(lon)) <= vm
     except (TypeError, ValueError): pass
     v = norm(ville)
+    if v in VILLES_DEPT: return 1 <= vague_de_dept(VILLES_DEPT[v]) <= vm   # commune connue : son département décide (14/11/2026)
     return bool(v) and (v in villes_ok or (vm >= 2 and v in COMMUNES_CAEN))
 
 

@@ -228,11 +228,11 @@ def scenario(nom, **kw):
     X.cmd_envoyer = kw.get("envoyer") or (lambda a, c, **k: ap.append(("envoyer",)) or 0)
     return ap, h, (lambda s: h.__setitem__(0, h[0] + s))
 
-# 0. vagues : la vague 1 ne donne rien -> après 3 recherches sans nouveau, la vague 2 s'ouvre, puis la 3 et la 4 ; ensuite seulement la liste est déclarée épuisée
+# 0. vagues : la vague 1 ne donne rien -> après 3 recherches sans nouveau, la vague 2 s'ouvre ; plafond Normandie (14/11/2026) : ensuite la liste est déclarée épuisée
 ap, h, dormir = scenario("vagues"); X.ETAT.write_text(json.dumps({}), encoding="utf-8"); cf = {**X.DEFAUT, "envoi_automatique": True}
 X.cmd_continu(False, cf, dormir=dormir, maintenant=lambda: h[0], vivant=lambda: h[0] < 1_000_000 + 7200, lien_ok=ok_lien)
 et = X.etat_lire(); rech = [x[1] for x in ap if x[0] == "chercher"]
-assert len(rech) == 12 and et["vagues"]["ouverte"] == 4 and sorted(et["vagues"]["ouvertures"]) == ["2", "3", "4"] and X.ZN.VAGUE_MAX == 4, (len(rech), et["vagues"])
+assert len(rech) == 6 and et["vagues"]["ouverte"] == 2 and sorted(et["vagues"]["ouvertures"]) == ["2"] and X.ZN.VAGUE_MAX == 2, (len(rech), et["vagues"])   # plafond Normandie (14/11/2026) : la vague 3 ne s'ouvre jamais
 X.ZN.ouvrir(1)
 ap, h, dormir = scenario("vagues0"); X.ETAT.write_text(json.dumps({}), encoding="utf-8"); cf = {**X.DEFAUT, "envoi_automatique": True, "seuil_vague": 0}   # seuil 0 : la vague 1 reste la seule ouverte
 X.cmd_continu(False, cf, dormir=dormir, maintenant=lambda: h[0], vivant=lambda: h[0] < 1_000_000 + 7200, lien_ok=ok_lien)
