@@ -7,7 +7,7 @@ aucune écriture dans la feuille Google (lecture seule) ; même modèle que les 
   python agents\\resume-sid.py etat                                       dernier résumé envoyé (ou simulé)
   python agents\\resume-sid.py installer-tache | retirer-tache [--oui]    tâche planifiée Windows (heure_tache, 19:00 par défaut) ; sans --oui, affiche seulement la commande
 
-Appels : nombre d'entreprises « Appelé » / « Répondu » / « Rendez-vous pris » / « Refus » coché sur la feuille Google du jour créée par appels-sid.py (agents\\appels-sid-etat.json ›
+Appels : nombre de lignes par valeur de la colonne Résultat (8 valeurs, tableur du 14/11/2026 ; anciennes feuilles : « Appelé » / « Répondu » / « Rendez-vous pris » / « Refus » coché) sur la feuille Google du jour créée par appels-sid.py (agents\\appels-sid-etat.json ›
 google › <jour> › feuille, lue en lecture seule). Aucune feuille ce jour-là (simulation, jour hors planning, pas encore sourcé) : annoncé sans chiffre inventé.
 Chiffre d'affaires : paiements Stripe réussis depuis minuit (Europe/Paris) ce jour-là, clé restreinte lue dans Jarvis\\.env (STRIPE_RESTRICTED_KEY), jamais affichée ;
 clé absente ou refusée : annoncé sans chiffre inventé. Aucune donnée personnelle (nom, e-mail, numéro) dans le message Discord."""
@@ -24,7 +24,8 @@ import prospection as P, reponses as RP   # P.acces_discord / P.discord : salon 
 CONFIG, ETAT, JOURNAL = ICI / "resume-sid-config.json", ICI / "resume-sid-etat.json", ICI / "resume-sid-journal.log"
 APPELS_SID_ETAT = ICI / "appels-sid-etat.json"
 DEFAUT = {"envoi_automatique": False, "heure_tache": "19:00", "compte_google": "contact.lmsites@gmail.com"}
-COLONNES_SUIVIES = ["Appelé", "Répondu", "Rendez-vous pris", "Refus"]
+COLONNES_SUIVIES = ["Appelé", "Répondu", "Rendez-vous pris", "Refus"]   # anciennes feuilles (cases à cocher)
+RESULTATS = ["Pas de réponse", "À rappeler", "RDV pris", "Non catégorique", "Je dois réfléchir", "Trop cher", "Déjà un site", "Pas le temps"]   # colonne Résultat du tableur « Appels » (= appels-sid.RESULTATS)
 NOMS_DEVISE = {"EUR": "euros", "USD": "dollars", "GBP": "livres"}
 TACHE = "Jarvis-ResumeSid"
 
@@ -99,10 +100,10 @@ def stats_appels(conf, jour, drive=None):
     lignes = list(csv.reader(io.StringIO(brut)))
     if not lignes: return False, f"feuille du {jour} vide"
     entete = lignes[0]
-    if "Résultat" in entete:   # tableur « Appels AAAA-MM-JJ » (14/11/2026) : une liste Résultat (Pas de réponse, Refus, À rappeler, RDV pris) au lieu des cases
+    if "Résultat" in entete:   # tableur « Appels AAAA-MM-JJ » (14/11/2026) : une liste Résultat (RESULTATS, 8 valeurs) au lieu des cases ; chaque valeur est comptée
         i = entete.index("Résultat"); r = [(l[i].strip() if i < len(l) else "") for l in lignes[1:]]
-        return True, {"total": len(r), "Appelé": sum(1 for v in r if v), "Répondu": sum(1 for v in r if v in ("Refus", "À rappeler", "RDV pris")),
-                      "Rendez-vous pris": r.count("RDV pris"), "Refus": r.count("Refus")}
+        return True, {"total": len(r), "Appelé": sum(1 for v in r if v), "resultats": {v: r.count(v) for v in RESULTATS},
+                      "autres": sum(1 for v in r if v and v not in RESULTATS)}
     try: idx = {c: entete.index(c) for c in COLONNES_SUIVIES}
     except ValueError: return False, f"feuille du {jour} : colonnes inattendues"
     compte = {c: 0 for c in COLONNES_SUIVIES}
@@ -154,7 +155,10 @@ def _montants_texte(montants):
 
 def message_resume(jour, dispo_a, appels, dispo_c, ca):
     l = [f"Résumé du {jour} :"]
-    if dispo_a:
+    if dispo_a and "resultats" in appels:
+        detail = ", ".join(f"{v} {n}" for v, n in appels["resultats"].items()) + (f", autre valeur {appels['autres']}" if appels.get("autres") else "")
+        l.append(f"Appels Sid — {appels['total']} entreprise(s) sur la liste : {appels['Appelé']} avec un résultat, {appels['total'] - appels['Appelé']} sans résultat. {detail}.")
+    elif dispo_a:
         l.append(f"Appels Sid — {appels['total']} entreprise(s) sur la liste : {appels['Appelé']} appelée(s), {appels['Répondu']} répondu(es), "
                  f"{appels['Rendez-vous pris']} rendez-vous pris, {appels['Refus']} refus.")
     else:

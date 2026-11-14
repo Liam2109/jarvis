@@ -306,7 +306,7 @@ code, _ = lancer("preparer", "--jour", JOUR); verifier(code == 0 and lire_csv(JO
 verifier(lancer("annuler", "2026-01-01")[0] == 2, "annuler une date sans liste : erreur, rien changé")
 verifier(lancer("annuler")[0] == 0 and not (A.SORTIE / f"liste-sid-{JOUR}.csv").exists(), "annuler sans date : la liste la plus récente")
 lancer("preparer", "--jour", JOUR)
-rows = lire_csv(JOUR); rows[3][RES] = "Refus"; rows[5][NOTE] = "rappeler jeudi"
+rows = lire_csv(JOUR); rows[3][RES] = "Non catégorique"; rows[5][NOTE] = "rappeler jeudi"
 with open(A.SORTIE / f"liste-sid-{JOUR}.csv", "w", encoding="utf-8-sig", newline="") as fh: csv.writer(fh, delimiter=";").writerows(rows)
 code, sortie = lancer("annuler", JOUR)
 verifier(code == 2 and "utilisée" in sortie and (A.SORTIE / f"liste-sid-{JOUR}.csv").exists() and len(json.loads(A.ETAT.read_text(encoding="utf-8"))["sorties"]) == 100, "liste déjà commencée (case ou remarque remplie) : annulation refusée")
@@ -616,8 +616,8 @@ verifier(racine and DRIVE.dossiers[racine] == ("Sid", None) and len(DRIVE.dossie
 fid = DRIVE.trouver_feuille(racine, f"Appels {JOUR}"); verifier(fid is not None and len(DRIVE.feuilles) == 1, "un seul tableur « Appels AAAA-MM-JJ », posé directement dans le dossier")
 contenu = list(csv.reader(io.StringIO(DRIVE.feuilles[fid][2]))); verifier(contenu == lire_csv(JOUR), "la feuille a exactement le contenu du CSV")
 verifier(contenu[0] == COLONNES, "colonnes dans l'ordre : Créneau, Entreprise, Métier, Ville, Téléphone, Détail fiche, Résultat, Note")
-verifier(DRIVE.mises_en_forme == [(fid, tuple(A.LARGEURS_PX), (6, ["Pas de réponse", "Refus", "À rappeler", "RDV pris"]))] and min(A.LARGEURS_PX) >= 120,
-         "mise en forme : colonnes larges, en-tête figé, Résultat en liste (Pas de réponse, Refus, À rappeler, RDV pris)")
+verifier(DRIVE.mises_en_forme == [(fid, tuple(A.LARGEURS_PX), (6, ["Pas de réponse", "À rappeler", "RDV pris", "Non catégorique", "Je dois réfléchir", "Trop cher", "Déjà un site", "Pas le temps"]))] and min(A.LARGEURS_PX) >= 120,
+         "mise en forme : colonnes larges, en-tête figé, Résultat en liste à 8 valeurs")
 verifier(json.loads(A.ETAT.read_text(encoding="utf-8"))["google"][JOUR]["feuille"] == fid, "état : identifiants du dossier et de la feuille")
 n_avant = (len(DRIVE.dossiers), len(DRIVE.feuilles)); A.exporter_google(A.cfg(), A.etat_lire(), JOUR, DRIVE, False)
 verifier((len(DRIVE.dossiers), len(DRIVE.feuilles)) == n_avant, "tableur du jour déjà là : rien recréé, rien écrasé")
@@ -885,7 +885,7 @@ print("24. Historique reconstruit automatiquement au premier lancement, à parti
 monde(trouves=gros_monde(), config={})
 lancer("preparer", "--jour", JOUR)
 rows = lire_csv(JOUR)
-for l in rows[1:3]: l[RES] = "Refus"   # seules 2 lignes avec un Résultat, le reste pas (jamais inventé)
+for l in rows[1:3]: l[RES] = "Non catégorique"   # seules 2 lignes avec un Résultat, le reste pas (jamais inventé)
 with open(A.SORTIE / f"liste-sid-{JOUR}.csv", "w", encoding="utf-8-sig", newline="") as fh: csv.writer(fh, delimiter=";").writerows(rows)
 A.HISTORIQUE.unlink(missing_ok=True)   # simule une mise à jour de l'agent sur une machine qui a déjà des listes, mais pas encore d'historique
 h = A._historique_reconstruire_tout()
@@ -899,7 +899,7 @@ monde(trouves=gros_monde(60), config={"envoi_automatique": True})
 lancer("preparer", "--jour", JOUR); A.exporter_google(A.cfg(), A.etat_lire(), JOUR, DRIVE, False)
 racine = DRIVE.trouver_dossier("Sid"); fid1 = DRIVE.trouver_feuille(racine, f"Appels {JOUR}")
 titre, dossier, contenu = DRIVE.feuilles[fid1]; lignes = list(csv.reader(io.StringIO(contenu)))
-for k, l in enumerate(lignes[1:]): l[RES] = ("À rappeler" if k < 3 else "Refus" if k < 5 else "")
+for k, l in enumerate(lignes[1:]): l[RES] = ("À rappeler" if k < 3 else "Trop cher" if k < 5 else "")
 lignes[1][NOTE] = "rappeler après 17 h"
 buf = io.StringIO(); csv.writer(buf).writerows(lignes); DRIVE.feuilles[fid1] = (titre, dossier, buf.getvalue())
 lancer("preparer", "--jour", JOUR2); A.exporter_google(A.cfg(), A.etat_lire(), JOUR2, DRIVE, False)
@@ -908,7 +908,7 @@ verifier(fid2 is not None and len(DRIVE.feuilles) == 2 and DRIVE.trouver_feuille
 c2 = list(csv.reader(io.StringIO(DRIVE.feuilles[fid2][2])))
 reprises = {l[NOM] for l in c2[1:] if l[DET].startswith(f"Reprise de la liste du {JOUR}")}
 attendues = {l[NOM] for l in lignes[1:] if l[RES] in ("", "À rappeler")}
-verifier(reprises == attendues and len(reprises) == 98, f"reprises : non appelées + « À rappeler » ({len(reprises)}), jamais Refus")
+verifier(reprises == attendues and len(reprises) == 98, f"reprises : non appelées + « À rappeler » ({len(reprises)}), jamais « Trop cher »")
 verifier(any("note : rappeler après 17 h" in l[DET] for l in c2[1:] if l[NOM] == lignes[1][NOM]), "la note de Sid suit la ligne reprise")
 verifier([_debut_min(l[CR]) for l in c2[1:]] == sorted(_debut_min(l[CR]) for l in c2[1:]), "tableur du lendemain : toujours trié par créneau")
 

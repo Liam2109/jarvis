@@ -133,7 +133,7 @@ def cle_metier_sid(texte):
 # Tableur du jour « Appels AAAA-MM-JJ » (décision de Liam, 14 nov. 2026) : colonnes toujours dans cet ordre, lignes triées par créneau, Résultat = liste déroulante.
 COLONNES = ["Créneau", "Entreprise", "Métier", "Ville", "Téléphone", "Détail fiche", "Résultat", "Note"]
 LARGEURS_PX = [130, 240, 170, 150, 130, 380, 150, 300]   # une par colonne de COLONNES : mise en forme de la feuille Google (colonnes larges, texte renvoyé à la ligne)
-RESULTATS = ["Pas de réponse", "Refus", "À rappeler", "RDV pris"]   # choix de la colonne Résultat ; vide ou « À rappeler » = reprise le jour d'appel suivant
+RESULTATS = ["Pas de réponse", "À rappeler", "RDV pris", "Non catégorique", "Je dois réfléchir", "Trop cher", "Déjà un site", "Pas le temps"]   # choix de la colonne Résultat, dans cet ordre (décision de Liam, 14 nov. 2026)
 I_RESULTAT = COLONNES.index("Résultat")
 TITRE_FEUILLE = "Appels {}"   # un seul tableur par jour, posé directement dans le dossier Drive de Sid (aucun sous-dossier)
 EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$")

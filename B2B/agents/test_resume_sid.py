@@ -109,7 +109,14 @@ dispo, detail = A.stats_appels(A.cfg(), JOUR, DRIVE)
 verifier(dispo is True and detail == {"total": 3, "Appelé": 2, "Répondu": 1, "Rendez-vous pris": 1, "Refus": 1}, f"3 lignes comptées par en-tête : {detail}")
 DRIVE.feuilles["F1"] = "Créneau,Entreprise,Métier,Ville,Téléphone,Détail fiche,Résultat,Note\n08 h,A,,,,,RDV pris,\n08 h 10,B,,,,,Refus,\n08 h 20,C,,,,,Pas de réponse,\n08 h 30,D,,,,,,\n"
 dispo, detail = A.stats_appels(A.cfg(), JOUR, DRIVE)
-verifier(dispo is True and detail == {"total": 4, "Appelé": 3, "Répondu": 2, "Rendez-vous pris": 1, "Refus": 1}, f"tableur « Appels » (colonne Résultat, 14/11/2026) : {detail}")
+verifier(dispo is True and detail["total"] == 4 and detail["Appelé"] == 3 and detail["resultats"]["RDV pris"] == 1 and detail["resultats"]["Pas de réponse"] == 1 and detail["autres"] == 1,
+         f"tableur « Appels » (colonne Résultat, 14/11/2026) : {detail}")
+DRIVE.feuilles["F1"] = "Créneau,Entreprise,Métier,Ville,Téléphone,Détail fiche,Résultat,Note\n" + "".join(f"08 h,E{k},,,,,{v},\n" for k, v in enumerate(A.RESULTATS)) + "09 h,Z,,,,,,\n"
+dispo, detail = A.stats_appels(A.cfg(), JOUR, DRIVE)
+verifier(dispo is True and list(detail["resultats"]) == ["Pas de réponse", "À rappeler", "RDV pris", "Non catégorique", "Je dois réfléchir", "Trop cher", "Déjà un site", "Pas le temps"]
+         and all(n == 1 for n in detail["resultats"].values()) and detail["Appelé"] == 8 and detail["total"] == 9, "les 8 valeurs de Résultat, dans l'ordre, chacune comptée")
+txt8 = A.message_resume(JOUR, True, detail, False, "clé absente")
+verifier(all(f"{v} 1" in txt8 for v in A.RESULTATS) and "8 avec un résultat, 1 sans résultat" in txt8 and "E0" not in txt8, "résumé du soir : chaque valeur comptée, aucun nom d'entreprise")
 
 print("4. stats_appels : pannes sans jamais inventer de chiffre")
 monde(appels_sid_etat={"google": {JOUR: {"feuille": "F2"}}})

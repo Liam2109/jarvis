@@ -3,7 +3,7 @@ Rôle : **tous les appels vont à Sid**. Chaque matin, l'agent cherche de nouvel
 
 ## Tableur du jour (décision de Liam, 14 nov. 2026 : prime sur les sections plus bas)
 - **Un seul tableur par jour**, « Appels AAAA-MM-JJ », posé **directement** dans le dossier de Sid (`dossier_sid_id`) : plus de sous-dossier daté ni de feuille « A rappeler ». Créé par `jour` à 8 h, **du lundi au vendredi** (`jours_appel`).
-- **Colonnes, toujours dans cet ordre** : Créneau, Entreprise, Métier, Ville, Téléphone, Détail fiche, Résultat (liste : Pas de réponse, Refus, À rappeler, RDV pris), Note. Lignes **triées par créneau** (8 h - 19 h), colonnes larges, en-tête figé, aucune cellule fusionnée.
+- **Colonnes, toujours dans cet ordre** : Créneau, Entreprise, Métier, Ville, Téléphone, Détail fiche, Résultat (liste : Pas de réponse, À rappeler, RDV pris, Non catégorique, Je dois réfléchir, Trop cher, Déjà un site, Pas le temps), Note. Lignes **triées par créneau** (8 h - 19 h), colonnes larges, en-tête figé, aucune cellule fusionnée.
 - **Appelée** = Résultat rempli (Pas de réponse, Refus, RDV pris) : oubliée 365 jours. Résultat vide ou « À rappeler » : reprise dans la liste suivante (Détail fiche « Reprise de la liste du … », avec la note de Sid). Les anciennes listes (case « Appelé ») restent lues.
 - **Corbeille** (jamais une suppression) des tableurs « Appels » de plus de 7 jours et des anciens sous-dossiers datés. Portée Google inchangée (`drive.file`) : aucune nouvelle autorisation.
 - Plus aucun `docs\liste-appels-*.md` n'est écrit (`liste_appels_md` = false dans prospection.py) ; les anciens restent relus. Essai à blanc : `python agentsppels-sid.py preparer --jour AAAA-MM-JJ --a-blanc --hors-ligne`. Fiche de rôle : `.claude\skillsgent-appels-sid\SKILL.md`.

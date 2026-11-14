@@ -18,7 +18,7 @@ description: Fiche de rôle de l'agent Liste d'appels de Sid (pôle Prospection)
 - **Le tableur :** il crée **un seul** tableur Google « Appels AAAA-MM-JJ », posé directement dans le dossier Drive de Sid (`dossier_sid_id`), sans sous-dossier.
   - Les lignes sont triées par créneau, de 8 h à 19 h.
   - Les colonnes sont toujours, dans cet ordre : Créneau, Entreprise, Métier, Ville, Téléphone, Détail fiche, Résultat, Note.
-  - Résultat est une liste : Pas de réponse, Refus, À rappeler, RDV pris.
+  - Résultat est une liste de 8 valeurs, dans cet ordre : Pas de réponse, À rappeler, RDV pris, Non catégorique, Je dois réfléchir, Trop cher, Déjà un site, Pas le temps.
   - Les colonnes sont larges, l'en-tête est figé, aucune cellule n'est fusionnée.
 - **Le ménage :** il met à la **corbeille** (jamais une suppression définitive) les tableurs de plus de 7 jours, et les anciens sous-dossiers datés.
 - **La réserve :** il garnit sa réserve de numéros avec la commande `sourcer` (OpenStreetMap et SIRENE, gratuits).
