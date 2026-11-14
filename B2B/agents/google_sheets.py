@@ -108,19 +108,21 @@ class Drive:
         return [(f["id"], f["name"]) for f in r.get("files", [])]
 
     def formater_feuille(self, id_, largeurs_px, liste=None):
-        """Mise en forme lisible d'une feuille convertie depuis un CSV (un seul onglet, sheetId 0) : ligne 1 figée, largeur de chaque colonne (`largeurs_px`, en pixels, dans l'ordre des
+        """Mise en forme lisible d'une feuille convertie depuis un CSV (un seul onglet, le premier) : ligne 1 figée, largeur de chaque colonne (`largeurs_px`, en pixels, dans l'ordre des
         colonnes), texte renvoyé à la ligne partout ; `liste` = (indice de colonne, [valeurs]) : liste déroulante sous l'en-tête. Aucune cellule fusionnée.
         API Sheets (v4) : la portée drive.file autorise cette API sur un fichier créé par cette app, sans ré-autorisation."""
         try: from googleapiclient.discovery import build
         except ImportError: raise GA.BibliothequeManquante("Bibliothèques Google absentes : " + PIP) from None
         svc = build("sheets", "v4", credentials=credentials(), cache_discovery=False)
-        requetes = [{"updateSheetProperties": {"properties": {"sheetId": 0, "gridProperties": {"frozenRowCount": 1}}, "fields": "gridProperties.frozenRowCount"}}]
+        # un CSV converti n'a PAS d'onglet 0 (test réel du 14/11/2026 : « No sheet with id: 0 ») : on lit l'identifiant du premier onglet
+        sid = _appel(svc.spreadsheets().get(spreadsheetId=id_, fields="sheets(properties(sheetId))"))["sheets"][0]["properties"]["sheetId"]
+        requetes = [{"updateSheetProperties": {"properties": {"sheetId": sid, "gridProperties": {"frozenRowCount": 1}}, "fields": "gridProperties.frozenRowCount"}}]
         for i, px in enumerate(largeurs_px):
-            requetes.append({"updateDimensionProperties": {"range": {"sheetId": 0, "dimension": "COLUMNS", "startIndex": i, "endIndex": i + 1}, "properties": {"pixelSize": px}, "fields": "pixelSize"}})
-        requetes.append({"repeatCell": {"range": {"sheetId": 0}, "cell": {"userEnteredFormat": {"wrapStrategy": "WRAP"}}, "fields": "userEnteredFormat.wrapStrategy"}})
+            requetes.append({"updateDimensionProperties": {"range": {"sheetId": sid, "dimension": "COLUMNS", "startIndex": i, "endIndex": i + 1}, "properties": {"pixelSize": px}, "fields": "pixelSize"}})
+        requetes.append({"repeatCell": {"range": {"sheetId": sid}, "cell": {"userEnteredFormat": {"wrapStrategy": "WRAP"}}, "fields": "userEnteredFormat.wrapStrategy"}})
         if liste:
             col, valeurs = liste
-            requetes.append({"setDataValidation": {"range": {"sheetId": 0, "startRowIndex": 1, "startColumnIndex": col, "endColumnIndex": col + 1},
+            requetes.append({"setDataValidation": {"range": {"sheetId": sid, "startRowIndex": 1, "startColumnIndex": col, "endColumnIndex": col + 1},
                              "rule": {"condition": {"type": "ONE_OF_LIST", "values": [{"userEnteredValue": v} for v in valeurs]}, "showCustomUi": True, "strict": True}}})
         _appel(svc.spreadsheets().batchUpdate(spreadsheetId=id_, body={"requests": requetes}))
 
