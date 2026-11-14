@@ -250,3 +250,12 @@ Contexte : Liam utilise un petit PC portable (celui de Mathéo, avec carte Wi-Fi
 - Tableau de bord 3D cliquable : page HTML locale (three.js), icone sur le bureau, lit un agents.json genere par un script qui scanne les agents et leurs etats. CEO Jarvis au centre, agents en orbite, vert/rouge selon l'etat, clic = details. Se met a jour tout seul quand un agent est cree. Script sans tokens Claude.
 - 2026-11-14 (Liam) : coffre Obsidian sur le dossier Jarvis (INDEX.md hub, notes agents et décisions) et tableau de bord 3D local sans token (dashboard\index.html, mis à jour toutes les 5 min). Suite possible : voir l'état du serveur en direct (petit fichier d'état publié par le serveur, à décider).
 - 2026-11-14 (Liam) : tableau de bord 2D de l'entreprise (organigramme par pôles, pipeline, à faire, journal, décisions, idées), servi par le serveur sur le port 8080 pour voir son état en direct depuis le gros PC (tâches à créer là-bas avec outils\taches-dashboard-serveur.ps1 -Oui).
+
+### 2026-11-14 (midi) - Idees de Liam
+- Appels uniquement, jamais de presentiel : tout le plan de vente passe par le telephone (Liam et Sid).
+- Skill « scripts d'appel » (Opus, par metier, versions Sid et Liam), a valider avec Claude avant usage.
+- Skill de design de site, puis equipe design / code / publication.
+- Connecteur d'ecoute de reunion (nom a donner par Liam) : verifier gratuite et accord des participants.
+- Serveur « qui ne bouge plus » : Claude reste relie au gros PC, le serveur recupere par git (maj-auto) ; plus aucune manipulation sur le serveur.
+- CEO Jarvis autonome apres la 1re vente : lit les resultats, relances J+3/J+7, lead chaud, devis, resume Discord le soir ; decisions engageantes soumises a Liam.
+- Personnalite de Claude : sincere, sans flatterie, efficace, orientee vente.

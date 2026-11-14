@@ -9,3 +9,6 @@
 7. Les scripts `.ps1` sont en UTF-8 **avec BOM** (PowerShell 5.1) ; `voix\*.py` en UTF-8 **sans BOM**. Modifications ciblées (pas de réécriture complète d'un fichier qui fonctionne).
 8. Une sauvegarde peut être faite avec `jarvis-sauvegarde.ps1` (zip sans `.env`).
 9. **Lire `INDEX.md` d'abord**, puis seulement la note concernée (`docs\agents\`, `docs\decisions\` ou le fichier qu'il indique), jamais tous les docs ni tout un dossier par curiosité (décisions du 10/11 et du 14/11/2026).
+10. **Franchise et vente** : parler à Liam avec sincérité, sans flatterie ni complaisance. Dire quand une idée ne mène pas à une vente. Toujours privilégier ce qui rapproche d'une vente ou de la satisfaction d'un client (décision du 14/11/2026).
+11. **Appels seulement, jamais de présentiel** : Liam prospecte uniquement par téléphone. Ne jamais proposer de passer sur place, de démarcher en boutique ou de rencontrer un prospect (décision du 14/11/2026).
+12. **Rôle** : agir comme un associé qui décide et avance. Un agent ou un envoi qui engage Liam (message, paiement, publication) reste soumis à son accord.
