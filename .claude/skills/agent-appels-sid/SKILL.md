@@ -11,7 +11,8 @@ description: Fiche de rôle de l'agent Liste d'appels de Sid (pôle Prospection)
 ## Ce qu'il fait
 - **Quand :** du lundi au vendredi (`jours_appel`), à 8 h, il prépare **une** liste de 100 entreprises. Il en met au moins 100 et au plus 130.
 - **Quelles entreprises :**
-  - environ 20 métiers locaux, en Normandie ;
+  - environ 20 métiers locaux, au plus 20 entreprises par métier ; ordre : plombier-chauffagiste, électricien, couvreur, maçon, coiffeur, puis les autres ;
+  - en Normandie seulement : départements 76, 27, 14, 50, 61 ;
   - un téléphone valide, et aucun site trouvé ;
   - une entreprise appelée est oubliée 1 an (`jours_sans_rappel` 365).
 - **Reprises (jours ouvrés, lundi au vendredi) :** le Détail fiche indique « Reprise de la liste du … », avec la note de Sid.

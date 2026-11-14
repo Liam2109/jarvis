@@ -180,14 +180,15 @@ ch = A.choisir(A.cfg(), A.etat_lire())
 verifier(A.cfg()["par_liste"] == 100 and len(ch) == 100, f"par défaut : 100 lignes au moins (obtenu {len(ch)})")
 par = {}
 for c in ch: par[c["metier"]] = par.get(c["metier"], 0) + 1
-verifier(set(par) == {"restaurant", "coiffeur", "plombier", "electricien", "fleuriste", "boulangerie", "garage"}, f"sept métiers présents (catalogue de 21 métiers, règle du 10 nov. 2026) : {par}")
-verifier(all(v >= 8 for v in par.values()), f"mélange raisonnable (au moins 8 par métier) : {par}")
+verifier(par == {"plombier": 20, "electricien": 20, "coiffeur": 20, "garage": 20, "boulangerie": 20}, f"au plus 20 par métier, ordre plombier, électricien, couvreur, maçon, coiffeur, puis les autres (14/11/2026) : {par}")
+verifier(A.ordre_metiers()[:5] == ["plombier", "electricien", "couvreur", "macon", "coiffeur"], "ordre de priorité : plombier-chauffagiste, électricien, couvreur, maçon, coiffeur, puis les autres")
+verifier({c["metier"] for c in A.choisir({**A.cfg(), "max_par_metier": 5}, A.etat_lire(), n=10)} == {"plombier", "electricien"}, "les premiers métiers de l'ordre passent d'abord")
 verifier(len({c["cle"] for c in ch}) == len(ch) and len({c["tel"] for c in ch}) == len(ch), "aucune entreprise ni aucun numéro en double")
 for demande, attendu in ((30, 100), (150, 130), (100, 100), (130, 130), ("abc", 100)):
     monde(trouves=gros_monde(), config={"par_liste": demande}); verifier(len(A.choisir(A.cfg(), A.etat_lire())) == attendu, f"par_liste = {demande!r} -> {attendu} lignes (bornes 100 à 130)")
 monde(trouves=[trouve(f"Resto Seul {i}", "restaurant", "Rouen", tel(100 + i)) for i in range(70)] + [trouve("Un Coiffeur", "coiffeur", "Rouen", tel(900))], config={})
 ch = A.choisir(A.cfg(), A.etat_lire())
-verifier(len(ch) == 71 and sum(1 for c in ch if c["metier"] == "restaurant") == 70, "un métier en manque, réserve totale sous 100 : tout ce qu'il y a est sorti (pas de liste réduite sans raison)")
+verifier(len(ch) == 21 and sum(1 for c in ch if c["metier"] == "restaurant") == 20, "un seul métier en réserve : jamais plus de 20 lignes de ce métier (la liste est plus courte, le rapport le signale)")
 monde(trouves=[trouve(f"Resto Seul {i}", "restaurant", "Rouen", tel(100 + i)) for i in range(12)], config={})
 verifier(len(A.choisir(A.cfg(), A.etat_lire())) == 12, "réserve trop petite : on sort ce qu'il y a (le rapport le signale)")
 
@@ -212,7 +213,7 @@ verifier(all(870 <= _debut_min(c) < 1050 for c in par_metier.get("Restaurant", [
 verifier(all(_debut_min(c) < 540 or _debut_min(c) >= 1020 for m in ("Plombier-chauffagiste", "Électricien", "Garagiste") for c in par_metier.get(m, [])), "artisans du bâtiment : avant 9 h ou à partir de 17 h")
 
 print("5. preparer : CSV, colonnes, constat, liens")
-monde(trouves=gros_monde(), config={})
+monde(trouves=gros_monde(), config={"max_par_metier": 15})   # 15 par métier : les sept métiers de gros_monde() sont dans la liste
 code, sortie = lancer("preparer", "--jour", JOUR)
 verifier(code == 0, f"preparer : code 0 ({sortie.strip()[:120]})")
 f = A.SORTIE / f"liste-sid-{JOUR}.csv"
@@ -277,7 +278,7 @@ verifier(code == 2 and "aucune" in sortie.lower() and not (A.SORTIE / f"liste-si
 print("8. --a-blanc : affiche sans rien écrire")
 monde(trouves=gros_monde(), config={})
 code, sortie = lancer("preparer", "--jour", JOUR, "--a-blanc")
-verifier(code == 0 and "à blanc" in sortie.lower() and "Resto Fictif" in sortie, "affiche la liste")
+verifier(code == 0 and "à blanc" in sortie.lower() and "Plomb Fictif" in sortie, "affiche la liste")
 verifier(not A.SORTIE.exists() or not list(A.SORTIE.iterdir()), "aucun CSV écrit")
 verifier(not A.ETAT.exists() and not A.JOURNAL.exists() and not A.VERROU.exists(), "ni état, ni journal, ni verrou")
 code, _ = lancer("preparer", "--jour", JOUR); verifier(code == 0 and len(lire_csv(JOUR)) == 101, "après un à blanc, le vrai preparer sort bien les mêmes entreprises (rien n'a été consommé)")
@@ -973,13 +974,13 @@ A.candidats = A_candidats_orig; A.chercher_site_web = lambda nom, ville: ""; A.l
 print("26 quater. Colonne « Type de numéro », constat neutre, et bout en bout (lancer preparer) avec des entreprises écartées pour site trouvé")
 AVEC_SITE = {f"Resto Fictif {i}" for i in range(40)}   # TOUS les restaurants fictifs ont un site confirmé : garantit qu'aucun n'est jamais appelé (déterministe, quel que soit l'ordre de
                                                         # proximité), le manque étant comblé par les autres métiers (coiffeur, plombier, électricien), comme en section 3 (métier en manque)
-monde(trouves=gros_monde(), config={})
+monde(trouves=gros_monde(), config={"max_par_metier": 16})   # 6 métiers x 16 = 96 < 100 : les restaurants (derniers de l'ordre) sont essayés
 A.chercher_site_web = lambda nom, ville: "https://a-deja-un-site.example/" if nom in AVEC_SITE else ""
 A.lire_site = lambda url: (url, {}, "Rouen 76000, notre page d'accueil") if url == "https://a-deja-un-site.example/" else None
 code, sortie = lancer("preparer", "--jour", JOUR)
 lignes = lire_csv(JOUR); corps = lignes[1:]
 noms = {l[1] for l in corps}
-verifier(code == 0 and len(corps) == 100, f"malgré les entreprises écartées, la liste a quand même 100 lignes (code {code})")
+verifier(code == 0 and len(corps) == 96, f"entreprises écartées : la liste a les 96 lignes possibles (6 autres métiers x 16, plafond par métier) (code {code}, {len(corps)})")
 verifier(not (noms & AVEC_SITE), f"aucune des entreprises avec un site officiel confirmé n'est inscrite : {sorted(noms & AVEC_SITE)}")
 verifier(any("écartée" in l and "site officiel" in l for l in sortie.splitlines()), f"la sortie annonce l'exclusion : {[l for l in sortie.splitlines() if 'écart' in l]}")
 verifier(not any(l[MET] == "Restaurant" for l in corps), "aucun restaurant dans la liste finale : les 40 avaient tous un site confirmé")

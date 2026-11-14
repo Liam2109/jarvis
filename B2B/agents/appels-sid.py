@@ -65,7 +65,7 @@ DEFAUT = {"envoi_automatique": False, "par_liste": 100,
           "repartition": {m: 5 for m in NAF_SID},   # ~20 métiers, environ 5 par métier dans une liste de 100 (règle fixe de Liam, 10 nov. 2026)
           "cible_reserve": 400, "seuil_alerte": 200, "sourcing_requetes_max": 6, "pause_overpass_s": 15, "sourcing_refaire_jours": 30,
           "zone": "Normandie", "departements": list(NORMANDIE), "sirene_actif": True, "sirene_requetes_max": 12, "sirene_pages_max": 4, "sirene_sites_max": 30, "pause_sirene_s": 1, "pause_site_s": 2,
-          "avec_site": False, "partager_avec": "", "compte_google": "contact.lmsites@gmail.com", "heure_tache": "08:00", "jours_appel": list(JOURS_SEMAINE), "dossier_sid_id": "", "jours_sans_rappel": 365}
+          "avec_site": False, "partager_avec": "", "compte_google": "contact.lmsites@gmail.com", "heure_tache": "08:00", "jours_appel": list(JOURS_SEMAINE), "dossier_sid_id": "", "jours_sans_rappel": 365, "max_par_metier": 20}
 MIN_LISTE, MAX_LISTE = 100, 130   # règle fixe de Liam (10 nov. 2026) : au moins 100 appels par jour
 VERROU_MAX_S = 3 * 3600   # un verrou plus vieux est celui d'un processus bloqué : repris
 TACHE = "Jarvis-AppelsSid"
@@ -107,6 +107,9 @@ NOMS = {"plombier": "Plombier-chauffagiste", "electricien": "Électricien", "coi
         "couvreur": "Couvreur", "menuisier": "Menuisier", "carreleur": "Carreleur", "estheticienne": "Esthéticienne", "onglerie": "Onglerie",
         "traiteur": "Traiteur", "boucher": "Boucher", "serrurier": "Serrurier", "paysagiste": "Paysagiste", "taxi": "Taxi",
         "auto_ecole": "Auto-école", "nettoyage": "Nettoyage"}
+# Mélange de la liste du jour (décision de Liam, 14 nov. 2026) : au plus max_par_metier (20) entreprises par métier, dans cet ordre ; « chauffagiste » n'est pas un métier à part ici :
+# il est compris dans « Plombier-chauffagiste » (codes NAF 43.22A et 43.22B), donc ces deux métiers partagent les 20 places.
+ORDRE_LISTE = ["plombier", "electricien", "couvreur", "macon", "coiffeur"]
 # Le sourcing commence par les métiers de chantier (historiquement sans numéro, règle d'origine), puis les autres dans l'ordre de cette liste.
 PRIORITE = ["plombier", "electricien", "couvreur", "macon", "peintre", "menuisier", "carreleur", "serrurier", "paysagiste", "garage",
             "coiffeur", "estheticienne", "onglerie", "boulangerie", "fleuriste", "boucher", "traiteur", "nettoyage", "taxi", "auto_ecole", "restaurant"]
@@ -240,7 +243,7 @@ def cfg():
     try: M.surcharge_locale(CONFIG, c)
     except M.ErreurLocale as e: raise ErreurAgent(str(e))
     _entier(c, "par_liste", MIN_LISTE, MAX_LISTE); _entier(c, "cible_reserve", 0, 4000); _entier(c, "seuil_alerte", 0, 4000); _entier(c, "sourcing_requetes_max", 0, 30)
-    _entier(c, "jours_sans_rappel", 30, 1000)
+    _entier(c, "jours_sans_rappel", 30, 1000); _entier(c, "max_par_metier", 1, MAX_LISTE)
     _entier(c, "pause_overpass_s", 5, 600); _entier(c, "sourcing_refaire_jours", 1, 365)
     _entier(c, "sirene_requetes_max", 0, 200); _entier(c, "sirene_pages_max", 1, 40); _entier(c, "sirene_sites_max", 0, 300); _entier(c, "pause_sirene_s", 0, 60); _entier(c, "pause_site_s", 0, 60)
     c["sirene_actif"] = c.get("sirene_actif") is not False
@@ -507,7 +510,12 @@ def _poids(conf):
     return p if sum(p.values()) else {m: 1 for m in NOMS}
 
 
-def choisir(conf, etat, n=None, jour=None, historique=None, a_blanc=False, sites_trouves=None, hors_ligne=False):
+def ordre_metiers():
+    """ORDRE_LISTE (plombier-chauffagiste, électricien, couvreur, maçon, coiffeur), puis les autres métiers dans l'ordre de PRIORITE."""
+    return ORDRE_LISTE + [m for m in PRIORITE if m not in ORDRE_LISTE] + [m for m in NOMS if m not in ORDRE_LISTE and m not in PRIORITE]
+
+
+def choisir(conf, etat, n=None, jour=None, historique=None, a_blanc=False, sites_trouves=None, hors_ligne=False, deja=None):
     """n lignes (par défaut conf['par_liste'], au moins 100) : répartition par métier selon `repartition`, complétée par les métiers disponibles si l'un manque, puis classées dans l'ordre
     de la journée. `jour`/`historique` : voir candidats (exclusion 365 jours). Avant d'inscrire une entreprise, verifier_site est appelé : si un site officiel est confirmé, elle N'EST PAS
     retenue (le pool passe à la suivante) et son exclusion est notée dans `historique` (365 jours, comme un appel confirmé) — sauf à blanc (`a_blanc`), où rien n'est noté, juste prévisualisé.
@@ -518,9 +526,7 @@ def choisir(conf, etat, n=None, jour=None, historique=None, a_blanc=False, sites
     jour = jour or date.today().isoformat()
     if historique is None: historique = historique_lire()
     for c in candidats(etat, jour=jour, historique=historique, jours_sans_rappel=conf.get("jours_sans_rappel", 365)): pools[c["metier"]].append(c)
-    poids = _poids(conf); total = sum(poids.values())
-    quota = {m: int(n * poids[m] / total) for m in NOMS}
-    for m in sorted(NOMS, key=lambda m: (n * poids[m] / total) % 1, reverse=True)[:n - sum(quota.values())]: quota[m] += 1
+    poids = _poids(conf); plafond = conf.get("max_par_metier", 20); deja = deja or {}   # deja : lignes reprises par métier, comptées dans les 20
     etat_verif = _etat_verif_defaut(hors_ligne)
 
     def prendre(pool, souhaite):
@@ -536,10 +542,8 @@ def choisir(conf, etat, n=None, jour=None, historique=None, a_blanc=False, sites
         return pris
 
     choisies = []
-    for m in NOMS: choisies += prendre(pools[m], quota[m])
-    while len(choisies) < n and any(pools.values()):
-        for m in sorted(NOMS, key=lambda m: -poids[m]):
-            if pools[m] and len(choisies) < n: choisies += prendre(pools[m], 1)
+    for m in ordre_metiers():   # chaque métier jusqu'à `plafond`, dans l'ordre de priorité, tant qu'il manque des lignes (repartition : un métier à 0 n'est jamais pris)
+        if poids[m] > 0 and len(choisies) < n: choisies += prendre(pools[m], min(plafond - deja.get(m, 0), n - len(choisies)))
     return sorted(choisies, key=lambda c: (RANG[c["metier"]], c["metier"], c["prox"]))
 
 
@@ -725,7 +729,9 @@ def _preparer(conf, etat, jour, a_blanc, drive=None, complet=True, hors_ligne=Fa
     a_rappeler, historique = _bilan_veille(conf, etat, jour, drive)
     purgees = _purger_sorties_expirees(etat, jour, historique, conf.get("jours_sans_rappel", 365))
     sites_trouves = []
-    nouvelles = choisir(conf, etat, n=max(0, conf["par_liste"] - len(a_rappeler)), jour=jour, historique=historique, a_blanc=a_blanc, sites_trouves=sites_trouves, hors_ligne=hors_ligne)
+    deja = {}
+    for c in a_rappeler: deja[c["metier"]] = deja.get(c["metier"], 0) + 1
+    nouvelles = choisir(conf, etat, n=max(0, conf["par_liste"] - len(a_rappeler)), jour=jour, historique=historique, a_blanc=a_blanc, sites_trouves=sites_trouves, hors_ligne=hors_ligne, deja=deja)
     if not a_blanc: historique_ecrire(historique)
     choisies = a_rappeler + nouvelles
     if not choisies: raise ErreurAgent("aucune entreprise disponible (téléphone valide, jamais appelée, jamais donnée) : la réserve est épuisée")
