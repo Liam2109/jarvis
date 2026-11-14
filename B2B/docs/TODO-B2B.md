@@ -47,3 +47,20 @@ Regle : tout prompt Claude Code se termine par la machine : « gros PC » ou « 
 - [ ] Agent Devis, resume du soir sur Discord, relance J+3, tableau de bord revenu
 - [ ] Recruter d'autres appelants (etudiants 15 %, specialiste restaurants, closers 10 %)
 - [ ] Paiement en 3 fois sans frais, parrainage
+
+## Mise a jour du 14 nov. 2026 (soir) - ordre voulu par Liam
+- [x] Agent Instagram retire du serveur (commit 9cba427) ; tache Jarvis-B2B-instagram absente du serveur
+- [x] Regles Claude dans CLAUDE.md (franchise, appels seulement, associe)
+- [ ] Valider le skill « scripts-appel » (generateur, version non vendeur) avec Claude : 4 exemples + liste cochee a coller dans le chat
+- [ ] Etape 1 : liste d'appels propre (un tableur par jour, supprime apres 7 jours, trie par heure, colonnes larges, lundi a vendredi, aucun dossier cree) - avant lundi 16 nov. pour Sid
+- [ ] Etape 2 : regrouper les agents en 4 responsables (Prospection, Vente, Argent, Production plus tard) + une fiche de role par agent (= son skill), un agent a la fois
+- [ ] Etape 3 : tableau de bord transparent style Apple, menu a gauche, clic sur un agent = sa fiche, ouvert comme une appli
+- [ ] Gabarit commun pour creer les skills (entrees, procedure, regles, critere de fin, exemples)
+- [ ] Demander a Sid les phrases exactes qui ont fait dire non
+- [ ] Relances J+3 / J+7 et lead chaud (envois coupes, validation a la main)
+- [ ] Skill de design de site, puis equipe design / code / publication (apres la 1re vente)
+- [ ] Connecteur d'ecoute de reunions : nom a donner par Liam ; verifier gratuite et accord des participants
+- [ ] CEO Jarvis autonome (resume Discord le soir) apres la 1re vente
+- [ ] Stripe : nom public LM MULTI-SERVICES, SIRET en pied de facture, desactiver les anciens liens quand Liam dit « desactive »
+- [ ] Serveur : netplwiz (ouverture de session automatique), secrets des agents s'il en manque
+- [ ] Appels uniquement du lundi au vendredi ; jamais de presentiel

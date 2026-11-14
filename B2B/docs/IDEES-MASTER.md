@@ -259,3 +259,21 @@ Contexte : Liam utilise un petit PC portable (celui de Mathéo, avec carte Wi-Fi
 - Serveur « qui ne bouge plus » : Claude reste relie au gros PC, le serveur recupere par git (maj-auto) ; plus aucune manipulation sur le serveur.
 - CEO Jarvis autonome apres la 1re vente : lit les resultats, relances J+3/J+7, lead chaud, devis, resume Discord le soir ; decisions engageantes soumises a Liam.
 - Personnalite de Claude : sincere, sans flatterie, efficace, orientee vente.
+
+### 2026-11-14 (apres-midi) - Idees de Liam (video et architecture)
+- Astuces d'une video (a appliquer a Claude Code) : boucles avec critere de fin (ne pas rendre la main avant 100 %), un skill par tache repetitive, hooks automatiques, sous-agents a contexte propre, bon modele par tache (Opus/Fable pour le complexe, Sonnet/Haiku pour le simple), /compact apres chaque tache, mode plan pour les grosses taches.
+- Un skill dedie par agent (appels-sid, prospection, devis, reponses, rendez-vous) pour ne plus repeter ses consignes ; plus tard.
+- Reorganiser l'architecture des agents : Liam doit trouver un exemple a montrer ; les agents sans lien avec la vente sont a revoir. Instagram est retire (decision du 14/11).
+- Skill « scripts d'appel » generique : genere le script pour n'importe quelle entreprise (versions Sid et Liam), pas des scripts figes par metier.
+- Appels uniquement du lundi au vendredi, jamais le week-end.
+- Gabarit unique pour creer des skills (entrees, procedure, regles, critere de fin, exemples a valider) pour economiser des tokens.
+
+### 2026-11-14 (soir) - Architecture voulue par Liam (validee sur le schema)
+- Organigramme : Liam et Claude (conseil) en haut ; Jarvis = CEO ; Jarvis ne parle qu'aux responsables (agents maitres), chaque responsable gere ses petits agents.
+- Responsables : Prospection (recherche, lots d'e-mails, liste d'appels de Sid) ; Vente (reponses, rendez-vous, devis, relances J+3/J+7) ; Argent (alerte Stripe, resume du soir, alerte pannes) ; Production plus tard apres la 1re vente (design, code, publication). Agents facultatifs ajoutables plus tard.
+- Chaque agent a UNE fiche de role = son skill : ce qu'il fait, ce qu'il ne fait jamais, ses ordres precis. Un clic sur un agent dans le tableau de bord ouvre cette fiche (pas le journal).
+- On avance etape par etape, un agent a la fois avec son skill ; pas de refonte d'un coup. Ne pas renommer les scripts : regrouper d'abord logiquement.
+- Liste d'appels : UN seul tableur par jour, supprime au bout d'une semaine ; plus aucun dossier cree chaque jour ; lignes triees par heure d'appel, colonnes larges, toujours les memes, tres propre ; jours ouvres uniquement (lundi a vendredi). Regles deja fixees : 100 appels, creneaux 8 h a 19 h, entreprise deja appelee oubliee un an.
+- Tableau de bord : style Apple, fond transparent, menu a gauche (architecture, ventes, to-do, taches, graphiques) ; reste servi par le serveur (port 8080) et ouvert comme une appli (fenetre d'application sur le bureau), pas un artefact (il ne peut pas lire l'etat du serveur en direct) ; clic sur un agent = sa fiche de role.
+- Scripts d'appel : trop vendeurs d'apres Sid (non categorique a chaque fois) ; le skill doit sonner humain et sans pression (premiere phrase sur eux, aucun prix ni mot « offre » dans la version Sid, une seule question).
+- Demander a Sid les phrases exactes qui ont fait dire non.
