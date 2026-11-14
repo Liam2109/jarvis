@@ -117,6 +117,7 @@ verifier(dispo is True and list(detail["resultats"]) == ["Pas de réponse", "À 
          and all(n == 1 for n in detail["resultats"].values()) and detail["Appelé"] == 8 and detail["total"] == 9, "les 8 valeurs de Résultat, dans l'ordre, chacune comptée")
 txt8 = A.message_resume(JOUR, True, detail, False, "clé absente")
 verifier(all(f"{v} 1" in txt8 for v in A.RESULTATS) and "8 avec un résultat, 1 sans résultat" in txt8 and "E0" not in txt8, "résumé du soir : chaque valeur comptée, aucun nom d'entreprise")
+verifier("RDV pris : 1 — à voir dans le tableur du jour" in txt8, "résumé du soir : les RDV pris sont signalés à part")
 
 print("4. stats_appels : pannes sans jamais inventer de chiffre")
 monde(appels_sid_etat={"google": {JOUR: {"feuille": "F2"}}})

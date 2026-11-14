@@ -25,7 +25,7 @@ Une entreprise sortie reste marquée dans l'état tant qu'elle n'a pas de case �
 (répondu, refus ou sans réponse), elle est exclue 365 jours (réglage `jours_sans_rappel`, appels-sid-historique.json), puis redevient un candidat normal. Créneau conseillé : calculé ligne par
 ligne, réparti sur 8 h - 19 h selon le métier (voir `creneau_ligne`)."""
 import argparse, contextlib, csv, html, io, json, math, os, random, re, subprocess, sys, time, urllib.error, urllib.parse, urllib.request
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 ICI = Path(__file__).resolve().parent
@@ -135,6 +135,12 @@ COLONNES = ["Créneau", "Entreprise", "Métier", "Ville", "Téléphone", "Détai
 LARGEURS_PX = [130, 240, 170, 150, 130, 380, 150, 300]   # une par colonne de COLONNES : mise en forme de la feuille Google (colonnes larges, texte renvoyé à la ligne)
 RESULTATS = ["Pas de réponse", "À rappeler", "RDV pris", "Non catégorique", "Je dois réfléchir", "Trop cher", "Déjà un site", "Pas le temps"]   # choix de la colonne Résultat, dans cet ordre (décision de Liam, 14 nov. 2026)
 I_RESULTAT = COLONNES.index("Résultat")
+# Règles de reprise (décision de Liam, 14 nov. 2026), en jours ouvrés (lundi-vendredi) comptés depuis le jour de la liste :
+# Pas de réponse -> 2 jours ouvrés plus tard, sur un autre créneau, 3 tentatives en tout puis oubliée 1 an ; À rappeler -> le jour ouvré suivant, avec la note ;
+# Je dois réfléchir / Pas le temps -> une seule fois, 7 jours plus tard, avec la note ; RDV pris -> sort de la liste (compté par resume-sid) ;
+# Non catégorique / Trop cher / Déjà un site -> oubliée 1 an ; case vide -> la liste suivante.
+TENTATIVES_SANS_REPONSE = 3
+UNE_FOIS_7_JOURS = ("Je dois réfléchir", "Pas le temps")
 TITRE_FEUILLE = "Appels {}"   # un seul tableur par jour, posé directement dans le dossier Drive de Sid (aucun sous-dossier)
 EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$")
 CONSTAT_NEUTRE = "Aucun site trouvé lors de mes recherches, à confirmer avec vous"   # constat par défaut (rien de vérifié par note_besoin) : n'affirme jamais l'absence d'un site, seulement
@@ -546,10 +552,20 @@ def lignes_csv(choisies):
     """En-tête COLONNES + une ligne par entreprise, triées par créneau (heure de début ; à égalité, l'ordre de choix est gardé)."""
     totaux = {}
     for c in choisies: totaux[c["metier"]] = totaux.get(c["metier"], 0) + 1
-    compte = {m: 0 for m in totaux}; corps = []
+    compte = {m: 0 for m in totaux}; places = []
     for c in choisies:
         m = c["metier"]; idx = compte[m]; compte[m] += 1
-        creneau = creneau_ligne(m, idx, totaux[m])
+        places.append([c, creneau_ligne(m, idx, totaux[m])])
+    for i, (c, cr) in enumerate(places):   # « Pas de réponse » : jamais le même créneau que l'appel sans réponse (échange avec une autre ligne du même métier, sinon l'autre moitié de la fenêtre)
+        h = _debut_minutes(c.get("eviter"))
+        if not c.get("eviter") or abs(_debut_minutes(cr) - h) >= 60: continue   # autre créneau = au moins une heure d'écart avec l'appel resté sans réponse
+        autre = next((p for p in places if p[0] is not c and p[0]["metier"] == c["metier"] and abs(_debut_minutes(p[1]) - h) >= 60
+                      and (not p[0].get("eviter") or abs(_debut_minutes(cr) - _debut_minutes(p[0]["eviter"])) >= 60)), None)
+        if autre: places[i][1], autre[1] = autre[1], cr
+        else: places[i][1] = next((x for x in (creneau_ligne(c["metier"], k, 4) for k in (2, 3, 1, 0)) if abs(_debut_minutes(x) - h) >= 60), cr)
+    corps = []
+    for c, creneau in places:
+        m = c["metier"]
         constat = cellule(c["constat"]) if c["constat"] else cellule(CONSTAT_NEUTRE)
         corps.append([creneau, cellule(c["nom"]), NOMS[m], cellule(c["ville"]), c["tel"], constat, "", ""])
     return [COLONNES] + sorted(corps, key=lambda l: _debut_minutes(l[0]))
@@ -559,8 +575,8 @@ def _index_colonnes(entete):
     """Indices (nom, ville, tel, metier, resultat, note) d'après l'en-tête : tableur « Appels » (14/11/2026) ou ancienne liste (« Appelé » en 10e colonne)."""
     if "Entreprise" in entete:
         return {"nom": entete.index("Entreprise"), "ville": entete.index("Ville"), "tel": entete.index("Téléphone"), "metier": entete.index("Métier"),
-                "resultat": entete.index("Résultat"), "note": entete.index("Note") if "Note" in entete else None, "ancien": False}
-    return {"nom": 1, "ville": 2, "tel": 3, "metier": 5, "resultat": 9, "note": 13, "ancien": True}
+                "resultat": entete.index("Résultat"), "note": entete.index("Note") if "Note" in entete else None, "creneau": entete.index("Créneau") if "Créneau" in entete else None, "ancien": False}
+    return {"nom": 1, "ville": 2, "tel": 3, "metier": 5, "resultat": 9, "note": 13, "creneau": None, "ancien": True}
 
 
 def _appele(valeur, ancien):
@@ -584,6 +600,15 @@ def repartition(choisies):
 
 
 # --- A rappeler : reprise des lignes non appelées de la liste précédente, historique 365 jours -------------------------
+def jour_ouvre(jour, n):
+    """Le n-ième jour ouvré (lundi-vendredi) après `jour` (AAAA-MM-JJ)."""
+    d = date.fromisoformat(jour)
+    while n > 0:
+        d += timedelta(days=1)
+        if d.weekday() < 5: n -= 1
+    return d.isoformat()
+
+
 def _dernier_jour_liste(etat, avant):
     jours = sorted(j for j in etat["listes"] if j < avant)
     return jours[-1] if jours else None
@@ -610,7 +635,8 @@ def _lire_liste_pour_bilan(conf, etat, jour_liste, drive):
     for l in lignes[1:]:
         if not v(l, "nom") or not v(l, "tel"): continue
         out.append({"cle": S.cle({"nom": v(l, "nom"), "ville": v(l, "ville")}), "nom": v(l, "nom"), "ville": v(l, "ville"), "tel": telephone_valide(v(l, "tel")),
-                    "metier": cle_metier_sid(v(l, "metier")) or "", "appele": _appele(v(l, "resultat"), ix["ancien"]), "note": v(l, "note")})
+                    "metier": cle_metier_sid(v(l, "metier")) or "", "appele": _appele(v(l, "resultat"), ix["ancien"]), "note": v(l, "note"),
+                    "resultat": "" if ix["ancien"] else v(l, "resultat"), "creneau": v(l, "creneau") if ix["creneau"] is not None else ""})
     return out
 
 
@@ -645,14 +671,36 @@ def _bilan_veille(conf, etat, jour, drive):
     historique = _historique_reconstruire_tout() if not HISTORIQUE.exists() else historique_lire()
     if not avant: return [], historique
     lignes = _lire_liste_pour_bilan(conf, etat, avant, drive)
-    a_rappeler = []
+    a_rappeler = []; attente = etat.setdefault("reprises", {}); tent = etat.setdefault("tentatives", {})
+
+    def oublier(l):
+        for k in (l["cle"], l["tel"]):
+            if k and (k not in historique or historique[k] < avant): historique[k] = avant
+        tent.pop(l["cle"], None)
+
     for l in lignes:
-        if l["appele"]:
-            for k in (l["cle"], l["tel"]):
-                if k and (k not in historique or historique[k] < avant): historique[k] = avant
-        elif l["cle"] and l["tel"] and l["metier"] in NOMS:
-            constat = f"Reprise de la liste du {avant}" + (f" ; note : {l['note']}" if l.get("note") else "")
-            a_rappeler.append({"cle": l["cle"], "nom": l["nom"], "ville": l["ville"], "tel": l["tel"], "metier": l["metier"], "brut": LABELS.get(l["metier"], ""), "constat": constat, "dept": "", "prox": -1})
+        if not (l["cle"] and l["tel"]): continue
+        v = l["resultat"]; t_ = tent.setdefault(l["cle"], {})   # compteurs de l'entreprise (vides : supprimés en fin de bilan)
+        if l["appele"] and not v: oublier(l); continue                       # ancienne liste : case « Appelé » cochée
+        if l["metier"] not in NOMS:
+            if v: oublier(l)
+            continue
+        if not v: retour, detail = jour, "non appelée"
+        elif v == "Pas de réponse":
+            t_["sans_reponse"] = t_.get("sans_reponse", 0) + 1
+            if t_["sans_reponse"] >= TENTATIVES_SANS_REPONSE: oublier(l); continue
+            retour, detail = jour_ouvre(avant, 2), f"pas de réponse, tentative {t_['sans_reponse'] + 1}/{TENTATIVES_SANS_REPONSE}, autre créneau"
+        elif v == "À rappeler": retour, detail = jour_ouvre(avant, 1), "à rappeler"
+        elif v in UNE_FOIS_7_JOURS:
+            if t_.get("une_fois"): oublier(l); continue
+            t_["une_fois"] = True; retour, detail = (date.fromisoformat(avant) + timedelta(days=7)).isoformat(), f"« {v} », rappel unique"
+        else: oublier(l); continue                                          # RDV pris, Non catégorique, Trop cher, Déjà un site (ou valeur inconnue) : plus jamais dans la liste avant 1 an
+        constat = f"Reprise de la liste du {avant} ({detail})" + (f" ; note : {l['note']}" if l.get("note") else "")
+        r = {"cle": l["cle"], "nom": l["nom"], "ville": l["ville"], "tel": l["tel"], "metier": l["metier"], "brut": LABELS.get(l["metier"], ""), "constat": constat, "dept": "", "prox": -1,
+             "eviter": l.get("creneau", "") if v == "Pas de réponse" else "", "retour": retour}
+        attente[l["cle"]] = r
+    for cle in [c for c, r in attente.items() if r.get("retour", jour) <= jour]: a_rappeler.append(attente.pop(cle))
+    for cle in [c for c, t_ in tent.items() if not t_]: del tent[cle]
     return a_rappeler, historique
 
 
@@ -674,7 +722,8 @@ def _preparer(conf, etat, jour, a_blanc, drive=None, complet=True, hors_ligne=Fa
     choisies = a_rappeler + nouvelles
     if not choisies: raise ErreurAgent("aucune entreprise disponible (téléphone valide, jamais appelée, jamais donnée) : la réserve est épuisée")
     if len(choisies) < conf["par_liste"]: print(f"  ! réserve insuffisante : {len(choisies)} ligne(s) au lieu de {conf['par_liste']}")
-    if a_rappeler: print(f"  {len(a_rappeler)} ligne(s) non appelée(s) de la liste précédente, reprises en tête (onglet « A rappeler »)")
+    if a_rappeler: print(f"  {len(a_rappeler)} ligne(s) reprise(s) (non appelées, pas de réponse, à rappeler, à réfléchir) : Détail fiche « Reprise de la liste du … »")
+    if etat.get("reprises"): print(f"  {len(etat['reprises'])} reprise(s) en attente d'un jour suivant (Pas de réponse : +2 jours ouvrés ; Je dois réfléchir / Pas le temps : +7 jours)")
     if purgees: print(f"  {purgees} entreprise(s) de nouveau disponible(s) ({conf.get('jours_sans_rappel', 365)} jours écoulés depuis leur dernier appel)")
     if sites_trouves: print(f"  {len(sites_trouves)} entreprise(s) écartée(s) : un site officiel a été trouvé lors de la vérification (OpenStreetMap, recherche web), notée dans l'historique")
     if a_blanc:

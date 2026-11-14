@@ -158,6 +158,7 @@ def message_resume(jour, dispo_a, appels, dispo_c, ca):
     if dispo_a and "resultats" in appels:
         detail = ", ".join(f"{v} {n}" for v, n in appels["resultats"].items()) + (f", autre valeur {appels['autres']}" if appels.get("autres") else "")
         l.append(f"Appels Sid — {appels['total']} entreprise(s) sur la liste : {appels['Appelé']} avec un résultat, {appels['total'] - appels['Appelé']} sans résultat. {detail}.")
+        if appels["resultats"].get("RDV pris"): l.append(f"RDV pris : {appels['resultats']['RDV pris']} — à voir dans le tableur du jour (ces entreprises sortent de la liste d'appels).")
     elif dispo_a:
         l.append(f"Appels Sid — {appels['total']} entreprise(s) sur la liste : {appels['Appelé']} appelée(s), {appels['Répondu']} répondu(es), "
                  f"{appels['Rendez-vous pris']} rendez-vous pris, {appels['Refus']} refus.")

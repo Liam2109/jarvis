@@ -14,7 +14,13 @@ description: Fiche de rôle de l'agent Liste d'appels de Sid (pôle Prospection)
   - environ 20 métiers locaux, en Normandie ;
   - un téléphone valide, et aucun site trouvé ;
   - une entreprise appelée est oubliée 1 an (`jours_sans_rappel` 365).
-- **Reprises :** les lignes non appelées de la liste précédente, et celles marquées « À rappeler », reviennent. Leur Détail fiche indique « Reprise de la liste du … », avec la note de Sid.
+- **Reprises (jours ouvrés, lundi au vendredi) :** le Détail fiche indique « Reprise de la liste du … », avec la note de Sid.
+  - Pas de réponse : revient 2 jours ouvrés plus tard, sur un autre créneau, 3 tentatives en tout ; ensuite, oubliée 1 an.
+  - À rappeler : revient le jour ouvré suivant.
+  - Je dois réfléchir, Pas le temps : reviennent une seule fois, 7 jours plus tard.
+  - RDV pris : sort de la liste, signalé dans le résumé du soir.
+  - Non catégorique, Trop cher, Déjà un site : oubliée 1 an.
+  - Case vide : revient dans la liste suivante.
 - **Le tableur :** il crée **un seul** tableur Google « Appels AAAA-MM-JJ », posé directement dans le dossier Drive de Sid (`dossier_sid_id`), sans sous-dossier.
   - Les lignes sont triées par créneau, de 8 h à 19 h.
   - Les colonnes sont toujours, dans cet ordre : Créneau, Entreprise, Métier, Ville, Téléphone, Détail fiche, Résultat, Note.
