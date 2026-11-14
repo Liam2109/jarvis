@@ -30,9 +30,15 @@ def lire_json(p, defaut=None):
     except (OSError, ValueError): return defaut
 
 
+def est_archive(p):
+    """Agent archivé : son .md commence par « Agent retiré … Archive. » (ex. instagram, retiré le 14/11/2026) : gardé sur disque, absent du tableau de bord."""
+    try: return p.with_suffix(".md").read_text(encoding="utf-8-sig").lstrip().startswith("Agent retiré")
+    except OSError: return False
+
+
 def est_agent(p):
     if p.name.startswith("test") or p.suffix != ".py": return False
-    try: return "M.exiger(" in p.read_text(encoding="utf-8", errors="ignore")
+    try: return "M.exiger(" in p.read_text(encoding="utf-8", errors="ignore") and not est_archive(p)
     except OSError: return False
 
 
@@ -80,7 +86,7 @@ def journal(nom):
 
 
 POLES = {"prospection": "Trouver", "page-exemple": "Trouver", "appels-sid": "Vendre", "rendez-vous": "Vendre", "reponses": "Vendre", "devis": "Vendre",
-         "stripe-alerte": "Encaisser", "instagram": "Communiquer", "resume-sid": "Communiquer"}     # tout nouvel agent : « Autres »
+         "stripe-alerte": "Encaisser", "resume-sid": "Communiquer"}     # tout nouvel agent : « Autres »
 
 
 def lignes_du_jour(nom, jour):

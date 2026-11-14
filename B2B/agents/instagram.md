@@ -1,3 +1,5 @@
+Agent retiré du serveur le 14/11/2026 (décision de Liam). Archive.
+
 # Agent Instagram (3 nov. 2026)
 Rôle : publier UN post par jour vers 12 h 30 (heure de Paris) sur lmmultiservices.normandie, d'après la file et les légendes de `docs\INSTAGRAM-PLAN.md`, cocher la ligne avec la date, et fabriquer les prochaines cartes quand la file passe sous 3 posts. Code : `agents\instagram.py` ; tests : `agents\test_instagram.py` (hors ligne, aucune publication) ; réglages : `agents\instagram-config.json` ; état : `agents\instagram-etat.json` ; journal : `agents\instagram-journal.log` ; cartes à valider : `instagram-a-valider.md` ; rendu des cartes : `sites\outils\instagram-carte.mjs`.
 

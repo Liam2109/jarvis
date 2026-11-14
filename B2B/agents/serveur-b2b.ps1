@@ -1,5 +1,5 @@
 ﻿# Lanceur d'UN cycle d'un agent B2B sur le portable serveur (tâches planifiées « Jarvis-B2B-<agent> », créées par maj-auto.ps1 pour les agents actifs seulement).
-#   powershell -File B2B\agents\serveur-b2b.ps1 -Agent instagram [-Simulation]
+#   powershell -File B2B\agents\serveur-b2b.ps1 -Agent devis [-Simulation]
 # Garde-fous (6 Go de RAM, aucune écoute, aucun navigateur) :
 #   1. machine : refuse si le nom de cette machine n'est pas « machine_active » de b2b.local.json (code 3, dit dans serveur-b2b.log) ;
 #   2. agent connu de serveur-taches.json (code 6) ET listé dans agents_actifs de b2b.local.json (code 4) ;

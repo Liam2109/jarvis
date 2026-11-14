@@ -25,7 +25,9 @@ $gros = @(Get-ChildItem $Root -Recurse -File -Force -ErrorAction SilentlyContinu
 Write-Host ("        fichiers de plus de 50 Mo (jamais dans git) : " + (($gros | ForEach-Object { "$($_.FullName.Substring($Root.Length + 1)) ($([int]($_.Length / 1MB)) Mo)" }) -join ' ; '))
 if ($aGit) {
     $gd = Join-Path $TR 'gd'; & git init --bare -q $gd 2>$null
-    $cand = @(& git -C $Root --git-dir=$gd --work-tree=$Root ls-files --others --exclude-standard 2>$null | ForEach-Object { $_ -replace '/', '\' })
+    # chemins non ASCII (notes à emoji de docs\) : sans guillemets ni octets échappés (core.quotepath=false), lus en UTF-8
+    $encAvant = [Console]::OutputEncoding; [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+    try { $cand = @(& git -c core.quotepath=false -C $Root --git-dir=$gd --work-tree=$Root ls-files --others --exclude-standard 2>$null | ForEach-Object { $_ -replace '/', '\' }) } finally { [Console]::OutputEncoding = $encAvant }
     Verifier ($cand.Count -gt 40) "git add -A ajouterait $($cand.Count) fichiers (simulé sans toucher au dossier : aucun .git créé ici)"
     $tailleCand = ($cand | ForEach-Object { (Get-Item (Join-Path $Root $_)).Length } | Measure-Object -Sum).Sum
     Write-Host ("        taille totale à commiter : {0:N1} Mo" -f ($tailleCand / 1MB))

@@ -10,18 +10,6 @@
       ],
       "heure": "08:00"
     },
-    "instagram": {
-      "script": "instagram.py",
-      "commandes": [
-        [
-          "jour"
-        ],
-        [
-          "valider"
-        ]
-      ],
-      "toutes_minutes": 5
-    },
     "devis": {
       "script": "devis.py",
       "commandes": [

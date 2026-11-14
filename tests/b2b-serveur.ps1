@@ -75,9 +75,12 @@ if (-not $aGit) { Verifier $true '(git absent : contrôles de la liste blanche s
     $propre = Join-Path $TR 'propre'; foreach ($f in $cand) { $d = Join-Path $propre (Split-Path $f -Parent); New-Item -ItemType Directory $d -Force | Out-Null; Copy-Item (Join-Path $Root $f) (Join-Path $propre $f) }
     $py = Get-Command python -ErrorAction SilentlyContinue
     if ($py) {
-        $code = "import importlib.util, sys; sys.dont_write_bytecode = True`nfrom pathlib import Path`nsys.path.insert(0, 'B2B/agents')`nfor n in ('prospection', 'reponses', 'instagram', 'devis', 'rendez-vous', 'appels-sid', 'machine'):`n    s = importlib.util.spec_from_file_location(n.replace('-', '_'), 'B2B/agents/' + n + '.py'); m = importlib.util.module_from_spec(s); s.loader.exec_module(m)`nprint('IMPORTS_OK')"
+        # agents du serveur = ceux de serveur-taches.json (instagram retiré le 14/11/2026), plus machine.py
+        $agServ = @((Lire (Join-Path $AG 'serveur-taches.json') | ConvertFrom-Json).agents.PSObject.Properties | ForEach-Object { [IO.Path]::GetFileNameWithoutExtension($_.Value.script) })
+        $liste = (@($agServ) + 'machine' | ForEach-Object { "'$_'" }) -join ', '
+        $code = "import importlib.util, sys; sys.dont_write_bytecode = True`nfrom pathlib import Path`nsys.path.insert(0, 'B2B/agents')`nfor n in ($liste,):`n    s = importlib.util.spec_from_file_location(n.replace('-', '_'), 'B2B/agents/' + n + '.py'); m = importlib.util.module_from_spec(s); s.loader.exec_module(m)`nprint('IMPORTS_OK')"
         $o = & { Push-Location $propre; try { & $py.Source -c $code 2>&1 | Out-String } finally { Pop-Location } }
-        Verifier ($o -match 'IMPORTS_OK') ('clone propre (seulement les fichiers versionnés) : les 6 agents et machine.py s''importent' + $(if ($o -notmatch 'IMPORTS_OK') { ' — ' + ($o.Trim() -split "`n" | Select-Object -Last 2) -join ' ' }))
+        Verifier ($o -match 'IMPORTS_OK' -and $agServ.Count -ge 5) ("clone propre (seulement les fichiers versionnés) : les $($agServ.Count) agents du serveur et machine.py s'importent" + $(if ($o -notmatch 'IMPORTS_OK') { ' — ' + ($o.Trim() -split "`n" | Select-Object -Last 2) -join ' ' }))
     }
 }
 
@@ -104,35 +107,45 @@ Verifier ($dt -match 'Get-ScheduledTask' -and $dt -match 'Jarvis-B2B' -and $dt -
 
 Write-Host '3) Lanceur serveur (serveur-b2b.ps1) : machine, un agent à la fois, priorité basse, aucun navigateur'
 $AGT = Join-Path $TR 'B2B\agents'; New-Item -ItemType Directory $AGT | Out-Null
-Copy-Item (Join-Path $AG 'serveur-b2b.ps1') $AGT; Copy-Item (Join-Path $AG 'serveur-taches.json') $AGT
-foreach ($n in 'instagram', 'devis', 'reponses', 'rendez-vous', 'prospection', 'appels-sid') { '# stub' | Set-Content "$AGT\$n.py" -Encoding ASCII }
+Copy-Item (Join-Path $AG 'serveur-b2b.ps1') $AGT
+$tableReelle = Lire (Join-Path $AG 'serveur-taches.json') | ConvertFrom-Json
+$nomsReels = @($tableReelle.agents.PSObject.Properties | ForEach-Object { $_.Name })
+Verifier ('instagram' -notin $nomsReels -and $nomsReels.Count -eq 5) "serveur-taches.json : instagram retiré (décision du 14/11/2026), $($nomsReels.Count) agents restants"
+Verifier (@($tableReelle.agents.PSObject.Properties | Where-Object { ($_.Value.commandes | ForEach-Object { $_ -join ' ' }) -match 'continu|visuels' }).Count -eq 0) 'serveur-taches.json : aucune commande « continu » ni « visuels » (Edge)'
+# agent FICTIF à deux commandes, seulement dans la copie temporaire : vérifie l'ordre des commandes et l'arrêt du cycle sur échec
+$tableReelle.agents | Add-Member -NotePropertyName 'deux-etapes' -NotePropertyValue ([pscustomobject]@{ script = 'deux-etapes.py'; commandes = (@('jour'), @('valider')); toutes_minutes = 5 })
+[IO.File]::WriteAllText("$AGT\serveur-taches.json", ($tableReelle | ConvertTo-Json -Depth 6), [Text.UTF8Encoding]::new($false))
+foreach ($n in @($nomsReels) + 'deux-etapes') { '# stub' | Set-Content "$AGT\$n.py" -Encoding ASCII }
 $LOCAL = Join-Path $AGT 'b2b.local.json'
 function Local([object]$o) { [IO.File]::WriteAllText($LOCAL, ($o | ConvertTo-Json -Depth 4), [Text.UTF8Encoding]::new($false)) }
 function Lance([string]$agent, [string[]]$plus = @()) { $o = & powershell -NoProfile -ExecutionPolicy Bypass -File "$AGT\serveur-b2b.ps1" -Agent $agent -NomMachine 'PC-SERVEUR' -NomMutex ("JarvisB2BTest" + $script:mx) @plus 2>&1 | Out-String; @{ sortie = $o; code = $LASTEXITCODE } }
 $script:mx = [guid]::NewGuid().ToString('N').Substring(0, 8)
-$r = Lance 'instagram' '-Simulation'
+$r = Lance 'rendez-vous' '-Simulation'
 Verifier ($r.code -eq 3 -and $r.sortie -match 'machine_active' -and (Lire "$AGT\serveur-b2b.log") -match 'refusé') 'sans b2b.local.json : refusé (code 3), dit dans le journal, rien lancé'
-Local @{ machine_active = 'PC-BUREAU'; agents_actifs = @('instagram') }
-$r = Lance 'instagram' '-Simulation'
+Local @{ machine_active = 'PC-BUREAU'; agents_actifs = @('rendez-vous') }
+$r = Lance 'rendez-vous' '-Simulation'
 Verifier ($r.code -eq 3 -and $r.sortie -match 'PC-BUREAU' -and $r.sortie -match 'PC-SERVEUR') 'autre machine active : refusé, les deux noms sont indiqués'
 Local @{ machine_active = 'pc-serveur'; agents_actifs = @('devis') }
-$r = Lance 'instagram' '-Simulation'
+$r = Lance 'rendez-vous' '-Simulation'
 Verifier ($r.code -eq 4 -and $r.sortie -match 'actif') 'agent non marqué actif dans la config locale : rien lancé (code 4)'
-Local @{ machine_active = 'PC-SERVEUR'; agents_actifs = @('instagram', 'devis', 'appels-sid') }
-$r = Lance 'instagram' '-Simulation'
-Verifier ($r.code -eq 0 -and $r.sortie -match 'SIMULATION' -and $r.sortie -match 'instagram\.py jour' -and $r.sortie -match 'instagram\.py valider' -and $r.sortie -notmatch 'visuels|continu') 'machine et agent actifs : cycle jour + valider, ni « visuels » (Edge) ni « continu » (simulation)'
+Local @{ machine_active = 'PC-SERVEUR'; agents_actifs = @('rendez-vous', 'devis', 'appels-sid', 'deux-etapes', 'instagram') }
+$r = Lance 'rendez-vous' '-Simulation'
+Verifier ($r.code -eq 0 -and $r.sortie -match 'SIMULATION' -and $r.sortie -match 'rendez-vous\.py jour' -and $r.sortie -notmatch 'visuels|continu') 'machine et agent actifs : cycle « jour », ni « visuels » (Edge) ni « continu » (simulation)'
 Verifier ($r.sortie -match 'BelowNormal' -and $r.sortie -match 'JARVIS_B2B_SERVEUR=1') 'priorité « sous la normale » et profil serveur annoncés'
+$r = Lance 'deux-etapes' '-Simulation'
+Verifier ($r.code -eq 0 -and $r.sortie -match 'deux-etapes\.py jour' -and $r.sortie -match 'deux-etapes\.py valider' -and $r.sortie.IndexOf('py jour') -lt $r.sortie.IndexOf('py valider')) 'agent à deux commandes : jour puis valider annoncés, dans l''ordre (simulation)'
 $r = Lance 'appels-sid' '-Simulation'; Verifier ($r.code -eq 0 -and $r.sortie -match 'appels-sid\.py jour') 'appels-sid : commande « jour »'
 $r = Lance 'inconnu' '-Simulation'; Verifier ($r.code -eq 6) 'agent inconnu : refusé (code 6)'
+$r = Lance 'instagram' '-Simulation'; Verifier ($r.code -eq 6 -and $r.sortie -notmatch 'SIMULATION') 'instagram (retiré du serveur), même encore listé dans agents_actifs : refusé (code 6), rien lancé'
 # python factice : vrai lancement, aucun agent
 $fa = Join-Path $TR 'fauxpy.cmd'; $trace = Join-Path $TR 'trace.txt'
 "@echo off`r`necho %* ; serveur=%JARVIS_B2B_SERVEUR% >> `"$trace`"`r`nif `"%FAUX_ECHEC%`"==`"1`" exit /b 1`r`nexit /b 0" | Set-Content $fa -Encoding ASCII
-$r = Lance 'instagram' '-Python', $fa
+$r = Lance 'deux-etapes' '-Python', $fa
 $t = $(if (Test-Path $trace) { @(Get-Content $trace) } else { @() })
-Verifier ($r.code -eq 0 -and $t.Count -eq 2 -and $t[0] -match 'instagram\.py"? jour' -and $t[1] -match 'instagram\.py"? valider' -and $t[0] -match 'serveur=1') 'lancement réel (python factice) : jour puis valider, dans l''ordre, profil serveur posé'
+Verifier ($r.code -eq 0 -and $t.Count -eq 2 -and $t[0] -match 'deux-etapes\.py"? jour' -and $t[1] -match 'deux-etapes\.py"? valider' -and $t[0] -match 'serveur=1') 'lancement réel (python factice) : jour puis valider, dans l''ordre, profil serveur posé'
 Verifier ((Lire "$AGT\serveur-b2b.log") -match 'BelowNormal' -and (Lire "$AGT\serveur-b2b.log") -match 'terminé') 'journal du lanceur : priorité basse appliquée, fin notée'
 Remove-Item $trace -Force; $env:FAUX_ECHEC = '1'
-$r = Lance 'instagram' '-Python', $fa; Remove-Item Env:FAUX_ECHEC
+$r = Lance 'deux-etapes' '-Python', $fa; Remove-Item Env:FAUX_ECHEC
 $t = @(Get-Content $trace)
 Verifier ($r.code -ne 0 -and $t.Count -eq 1 -and (Lire "$AGT\serveur-b2b.log") -match 'échec') 'une commande qui échoue arrête le cycle (la suivante n''est pas lancée), noté au journal'
 # un seul agent à la fois : le verrou global est tenu par un autre processus
@@ -149,28 +162,29 @@ $LB = "$RB\B2B\agents\b2b.local.json"
 function LocalB([object]$o) { [IO.File]::WriteAllText($LB, ($o | ConvertTo-Json -Depth 4), [Text.UTF8Encoding]::new($false)) }
 $script:NomMachineB2B = 'PC-SERVEUR'
 $p = Get-B2BTaches $RB; Verifier ((-not $p.ok) -and $p.taches.Count -eq 0 -and $p.raison -match 'machine_active') 'sans config locale : aucune tâche, raison donnée'
-LocalB @{ machine_active = 'PC-BUREAU'; agents_actifs = @('instagram') }
+LocalB @{ machine_active = 'PC-BUREAU'; agents_actifs = @('rendez-vous') }
 $p = Get-B2BTaches $RB; Verifier ((-not $p.ok) -and $p.taches.Count -eq 0 -and $p.raison -match 'PC-BUREAU') 'autre machine : aucune tâche'
 LocalB @{ machine_active = 'PC-SERVEUR' }
 $p = Get-B2BTaches $RB; Verifier ($p.ok -and $p.taches.Count -eq 0) 'machine bonne mais aucun agent actif : aucune tâche (tout éteint par défaut)'
-LocalB @{ machine_active = 'PC-SERVEUR'; agents_actifs = @('instagram', 'appels-sid', 'inconnu') }
+LocalB @{ machine_active = 'PC-SERVEUR'; agents_actifs = @('rendez-vous', 'appels-sid', 'inconnu', 'instagram') }
 $p = Get-B2BTaches $RB; $noms = @($p.taches | ForEach-Object { $_.nom })
-Verifier ($p.ok -and $noms.Count -eq 2 -and 'Jarvis-B2B-instagram' -in $noms -and 'Jarvis-B2B-appels-sid' -in $noms -and $p.avertissements -match 'inconnu') 'seuls les agents actifs ont une tâche « Jarvis-B2B-<agent> » ; un nom inconnu est signalé, ignoré'
-$ti = $p.taches | Where-Object { $_.agent -eq 'instagram' }; $ta = $p.taches | Where-Object { $_.agent -eq 'appels-sid' }
-Verifier ($ti.minutes -eq 5 -and -not $ti.heure -and $ta.heure -eq '08:00' -and -not $ta.minutes) 'instagram : toutes les 5 minutes ; appels-sid : tous les jours à 08:00'
-Verifier ($ti.arguments -match 'serveur-b2b\.ps1' -and $ti.arguments -match '-Agent instagram' -and $ti.arguments -match 'ExecutionPolicy Bypass' -and $ti.arguments -notmatch 'visuels|continu') 'la tâche appelle le lanceur (priorité basse + verrou), jamais un agent directement'
-$script:Reg = @(); $script:Sup = @(); $script:Exist = @('Jarvis-B2B-devis', 'Jarvis-MajAuto', 'Jarvis-Serveur')
+Verifier ($p.ok -and $noms.Count -eq 2 -and 'Jarvis-B2B-rendez-vous' -in $noms -and 'Jarvis-B2B-appels-sid' -in $noms -and $p.avertissements -match 'inconnu') 'seuls les agents actifs ont une tâche « Jarvis-B2B-<agent> » ; un nom inconnu est signalé, ignoré'
+Verifier ('Jarvis-B2B-instagram' -notin $noms -and $p.avertissements -match 'instagram') 'instagram encore listé dans agents_actifs : aucune tâche (retiré de serveur-taches.json), signalé comme inconnu'
+$ti = $p.taches | Where-Object { $_.agent -eq 'rendez-vous' }; $ta = $p.taches | Where-Object { $_.agent -eq 'appels-sid' }
+Verifier ($ti.minutes -eq 5 -and -not $ti.heure -and $ta.heure -eq '08:00' -and -not $ta.minutes) 'rendez-vous : toutes les 5 minutes ; appels-sid : tous les jours à 08:00'
+Verifier ($ti.arguments -match 'serveur-b2b\.ps1' -and $ti.arguments -match '-Agent rendez-vous' -and $ti.arguments -match 'ExecutionPolicy Bypass' -and $ti.arguments -notmatch 'visuels|continu') 'la tâche appelle le lanceur (priorité basse + verrou), jamais un agent directement'
+$script:Reg = @(); $script:Sup = @(); $script:Exist = @('Jarvis-B2B-devis', 'Jarvis-B2B-instagram', 'Jarvis-MajAuto', 'Jarvis-Serveur')
 $script:B2BHooks = @{ Existantes = { $script:Exist }; Enregistrer = { param($t) $script:Reg += $t.nom }; Supprimer = { param($n) $script:Sup += $n } }
 $s = Sync-B2BTaches $RB
-Verifier (($script:Reg | Sort-Object) -join ',' -eq 'Jarvis-B2B-appels-sid,Jarvis-B2B-instagram') 'synchro : les tâches des agents actifs sont (re)créées'
-Verifier (($script:Sup -join ',') -eq 'Jarvis-B2B-devis') 'synchro : la tâche d''un agent désactivé est retirée ; Jarvis-MajAuto et Jarvis-Serveur ne sont JAMAIS touchées'
-$premier = ($script:Reg | Sort-Object) -join ','; $script:Reg = @(); $script:Sup = @(); $script:Exist = @('Jarvis-B2B-appels-sid', 'Jarvis-B2B-instagram', 'Jarvis-MajAuto')
+Verifier (($script:Reg | Sort-Object) -join ',' -eq 'Jarvis-B2B-appels-sid,Jarvis-B2B-rendez-vous') 'synchro : les tâches des agents actifs sont (re)créées'
+Verifier ((($script:Sup | Sort-Object) -join ',') -eq 'Jarvis-B2B-devis,Jarvis-B2B-instagram') 'synchro : les tâches d''un agent désactivé (devis) et d''un agent retiré du serveur (instagram, encore listé) sont retirées ; Jarvis-MajAuto et Jarvis-Serveur ne sont JAMAIS touchées'
+$premier = ($script:Reg | Sort-Object) -join ','; $script:Reg = @(); $script:Sup = @(); $script:Exist = @('Jarvis-B2B-appels-sid', 'Jarvis-B2B-rendez-vous', 'Jarvis-MajAuto')
 [void](Sync-B2BTaches $RB)
 Verifier ((($script:Reg | Sort-Object) -join ',') -eq $premier -and $script:Sup.Count -eq 0) 'idempotent : relancée, même résultat, rien à retirer, aucun doublon'
-LocalB @{ machine_active = 'PC-BUREAU'; agents_actifs = @('instagram') }; $script:Reg = @(); $script:Sup = @()
+LocalB @{ machine_active = 'PC-BUREAU'; agents_actifs = @('rendez-vous') }; $script:Reg = @(); $script:Sup = @()
 [void](Sync-B2BTaches $RB)
 Verifier ($script:Reg.Count -eq 0) 'autre machine : aucune tâche enregistrée (même si des agents sont listés)'
-LocalB @{ machine_active = 'PC-SERVEUR'; agents_actifs = @('instagram') }
+LocalB @{ machine_active = 'PC-SERVEUR'; agents_actifs = @('rendez-vous') }
 $script:Pip = @(); $script:B2BHooks.Pip = { param($req) $script:Pip += $req; $true }
 Verifier ((Install-B2BDependances $RB) -eq $true -and $script:Pip.Count -eq 1 -and $script:Pip[0] -like '*B2B\requirements.txt') 'dépendances : pip install -r B2B\requirements.txt'
 $script:B2BHooks.Pip = { param($req) $false }; Verifier ((Install-B2BDependances $RB) -eq $false) 'pip qui échoue : renvoie faux, sans lever d''exception'
@@ -208,10 +222,10 @@ if (-not $aGit) { Verifier $true '(git absent : scénarios sautés)' } else {
     # a) pas de config locale B2B : mise à jour normale, étape B2B muette
     Pousser '2'; $r = Maj
     Verifier ($r.code -eq 0 -and $r.sortie -match 'tests verts' -and $r.sortie -notmatch 'Jarvis-B2B' -and (JournalS) -notmatch 'B2B : tâche') 'a) serveur sans config B2B locale : mise à jour normale, aucune tâche B2B'
-    # b) config locale du serveur : instagram actif -> sa tâche est (re)créée après les tests verts
-    [IO.File]::WriteAllText("$S\B2B\agents\b2b.local.json", '{ "machine_active": "PC-SERVEUR", "agents_actifs": ["instagram"] }', [Text.UTF8Encoding]::new($false))
+    # b) config locale du serveur : rendez-vous actif -> sa tâche est (re)créée après les tests verts
+    [IO.File]::WriteAllText("$S\B2B\agents\b2b.local.json", '{ "machine_active": "PC-SERVEUR", "agents_actifs": ["rendez-vous"] }', [Text.UTF8Encoding]::new($false))
     Pousser '3'; $r = Maj
-    Verifier ($r.code -eq 0 -and $r.sortie -match 'tests verts' -and (JournalS) -match 'Jarvis-B2B-instagram' -and (JournalS) -notmatch 'Jarvis-B2B-devis') 'b) agent actif dans la config locale : sa tâche est recréée après le pull et les tests verts, et lui seul'
+    Verifier ($r.code -eq 0 -and $r.sortie -match 'tests verts' -and (JournalS) -match 'Jarvis-B2B-rendez-vous' -and (JournalS) -notmatch 'Jarvis-B2B-devis') 'b) agent actif dans la config locale : sa tâche est recréée après le pull et les tests verts, et lui seul'
     Verifier ((& git -C $S status --porcelain --untracked-files=no).Count -eq 0) 'b) la config locale ne rend pas l''arbre git « modifié » (la mise à jour suivante n''est pas bloquée)'
     # c) tests rouges : aucune tâche touchée
     $avant = (JournalS).Length; Pousser '4' "Write-Host '  ECHEC factice'; exit 1"; $r = Maj

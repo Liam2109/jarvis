@@ -3,7 +3,7 @@ Lire ce fichier, puis **seulement** la note du sujet en cours (jamais tous les d
 
 ## Au centre : [[docs/agents/🧠 Jarvis (CEO)|🧠 Jarvis (CEO)]]
 **Agents B2B** : notes dans `docs\agents\` (reliées à Jarvis (CEO) dans le graphe)
-**Décisions** : [[docs/decisions/📌 Offre 595 + 49|📌 Offre 595 + 49]] · [[docs/decisions/📌 Sans acompte|📌 Sans acompte]] · [[docs/decisions/📌 Serveur HLQSTAU|📌 Serveur HLQSTAU]] · [[docs/decisions/📌 Validation à la main|📌 Validation à la main]] · [[docs/decisions/📌 INDEX d'abord|📌 INDEX d'abord]]
+**Décisions** : [[docs/decisions/📌 Offre 595 + 49|📌 Offre 595 + 49]] · [[docs/decisions/📌 Sans acompte|📌 Sans acompte]] · [[docs/decisions/📌 Serveur HLQSTAU|📌 Serveur HLQSTAU]] · [[docs/decisions/📌 Validation à la main|📌 Validation à la main]] · [[docs/decisions/📌 INDEX d'abord|📌 INDEX d'abord]] · [[docs/decisions/📌 Instagram retiré|📌 Instagram retiré]]
 **Docs clés** : [[liens-paiement]] · [[KIT-RDV-15MIN]] · [[DEVIS-ET-OBJECTIONS]] · [[TODO-B2B]] · [[JOURNAL-B2B]] · [[IDEES-MASTER]]
 **Tableau de bord** : `dashboard\index.html` (icône « Jarvis - Mon entreprise »), données `outils\agents-json.py`
 
@@ -19,7 +19,6 @@ Lire ce fichier, puis **seulement** la note du sujet en cours (jamais tous les d
 | Agence B2B : contexte, offres, prix, décisions | MEMOIRE-B2B · à faire : TODO-B2B · journal : JOURNAL-B2B · idées : IDEES-MASTER |
 | Rendez-vous, devis, objections, liens de paiement | KIT-RDV-15MIN · DEVIS-ET-OBJECTIONS · liens-paiement |
 | Sites/pages exemple (à lire avant toute page) | REGLES-STYLE-SITES |
-| Instagram | INSTAGRAM-PLAN |
 | Transfert vers le serveur | TRANSFERT-SERVEUR |
 | Pont Discord | `pont-discord/pont_logique.py`, `pont-discord/notifier.py` |
 | Veille conducteur de train + candidatures | `lib\veille-train.ps1`, `lib\candidatures.ps1`, TACHE-EMPLOI-CONDUCTEUR |

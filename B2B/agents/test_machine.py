@@ -38,15 +38,15 @@ ecrire(M.LOCAL, '{"machine_active": "PC-SERVEUR", "ical_url": "SECRETXYZ'); ok, 
 assert not ok and "illisible" in raison and "SECRETXYZ" not in raison and "SECRETXYZ" not in JR.read_text(encoding="utf-8")   # fichier abîmé : refus, sans rien montrer de son contenu
 ecrire(M.LOCAL, {"machine_active": "PC-BUREAU"}); e = doit_lever(SystemExit, lambda: M.exiger("rendez-vous", "jour", False, JR)); assert e.code == 3
 ecrire(M.LOCAL, {"machine_active": "PC-SERVEUR"}); M.exiger("rendez-vous", "jour", False, JR)                  # autorisé : ne lève rien
-ecrire(M.LOCAL, {"machine_active": "PC-SERVEUR", "agents_actifs": ["instagram", "devis", "inconnu"], "serveur": True})
-assert M.agents_actifs() == ["instagram", "devis", "inconnu"] and M.serveur() is True
+ecrire(M.LOCAL, {"machine_active": "PC-SERVEUR", "agents_actifs": ["rendez-vous", "devis", "inconnu"], "serveur": True})
+assert M.agents_actifs() == ["rendez-vous", "devis", "inconnu"] and M.serveur() is True
 ecrire(M.LOCAL, {"machine_active": "PC-SERVEUR"}); assert M.agents_actifs() == [] and M.serveur() is False       # tout éteint par défaut
 os.environ["JARVIS_B2B_SERVEUR"] = "1"; assert M.serveur() is True; del os.environ["JARVIS_B2B_SERVEUR"]         # le lanceur du serveur pose cette variable
 # une boucle « continu » lancée par Jarvis ferait double emploi avec la tâche planifiée Jarvis-B2B-<agent> : refusée pour les agents planifiés, permise sinon (PC de bureau)
-ecrire(M.LOCAL, {"machine_active": "PC-SERVEUR", "agents_actifs": ["instagram", "prospection"]})
-ok, raison = M.verifier("instagram", "continu", False, JR); assert not ok and "Jarvis-B2B-instagram" in raison and "double" in raison, raison
+ecrire(M.LOCAL, {"machine_active": "PC-SERVEUR", "agents_actifs": ["rendez-vous", "prospection"]})
+ok, raison = M.verifier("rendez-vous", "continu", False, JR); assert not ok and "Jarvis-B2B-rendez-vous" in raison and "double" in raison, raison
 for c in ("ecouter", "demarrage"): assert not M.verifier("prospection", c, False, JR)[0], c
-assert M.verifier("instagram", "jour", False, JR)[0] and M.verifier("devis", "continu", False, JR)[0], "un agent non planifié garde sa boucle ; « jour » est toujours permis"
+assert M.verifier("rendez-vous", "jour", False, JR)[0] and M.verifier("devis", "continu", False, JR)[0], "un agent non planifié garde sa boucle ; « jour » est toujours permis"
 ecrire(M.LOCAL, {"machine_active": "PC-SERVEUR"})
 
 # ---------- 2) surcharge locale ----------
@@ -112,12 +112,12 @@ assert not re.search(r"^\s*(import|from)\s+(selenium|playwright|pyppeteer)", src
 
 # ---------- 6) tâches du serveur (serveur-taches.json) : cohérence ----------
 T = json.loads((ICI / "serveur-taches.json").read_text(encoding="utf-8"))["agents"]
-assert set(T) == {"appels-sid", "instagram", "devis", "rendez-vous", "reponses", "prospection"}, sorted(T)
+assert set(T) == {"appels-sid", "devis", "rendez-vous", "reponses", "prospection"}, sorted(T)   # instagram retiré du serveur le 14/11/2026 (archive)
 for nom, t in T.items():
     assert (ICI / t["script"]).is_file() and t["commandes"] and bool(t.get("toutes_minutes")) != bool(t.get("heure")), nom   # une cadence OU une heure
     for cmd in t["commandes"]: assert not set(cmd) & {"continu", "visuels", "ecouter", "demarrage", "google-autoriser", "installer-tache"}, (nom, cmd)   # ni boucle infinie, ni navigateur
 assert T["appels-sid"]["heure"] == "08:00" and T["appels-sid"]["commandes"] == [["jour"]]
-assert T["instagram"]["commandes"] == [["jour"], ["valider"]]
+assert "instagram" not in T and T["rendez-vous"]["commandes"] == [["jour"]] and T["devis"]["commandes"] == [["jour"]]
 
 # ---------- 7) refus de bout en bout : la vraie ligne de commande de chaque agent, dans une COPIE du dossier ----------
 copie = tmp / "copie" / "B2B"; (copie / "agents").mkdir(parents=True)
@@ -128,7 +128,7 @@ if (ICI.parent / "sites" / "moteur").is_dir():
     for f in (ICI.parent / "sites" / "moteur").glob("*.py"): shutil.copy(f, copie / "sites" / "moteur" / f.name)
 ecrire(copie / "agents" / "b2b.local.json", {"machine_active": "UNE-AUTRE-MACHINE-QUI-N-EXISTE-PAS"})
 env = {**os.environ, "JARVIS_TEST": "1", "PYTHONIOENCODING": "utf-8", "PYTHONDONTWRITEBYTECODE": "1"}
-for agent, args in (("instagram", ["jour"]), ("devis", ["jour"]), ("rendez-vous", ["jour"]), ("appels-sid", ["jour"]), ("prospection", ["jour"]), ("reponses", [])):
+for agent, args in [(n, [] if n == "reponses" else ["jour"]) for n in T] + [("instagram", ["jour"])]:   # chaque agent du serveur + l'archive instagram (lancée à la main : refusée aussi)
     p = subprocess.run([sys.executable, str(copie / "agents" / (agent + ".py"))] + args, capture_output=True, text=True, timeout=60, env=env, cwd=str(copie))
     assert p.returncode == 3, (agent, p.returncode, p.stdout[-300:], p.stderr[-300:])
     jr = copie / "agents" / f"{agent}-journal.log"
