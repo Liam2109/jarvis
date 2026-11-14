@@ -981,7 +981,10 @@ def _formater_sans_bloquer(drive, id_):
     """Ligne 1 figée, colonnes larges, texte renvoyé à la ligne, Résultat en liste déroulante (google_sheets.Drive.formater_feuille) : jamais bloquant, une feuille créée mais mal mise
     en forme reste exploitable."""
     try: drive.formater_feuille(id_, LARGEURS_PX, liste=(I_RESULTAT, RESULTATS))
-    except Exception as e: journaliser("google", f"mise en forme ignorée ({type(e).__name__})")
+    except Exception as e:   # jamais silencieux : sans mise en forme, Sid n'a ni liste Résultat ni en-tête figé (test réel du 14/11/2026 : HTTP 403, API Google Sheets désactivée dans le projet Google Cloud)
+        conseil = " : activer l'API « Google Sheets » dans le projet Google Cloud du client OAuth (aucune nouvelle autorisation du jeton)" if "403" in str(e) else ""
+        journaliser("google", f"mise en forme ignorée ({type(e).__name__} {e}){conseil}")
+        print(f"  ! Google : tableur créé SANS mise en forme (en-tête figé, colonnes larges, liste Résultat) ({type(e).__name__} {e}){conseil}")
 
 
 # --- Google Drive : un tableur « Appels AAAA-MM-JJ » par jour, directement dans le dossier de Sid --------------------------

@@ -1102,6 +1102,14 @@ hist = json.loads(A.HISTORIQUE.read_text(encoding="utf-8")); e = json.loads(A.ET
 verifier(all(l16[x][TEL] in hist for x in (pdr, ref, tps, rdv, nc, cher, site)), "oubliées 1 an : téléphone noté dans l'historique")
 verifier(not e.get("tentatives") and not any(r["nom"] in (pdr, ref, tps) for r in e.get("reprises", {}).values()), "plus aucun compteur ni reprise en attente pour elles")
 
+print("33. Mise en forme refusée par Google (API Sheets désactivée, HTTP 403) : le tableur reste, l'échec est dit clairement")
+class _DriveSansSheets:
+    def formater_feuille(self, *a, **k): raise Exception("HTTP 403")
+import contextlib as _cl
+_buf = io.StringIO()
+with _cl.redirect_stdout(_buf): A._formater_sans_bloquer(_DriveSansSheets(), "F")
+verifier("SANS mise en forme" in _buf.getvalue() and "API « Google Sheets »" in _buf.getvalue(), f"échec de mise en forme signalé dans la sortie : {_buf.getvalue().strip()[:160]}")
+
 monde(trouves=[], config={})   # ne laisse aucun fichier temporaire dans un état inattendu pour la suite
 
 print()

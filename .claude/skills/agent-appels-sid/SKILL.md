@@ -77,4 +77,5 @@ Si la liste n'a pas pu être faite, le code est 2, avec une alerte.
 - Nombre de lignes du jour, nombre de reprises, répartition par métier.
 - Réserve restante : une alerte sous `seuil_alerte` (200, soit environ 2 jours).
 - Panne du sourcing ou de Google, jeton Google expiré.
+- Tableur créé sans mise en forme (liste Résultat, en-tête figé) : l'API « Google Sheets » est à activer dans le projet Google Cloud, par Liam.
 - Le soir : les colonnes Résultat remplies par Sid, lues par l'agent `resume-sid`.
