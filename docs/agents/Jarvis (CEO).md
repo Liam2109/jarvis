@@ -1,4 +1,6 @@
 ---
+agent: jarvis
+aliases: [Jarvis (CEO)]
 name: Jarvis (CEO)
 role: Assistant vocal de Liam et chef d'orchestre des agents B2B de LM MULTI-SERVICES
 machine: gros PC DESKTOP-OBKCBTL (assistant) ; agents B2B sur le serveur DESKTOP-HLQSTAU
@@ -8,6 +10,4 @@ sorties: journal du jour, Discord, tableau de bord dashboard/index.html
 ---
 # Jarvis (CEO)
 Au centre : il lance, surveille et arrête les agents. « Jarvis stop » = arrêt d'urgence.
-Agents : [[agent-prospection]] · [[agent-appels-sid]] · [[agent-rendez-vous]] · [[agent-reponses]] · [[agent-devis]] · [[agent-instagram]] · [[agent-page-exemple]] · [[agent-stripe-alerte]] · [[agent-resume-sid]]
-Décisions : [[decision-serveur-hlqstau]] · [[decision-offre-595-49]] · [[decision-sans-acompte]] · [[decision-validation-manuelle]] · [[decision-index-d-abord]]
-Retour au hub : [[INDEX]]
+Liens : [[docs/agents/Prospection|Prospection]] · [[docs/agents/Page exemple|Page exemple]] · [[docs/agents/Appels Sid|Appels Sid]] · [[docs/agents/Rendez-vous|Rendez-vous]] · [[docs/agents/Réponses|Réponses]] · [[docs/agents/Devis|Devis]] · [[docs/agents/Alerte Stripe|Alerte Stripe]] · [[docs/agents/Instagram|Instagram]] · [[docs/agents/Résumé Sid|Résumé Sid]]

@@ -14,6 +14,7 @@ jamais la 3e qui peut contenir un nom d'entreprise) et des COMPTES (nombres). Au
 import json, os, re, socket, subprocess, sys
 from datetime import datetime, date
 from pathlib import Path
+from urllib.parse import quote
 
 RACINE = Path(__file__).resolve().parent.parent
 AGENTS = RACINE / "B2B" / "agents"
@@ -43,9 +44,16 @@ def frontmatter(p):
     return {k.strip(): v.strip().strip('"') for k, v in (l.split(":", 1) for l in m.group(1).splitlines() if ":" in l)} if m else {}
 
 
+def note_de(nom):
+    """Note Obsidian de l'agent : docs/agents/*.md dont l'en-tête porte « agent: <nom> » (noms de fichiers courts en français)."""
+    for p in NOTES.glob("*.md"):
+        if frontmatter(p).get("agent") == nom: return p
+    return NOTES / f"{nom}.md"
+
+
 def role_doc(nom):
     """Rôle : note docs/agents d'abord (courte), puis la ligne « Rôle : » du .md de l'agent, puis la 1re ligne de la docstring."""
-    fm = frontmatter(NOTES / f"agent-{nom}.md")
+    fm = frontmatter(note_de(nom))
     if fm.get("role"): return fm["role"]
     try:
         for l in (AGENTS / f"{nom}.md").read_text(encoding="utf-8").splitlines():
@@ -168,7 +176,7 @@ def construire(maintenant=None):
         suspendu = bool(etat.get("suspendu"))
         en_erreur = suspendu or (erreur is not None and erreur["date"] == dernier)
         statut = "erreur" if en_erreur else "actif" if (tourne or planifie_ici) else "inactif"
-        note = NOTES / f"agent-{nom}.md"
+        note = note_de(nom)
         agents.append({
             "nom": nom, "role": role_doc(nom),
             "machine": f"serveur {machine_active}" if s and machine_active and machine_active != ce_pc else (machine_active or "aucune machine active"),
@@ -178,7 +186,7 @@ def construire(maintenant=None):
             "dernier_passage": dernier, "dernier_resultat": resultat, "derniere_erreur": erreur,
             "pole": POLES.get(nom, "Autres"), "journal": lignes_journal,
             "note": str(note.relative_to(RACINE)).replace("\\", "/") if note.exists() else None,
-            "note_obsidian": ("obsidian://open?path=" + str(note).replace("\\", "/")) if note.exists() else None,
+            "note_obsidian": ("obsidian://open?path=" + quote(str(note), safe="")) if note.exists() else None,
         })
     c = chiffres_du_jour(maintenant.date()); j = maintenant.date().isoformat()
     du_jour = {"prospection": ("prospects trouvés", c["prospects_trouves_aujourdhui"]), "appels-sid": ("appels Sid", c["appels_sid_aujourdhui"]),

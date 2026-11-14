@@ -1,6 +1,6 @@
 {
   "collapse-filter": false,
-  "search": "-path:B2B/sites -path:emploi",
+  "search": "-file:README -file:CLAUDE -file:liste-appels -path:lots -path:memoire -path:logs -path:dashboard -path:node_modules -path:B2B/sites -path:emploi -path:transfert-serveur -path:quarantaine",
   "showTags": false,
   "showAttachments": false,
   "hideUnresolved": true,
@@ -8,51 +8,37 @@
   "collapse-color-groups": false,
   "colorGroups": [
     {
-      "query": "file:jarvis-ceo",
-      "color": {
-        "a": 1,
-        "rgb": 15920093
-      }
-    },
-    {
       "query": "path:docs/agents",
       "color": {
         "a": 1,
-        "rgb": 14722136
+        "rgb": 12089899
       }
     },
     {
       "query": "path:docs/decisions",
       "color": {
         "a": 1,
-        "rgb": 6196366
-      }
-    },
-    {
-      "query": "path:B2B/docs",
-      "color": {
-        "a": 1,
-        "rgb": 11553328
-      }
-    },
-    {
-      "query": "path:B2B/agents",
-      "color": {
-        "a": 1,
         "rgb": 3104098
+      }
+    },
+    {
+      "query": "file:liens-paiement OR file:KIT-RDV-15MIN OR file:DEVIS-ET-OBJECTIONS OR file:TODO-B2B OR file:JOURNAL-B2B OR file:IDEES-MASTER",
+      "color": {
+        "a": 1,
+        "rgb": 10699563
       }
     }
   ],
   "collapse-display": false,
-  "showArrow": true,
-  "textFadeMultiplier": 0,
-  "nodeSizeMultiplier": 1.2,
+  "showArrow": false,
+  "textFadeMultiplier": 2,
+  "nodeSizeMultiplier": 1.3,
   "lineSizeMultiplier": 1,
   "collapse-forces": true,
-  "centerStrength": 0.5,
-  "repelStrength": 12,
+  "centerStrength": 0.4,
+  "repelStrength": 20,
   "linkStrength": 1,
-  "linkDistance": 220,
+  "linkDistance": 160,
   "scale": 1,
   "close": false
 }
