@@ -8,7 +8,7 @@
           "jour"
         ]
       ],
-      "heure": "08:00"
+      "heure": "07:30"
     },
     "devis": {
       "script": "devis.py",

@@ -723,7 +723,7 @@ print("17. Tâche planifiée : commande fournie, jamais installée sans --oui")
 monde(trouves=gros_monde(), config={})
 code, sortie = lancer("installer-tache")
 verifier(code == 0 and EXEC == [], "installer-tache sans --oui : affiche la commande, n'exécute rien")
-for motif in ("Register-ScheduledTask", "-Daily", "08:00", "-StartWhenAvailable", "IgnoreNew", "appels-sid.py", " jour", "Jarvis-AppelsSid", "Interactive"):
+for motif in ("Register-ScheduledTask", "-Daily", "07:30", "-StartWhenAvailable", "IgnoreNew", "appels-sid.py", " jour", "Jarvis-AppelsSid", "Interactive"):
     verifier(motif in sortie, f"commande : contient « {motif} »")
 verifier("--oui" in sortie, "la sortie dit comment l'installer vraiment")
 code, sortie = lancer("retirer-tache"); verifier(code == 0 and EXEC == [] and "Unregister-ScheduledTask" in sortie and "Jarvis-AppelsSid" in sortie, "retirer-tache sans --oui : affiche la commande, n'exécute rien")

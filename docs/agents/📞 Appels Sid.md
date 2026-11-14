@@ -4,7 +4,7 @@ aliases: [📞 Appels Sid]
 name: appels-sid
 role: Préparer chaque matin la liste d'appels de Sid (au moins 100 entreprises avec téléphone)
 machine: serveur DESKTOP-HLQSTAU (si listé dans agents_actifs)
-planification: 08:00 (serveur-taches.json, commande « jour ») ; jours d'appel du lundi au vendredi
+planification: 07:30 (serveur-taches.json, commande « jour ») ; jours d'appel du lundi au vendredi
 depend_de: agent-prospection
 responsable: prospection
 sorties: docs/sid/liste-sid-AAAA-MM-JJ.csv, tableur Google « Appels AAAA-MM-JJ » dans le dossier de Sid

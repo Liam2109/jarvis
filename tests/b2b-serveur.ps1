@@ -171,7 +171,7 @@ $p = Get-B2BTaches $RB; $noms = @($p.taches | ForEach-Object { $_.nom })
 Verifier ($p.ok -and $noms.Count -eq 2 -and 'Jarvis-B2B-rendez-vous' -in $noms -and 'Jarvis-B2B-appels-sid' -in $noms -and $p.avertissements -match 'inconnu') 'seuls les agents actifs ont une tâche « Jarvis-B2B-<agent> » ; un nom inconnu est signalé, ignoré'
 Verifier ('Jarvis-B2B-instagram' -notin $noms -and $p.avertissements -match 'instagram') 'instagram encore listé dans agents_actifs : aucune tâche (retiré de serveur-taches.json), signalé comme inconnu'
 $ti = $p.taches | Where-Object { $_.agent -eq 'rendez-vous' }; $ta = $p.taches | Where-Object { $_.agent -eq 'appels-sid' }
-Verifier ($ti.minutes -eq 5 -and -not $ti.heure -and $ta.heure -eq '08:00' -and -not $ta.minutes) 'rendez-vous : toutes les 5 minutes ; appels-sid : tous les jours à 08:00'
+Verifier ($ti.minutes -eq 5 -and -not $ti.heure -and $ta.heure -eq '07:30' -and -not $ta.minutes) 'rendez-vous : toutes les 5 minutes ; appels-sid : tous les jours à 07:30'
 Verifier ($ti.arguments -match 'serveur-b2b\.ps1' -and $ti.arguments -match '-Agent rendez-vous' -and $ti.arguments -match 'ExecutionPolicy Bypass' -and $ti.arguments -notmatch 'visuels|continu') 'la tâche appelle le lanceur (priorité basse + verrou), jamais un agent directement'
 $script:Reg = @(); $script:Sup = @(); $script:Exist = @('Jarvis-B2B-devis', 'Jarvis-B2B-instagram', 'Jarvis-MajAuto', 'Jarvis-Serveur')
 $script:B2BHooks = @{ Existantes = { $script:Exist }; Enregistrer = { param($t) $script:Reg += $t.nom }; Supprimer = { param($n) $script:Sup += $n } }

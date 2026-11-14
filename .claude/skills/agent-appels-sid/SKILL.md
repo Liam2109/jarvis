@@ -1,6 +1,6 @@
 ---
 name: agent-appels-sid
-description: Fiche de rôle de l'agent Liste d'appels de Sid (pôle Prospection) — chaque jour ouvré à 8 h, un seul tableur Google « Appels AAAA-MM-JJ » de 100 entreprises triées par créneau, dans le dossier Drive de Sid. À utiliser pour préparer, vérifier ou corriger la liste d'appels (appels-sid.py jour, preparer, sourcer, etat, annuler).
+description: Fiche de rôle de l'agent Liste d'appels de Sid (pôle Prospection) — chaque jour ouvré à 7 h 30, un seul tableur Google « Appels AAAA-MM-JJ » de 100 entreprises triées par créneau, dans le dossier Drive de Sid. À utiliser pour préparer, vérifier ou corriger la liste d'appels (appels-sid.py jour, preparer, sourcer, etat, annuler).
 ---
 
 # Agent Liste d'appels de Sid — le tableur du jour
@@ -9,7 +9,7 @@ description: Fiche de rôle de l'agent Liste d'appels de Sid (pôle Prospection)
 **Script :** `B2B/agents/appels-sid.py`, propre à cet agent. Il réutilise les fonctions de `prospection.py` (exclusions, zone) sans en lancer les commandes. Note : `docs/agents/📞 Appels Sid.md`.
 
 ## Ce qu'il fait
-- **Quand :** du lundi au vendredi (`jours_appel`), à 8 h, il prépare **une** liste de 100 entreprises. Il en met au moins 100 et au plus 130.
+- **Quand :** du lundi au vendredi (`jours_appel`), à 7 h 30, il prépare **une** liste de 100 entreprises. Il en met au moins 100 et au plus 130.
 - **Quelles entreprises :**
   - environ 20 métiers locaux, au plus 20 entreprises par métier ; ordre : plombier-chauffagiste, électricien, couvreur, maçon, coiffeur, puis les autres ;
   - en Normandie seulement : départements 76, 27, 14, 50, 61 ;
@@ -57,14 +57,14 @@ description: Fiche de rôle de l'agent Liste d'appels de Sid (pôle Prospection)
 | Ordre | Commande |
 |---|---|
 | Essai à blanc : le tableur du jour en texte, sans réseau ni écriture | `python B2B\agents\appels-sid.py preparer --jour AAAA-MM-JJ --a-blanc --hors-ligne` |
-| Passage du matin (tâche de 8 h) | `python B2B\agents\appels-sid.py jour` (essai : `--a-blanc`) |
+| Passage du matin (tâche de 7 h 30) | `python B2B\agents\appels-sid.py jour` (essai : `--a-blanc`) |
 | La liste seule, en CSV local | `python B2B\agents\appels-sid.py preparer --jour AAAA-MM-JJ` |
 | Garnir la réserve | `python B2B\agents\appels-sid.py sourcer` (essai : `--a-blanc` ; un département : `--dept 27` ; sans réseau : `--simulation`) |
 | Réserve, dernière liste, état de Google | `python B2B\agents\appels-sid.py etat` |
 | Libérer une liste qui n'a pas servi | `python B2B\agents\appels-sid.py annuler AAAA-MM-JJ` (essai : `--a-blanc`) |
 | Autorisation Google, **par Liam seulement** | `python B2B\agents\appels-sid.py google-autoriser` |
 
-Sur le serveur, la commande `jour` tourne à 08:00 (`serveur-taches.json`). Un samedi ou un dimanche, elle note « jour hors planning » et ne fait rien.
+Sur le serveur, la commande `jour` tourne à 07:30 (`serveur-taches.json`, `heure_tache`). Un samedi ou un dimanche, elle note « jour hors planning » et ne fait rien.
 
 ## Critère de fin (un passage `jour`)
 Le passage se termine avec le code 0 quand :

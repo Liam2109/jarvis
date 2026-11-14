@@ -116,7 +116,7 @@ assert set(T) == {"appels-sid", "devis", "rendez-vous", "reponses", "prospection
 for nom, t in T.items():
     assert (ICI / t["script"]).is_file() and t["commandes"] and bool(t.get("toutes_minutes")) != bool(t.get("heure")), nom   # une cadence OU une heure
     for cmd in t["commandes"]: assert not set(cmd) & {"continu", "visuels", "ecouter", "demarrage", "google-autoriser", "installer-tache"}, (nom, cmd)   # ni boucle infinie, ni navigateur
-assert T["appels-sid"]["heure"] == "08:00" and T["appels-sid"]["commandes"] == [["jour"]]
+assert T["appels-sid"]["heure"] == "07:30" and T["appels-sid"]["commandes"] == [["jour"]]
 assert "instagram" not in T and T["rendez-vous"]["commandes"] == [["jour"]] and T["devis"]["commandes"] == [["jour"]]
 
 # ---------- 7) refus de bout en bout : la vraie ligne de commande de chaque agent, dans une COPIE du dossier ----------

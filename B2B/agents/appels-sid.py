@@ -14,7 +14,7 @@ verrou, arrêt de secours, alerte Discord, journal, tests écrits avant le code.
   python agents\\appels-sid.py annuler [AAAA-MM-JJ] [--force] [--a-blanc] libère les entreprises d'une liste non utilisée (la plus récente par défaut)
   python agents\\appels-sid.py google-autoriser                           autorisation Google (Drive) du compte contact.lmsites@gmail.com, une seule fois
   python agents\\appels-sid.py rediriger-liste | rendre-liste [--a-blanc]  la liste d'appels quotidienne de Liam n'est plus produite (tout va à Sid) | est rendue à Liam
-  python agents\\appels-sid.py installer-tache | retirer-tache [--oui]     tâche planifiée Windows de 8 h 00 : sans --oui, affiche seulement la commande
+  python agents\\appels-sid.py installer-tache | retirer-tache [--oui]     tâche planifiée Windows de 7 h 30 : sans --oui, affiche seulement la commande
 
 Sélection (la logique de prospection.py est réutilisée, pas recopiée : exclusions STOP / refus, exclus-emails.json, listes d'appels, zone et vagues, proximité de Rouen) :
 ~20 métiers locaux seulement (voir NOMS, 10 nov. 2026) ; Normandie (départements 14, 27, 50, 61, 76) ; téléphone français valide, type (fixe / mobile / box) affiché ; jamais appelée ni donnée à
@@ -65,7 +65,7 @@ DEFAUT = {"envoi_automatique": False, "par_liste": 100,
           "repartition": {m: 5 for m in NAF_SID},   # ~20 métiers, environ 5 par métier dans une liste de 100 (règle fixe de Liam, 10 nov. 2026)
           "cible_reserve": 400, "seuil_alerte": 200, "sourcing_requetes_max": 6, "pause_overpass_s": 15, "sourcing_refaire_jours": 30,
           "zone": "Normandie", "departements": list(NORMANDIE), "sirene_actif": True, "sirene_requetes_max": 12, "sirene_pages_max": 4, "sirene_sites_max": 30, "pause_sirene_s": 1, "pause_site_s": 2,
-          "avec_site": False, "partager_avec": "", "compte_google": "contact.lmsites@gmail.com", "heure_tache": "08:00", "jours_appel": list(JOURS_SEMAINE), "dossier_sid_id": "", "jours_sans_rappel": 365, "max_par_metier": 20}
+          "avec_site": False, "partager_avec": "", "compte_google": "contact.lmsites@gmail.com", "heure_tache": "07:30", "jours_appel": list(JOURS_SEMAINE), "dossier_sid_id": "", "jours_sans_rappel": 365, "max_par_metier": 20}
 MIN_LISTE, MAX_LISTE = 100, 130   # règle fixe de Liam (10 nov. 2026) : au moins 100 appels par jour
 VERROU_MAX_S = 3 * 3600   # un verrou plus vieux est celui d'un processus bloqué : repris
 TACHE = "Jarvis-AppelsSid"
