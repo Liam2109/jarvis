@@ -58,6 +58,7 @@ B2B/sites/agence/assets/*
 B2B/messages-a-valider.md
 B2B/docs/sid/
 B2B/docs/liste-appels-*
+B2B/docs/archives/**/liste-appels-*
 B2B/agents/gmail-*
 B2B/agents/instagram-token*
 B2B/agents/google-sheets-token*

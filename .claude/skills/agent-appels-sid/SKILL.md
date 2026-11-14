@@ -32,7 +32,7 @@ description: Fiche de rôle de l'agent Liste d'appels de Sid (pôle Prospection)
 
 ## Ce qu'il ne fait JAMAIS
 - Appeler, envoyer un SMS, un e-mail ou un message à une entreprise ou à Sid.
-- Écrire un fichier `liste-appels-*.md` : c'est arrêté depuis le 14/11/2026, et les anciens restent seulement en lecture.
+- Écrire un fichier `liste-appels-*.md` : c'est arrêté depuis le 14/11/2026. Les anciens sont rangés dans `B2B/docs/archives/`, en lecture seule.
 - Redonner une entreprise STOP, refusée ou hors zone, ou un numéro déjà donné à Sid.
 - Supprimer définitivement un fichier Drive, ou toucher un fichier qu'il n'a pas créé (portée `drive.file`).
 - Demander une nouvelle autorisation Google sans l'accord de Liam.

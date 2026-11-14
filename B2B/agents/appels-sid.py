@@ -361,7 +361,7 @@ def _lire_maps():
 def _lignes_des_listes():
     """Entreprises des docs\\liste-appels-*.md (nom, ville, téléphone, métier), pour celles qui n'auraient plus de ligne dans les fichiers de la prospection."""
     out = []
-    for f in sorted(P.DOCS.glob("liste-appels-*.md")):
+    for f in P.fichiers_listes_appels():   # docs\ et docs\archives\ (rangement du 14/11/2026)
         out += [{"nom": e["nom"], "ville": e["ville"], "telephone": e["tel"], "metier": e["metier"]} for e in P.lire_liste_fichier(f)]
     return out
 

@@ -1907,10 +1907,17 @@ def texte_liste(choisies, ident, jour):
             "\nSource des numéros et des noms : © les contributeurs d'OpenStreetMap, licence ODbL 1.0 (https://www.openstreetmap.org/copyright).\n")
 
 
+def fichiers_listes_appels():
+    """docs\\liste-appels-*.md et docs\\archives\\liste-appels-*.md (rangement du 14/11/2026) ; un même nom présent aux deux endroits n'est lu qu'une fois (celui de docs)."""
+    vus = {}
+    for f in sorted((DOCS / "archives").glob("liste-appels-*.md")) + sorted(DOCS.glob("liste-appels-*.md")): vus[f.name] = f
+    return [vus[n] for n in sorted(vus)]
+
+
 def lire_listes():
-    """Relit tous les docs\\liste-appels-*.md : [(clé, jour, {email, lien, cases})] pour chaque ligne du tableau."""
+    """Relit tous les docs\\liste-appels-*.md (et ceux rangés dans docs\\archives) : [(clé, jour, {email, lien, cases})] pour chaque ligne du tableau."""
     out = []
-    for f in sorted(DOCS.glob("liste-appels-*.md")):
+    for f in fichiers_listes_appels():
         jour = f.stem.removeprefix("liste-appels-")
         for lg in f.read_text(encoding="utf-8").splitlines():
             m = re.search(r"<!-- k:(.+?) -->", lg)

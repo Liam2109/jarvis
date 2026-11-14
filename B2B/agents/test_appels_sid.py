@@ -174,6 +174,9 @@ for interdit, raison in (("Sans Tel", "sans téléphone"), ("Tel Faux", "télép
 verifier(len([c for c in A.choisir(A.cfg(), A.etat_lire()) if c["nom"] == "Suivi A Contacter"]) == 1, "même entreprise présente dans deux fichiers (suivi + maps) : une seule ligne")
 
 for repris in ("Liste Resto", "Deja Rendu A Liam"): verifier(repris in cles, f"reprise : {repris} (listée pour Liam mais jamais appelée)")
+(P.DOCS / "archives").mkdir(exist_ok=True); os.replace(P.DOCS / "liste-appels-2026-11-03.md", P.DOCS / "archives" / "liste-appels-2026-11-03.md")
+cles_arch = {c["nom"] for c in A.choisir(A.cfg(), A.etat_lire())}
+verifier(cles_arch == cles and [f.name for f in P.fichiers_listes_appels()] == ["liste-appels-2026-11-03.md"], "liste rangée dans docs\\archives (14/11/2026) : toujours relue, mêmes reprises et mêmes exclusions")
 print("3. Taille de la liste (100 à 130, règle fixe de Liam du 10 nov. 2026) et mélange des métiers")
 monde(trouves=gros_monde(), config={})
 ch = A.choisir(A.cfg(), A.etat_lire())
