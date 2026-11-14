@@ -27,7 +27,7 @@ Délai : 8 jours ouvrés
 Livrables : photos de la boutique ; horaires d'ouverture ; bouton d'appel ; carte et itinéraire
 Besoin : « Je veux que les gens m'appellent depuis leur téléphone. »
 """
-FICHE_SITE = FICHE_PAGE.replace("Offre : page web", "Offre : site complet\nPrix : 990 €").replace("Options : maintenance\n", "Options : aucune\n")
+FICHE_SITE = FICHE_PAGE.replace("Offre : page web", "Offre : site complet\nPrix : 994 €").replace("Options : maintenance\n", "Options : aucune\n")
 
 # --- lecture de la fiche : accents, majuscules et alias sans importance ---
 f = D.lire_fiche(FICHE_PAGE)
@@ -39,12 +39,12 @@ MODELE = (Path(D.__file__).parent / "devis-fiche-modele.txt").read_text(encoding
 assert D.lire_fiche("# Offre : site complet\nOffre : page web\n# note\nVille : Rouen") == {"offre": "page web", "ville": "Rouen"}      # lignes # ignorées
 rm = D.construire(D.lire_fiche(MODELE), IDENT, "DEV-2026-009", JOUR); assert rm[0] is None and len(rm[1]) >= 6, rm       # le modèle non rempli ne produit JAMAIS de devis
 
-# --- prix, acompte de 30 %, liens : uniquement ceux de docs\KIT-RDV-15MIN.md / liens-paiement.md ---
+# --- prix et lien de paiement du prix complet (paiement en une fois, 14/11/2026) : uniquement ceux de docs\KIT-RDV-15MIN.md / liens-paiement.md ---
 d, manques = D.construire(f, IDENT, "DEV-2026-001", JOUR)
-assert not manques and d["prix"] == 595 and d["acompte"] == 178 and d["solde"] == 417 and d["lien_acompte"] == "https://buy.stripe.com/3cI14o4Mt9J3dTVc4g5EY00", (d, manques)
+assert not manques and d["prix"] == 595 and "acompte" not in d and "solde" not in d and d["lien_paiement"] == "https://buy.stripe.com/bJebJ2ceVdZjbLN0ly5EY06", (d, manques)
 assert d["maintenance"] is True and d["delai_jours"] == 8 and d["valide_jusqu"] == "2026-11-19" and len(d["livrables"]) == 4 and d["offre_nom"] == "Page web"
 ds, m2 = D.construire(D.lire_fiche(FICHE_SITE), IDENT, "DEV-2026-002", JOUR)
-assert not m2 and ds["prix"] == 990 and ds["acompte"] == 297 and ds["solde"] == 693 and ds["lien_acompte"].endswith("4jl4BO5EY02") and ds["maintenance"] is False
+assert not m2 and ds["prix"] == 994 and ds["lien_paiement"] == "https://buy.stripe.com/7sYaEY2ElaN7179d8k5EY07" and ds["maintenance"] is False
 assert D.euros(590) == "590 €" and D.euros(1490) == "1 490 €"
 
 # --- information manquante ou sans source : signalée, aucun devis (rien d'inventé) ---
@@ -61,26 +61,28 @@ r, mq = manquent(FICHE_PAGE.replace("maintenance", "maintenance ; nom de domaine
 assert manquent(FICHE_PAGE + "Prix : 500 €\n")[0] is None                                          # la page web coûte 595 €, pas un autre montant
 assert manquent(FICHE_PAGE.replace("Offre : page web", "Offre : site complet"))[0] is None         # site complet sans prix (990 à 1 490 €) : à décider par Liam
 assert manquent(FICHE_PAGE.replace("Offre : page web", "Offre : site complet\nPrix : 700 €"))[0] is None   # hors de 990 à 1 490 €
-r, mq = manquent(FICHE_PAGE.replace("Offre : page web", "Offre : site complet\nPrix : 1 190 €")); assert r is None and any("lien" in x and "297" in x for x in mq), mq   # lien d'acompte à créer
+r, mq = manquent(FICHE_PAGE.replace("Offre : page web", "Offre : site complet\nPrix : 1 190 €")); assert r is None and any("lien" in x and "994 €" in x for x in mq), mq   # lien de paiement à créer par Liam
+assert manquent(FICHE_PAGE.replace("Offre : page web", "Offre : site complet\nPrix : 990 €"))[0] is None   # 990 € : aucun lien de ce montant
 assert manquent(FICHE_PAGE.replace("Offre : page web", "Offre : site complet\nPrix : 1 600 €"))[0] is None
 assert manquent(FICHE_PAGE, {**IDENT, "siret": ""})[0] is None and manquent(FICHE_PAGE, {**IDENT, "email_reponse": ""})[0] is None   # en-tête incomplet
 
 # --- le devis écrit (texte et PDF, même contenu) ---
 txt = D.texte_devis(d)
 for attendu in ("LM MULTI-SERVICES", "entreprise individuelle", "101 839 033 00012", "TVA non applicable, art. 293 B du CGI", "DEV-2026-001", "Boulangerie Fictive Dupont", "Rouen", "Page web",
-                "595 €", "178 €", "417 €", "30 %", "8 jours ouvrés", "valable 15 jours", "19/11/2026", d["lien_acompte"], "aperçu", "49 € par mois", "photos de la boutique", "carte et itinéraire"):
+                "595 €", "en une fois", "8 jours ouvrés", "valable 15 jours", "19/11/2026", d["lien_paiement"], "aperçu", "49 € par mois", "photos de la boutique", "carte et itinéraire"):
     assert attendu in txt, attendu
 assert not re.search(r"garanti|n°\s?1|meilleur|\bavis\b|clients? satisfaits|référence", txt, re.I)   # aucune promesse ni avis inventés
-assert "49 €" in D.texte_devis(d) and "49 €" not in D.texte_devis(ds) and ds["lien_acompte"] in D.texte_devis(ds) and "693 €" in D.texte_devis(ds)   # maintenance seulement si demandée, jamais ajoutée au total
+assert "49 €" in D.texte_devis(d) and "49 €" not in D.texte_devis(ds) and ds["lien_paiement"] in D.texte_devis(ds) and "994 €" in D.texte_devis(ds)   # maintenance seulement si demandée, jamais ajoutée au total
 msg = D.texte_message(d)
-assert msg.startswith("Objet : Devis page web pour Boulangerie Fictive Dupont") and "Bonjour Jeanne Martin" in msg and "Je veux que les gens m'appellent" in msg and d["lien_acompte"] in msg and "DEV-2026-001" in msg and "Liam Emo" in msg and "valable 15 jours" in msg
+for t in (txt, msg, D.texte_devis(ds), D.texte_message(ds)): assert not re.search(r"acompte|solde|30 %", t, re.I), t   # paiement en une fois : aucune étape intermédiaire
+assert msg.startswith("Objet : Devis page web pour Boulangerie Fictive Dupont") and "Bonjour Jeanne Martin" in msg and "Je veux que les gens m'appellent" in msg and d["lien_paiement"] in msg and "DEV-2026-001" in msg and "Liam Emo" in msg and "valable 15 jours" in msg
 assert "Je veux" not in D.texte_message({**d, "besoin": ""}) and "vos mots" not in D.texte_message({**d, "besoin": ""})
 pdf = D.pdf_devis(d)
 assert pdf.startswith(b"%PDF-1.4") and pdf.rstrip().endswith(b"%%EOF")
 sx = int(re.search(rb"startxref\s+(\d+)", pdf).group(1)); assert pdf[sx:sx + 4] == b"xref"
 nb = int(re.search(rb"xref\s+0 (\d+)", pdf).group(1)); offs = re.findall(rb"(\d{10}) 00000 n", pdf[sx:]); assert len(offs) == nb - 1
 for i, o in enumerate(offs, 1): assert pdf[int(o):].startswith(f"{i} 0 obj".encode()), i      # table des références exacte
-assert b"DEV-2026-001" in pdf and "178 €".encode("cp1252") in pdf and b"Boulangerie Fictive Dupont" in pdf
+assert b"DEV-2026-001" in pdf and "595 €".encode("cp1252") in pdf and b"acompte" not in pdf.lower() and b"Boulangerie Fictive Dupont" in pdf
 assert len(re.findall(rb"/Type /Page\b", pdf)) == 1
 long = D.pdf_devis({**d, "besoin": "mot " * 3000}); assert len(re.findall(rb"/Type /Page\b", long)) >= 2 and long.rstrip().endswith(b"%%EOF")      # passage à la page suivante
 
@@ -167,15 +169,15 @@ effacer(); fx = Faux(); D.cmd_preparer(conf, FICHE_PAGE, False, JOUR, IDENT, ale
 assert D.cmd_jour(conf, False, JOUR, fx.api, fx.acces, alerte)["action"] == "simulation" and not fx.appels and D.etat_lire()["devis"]["DEV-2026-001"]["statut"] == "préparé"
 
 # --- suivi : statuts dans l'ordre, jamais de saut ; l'agent ne lit ni n'écrit Stripe : Liam coche à la main ---
-assert D.STATUTS == ["préparé", "validé", "envoyé", "accepté", "acompte payé"]
+assert D.STATUTS == ["préparé", "validé", "envoyé", "accepté", "payé"]
 assert D.cmd_marquer("DEV-2026-001", "envoyé", JOUR)["action"] == "refusé"                           # pas envoyé sans « ok » de Liam
 assert D.cmd_marquer("DEV-2026-404", "validé", JOUR)["action"] == "refusé"
 assert D.cmd_marquer("DEV-2026-001", "validé", JOUR)["action"] == "marqué" and D.cmd_marquer("DEV-2026-001", "accepté", JOUR)["action"] == "refusé"
-for s, dj in (("envoyé", 1), ("accepté", 2), ("acompte payé", 3)): assert D.cmd_marquer("DEV-2026-001", s, JOUR + timedelta(days=dj))["action"] == "marqué", s
-h = D.etat_lire()["devis"]["DEV-2026-001"]; assert h["statut"] == "acompte payé" and h["historique"]["acompte payé"] == "2026-11-07" and list(h["historique"]) == D.STATUTS
+for s, dj in (("envoyé", 1), ("accepté", 2), ("payé", 3)): assert D.cmd_marquer("DEV-2026-001", s, JOUR + timedelta(days=dj))["action"] == "marqué", s
+h = D.etat_lire()["devis"]["DEV-2026-001"]; assert h["statut"] == "payé" and h["historique"]["payé"] == "2026-11-07" and list(h["historique"]) == D.STATUTS
 assert D.cmd_marquer("DEV-2026-001", "validé", JOUR)["action"] == "refusé"                            # jamais en arrière
 assert len(re.findall(r"marqué", journal())) == 4
-assert D.statut_court("acompte") == "acompte payé" and D.statut_court("envoye") == "envoyé" and D.statut_court("valide") == "validé" and D.statut_court("zzz") is None
+assert D.statut_court("paye") == "payé" and D.statut_court("acompte") is None and D.statut_court("envoye") == "envoyé" and D.statut_court("valide") == "validé" and D.statut_court("zzz") is None
 # un nouveau devis est possible une fois le précédent validé (un seul en cours de VALIDATION)
 assert D.cmd_preparer(conf, FICHE_SITE, False, JOUR, IDENT, alerte)["numero"] == "DEV-2026-002"
 # annuler libère la place
@@ -225,9 +227,10 @@ for mauvaise, mot in (("A | b | c | d, e, f | 8 jours ouvrés", "champs"), ("A |
     assert D.fiche_rapide(mauvaise)[0] is None and any(mot in x for x in D.fiche_rapide(mauvaise)[1]), (mauvaise, D.fiche_rapide(mauvaise))
 effacer(); fx = Faux(); r = D.cmd_rapide(conf, LIGNE, False, JOUR, IDENT, alerte)
 assert r["action"] == "préparé" and r["numero"] == "DEV-2026-001"
-q = D.etat_lire()["devis"]["DEV-2026-001"]; assert q["statut"] == "préparé" and (q["prix"], q["acompte"], q["solde"]) == (595, 178, 417) and q["maintenance"] is True and q["offre_nom"] == "Page web"
+q = D.etat_lire()["devis"]["DEV-2026-001"]; assert q["statut"] == "préparé" and q["prix"] == 595 and "acompte" not in q and q["lien_paiement"] == D.LIEN_PAGE and q["maintenance"] is True and q["offre_nom"] == "Page web"
 t = (D.DOSSIER / "DEV-2026-001.txt").read_text(encoding="utf-8")
-for x in ("595 €", "178 €", "417 €", "49 € par mois", "8 jours ouvrés", "photos de la boutique", "bouton d'appel", "Je veux être appelé", "https://buy.stripe.com/3cI14o4Mt9J3dTVc4g5EY00", "TVA non applicable"): assert x in t, x
+for x in ("595 €", "en une fois", "49 € par mois", "8 jours ouvrés", "photos de la boutique", "bouton d'appel", "Je veux être appelé", "https://buy.stripe.com/bJebJ2ceVdZjbLN0ly5EY06", "TVA non applicable"): assert x in t, x
+assert "acompte" not in t.lower() and "acompte" not in (D.DOSSIER / "DEV-2026-001-message.txt").read_text(encoding="utf-8").lower()
 assert "attention de" not in t and (D.DOSSIER / "DEV-2026-001.pdf").read_bytes().startswith(b"%PDF") and (D.DOSSIER / "DEV-2026-001-message.txt").read_text(encoding="utf-8").startswith("Objet : Devis page web pour Boulangerie Fictive Dupont\n\nBonjour,")
 assert not fx.appels and not alertes                                                          # simulation : aucun Discord, aucune alerte
 effacer(); D.cmd_rapide(conf, LIGNE.replace("| oui |", "| non |"), False, JOUR, IDENT, alerte); assert "49 €" not in (D.DOSSIER / "DEV-2026-001.txt").read_text(encoding="utf-8")
@@ -247,7 +250,7 @@ fx.liam("devis : " + LIGNE, uid="777"); assert D.cmd_jour(reel, False, JOUR, fx.
 fx.n += 1; fx.msgs.append({"id": str(fx.n), "content": "devis : " + LIGNE, "author": {"id": "42", "bot": True}}); assert D.cmd_jour(reel, False, JOUR, fx.api, fx.acces, alerte)["action"] == "rien" and not D.etat_lire()["devis"]   # un bot : ignoré
 nb = len(fx.msgs); fx.liam("devis : " + LIGNE); jr = D.cmd_jour(reel, False, JOUR, fx.api, fx.acces, alerte)
 assert jr["action"] == "en attente du ok" and D.etat_lire()["devis"]["DEV-2026-001"]["statut"] == "préparé" and (D.DOSSIER / "DEV-2026-001.pdf").exists(), jr
-rep = [x["content"] for x in fx.msgs[nb + 1:] if x["author"]["bot"]]; assert len(rep) == 1 and "à valider" in rep[0] and "DEV-2026-001" in rep[0] and "595 €" in rep[0] and "178 €" in rep[0] and "49 €" in rep[0] and "ok devis" in rep[0]
+rep = [x["content"] for x in fx.msgs[nb + 1:] if x["author"]["bot"]]; assert len(rep) == 1 and "à valider" in rep[0] and "DEV-2026-001" in rep[0] and "595 €" in rep[0] and D.LIEN_PAGE in rep[0] and "acompte" not in rep[0].lower() and "49 €" in rep[0] and "ok devis" in rep[0]
 assert D.etat_lire()["devis"]["DEV-2026-001"]["apercu_id"]
 D.cmd_jour(reel, False, JOUR, fx.api, fx.acces, alerte); assert len(D.etat_lire()["devis"]) == 1 and len([x for x in fx.msgs if x["author"]["bot"]]) == 2    # le même message n'est jamais retraité
 fx.liam("devis : " + LIGNE.replace("Fictive", "Autre")); D.cmd_jour(reel, False, JOUR, fx.api, fx.acces, alerte)

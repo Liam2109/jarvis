@@ -1,0 +1,25 @@
+{
+  "alwaysUpdateLinks": false,
+  "newFileLocation": "folder",
+  "newFileFolderPath": "docs",
+  "showUnsupportedFiles": false,
+  "userIgnoreFilters": [
+    "node_modules/",
+    "B2B/sites/outils/node_modules/",
+    "dashboard/node_modules/",
+    "B2B/sites/sorties/",
+    "B2B/docs/sid/",
+    "B2B/devis/",
+    "B2B/messages-a-valider.md",
+    "messages-a-valider.md",
+    "liste-appels-",
+    "B2B/docs/liste-appels-",
+    "lots/",
+    "memoire/",
+    "logs/",
+    "quarantaine/",
+    "transfert-serveur/",
+    "instagram/",
+    "voix/models/"
+  ]
+}

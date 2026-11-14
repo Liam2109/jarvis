@@ -35,7 +35,7 @@ Quand la file est vide : prévenir Liam.
 1. Introduction. #artisan
 2. Exemple de page pour un électricien. « Atelier Lumière » est un nom fictif. Devis écrit avant de commencer. #electricien
 3. Exemple de page pour un plombier-chauffagiste. Ce n'est pas un site client. #plombier
-4. De l'échange à la page en ligne : visio de 15 minutes, devis écrit, acompte de 30 %, mise en ligne après le solde. #siteweb
+4. De l'échange à la page en ligne : visio de 15 minutes, devis écrit avec son lien de paiement, prix réglé en une fois. #siteweb
 5. Notre client numéro 1 est garanti satisfait. #artisan
 7. Légende qui existe mais état « plus tard ». #artisan
 """
@@ -45,13 +45,13 @@ I.PLAN.write_text(PLAN_TXT, encoding="utf-8")
 # --- lecture du plan : file, légendes, cases à cocher ---
 plan = I.lire_plan(PLAN_TXT); leg = I.lire_legendes(PLAN_TXT)
 assert [p["n"] for p in plan] == [1, 2, 3, 4, 5, 6, 7] and plan[0]["etat"] == "publié" and plan[0]["date"] == "2026-11-03" and plan[1]["fichier"] == "02-video.mp4" and plan[1]["etat"] == "à publier"
-assert sorted(leg) == [1, 2, 3, 4, 5, 7] and leg[3].startswith("Exemple de page pour un plombier") and "30 %" in leg[4]
+assert sorted(leg) == [1, 2, 3, 4, 5, 7] and leg[3].startswith("Exemple de page pour un plombier") and "réglé en une fois" in leg[4] and "acompte" not in leg[4]
 coche = I.cocher(PLAN_TXT, 2, "2026-11-04")
 assert "| 2 | 02-video.mp4 | publié | 2026-11-04 |" in coche and coche.replace("| 2 | 02-video.mp4 | publié | 2026-11-04 |", "| 2 | 02-video.mp4 | à publier | |") == PLAN_TXT   # seule la ligne 2 change
 assert I.cocher(PLAN_TXT, 99, "2026-11-04") == PLAN_TXT
 
 # --- règles : légende, fichier ---
-assert I.legende_ok(leg[2]) == "" and I.legende_ok(leg[3]) == "" and I.legende_ok(leg[4]) == ""          # « acompte de 30 % » décidé par Liam : accepté
+assert I.legende_ok(leg[2]) == "" and I.legende_ok(leg[3]) == "" and I.legende_ok(leg[4]) == ""          # « prix réglé en une fois » (sans montant) décidé par Liam : accepté
 assert "interdit" in I.legende_ok(leg[5]) and I.legende_ok("") != "" and I.legende_ok("x" * 2300) != ""      # promesse (« garanti », « numéro 1 »), vide, plus de 2200 caractères
 assert I.legende_ok("Exemple de page. ★★★★★ avis clients") != "" and I.legende_ok("Exemple. 120 clients") != ""
 assert I.fichier_ok(DOSSIER / "01-intro.png") == "" and I.fichier_ok(DOSSIER / "absent.png") != "" and I.fichier_ok(DOSSIER / "x.txt") != ""

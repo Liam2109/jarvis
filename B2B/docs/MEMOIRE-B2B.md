@@ -18,7 +18,7 @@ Fichier tenu à jour pour ne rien perdre entre deux conversations. Les idées d�
 - Nom de domaine / DNS : 40 € + prix coûtant, domaine au nom du client.
 - E-mail professionnel : sur devis.
 - Maintenance : 49 € par mois (comprise dans le pack unique depuis le 10 nov. 2026 ; l'ancien intervalle 29 à 49 € est résolu).
-- Devis type, script d'appel et 8 réponses aux objections : `docs\DEVIS-ET-OBJECTIONS.md` (brouillon à valider ; points à confirmer : délai, acompte, TVA, rétractation, relecture juridique).
+- Devis type, script d'appel et 8 réponses aux objections : `docs\DEVIS-ET-OBJECTIONS.md` (brouillon à valider ; points à confirmer : délai, TVA, rétractation, relecture juridique ; paiement décidé le 14/11/2026 : prix complet en une fois, lien de paiement direct).
 
 ## Parcours de vente
 E-mail ou message LinkedIn/Facebook -> le prospect répond « oui » -> appel de 15 minutes -> devis -> paiement Stripe (lien Stripe PAS encore créé).

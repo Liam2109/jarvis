@@ -15,7 +15,7 @@ Brouillon du 26 oct. 2026, à valider par Liam. Aucun lien de paiement Stripe n'
 6. **Une série de retouches incluse** : textes, photos, couleurs, horaires, regroupées en un seul envoi de modifications. Toute série supplémentaire, nouvelle page ou fonctionnalité fait l'objet d'un devis.
 
 ### Délai **[à confirmer]**
-Mise en ligne sous [5 à 7 jours ouvrés] après réception de l'acompte et des éléments du client (logo, photos, textes ou réponses aux questions, accès au domaine si besoin). Le délai court à partir du dernier élément reçu.
+Mise en ligne sous [5 à 7 jours ouvrés] après réception du paiement et des éléments du client (logo, photos, textes ou réponses aux questions, accès au domaine si besoin). Le délai court à partir du dernier élément reçu.
 
 ### Options (chacune sur accord écrit du client)
 | Option | Prix | Détail |
@@ -24,13 +24,13 @@ Mise en ligne sous [5 à 7 jours ouvrés] après réception de l'acompte et des 
 | E-mail professionnel | [à décider] + prix coûtant de l'abonnement du fournisseur | Création de l'adresse (contact@domaine), réglages de sécurité (SPF, DKIM, DMARC). |
 | Maintenance | 49 €/mois (hébergement, changements, sauvegarde, contrôle de disponibilité, support) | Sans engagement après [3] mois **[à confirmer]**. Pack unique décidé par Liam le 10 nov. 2026 (remplace la distinction 29 € / 49 € ci-dessous, résolue). |
 
-### Paiement **[à confirmer]**
-- 50 % à la commande (acompte), 50 % à la livraison avant mise en ligne définitive. Paiement en ligne par Stripe **seulement après l'OK de Liam** : aucun lien n'existe à ce jour.
+### Paiement (décidé par Liam le 14/11/2026)
+- Prix complet réglé en une fois à la commande, par le lien de paiement Stripe joint au devis (liens : `docs\KIT-RDV-15MIN.md` section 4). Aperçu privé validé par le client avant la mise en ligne.
 - Aucune dépense (domaine, e-mail) n'est engagée avant l'accord écrit du client sur son prix.
 
 ### Rétractation et annulation (à faire relire avant le premier devis)
 - Entre professionnels, il n'y a en principe pas de délai de rétractation légal. Mais un petit artisan peut être protégé comme un consommateur dans certains cas de vente hors établissement (démarchage, signature chez lui). **À faire valider par un juriste ou par la DGCCRF avant le premier envoi.**
-- Proposition commerciale : annulation sans frais jusqu'au début du travail ; après, l'acompte reste acquis pour le travail réalisé.
+- Proposition commerciale : annulation sans frais (remboursement complet) jusqu'au début du travail ; après, le travail réalisé reste dû **[à confirmer par Liam]**.
 - Le devis est valable [30] jours. Il est accepté par retour de « Bon pour accord » daté et signé.
 - Mentions à ajouter : propriété du site après paiement complet, droit sur les photos du client, protection des données (le formulaire envoie les messages au client uniquement).
 
@@ -66,7 +66,7 @@ Principe : écouter, reconnaître l'objection, répondre avec des faits vérifia
 7. **« Je dois en parler à mon associé / mon comptable. »**
    Réponse : « Bien sûr. Je vous envoie le devis par écrit pour que vous puissiez le leur montrer. Je vous rappelle [jour] ? »
 8. **« Je ne connais pas votre société, je n'ai pas confiance. »**
-   Réponse : « Normal. Voici mon identité : Liam Emo, LM MULTI-SERVICES, SIRET [à compléter]. Rien ne se paie avant le devis signé et l'acompte, la maquette est gratuite et sans engagement. Vous pouvez aussi me répondre STOP et je ne vous recontacte plus. »
+   Réponse : « Normal. Voici mon identité : Liam Emo, LM MULTI-SERVICES, SIRET [à compléter]. Rien ne se paie avant le devis signé, la maquette est gratuite et sans engagement, et vous validez un aperçu privé avant toute mise en ligne. Vous pouvez aussi me répondre STOP et je ne vous recontacte plus. »
 
 ### À éviter, toujours
 - Citer un nombre de clients, d'appels ou de visites gagnés (aucune mesure réelle à ce jour).
@@ -77,6 +77,6 @@ Principe : écouter, reconnaître l'objection, répondre avec des faits vérifia
 ## 4. À valider par Liam (ordre)
 1. ~~Prix et contenu des options : e-mail pro, différence 29 € / 49 €~~ : résolu le 10 nov. 2026, pack unique 49 €/mois tout compris (site, domaine, e-mail pro, hébergement, maintenance).
 2. Délai de livraison et durée d'engagement de la maintenance.
-3. Acompte 50/50 ou autre schéma, et création ensuite d'un lien Stripe (non fait).
+3. ~~Schéma de paiement~~ : résolu le 14/11/2026, paiement en une fois avec le lien du prix complet.
 4. Mention de TVA et texte juridique de rétractation (relecture).
 5. Texte des 8 réponses et du script d'appel.

@@ -32,7 +32,7 @@ Quand la file est vide : prévenir Liam et proposer la suite (pages coiffeur, re
 1. LM Multi-Services crée des pages web pour les artisans et les commerçants de Normandie. Un échange de 15 minutes en visio, puis un devis écrit avant de commencer. Les prochaines publications montrent des exemples de pages. #artisan #normandie #rouen #siteweb #commerçant
 2. Exemple de page pour un électricien. « Atelier Lumière » est un nom fictif : photos, déroulé en 3 étapes, carte et horaires. Votre page, avec vos photos et vos informations. Devis écrit avant de commencer. #electricien #siteweb #rouen #normandie #artisan
 3. Exemple de page pour un plombier-chauffagiste. Ce n'est pas un site client : c'est ce que je peux réaliser avec vos photos et vos tarifs. #plombier #chauffagiste #siteweb #rouen #normandie
-4. De l'échange à la page en ligne : visio de 15 minutes, devis écrit, acompte de 30 %, mise en ligne après le solde. Vous validez l'aperçu avant. #siteweb #artisan #normandie #rouen
+4. De l'échange à la page en ligne : visio de 15 minutes, devis écrit avec son lien de paiement, prix réglé en une fois. Vous validez l'aperçu avant la mise en ligne. #siteweb #artisan #normandie #rouen
 5. Ce que contient votre page : un bouton d'appel visible, l'itinéraire et les horaires, vos vraies photos, un affichage propre sur téléphone. #artisan #siteweb #commerçant #normandie
 6. Sur téléphone, un client vous appelle en un geste. Exemple de page électricien, pas un site client. #electricien #siteweb #mobile #rouen
 7. Un devis écrit avant de commencer : vous savez ce que vous payez, ce que contient votre page et quand elle est livrée. Rien ne démarre sans votre accord. #devis #siteweb #artisan #rouen

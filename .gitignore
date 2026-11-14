@@ -84,3 +84,14 @@ exclus-emails.json
 
 # Copie pour clé USB vers le serveur (secrets, jetons, états) : jamais dans git
 transfert-serveur/
+# Coffre Obsidian (14/11/2026) : seule la config utile du coffre est suivie (filtres, couleurs du graphe) ; jamais l'espace de travail
+.obsidian/*
+!.obsidian/app.json
+!.obsidian/graph.json
+.obsidian/workspace*
+# Tableau de bord local : données générées (comptes seulement) et dépendances npm hors git
+dashboard/node_modules/
+dashboard/agents.json
+dashboard/agents.js
+dashboard/*.tmp
+dashboard/docs.js

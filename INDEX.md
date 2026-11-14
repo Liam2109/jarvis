@@ -1,31 +1,32 @@
-# Index — où chercher selon le sujet
+# Index — hub du coffre Jarvis
+Lire ce fichier, puis **seulement** la note du sujet en cours (jamais tous les docs). Créé le 10 nov. 2026, hub Obsidian depuis le 14 nov. 2026 (`CLAUDE.md` § 9).
 
-Une ligne par domaine, avec le fichier à lire (lui seul, pas tout le dossier). Créé le 10 nov. 2026 (voir `CLAUDE.md` § 9).
+## Au centre : [[jarvis-ceo|Jarvis (CEO)]]
+**Agents B2B** : [[agent-prospection|prospection]] · [[agent-appels-sid|appels-sid]] · [[agent-rendez-vous|rendez-vous]] · [[agent-reponses|réponses]] · [[agent-devis|devis]] · [[agent-instagram|instagram]] · [[agent-page-exemple|page-exemple]] · [[agent-stripe-alerte|stripe-alerte]] · [[agent-resume-sid|resume-sid]]
+**Décisions** : [[decision-serveur-hlqstau|serveur DESKTOP-HLQSTAU]] · [[decision-offre-595-49|offre 595 € + 49 €/mois]] · [[decision-sans-acompte|sans acompte]] · [[decision-validation-manuelle|validation à la main]] · [[decision-index-d-abord|INDEX d'abord]]
+**Tableau de bord** : `dashboard\index.html` (icône « Jarvis - Mon entreprise »), données `outils\agents-json.py`
 
+## Où chercher selon le sujet
 | Domaine | Lire |
 |---|---|
-| Démarrer/arrêter Jarvis, raccourcis, permissions, voix, mémoire, Discord | [README.md](README.md) |
-| Règles à respecter dans toute session (ne jamais lancer Jarvis, tests silencieux, `.env`, permissions) | [CLAUDE.md](CLAUDE.md) |
-| Réglages de Jarvis (voix, raccourcis, Discord, veilles…) | `config.json` (défaut, suivi par git) + `config.local.json` (secrets/réglages de cette machine, hors git) |
-| Journal du jour (ordres, actions, résultats) | `logs\journal-AAAA-MM-JJ.md` |
-| Mémoire de Jarvis (to-do, notes, résumé, rappels) | `memoire\todo.md`, `memoire\notes.md`, `memoire\resume.md` |
-| Agence B2B (LM MULTI-SERVICES) : règles permanentes, style des sites, ressources PC | [B2B/CLAUDE.md](B2B/CLAUDE.md) |
-| Agence B2B : architecture des agents (prospection, appels, rendez-vous, réponses…) | [B2B/ARCHITECTURE-AGENT-B2B.md](B2B/ARCHITECTURE-AGENT-B2B.md) |
-| Agence B2B : contexte, offres, prix, décisions prises | [B2B/docs/MEMOIRE-B2B.md](B2B/docs/MEMOIRE-B2B.md) |
-| Agence B2B : ce qui reste à faire, par priorité | [B2B/docs/TODO-B2B.md](B2B/docs/TODO-B2B.md) |
-| Appels téléphoniques Sid (listes, historique 365 j, Normandie) | `B2B/agents/appels-sid.py` (règles en tête de fichier) |
-| Prospection e-mail, lots, zone de recherche (vagues de départements) | `B2B/agents/prospection.py`, `B2B/agents/zone.py` |
-| Rendez-vous (agenda, Discord) | `B2B/agents/rendez-vous.py` |
-| Sites/pages exemple générés pour les prospects | [B2B/sites/moteur/REGLES-STYLE-SITES.md](B2B/sites/moteur/REGLES-STYLE-SITES.md) (à lire avant toute page) |
-| Agent Instagram | [B2B/docs/INSTAGRAM-PLAN.md](B2B/docs/INSTAGRAM-PLAN.md) + `B2B/agents/instagram.py` |
-| Pont Discord (bot, salons, cache des identifiants) | `pont-discord/pont_logique.py`, `pont-discord/notifier.py` |
-| Veille des annonces de conducteur de train + candidatures | `lib\veille-train.ps1`, `lib\candidatures.ps1`, [emploi/TACHE-EMPLOI-CONDUCTEUR.md](emploi/TACHE-EMPLOI-CONDUCTEUR.md) |
+| Règles de toute session (ne jamais lancer Jarvis, tests silencieux, `.env`, permissions) | [[CLAUDE.md\|CLAUDE]] |
+| Démarrer/arrêter Jarvis, raccourcis, voix, mémoire, Discord | [[README.md\|README]] |
+| Réglages | `config.json` (suivi par git) + `config.local.json` (cette machine, hors git) |
+| Journal du jour / mémoire de Jarvis | `logs\journal-AAAA-MM-JJ.md` · `memoire\todo.md`, `notes.md`, `resume.md` |
+| Agence B2B : règles permanentes, style des sites, ressources PC | [[B2B/CLAUDE.md\|B2B/CLAUDE]] |
+| Agence B2B : architecture des agents | [[B2B/ARCHITECTURE-AGENT-B2B.md\|ARCHITECTURE-AGENT-B2B]] |
+| Agence B2B : contexte, offres, prix, décisions | [[MEMOIRE-B2B]] · à faire : [[TODO-B2B]] · journal : [[JOURNAL-B2B]] · idées : [[IDEES-MASTER]] |
+| Rendez-vous, devis, objections, liens de paiement | [[KIT-RDV-15MIN]] · [[DEVIS-ET-OBJECTIONS]] · [[liens-paiement]] |
+| Sites/pages exemple (à lire avant toute page) | [[REGLES-STYLE-SITES]] |
+| Instagram | [[INSTAGRAM-PLAN]] |
+| Transfert vers le serveur | [[TRANSFERT-SERVEUR]] |
+| Pont Discord | `pont-discord/pont_logique.py`, `pont-discord/notifier.py` |
+| Veille conducteur de train + candidatures | `lib\veille-train.ps1`, `lib\candidatures.ps1`, [[TACHE-EMPLOI-CONDUCTEUR]] |
 | Voix (synthèse, écoute, réveil) | `voix\ecoute.py`, `voix\piper_serveur.py`, `voix\reveil.py` |
-| Tableau de bord / visage (pages HTML du coffre) | `visage\pilotage.html`, `visage\pilotage.js` |
-| Tests | `tests\tout.ps1` (tout, silencieux) ; un fichier par module sinon (ex. `tests\rendez-vous.ps1`) ; **jamais** `tests\manuels.ps1` |
+| Visage / pilotage | `visage\pilotage.html`, `visage\pilotage.js` |
+| Tests | `tests\tout.ps1` (silencieux) ou un fichier par module ; **jamais** `tests\manuels.ps1` |
 | Fichiers isolés par précaution | `quarantaine\` (jamais supprimés automatiquement) |
 
-**Données d'exécution (jamais la doc) :** `lots\`, `memoire\*.json`, `B2B\agents\*-etat.json`, `B2B\agents\*-historique.json`, `B2B\docs\sid\*.csv` — générées par les agents, pas à lire pour comprendre une règle.
+**Données d'exécution (jamais la doc, jamais dans le coffre)** : `lots\`, `memoire\*.json`, `B2B\agents\*-etat.json`, `B2B\docs\sid\*.csv`, listes d'appels.
 
-## Dossiers (README courts, pour s'orienter)
-[B2B](B2B/README.md) · [B2B/agents](B2B/agents/README.md) · [B2B/docs](B2B/docs/README.md) · [docs](docs/README.md) · [emploi](emploi/README.md) · [instagram](instagram/README.md) · [lib](lib/README.md) · [lots](lots/README.md) · [memoire](memoire/README.md) · [pont-discord](pont-discord/README.md) · [tests](tests/README.md) · [visage](visage/README.md) · [voix](voix/README.md)
+Dossiers : [[B2B/README.md\|B2B]] · [[B2B/agents/README.md\|B2B/agents]] · [[B2B/docs/README.md\|B2B/docs]] · [[docs/README.md\|docs]] · [[lib/README.md\|lib]] · [[tests/README.md\|tests]] · [[voix/README.md\|voix]]
