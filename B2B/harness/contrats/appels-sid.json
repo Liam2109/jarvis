@@ -18,10 +18,12 @@
  "fichiers_lus": [
   "B2B/prospects_maps.csv",
   "B2B/agents/appels-sid-historique.json",
-  "B2B/agents/appels-sid-config.json"
+  "B2B/agents/appels-sid-config.json",
+  "B2B/donnees/registre-entreprises.json"
  ],
  "fichiers_ecrits": [
   "Google Drive : Appels AAAA-MM-JJ",
+  "B2B/donnees/registre-entreprises.json",
   "B2B/agents/appels-sid-etat.json",
   "B2B/agents/appels-sid-journal.log"
  ],
@@ -36,7 +38,10 @@
   "signer ou promettre un résultat",
   "afficher un secret (jeton, clé, adresse iCal)",
   "appeler un prospect",
-  "remettre un STOP dans la liste"
+  "remettre un STOP dans la liste",
+  "redonner une entreprise déjà donnée à Liam ou dans un lot",
+  "supprimer définitivement un fichier Drive",
+  "créer un dossier Drive"
  ],
  "plafonds": {
   "messages_par_jour": 5
@@ -45,6 +50,7 @@
  "alerte_si_silence": "07:45",
  "tests": [
   "B2B/agents/test_appels_sid.py",
-  "tests/agents/test_appels_sid.py"
+  "tests/agents/test_appels_sid.py",
+  "tests/agents/test_appels_registre.py"
  ]
 }

@@ -1,0 +1,55 @@
+{
+ "nom": "appels-liam",
+ "responsable": "Prospection",
+ "mission": "Créer chaque jour ouvré à 07:30 le tableur « Appels Liam AAAA-MM-JJ » : relances « Je dois réfléchir » dues, puis entreprises neuves jamais données (registre commun).",
+ "statut": "simulation",
+ "script": "B2B/agents/appels-liam.py",
+ "jours": [
+  0,
+  1,
+  2,
+  3,
+  4
+ ],
+ "heures": {
+  "debut": "07:00",
+  "fin": "19:00"
+ },
+ "fichiers_lus": [
+  "B2B/donnees/registre-entreprises.json",
+  "B2B/agents/appels-liam-config.json",
+  "Google Drive : Appels AAAA-MM-JJ et Appels Liam AAAA-MM-JJ (colonne Résultat)"
+ ],
+ "fichiers_ecrits": [
+  "Google Drive : Appels Liam AAAA-MM-JJ",
+  "B2B/donnees/registre-entreprises.json",
+  "B2B/agents/appels-liam-etat.json",
+  "B2B/agents/appels-liam-journal.log"
+ ],
+ "canaux_discord": [
+  "alertes"
+ ],
+ "envoi_client": false,
+ "actions_interdites": [
+  "envoyer au client sans accord de Liam",
+  "encaisser ou rembourser",
+  "publier",
+  "signer ou promettre un résultat",
+  "afficher un secret (jeton, clé, adresse iCal)",
+  "appeler un prospect",
+  "remettre un STOP dans la liste",
+  "redonner une entreprise déjà donnée à Sid ou dans un lot",
+  "supprimer définitivement un fichier Drive",
+  "créer un dossier Drive"
+ ],
+ "plafonds": {
+  "messages_par_jour": 5,
+  "lignes_par_liste_min": 10,
+  "lignes_par_liste_max": 20
+ },
+ "peut_engager": false,
+ "alerte_si_silence": "07:45",
+ "tests": [
+  "tests/agents/test_appels_registre.py"
+ ]
+}

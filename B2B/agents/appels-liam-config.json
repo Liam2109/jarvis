@@ -1,0 +1,14 @@
+{
+ "envoi_automatique": false,
+ "par_liste": 15,
+ "heure_tache": "07:30",
+ "jours_appel": [
+  "lundi",
+  "mardi",
+  "mercredi",
+  "jeudi",
+  "vendredi"
+ ],
+ "dossier_liam_id": "",
+ "_aide": "envoi_automatique : false = SIMULATION (CSV local B2B\\docs\\sid\\liste-liam-AAAA-MM-JJ.csv, ni Google ni Discord) ; true = feuille Google « Appels Liam AAAA-MM-JJ » (même compte Google que Sid), à mettre dans appels-liam-config.local.json. par_liste : 15 (plage 10 à 20, contrat appels-liam). dossier_liam_id : ID d'un dossier Drive existant ; vide = racine du Drive (aucun dossier n'est jamais créé). Règles de reprise et registre commun : B2B\\agents\\registre.py et .claude\\skills\\agent-appels-liam\\SKILL.md."
+}

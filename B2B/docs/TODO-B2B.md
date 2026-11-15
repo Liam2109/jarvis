@@ -1,6 +1,6 @@
 # To-do B2B — LM MULTI-SERVICES
 
-_Mise à jour : 15 nov. 2026, 19 h 20 (le fait est supprimé ; l'historique est dans le journal et dans git)_
+_Mise à jour : 15 nov. 2026, 22 h (le fait est supprimé ; l'historique est dans le journal et dans git)_
 
 ## Lundi 16 nov. (appels d'abord)
 - [ ] 07 h 20 : session ouverte sur le serveur ; 07 h 35 : la feuille de Sid existe, sinon `Start-ScheduledTask Jarvis-B2B-appels-sid`
@@ -12,13 +12,12 @@ _Mise à jour : 15 nov. 2026, 19 h 20 (le fait est supprimé ; l'historique est 
 - [ ] Prévoir comment livrer un site complet multi-pages avant d'en vendre un
 - [ ] Décider les commissions (≈10 % appelant, 10 % closer ?) et si c'est sur le premier paiement seulement ou aussi sur les 49 €/mois
 - [ ] Décider : petit acompte (environ 100 €) pour le client sans confiance ? Contredit « sans acompte » ; pas dans les scripts avant décision
-- [ ] Dire à Sid de noter dans Note la phrase exacte de douleur du client (pas seulement celle du non)
-- [ ] Test de cohérence : ajouter « pas obligatoire » aux phrases interdites (non détecté avant la correction de objections.md)
 - [ ] Test de cohérence : étendre aux notes docs\decisions et docs\agents (la note « Offre 595 + 49 » avait encore 990–1 490 € et « lien à créer », hors du périmètre du test) ; vérifier aussi les 3 autres notes de décision
-- [ ] Valider les règles de reprise des appels (Pas de réponse = 3 tentatives, etc.)
 
 ## Liam
-- [ ] Ouvrir B2B\docs\agents comme coffre Obsidian (« Ouvrir un dossier comme coffre »), commencer par 00-ORGANIGRAMME
+- [ ] Lundi 16 : prendre les ~15 dernières lignes de la feuille de Sid (ta propre liste « Appels Liam » commence mardi 17)
+- [ ] Serveur : ajouter « appels-liam » aux agents actifs (b2b.local.json), puis envoi_automatique à true dans la config locale d'appels-liam pour avoir la feuille Google
+- [ ] Envoyer SCRIPT-APPEL-SID.md à Sid (seulement celui-là ; closing et techniques restent à toi)
 - [ ] Serveur : `git -C <dossier Jarvis> config core.hooksPath .githooks`, ajouter « surveillant » aux agents actifs
 - [ ] Mettre l'adresse secrète iCal dans la config locale de l'agent Rendez-vous, puis dire « fait »
 - [ ] Vérifier que /codex:setup a marché (sans clé API)
@@ -42,4 +41,3 @@ _Mise à jour : 15 nov. 2026, 19 h 20 (le fait est supprimé ; l'historique est 
 - [ ] Parrainage (1 mois de maintenance offert) ; paiement en 3x sans frais (Alma/Floa)
 - [ ] Connecteur d'écoute de réunions : nom à donner par Liam, vérifier gratuité et accord des participants
 - [ ] Skills du catalogue Claude : Liam colle les noms
-- [ ] Ouvrir B2B\docsgents comme coffre Obsidian

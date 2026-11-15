@@ -35,6 +35,7 @@ urllib.request.urlopen = reseau; socket.create_connection = reseau; P.lien_acces
 tmp = Path(tempfile.mkdtemp(prefix="appels-sid-test-"))
 (tmp / "docs").mkdir(); (tmp / "agents").mkdir()
 A.ICI, A.RACINE, A.SORTIE = tmp / "agents", tmp, tmp / "docs" / "sid"
+A.CONFIG_LIAM, A.ETAT_LIAM, A.RG.FICHIER = tmp / "agents" / "appels-liam-config.json", tmp / "agents" / "appels-liam-etat.json", tmp / "donnees" / "registre-entreprises.json"   # registre commun (17/11/2026) : jamais le vrai
 A.CONFIG, A.ETAT, A.VERROU, A.ARRET, A.JOURNAL, A.MAPS, A.HISTORIQUE = (tmp / "agents" / "appels-sid-config.json", tmp / "agents" / "appels-sid-etat.json", tmp / "agents" / "appels-sid.verrou",
                                                           tmp / "agents" / "appels-sid.arret", tmp / "agents" / "appels-sid-journal.log", tmp / "prospects_maps.csv", tmp / "agents" / "appels-sid-historique.json")
 P.TROUVES, P.DOCS, P.ICI, P.ETAT, S.FICHIER = tmp / "prospection-trouves.csv", tmp / "docs", tmp / "agents", tmp / "agents" / "prospection-etat.json", tmp / "suivi-prospects.csv"
@@ -96,7 +97,7 @@ def suivi(nom, metier, ville, t, statut="à contacter", email=""):
 
 def monde(trouves=(), suivis=(), maps=(), listes=None, exclus_mails=(), exclus_cles=(), config=None):
     """Remet tout à zéro dans le dossier temporaire et écrit les faux fichiers sources."""
-    for f in (A.ETAT, A.VERROU, A.ARRET, A.JOURNAL, A.HISTORIQUE, P.ETAT): f.unlink(missing_ok=True)
+    for f in (A.ETAT, A.VERROU, A.ARRET, A.JOURNAL, A.HISTORIQUE, P.ETAT, A.ETAT_LIAM, A.RG.FICHIER): f.unlink(missing_ok=True)
     for f in list((tmp / "docs").glob("liste-appels-*.md")) + (list(A.SORTIE.glob("*")) if A.SORTIE.exists() else []): f.unlink()
     P.ecrire_trouves(list(trouves), P.TROUVES); S.ecrire(list(suivis))
     with open(A.MAPS, "w", encoding="utf-8-sig", newline="") as f:
@@ -885,7 +886,8 @@ with open(A.SORTIE / f"liste-sid-{JOUR}.csv", "w", encoding="utf-8-sig", newline
 lancer("preparer", "--jour", JOUR2)   # le bilan de JOUR2 confirme JOUR dans l'historique (365 jours)
 loin = "2027-11-10"   # plus de 365 jours après JOUR (2026-11-04)
 code, sortie = lancer("preparer", "--jour", loin, "--a-blanc")
-verifier(code == 0 and "100 entreprise(s) de nouveau disponible(s)" in sortie, f"365 jours écoulés : les 100 entreprises de JOUR redeviennent disponibles : {[l for l in sortie.splitlines() if 'disponible' in l]}")
+noms_jour = {l[NOM] for l in rows[1:]}
+verifier(code == 0 and not any(f"| {n} |" in sortie for n in noms_jour), "registre commun (17/11/2026) : une entreprise déjà donnée n'est jamais redonnée, même 365 jours plus tard (l'ancienne purge ne s'applique plus)")
 proche = "2026-11-06"   # moins de 365 jours après JOUR : toujours exclues
 code, sortie = lancer("preparer", "--jour", proche, "--a-blanc")
 verifier(code == 0 and "de nouveau disponible" not in sortie, "moins de 365 jours écoulés : toujours exclues, aucune purge annoncée")
@@ -1072,7 +1074,7 @@ except A.ErreurRecherche: verifier(True, "chercher_site_web : panne réseau (URL
 r = CHERCHER_SITE_WEB_REEL("Nom", "Ville", ouvrir=lambda rq, timeout=0: _RepVide())
 verifier(r == "", "chercher_site_web : page vide, aucun résultat exploitable : chaîne vide, pas d'exception")
 
-print("32. Règles de reprise en jours ouvrés (décision de Liam, 14 nov. 2026)")
+print("32. Règles de reprise en jours ouvrés (décision de Liam, 14 nov. 2026 ; listes d'avant le 17/11/2026, registre commun ensuite : tests\\agents\\test_appels_registre.py)")
 verifier(A.jour_ouvre("2026-11-13", 1) == "2026-11-16" and A.jour_ouvre("2026-11-16", 2) == "2026-11-18" and A.jour_ouvre("2026-11-19", 2) == "2026-11-23", "jour_ouvre : le week-end ne compte pas")
 monde(trouves=gros_monde(60), config={})
 def _marquer(jour, valeurs):
@@ -1081,25 +1083,25 @@ def _marquer(jour, valeurs):
         if l[NOM] in valeurs: l[RES], l[NOTE] = valeurs[l[NOM]]
     with open(A.SORTIE / f"liste-sid-{jour}.csv", "w", encoding="utf-8-sig", newline="") as fh: csv.writer(fh, delimiter=";").writerows(rows)
 def _noms(jour): return {l[NOM]: l for l in lire_csv(jour)[1:]}
-lancer("preparer", "--jour", "2026-11-16"); l16 = _noms("2026-11-16"); n = sorted(l16)
+lancer("preparer", "--jour", "2026-10-26"); l16 = _noms("2026-10-26"); n = sorted(l16)
 pdr, rap, ref, tps, rdv, nc, cher, site = n[:8]
-_marquer("2026-11-16", {pdr: ("Pas de réponse", ""), rap: ("À rappeler", "après 17 h"), ref: ("Je dois réfléchir", "voir avec son associé"), tps: ("Pas le temps", ""),
+_marquer("2026-10-26", {pdr: ("Pas de réponse", ""), rap: ("À rappeler", "après 17 h"), ref: ("Je dois réfléchir", "voir avec son associé"), tps: ("Pas le temps", ""),
                         rdv: ("RDV pris", ""), nc: ("Non catégorique", ""), cher: ("Trop cher", ""), site: ("Déjà un site", "")})
-lancer("preparer", "--jour", "2026-11-17"); l17 = _noms("2026-11-17")
+lancer("preparer", "--jour", "2026-10-27"); l17 = _noms("2026-10-27")
 verifier(rap in l17 and "à rappeler" in l17[rap][DET] and "note : après 17 h" in l17[rap][DET], "À rappeler : revient le jour ouvré suivant, avec la note de Sid")
 verifier(not ({pdr, ref, tps, rdv, nc, cher, site} & set(l17)), "J+1 : ni Pas de réponse (J+2), ni réfléchir / pas le temps (J+7), ni RDV pris, Non catégorique, Trop cher, Déjà un site")
 verifier(set(n[8:]) <= set(l17), "case vide : revient dans la liste suivante")
-lancer("preparer", "--jour", "2026-11-18"); l18 = _noms("2026-11-18")
+lancer("preparer", "--jour", "2026-10-28"); l18 = _noms("2026-10-28")
 verifier(pdr in l18 and "tentative 2/3" in l18[pdr][DET] and abs(_debut_min(l18[pdr][CR]) - _debut_min(l16[pdr][CR])) >= 60, f"Pas de réponse : revient 2 jours ouvrés plus tard, sur un autre créneau, au moins 1 h d'écart ({l16[pdr][CR]} -> {l18[pdr][CR] if pdr in l18 else '-'})")
-_marquer("2026-11-18", {pdr: ("Pas de réponse", "")})
-lancer("preparer", "--jour", "2026-11-19"); lancer("preparer", "--jour", "2026-11-20"); l20 = _noms("2026-11-20")
+_marquer("2026-10-28", {pdr: ("Pas de réponse", "")})
+lancer("preparer", "--jour", "2026-10-29"); lancer("preparer", "--jour", "2026-10-30"); l20 = _noms("2026-10-30")
 verifier(pdr in l20 and "tentative 3/3" in l20[pdr][DET] and abs(_debut_min(l20[pdr][CR]) - _debut_min(l18[pdr][CR])) >= 60, "2e Pas de réponse : 3e et dernière tentative, encore un autre créneau")
-_marquer("2026-11-20", {pdr: ("Pas de réponse", "")})
-lancer("preparer", "--jour", "2026-11-23"); l23 = _noms("2026-11-23")
+_marquer("2026-10-30", {pdr: ("Pas de réponse", "")})
+lancer("preparer", "--jour", "2026-11-02"); l23 = _noms("2026-11-02")
 verifier({ref, tps} <= set(l23) and "note : voir avec son associé" in l23[ref][DET] and "rappel unique" in l23[tps][DET], "Je dois réfléchir / Pas le temps : reviennent 7 jours plus tard, avec la note")
-_marquer("2026-11-23", {ref: ("Je dois réfléchir", ""), tps: ("Pas le temps", "")})
-lancer("preparer", "--jour", "2026-11-24"); lancer("preparer", "--jour", "2026-11-25"); lancer("preparer", "--jour", "2026-12-02")
-toutes = set(_noms("2026-11-24")) | set(_noms("2026-11-25")) | set(_noms("2026-12-02"))
+_marquer("2026-11-02", {ref: ("Je dois réfléchir", ""), tps: ("Pas le temps", "")})
+lancer("preparer", "--jour", "2026-11-03"); lancer("preparer", "--jour", "2026-11-04"); lancer("preparer", "--jour", "2026-11-11")
+toutes = set(_noms("2026-11-03")) | set(_noms("2026-11-04")) | set(_noms("2026-11-11"))
 verifier(not ({pdr, ref, tps, rdv, nc, cher, site} & toutes), "après 3 Pas de réponse, ou une 2e fois réfléchir / pas le temps : oubliée ; RDV pris et refus jamais repris")
 hist = json.loads(A.HISTORIQUE.read_text(encoding="utf-8")); e = json.loads(A.ETAT.read_text(encoding="utf-8"))
 verifier(all(l16[x][TEL] in hist for x in (pdr, ref, tps, rdv, nc, cher, site)), "oubliées 1 an : téléphone noté dans l'historique")

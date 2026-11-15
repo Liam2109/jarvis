@@ -1,0 +1,16 @@
+{
+ "_lisez-moi": "Résultats fictifs posés par les tests (tests\\agents\\test_appels_registre.py) sur les premières lignes de la feuille de Sid du 17/11/2026, puis « reste » sur les autres lignes. Aucune vraie entreprise.",
+ "lignes": [
+  ["Pas de réponse", ""],
+  ["À rappeler", "rappeler le 20/11 après 17 h"],
+  ["Je dois réfléchir", "voir avec son associé"],
+  ["RDV pris", "jeudi 10 h"],
+  ["Non catégorique", ""],
+  ["Trop cher", ""],
+  ["Déjà un site", ""],
+  ["Pas le temps", ""],
+  ["", ""],
+  ["À rappeler", "pas de date"]
+ ],
+ "reste": "Non catégorique"
+}

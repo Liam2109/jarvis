@@ -10,6 +10,15 @@
       ],
       "heure": "07:30"
     },
+    "appels-liam": {
+      "script": "appels-liam.py",
+      "commandes": [
+        [
+          "jour"
+        ]
+      ],
+      "heure": "07:30"
+    },
     "devis": {
       "script": "devis.py",
       "commandes": [

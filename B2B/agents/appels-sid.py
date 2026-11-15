@@ -640,6 +640,12 @@ def _lire_liste_pour_bilan(conf, etat, jour_liste, drive):
         if not f.exists(): return []
         try: texte = f.read_bytes().decode("utf-8-sig")
         except OSError: return []
+    return _parser_liste(texte)
+
+
+def _parser_liste(texte):
+    """Texte CSV d'une liste (Drive : « , » ; CSV local : « ; ») -> lignes (cle, nom, ville, tel, metier, appele, note, resultat, creneau)."""
+    if not texte: return []
     sep = ";" if texte.split("\n", 1)[0].count(";") >= texte.split("\n", 1)[0].count(",") else ","   # Drive exporte en « , », le CSV local en « ; »
     lignes = list(csv.reader(io.StringIO(texte), delimiter=sep))
     if not lignes: return []
@@ -740,8 +746,280 @@ def _purger_sorties_expirees(etat, jour, historique, jours_sans_rappel):
     return len(expirees)
 
 
+# --- registre commun (décision de Liam du 15/11/2026, actif à partir du 17/11/2026 ; voir registre.py) ------------------------------
+# À partir de RG.DEBUT : avant toute liste, les Résultat des feuilles précédentes (Sid et Liam) sont lus dans le registre ; ensuite seulement la liste est générée.
+# Les reprises viennent du registre (règles dans registre.py) ; les entreprises neuves sont celles de candidats() que le registre ne connaît pas, réparties sur les
+# départements (76, 27, 14, 50, 61) et mélangées entre métiers (jamais regroupées par ville). Les listes d'avant le 17/11 gardent les anciennes règles (_bilan_veille).
+import registre as RG
+CONFIG_LIAM, ETAT_LIAM = ICI / "appels-liam-config.json", ICI / "appels-liam-etat.json"
+TITRE_LIAM = "Appels Liam {}"
+DEFAUT_LIAM = {"envoi_automatique": False, "par_liste": 15, "heure_tache": "07:30", "jours_appel": ["lundi", "mardi", "mercredi", "jeudi", "vendredi"], "dossier_liam_id": ""}
+MIN_LIAM, MAX_LIAM = 10, 20   # plage du contrat appels-liam
+STOCK_JOURS_MIN = 3           # sous 3 jours de listes (Sid + Liam) d'entreprises neuves : alerte du surveillant (trace en erreur), silence sinon
+
+
+def chemin_liam(jour): return SORTIE / f"liste-liam-{jour}.csv"
+
+
+def cfg_liam():
+    c = dict(DEFAUT_LIAM)
+    try:
+        if CONFIG_LIAM.exists(): c.update({k: v for k, v in json.loads(CONFIG_LIAM.read_text(encoding="utf-8-sig")).items() if not k.startswith("_")})
+        M.surcharge_locale(CONFIG_LIAM, c)
+    except (OSError, ValueError) as e: raise ErreurAgent(f"réglages illisibles : {CONFIG_LIAM.name} ({type(e).__name__})")
+    mini, maxi = bornes_liam(); n = c.get("par_liste"); c["par_liste"] = max(mini, min(maxi, n)) if isinstance(n, int) and not isinstance(n, bool) else DEFAUT_LIAM["par_liste"]
+    c["envoi_automatique"] = c.get("envoi_automatique") is True; c["dossier_liam_id"] = str(c.get("dossier_liam_id") or "").strip()
+    jrs = [str(j).strip().lower() for j in c.get("jours_appel") or [] if str(j).strip().lower() in JOURS_SEMAINE]; c["jours_appel"] = jrs or list(DEFAUT_LIAM["jours_appel"])
+    c["compte_google"] = cfg_compte_google(); c["departements"] = list(ZONE["departements"]); c["max_par_metier"] = MAX_LIAM; c["repartition"] = DEFAUT["repartition"]
+    return c
+
+
+def bornes_liam():
+    """Plage du nombre de lignes de la liste de Liam, lue dans son contrat (plafonds lignes_par_liste_min / _max), 10 à 20 par défaut."""
+    try:
+        p = json.loads((RACINE / "harness" / "contrats" / "appels-liam.json").read_text(encoding="utf-8"))["plafonds"]
+        return int(p["lignes_par_liste_min"]), int(p["lignes_par_liste_max"])
+    except (OSError, ValueError, KeyError, TypeError): return MIN_LIAM, MAX_LIAM
+
+
+def cfg_compte_google():
+    try: return cfg()["compte_google"]
+    except ErreurAgent: return DEFAUT["compte_google"]
+
+
+def etat_liam_lire():
+    try: e = json.loads(ETAT_LIAM.read_text(encoding="utf-8")) if ETAT_LIAM.exists() else {}
+    except (OSError, ValueError): raise ErreurAgent(f"état illisible ({ETAT_LIAM.name}) : rien n'est écrit")
+    for k in ("listes", "google", "alertes"): e.setdefault(k, {})
+    return e
+
+
+def etat_liam_ecrire(e): ETAT_LIAM.write_text(json.dumps(e, ensure_ascii=False, indent=1), encoding="utf-8")
+
+
+def _dept_ville(ville):
+    v = ZN.norm(ville or ""); return ZN.VILLES_DEPT.get(v) or ("14" if v in ZN.COMMUNES_CAEN else "")
+
+
+def _texte_feuille(conf, etat, jour_liste, drive, fichier):
+    """Texte CSV d'une liste : la feuille Google quand elle existe (envoi_automatique), sinon le CSV local (simulation). Une feuille Google illisible lève ErreurAgent :
+    elle n'est PAS marquée lue (les Résultat de Sid ou de Liam ne sont jamais remplacés par un CSV local vide), le passage suivant réessaie."""
+    feuille = (etat.get("google", {}).get(jour_liste) or {}).get("feuille")
+    if conf.get("envoi_automatique") and feuille:
+        if drive is None: raise ErreurAgent(f"feuille du {jour_liste} sur Google, mais Google n'est pas ouvert : relue au prochain passage")
+        try: return drive.lire_feuille_csv(feuille)
+        except Exception as e: raise ErreurAgent(f"feuille du {jour_liste} illisible sur Google ({type(e).__name__}) : relue au prochain passage")
+    try: return fichier.read_bytes().decode("utf-8-sig") if fichier.exists() else ""
+    except OSError: return ""
+
+
+def _migrer(reg, jour, conf, etat, drive):
+    """Une seule fois (premier passage à partir du 17/11) : les listes de Sid d'avant le 16/11 entrent dans le registre (déjà données : jamais redonnées), puis les reprises
+    en attente de l'ancien système (etat['reprises']) deviennent des reprises du registre (« Pas le temps » : plus jamais ; « Je dois réfléchir » : pour Liam)."""
+    if reg.get("migre"): return 0
+    n = 0
+    for j in sorted(etat["listes"]):
+        if j >= RG.LECTURE_DEPUIS: continue
+        try: texte = _texte_feuille(conf, etat, j, drive, chemin(j))
+        except ErreurAgent: texte = _texte_feuille({}, etat, j, None, chemin(j))
+        for l in _parser_liste(texte):
+            if not l["tel"]: continue
+            k = RG.trouver(reg, l["nom"], l["ville"], l["tel"])
+            if not k:
+                k = RG.donner(reg, {"nom": l["nom"], "ville": l["ville"], "tel": l["tel"], "metier": l["metier"], "dept": _dept_ville(l["ville"])}, RG.SID, j, feuille=f"{RG.SID}|{j}"); n += 1
+            x = reg["entreprises"][k]; x["statut"] = "historique"
+            if l.get("resultat"): x["dernier_resultat"] = l["resultat"]
+        reg["feuilles_lues"][f"{RG.SID}|{j}"] = jour
+    for r in (etat.get("reprises") or {}).values():
+        k = RG.trouver(reg, r["nom"], r["ville"], r["tel"]) or RG.donner(reg, {**r, "dept": r.get("dept") or _dept_ville(r["ville"])}, RG.SID, r.get("retour") or jour)
+        x = reg["entreprises"][k]; c = r.get("constat", "")
+        if "Pas le temps" in c: x.update(statut="terminée", dernier_resultat="Pas le temps", retour="", pour="")
+        else: x.update(statut="à reprendre", retour=r.get("retour") or jour, pour=RG.LIAM if "réfléchir" in c else RG.SID, tete=False)
+        n += 1
+    etat["reprises"] = {}; etat["tentatives"] = {}; reg["migre"] = jour
+    return n
+
+
+def sources_feuilles(qui, conf, etat):
+    """Les deux séries de feuilles à relire : (qui, réglages, état, chemin du CSV local) ; celle de l'agent qui tourne reprend SON état (modifié puis écrit par lui)."""
+    sid = (RG.SID, conf, etat, chemin) if qui == RG.SID else (RG.SID, cfg(), etat_lire(), chemin)
+    liam = (RG.LIAM, conf, etat, chemin_liam) if qui == RG.LIAM else (RG.LIAM, cfg_liam(), etat_liam_lire(), chemin_liam)
+    return [sid, liam]
+
+
+def lire_resultats(reg, jour, sources, drive, avertir=print):
+    """Étape 5 : lit les Résultat de chaque feuille (Sid et Liam) d'un jour antérieur, pas encore lue, et met le registre à jour. -> (feuilles lues, lignes, échecs)."""
+    lues = lignes = 0; echecs = []
+    for qui, conf, etat, fn in sources:
+        for j in sorted(etat["listes"]):
+            if j >= jour or j < RG.LECTURE_DEPUIS or f"{qui}|{j}" in reg["feuilles_lues"]: continue
+            try: texte = _texte_feuille(conf, etat, j, drive, fn(j))
+            except ErreurAgent as e: echecs.append(str(e)); avertir(f"  ! {qui} : {e}"); continue
+            for l in _parser_liste(texte):
+                if not l["tel"]: continue
+                k = RG.trouver(reg, l["nom"], l["ville"], l["tel"]) or RG.donner(reg, {"nom": l["nom"], "ville": l["ville"], "tel": l["tel"], "metier": l["metier"], "dept": _dept_ville(l["ville"])}, qui, j, feuille=f"{qui}|{j}")
+                RG.noter(reg, k, l.get("resultat", ""), l.get("note", ""), j, qui); lignes += 1
+            reg["feuilles_lues"][f"{qui}|{j}"] = jour; lues += 1
+    return lues, lignes, echecs
+
+
+def neuves_registre(conf, etat, jour, reg, n, historique, qui, a_blanc=False, sites_trouves=None, hors_ligne=False, deja=None):
+    """Jusqu'à n entreprises jamais données (candidats() moins le registre), réparties à tour de rôle sur les départements (76, 27, 14, 50, 61) et, dans chaque département,
+    sur les métiers (rotation) ; dans un métier, ordre mélangé (jamais trié par ville ni par proximité). Site officiel trouvé : écartée (historique), comme choisir()."""
+    idx = RG.index(reg); rnd = random.Random(f"{jour}|{qui}")
+    cands = [c for c in candidats(etat, jour=jour, historique=historique, jours_sans_rappel=conf.get("jours_sans_rappel", 365)) if not RG.connue(reg, c["nom"], c["ville"], c["tel"], idx)]
+    pools = {d: {} for d in conf["departements"]}
+    for c in cands: pools.setdefault(c["dept"] or "?", {}).setdefault(c["metier"], []).append(c)
+    for d in pools:
+        for m in pools[d]: rnd.shuffle(pools[d][m])
+    poids = _poids(conf); plafond = conf.get("max_par_metier", 20); compte = dict(deja or {}); rot = {d: i for i, d in enumerate(pools)}
+    ordre = ordre_metiers(); out = []; etat_verif = _etat_verif_defaut(hors_ligne)
+    while len(out) < n:
+        bouge = False
+        for d in pools:
+            if len(out) >= n: break
+            ms = [m for m in ordre if poids.get(m, 0) > 0 and pools[d].get(m) and compte.get(m, 0) < plafond]
+            if not ms: continue
+            m = ms[rot[d] % len(ms)]; rot[d] += 1
+            while pools[d][m]:
+                c = pools[d][m].pop(0); bouge = True; url, raison = verifier_site(c, etat_verif)
+                if url:
+                    if not a_blanc:
+                        for k in (c["cle"], c["tel"]): historique[k] = {"jour": jour, "raison": raison}
+                    if sites_trouves is not None: sites_trouves.append({"metier": m, "raison": raison})
+                    continue
+                c["dept"] = c["dept"] if d == "?" else d; out.append(c); compte[m] = compte.get(m, 0) + 1; break
+        if not bouge: break
+    return out
+
+
+def stock_neuves(conf, etat, jour, reg, historique=None):
+    """Nombre d'entreprises neuves disponibles (jamais données à personne, d'après le registre)."""
+    idx = RG.index(reg)
+    return sum(1 for c in candidats(etat, jour=jour, historique=historique, jours_sans_rappel=conf.get("jours_sans_rappel", 365)) if not RG.connue(reg, c["nom"], c["ville"], c["tel"], idx))
+
+
+def _eviter_meme_ville(corps):
+    """Deux lignes voisines de la même ville : échange l'entreprise (pas le créneau) avec une ligne plus bas du même métier d'une autre ville (créneau toujours dans la fenêtre du métier)."""
+    V, MET = 3, 2
+    for i in range(1, len(corps)):
+        if corps[i][V] != corps[i - 1][V]: continue
+        voisin = corps[i + 1][V] if i + 1 < len(corps) else None
+        j = next((j for j in range(i + 1, len(corps)) if corps[j][MET] == corps[i][MET] and corps[j][V] not in (corps[i - 1][V], voisin)
+                  and (j + 1 >= len(corps) or corps[j + 1][V] != corps[i][V]) and corps[j - 1][V] != corps[i][V]), None)
+        if j is not None: corps[i][1:6], corps[j][1:6] = corps[j][1:6], corps[i][1:6]
+    return corps
+
+
+def _reprise_vers_ligne(k, x, qui):
+    """Une entrée du registre due -> ligne de liste (même forme que candidats()), avec le motif et la note."""
+    j_f = (x.get("feuille") or "|").split("|")[-1] or x.get("date", "")
+    de = "" if x.get("a_qui") == qui or not x.get("a_qui") else f" de {x['a_qui']}"
+    motif = x.get("dernier_resultat") or "sans résultat"
+    if x.get("dernier_resultat") == "Je dois réfléchir" and qui == RG.LIAM: debut = f"Relance « Je dois réfléchir » (liste{de} du {j_f})"
+    else: debut = f"Reprise de la liste{de} du {j_f} ({motif}, essai {int(x.get('essais', 0)) + 1})"
+    constat = debut + (f" ; note : {x['note']}" if x.get("note") else "")
+    metier = x.get("metier") if x.get("metier") in NOMS else (cle_metier_sid(x.get("metier", "")) or "")
+    return {"cle": S.cle({"nom": x["nom"], "ville": x["commune"]}), "rkey": k, "nom": x["nom"], "ville": x["commune"], "tel": telephone_valide(x["tel"]), "metier": metier,
+            "brut": LABELS.get(metier, ""), "constat": constat, "dept": x.get("departement", ""), "prox": -1, "tete": bool(x.get("tete")), "relance": x.get("dernier_resultat") == "Je dois réfléchir",
+            "eviter": x.get("creneau", "") if x.get("dernier_resultat") == "Pas de réponse" else ""}
+
+
+def preparer_registre(qui, conf, etat, jour, a_blanc, drive=None, hors_ligne=False, sources=None, fichier_registre=None):
+    """La liste du jour de `qui` (Sid ou Liam) selon le registre commun : 1. lire les Résultat des feuilles précédentes (registre mis à jour) ; 2. reprises dues ; 3. entreprises neuves.
+    Sid : les lignes restées sans résultat en tête, puis le reste trié par créneau. Liam : les relances dues d'abord, puis les entreprises neuves. -> lignes choisies."""
+    fn = chemin if qui == RG.SID else chemin_liam; fichier = fn(jour); n = conf["par_liste"]
+    if jour in etat["listes"] or fichier.exists(): raise ErreurAgent(f"la liste du {jour} est déjà préparée ({fichier.name}) : utilisez `annuler {jour}` si elle n'a pas servi")
+    ctx = contextlib.nullcontext() if a_blanc else RG.verrou(fichier_registre)
+    with ctx:
+        try: reg = RG.charger(fichier_registre)
+        except (OSError, ValueError): raise ErreurAgent("registre des entreprises illisible (B2B\\donnees\\registre-entreprises.json) : rien n'est généré ; corrigez-le à la main")
+        sources = sources if sources is not None else sources_feuilles(qui, conf, etat)
+        sid = next((s for s in sources if s[0] == RG.SID), None)
+        migrees = _migrer(reg, jour, sid[1], sid[2], drive) if sid else 0
+        if migrees and qui != RG.SID and not a_blanc: etat_ecrire(sid[2])   # reprises de l'ancien système vidées dans l'état de Sid (elles sont dans le registre)
+        lues, nlig, echecs = lire_resultats(reg, jour, sources, drive)
+        print(f"  Registre : {lues} feuille(s) relue(s) ({nlig} ligne(s))" + (f", {migrees} entreprise(s) reprise(s) des anciennes listes" if migrees else "") + (f", {len(echecs)} feuille(s) à relire plus tard" if echecs else ""))
+        historique = historique_lire(); stop = _tels_stop(); reprises = []
+        dues = RG.dues(reg, jour, qui)
+        if qui == RG.LIAM: dues.sort(key=lambda kx: kx[1].get("dernier_resultat") != "Je dois réfléchir")   # Liam : les relances « Je dois réfléchir » d'abord (tri stable)
+        for k, x in dues:
+            l = _reprise_vers_ligne(k, x, qui)
+            if not l["tel"] or l["tel"] in stop or l["metier"] not in NOMS: x.update(statut="terminée", retour="", pour=""); continue   # STOP ou hors des métiers : ne revient plus
+            if len(reprises) < n: reprises.append(l)
+        deja = {}
+        for r in reprises: deja[r["metier"]] = deja.get(r["metier"], 0) + 1
+        sites = []
+        neuves = neuves_registre(conf, sid[2] if sid else etat, jour, reg, n - len(reprises), historique, qui, a_blanc, sites, hors_ligne, deja)   # exclusions de candidats() : l'état de Sid (entreprises sorties)
+        choisies = reprises + neuves
+        if not choisies: raise ErreurAgent("aucune entreprise disponible (registre : toutes déjà données) : la réserve est épuisée")
+        if qui == RG.SID: groupes = [[c for c in reprises if c["tete"]], [c for c in reprises if not c["tete"]] + neuves]
+        else: groupes = [[c for c in reprises if c["relance"]], [c for c in reprises if not c["relance"]], neuves]
+        corps = []
+        for g in groupes:
+            if g: corps += _eviter_meme_ville(lignes_csv(g)[1:])
+        lignes = [COLONNES] + corps
+        print(f"  {qui} : {len(reprises)} reprise(s) dont {sum(1 for c in reprises if c['tete'])} sans résultat (en tête), {len(neuves)} neuve(s) ; départements : "
+              + ", ".join(f"{d} {sum(1 for c in choisies if c.get('dept') == d)}" for d in NORMANDIE))
+        if len(choisies) < n: print(f"  ! réserve insuffisante : {len(choisies)} ligne(s) au lieu de {n}")
+        if sites: print(f"  {len(sites)} entreprise(s) écartée(s) : un site officiel a été trouvé")
+        titre = (TITRE_FEUILLE if qui == RG.SID else TITRE_LIAM).format(jour)
+        if a_blanc:
+            print(f"Liste {qui} du {jour} [à blanc : rien n'est écrit, rien n'est marqué] : {len(choisies)} ligne(s) ({repartition(choisies)}) ; tableur « {titre} »")
+            for l in lignes[1:]: print("  " + " | ".join(l[:I_RESULTAT]))
+            return choisies
+        SORTIE.mkdir(parents=True, exist_ok=True)
+        with open(fichier, "x", encoding="utf-8-sig", newline="") as f: csv.writer(f, delimiter=";").writerows(lignes)
+        try:
+            par_nom = {(l[1], l[4]): l[0] for l in corps}
+            for c in choisies:
+                RG.donner(reg, c, qui, jour, feuille=f"{qui}|{jour}", creneau=par_nom.get((cellule(c["nom"]), c["tel"]), ""))
+            RG.sauver(reg, fichier_registre); historique_ecrire(historique)
+            if qui == RG.SID: etat["sorties"].update({c["cle"]: jour for c in choisies})
+            etat["listes"][jour] = {"fichier": fichier.name, "nombre": len(choisies), "cles": [c["cle"] for c in choisies], "a_rappeler": len(reprises)}
+            (etat_ecrire if qui == RG.SID else etat_liam_ecrire)(etat)
+        except OSError: fichier.unlink(missing_ok=True); raise
+    journaliser("preparer", f"{qui} {jour} : {len(choisies)} entreprises ({repartition(choisies)}), dont {len(reprises)} reprise(s), registre")
+    print(f"Liste {qui} du {jour} : {len(choisies)} ligne(s) ({repartition(choisies)}) -> {fichier}")
+    return choisies
+
+
+def verifier_stock(conf_sid, conf_liam, etat, jour, agent="appels-sid", a_blanc=False, fichier_registre=None):
+    """Étape 8 : sous STOCK_JOURS_MIN jours de listes (Sid + Liam) d'entreprises neuves, une trace en erreur que le surveillant signale ; silence sinon. -> (stock, seuil)."""
+    try: reg = RG.charger(fichier_registre)
+    except (OSError, ValueError): return None, None
+    stock = stock_neuves(conf_sid, etat, jour, reg); seuil = STOCK_JOURS_MIN * (conf_sid["par_liste"] + conf_liam["par_liste"])
+    if stock < seuil:
+        msg = f"stock bas : {stock} entreprise(s) neuve(s), moins de {STOCK_JOURS_MIN} jours de listes (seuil {seuil})"
+        print(f"  ! {msg}")
+        if not a_blanc:
+            try:
+                sys.path.insert(0, str(RACINE / "harness")); import traces as T
+                T.ecrire(agent, "stock", "stock bas", ok=False, erreur=msg)
+            except Exception as e: print(f"  ! trace impossible ({type(e).__name__})")
+    return stock, seuil
+
+
+def nettoyer_feuilles_lues(qui, racine, jour, drive, a_blanc, envoi, fichier_registre=None):
+    """Étape 6 : met à la CORBEILLE (jamais une suppression définitive) les feuilles « Appels AAAA-MM-JJ » (Sid) ou « Appels Liam AAAA-MM-JJ » de plus de JOURS_DOSSIER_MAX jours,
+    seulement si leur contenu a déjà été lu dans le registre. Aucun dossier ni aucun autre fichier n'est touché."""
+    if not envoi or a_blanc:
+        print(f"  Google (nettoyage {qui}) : {'à blanc' if a_blanc else 'simulation (envoi_automatique=false)'} : rien n'est listé ni mis à la corbeille"); return 0
+    if not racine: print(f"  Google (nettoyage {qui}) : aucun dossier pour l'instant"); return 0
+    reg = RG.charger(fichier_registre); motif = r"Appels (\d{4}-\d{2}-\d{2})" if qui == RG.SID else r"Appels Liam (\d{4}-\d{2}-\d{2})"
+    vieux = []
+    for i, nom in drive.lister_feuilles(racine):
+        m = re.fullmatch(motif, nom)
+        if m and _jours_ecoules(jour, m.group(1)) > JOURS_DOSSIER_MAX and f"{qui}|{m.group(1)}" in reg["feuilles_lues"]: vieux.append((i, nom))
+    for i, _ in vieux: drive.mettre_corbeille(i)
+    if vieux: journaliser("nettoyage", f"{qui} {jour} : {len(vieux)} feuille(s) lue(s) de plus de {JOURS_DOSSIER_MAX} jours mise(s) à la corbeille")
+    print(f"  Google (nettoyage {qui}) : {len(vieux)} feuille(s) de plus de {JOURS_DOSSIER_MAX} jours, déjà lue(s), mise(s) à la corbeille" if vieux else f"  Google (nettoyage {qui}) : rien à mettre à la corbeille")
+    return len(vieux)
+
+
 # --- la liste du jour ----------------------------------------------------------------------------------------------
 def _preparer(conf, etat, jour, a_blanc, drive=None, complet=True, hors_ligne=False):
+    if RG.actif(jour): return preparer_registre(RG.SID, conf, etat, jour, a_blanc, drive, hors_ligne)   # registre commun à partir du 17/11/2026
     if jour in etat["listes"] or chemin(jour).exists(): raise ErreurAgent(f"la liste du {jour} est déjà préparée ({chemin(jour).name}) : utilisez `annuler {jour}` si elle n'a pas servi")
     a_rappeler, historique = _bilan_veille(conf, etat, jour, drive)
     a_rappeler = _filtrer_reprises(conf, etat, jour, a_rappeler)
@@ -1084,7 +1362,10 @@ def cmd_jour(conf, jour, a_blanc):
         if jour in etat["listes"] or chemin(jour).exists(): print(f"  2. liste du {jour} : déjà préparée"); liste = True
         else: liste = _etape("liste", lambda: _preparer(conf, etat, jour, a_blanc, drive, complet=False), conf, etat, jour, a_blanc) is not None
         if liste: _etape("google", lambda: exporter_google(conf, etat, jour, drive, a_blanc), conf, etat, jour, a_blanc)
-        _etape("nettoyage", lambda: nettoyer_dossiers_drive(conf, etat, jour, drive, a_blanc), conf, etat, jour, a_blanc)
+        if RG.actif(jour):   # registre commun (17/11/2026) : seules les feuilles « Appels » déjà lues dans le registre vont à la corbeille ; aucun dossier touché
+            _etape("nettoyage", lambda: nettoyer_feuilles_lues(RG.SID, _racine(conf, etat, drive, creer=False) if drive else None, jour, drive, a_blanc, conf["envoi_automatique"]), conf, etat, jour, a_blanc)
+            _etape("stock", lambda: verifier_stock(conf, cfg_liam(), etat, jour, "appels-sid", a_blanc), conf, etat, jour, a_blanc)
+        else: _etape("nettoyage", lambda: nettoyer_dossiers_drive(conf, etat, jour, drive, a_blanc), conf, etat, jour, a_blanc)
         r = reserve(etat, jour=jour); detail = ", ".join(f"{NOMS[m]} {n}" for m, n in r["par"].items())
         print(f"  Réserve : {r['total']} entreprise(s) ({detail})"); afficher_reserve(conf, r)
         if r["total"] < conf["seuil_alerte"]:
@@ -1128,6 +1409,9 @@ def cmd_annuler(jour, force, a_blanc):
         cles = etat["listes"][jour]["cles"]
         if a_blanc: print(f"Annulation du {jour} [à blanc : rien n'est changé] : {len(cles)} entreprise(s) seraient libérées"); return 0
         for k in cles: etat["sorties"].pop(k, None)
+        if RG.actif(jour):   # registre commun : les entreprises neuves de cette liste sont libérées, les reprises redeviennent dues
+            with RG.verrou():
+                reg = RG.charger(); RG.liberer(reg, f"{RG.SID}|{jour}", jour); RG.sauver(reg)
         del etat["listes"][jour]; etat["google"].pop(jour, None); etat_ecrire(etat)
         if fichier.exists(): os.replace(fichier, chemin(jour, ".annulee"))
         journaliser("annuler", f"{jour} : {len(cles)} entreprises libérées")

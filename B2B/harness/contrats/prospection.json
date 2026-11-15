@@ -17,12 +17,14 @@
  },
  "fichiers_lus": [
   "API entreprises, OSM, sites publics",
-  "B2B/agents/prospection-etat.json"
+  "B2B/agents/prospection-etat.json",
+  "B2B/donnees/registre-entreprises.json"
  ],
  "fichiers_ecrits": [
   "lots",
   "messages-a-valider.md",
-  "B2B/agents/prospection-etat.json"
+  "B2B/agents/prospection-etat.json",
+  "B2B/donnees/registre-entreprises.json"
  ],
  "canaux_discord": [
   "lots",

@@ -75,7 +75,7 @@ Lire l'état des responsables, décider, déléguer et prévenir Liam ; ne produ
 Liam décide ; Jarvis (CEO) pilote ; chaque responsable pilote ses agents et rend compte à Jarvis.
 
 - **Rattachés directement à Jarvis (CEO) :** 🚨 Alerte pannes (actif), 📝 Résumé Sid (actif), 🛡️ Surveillant (actif).
-- **Prospection :** Remplir chaque jour ouvré la journée de vente : entreprises trouvées, lots d'e-mails validés par Liam, liste d'appels prête pour Sid à 7 h 30. Agents : 📞 Appels Sid (actif), instagram (arrêté), 🔎 Prospection (actif).
+- **Prospection :** Remplir chaque jour ouvré la journée de vente : entreprises trouvées, lots d'e-mails validés par Liam, liste d'appels prête pour Sid à 7 h 30. Agents : 📞 Appels Liam (actif), 📞 Appels Sid (actif), instagram (arrêté), 🔎 Prospection (actif).
 - **Vente :** Transformer réponses et rendez-vous en devis montrés à Liam, puis relancer, sans jamais rien envoyer au client sans son accord. Agents : 🧾 Devis (actif), 📅 Rendez-vous (actif), 💬 Réponses (actif), 🔁 Relances (prévu).
 - **Argent :** Suivre les paiements Stripe en lecture seule et prévenir Liam de chaque encaissement. Agents : 💶 Alerte Stripe (actif).
 - **Production :** Produire les pages et sites des clients, validés par Liam avant toute mise en ligne. Agents : 🌐 Page exemple (arrêté), 🏭 Production (prévu).
@@ -91,6 +91,7 @@ flowchart TD
   ceo --> resume_sid["📝 Résumé Sid (actif)"]
   ceo --> surveillant["🛡️ Surveillant (actif)"]
   ceo --> r_prospection["Responsable Prospection"]
+  r_prospection --> appels_liam["📞 Appels Liam (actif)"]
   r_prospection --> appels_sid["📞 Appels Sid (actif)"]
   r_prospection --> instagram["instagram (arrêté)"]
   r_prospection --> prospection["🔎 Prospection (actif)"]
@@ -112,7 +113,7 @@ flowchart TD
 _Zone conservée à chaque régénération : liens vers docs\decisions et docs clés seulement._
 
 Au centre : il lance, surveille et arrête les agents. « Jarvis stop » = arrêt d'urgence.
-Liens : [[docs/agents/🔎 Prospection|🔎 Prospection]] · [[docs/agents/🌐 Page exemple|🌐 Page exemple]] · [[docs/agents/📞 Appels Sid|📞 Appels Sid]] · [[docs/agents/📅 Rendez-vous|📅 Rendez-vous]] · [[docs/agents/💬 Réponses|💬 Réponses]] · [[docs/agents/🧾 Devis|🧾 Devis]] · [[docs/agents/💶 Alerte Stripe|💶 Alerte Stripe]] · [[docs/agents/📝 Résumé Sid|📝 Résumé Sid]] · [[docs/agents/🚨 Alerte pannes|🚨 Alerte pannes]] · [[docs/agents/🛡️ Surveillant|🛡️ Surveillant]] · [[docs/agents/🔁 Relances|🔁 Relances]] · [[docs/agents/🏭 Production|🏭 Production]]
+Liens : [[docs/agents/🔎 Prospection|🔎 Prospection]] · [[docs/agents/🌐 Page exemple|🌐 Page exemple]] · [[docs/agents/📞 Appels Sid|📞 Appels Sid]] · [[docs/agents/📞 Appels Liam|📞 Appels Liam]] · [[docs/agents/📅 Rendez-vous|📅 Rendez-vous]] · [[docs/agents/💬 Réponses|💬 Réponses]] · [[docs/agents/🧾 Devis|🧾 Devis]] · [[docs/agents/💶 Alerte Stripe|💶 Alerte Stripe]] · [[docs/agents/📝 Résumé Sid|📝 Résumé Sid]] · [[docs/agents/🚨 Alerte pannes|🚨 Alerte pannes]] · [[docs/agents/🛡️ Surveillant|🛡️ Surveillant]] · [[docs/agents/🔁 Relances|🔁 Relances]] · [[docs/agents/🏭 Production|🏭 Production]]
 Décisions qui le cadrent : [[docs/decisions/📌 Offre 595 + 49|📌 Offre 595 + 49]] · [[docs/decisions/📌 Sans acompte|📌 Sans acompte]] · [[docs/decisions/📌 Serveur HLQSTAU|📌 Serveur HLQSTAU]] · [[docs/decisions/📌 Validation à la main|📌 Validation à la main]] · [[docs/decisions/📌 INDEX d'abord|📌 INDEX d'abord]] · [[docs/decisions/📌 Instagram retiré|📌 Instagram retiré]]
 
 ## Notes de Liam

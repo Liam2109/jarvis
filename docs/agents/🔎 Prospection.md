@@ -41,11 +41,13 @@ Trouver des entreprises locales, préparer les lots d'e-mails, les soumettre à 
 **Lit :**
 - API entreprises, OSM, sites publics
 - B2B/agents/prospection-etat.json
+- B2B/donnees/registre-entreprises.json
 
 **Écrit :**
 - lots
 - messages-a-valider.md
 - B2B/agents/prospection-etat.json
+- B2B/donnees/registre-entreprises.json
 
 **Discord :** lots, alertes · **Plafond :** 40 messages par jour · **Envoi au client :** oui, seulement après accord de Liam
 

@@ -873,6 +873,26 @@ def ecarter_adresse(l, motif, etat, ecartes):
     print(f"  écarté : {l['nom']} ({l['ville']}) : adresse refusée : {motif}")
 
 
+import registre as RG   # registre commun des entreprises (B2B\donnees\registre-entreprises.json, 17/11/2026)
+
+
+def registre_commun():
+    """Le registre commun, à partir de son premier jour (RG.DEBUT) ; None avant, ou s'il est illisible (le lot se prépare alors comme avant, c'est dit)."""
+    if not RG.actif(aujourdhui()): return None
+    try: return RG.charger()
+    except (OSError, ValueError): print("  ! registre commun illisible : lot préparé sans lui"); return None
+
+
+def noter_lot_registre(lignes):
+    """Les entreprises mises dans le lot du jour entrent dans le registre (« lot e-mail ») : jamais données ensuite à Sid ni à Liam."""
+    try:
+        with RG.verrou():
+            reg = RG.charger()
+            for l in lignes: RG.donner(reg, {"nom": l["nom"], "ville": l.get("ville", ""), "tel": l.get("telephone", ""), "metier": l.get("metier", ""), "dept": ZN.dept_de_cp(str(l.get("cp", ""))) or ""}, RG.LOT, aujourdhui(), feuille=f"lot|{aujourdhui()}")
+            RG.sauver(reg)
+    except (OSError, ValueError, TimeoutError) as e: print(f"  ! registre commun non mis à jour ({type(e).__name__})")
+
+
 def cmd_preparer(a_blanc, conf, generer=True, api_fiche=None):
     etat = etat_lire(); cles, mails = exclusions(); ident, manque = R.charger_identite(); statuts = R.statuts_suivi()
     lignes = lire_trouves(); texte = MESSAGES.read_text(encoding="utf-8") if MESSAGES.exists() else ""
@@ -883,6 +903,10 @@ def cmd_preparer(a_blanc, conf, generer=True, api_fiche=None):
     choisis, reseaux, formulaires, adresses = [], 0, 0, set()
     partages = partages_connus(lignes)
     dispo = [l for l in lignes if l["statut"] == "trouvé" and not ZN.cp_hors_zone(l.get("cp", "")) and S.cle(l) not in cles and l["email"].lower() not in mails and not motif_exclusion(l["nom"], l["email"], l.get("site_actuel", ""), partages)]
+    reg = registre_commun()
+    if reg is not None:   # registre commun (17/11/2026) : une entreprise déjà donnée à Sid, à Liam ou dans un lot n'est jamais remise dans un lot
+        idx = RG.index(reg); avant = len(dispo); dispo = [l for l in dispo if not RG.connue(reg, l["nom"], l.get("ville", ""), l.get("telephone", ""), idx)]
+        if len(dispo) < avant: print(f"  registre commun : {avant - len(dispo)} entreprise(s) déjà données (Sid, Liam ou un lot) écartée(s)")
     sans = [l for l in dispo if not lien_exemple(l.get("metier", ""))]
     print("  Prospects par canal : e-mail " + str(sum(1 for l in dispo if l["email"])) + ", formulaire " + str(sum(1 for l in dispo if not l["email"] and l.get("formulaire"))) + ", Facebook " + str(sum(1 for l in dispo if l.get("facebook"))) + ", LinkedIn " + str(sum(1 for l in dispo if l.get("linkedin")))
           + f" ; {len(sans)} sans page exemple en ligne pour leur métier (écartés du lot)")
@@ -930,6 +954,7 @@ def cmd_preparer(a_blanc, conf, generer=True, api_fiche=None):
     for l in lignes:
         if S.cle(l) in fait: l["statut"] = "préparé"
     ecrire_trouves(lignes)
+    if reg is not None: noter_lot_registre([l for l, _ in choisis])
     if lot_csv.exists(): S.init(str(lot_csv))
     etat_ecrire(etat, False)
     return n

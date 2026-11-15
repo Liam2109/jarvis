@@ -112,12 +112,13 @@ assert not re.search(r"^\s*(import|from)\s+(selenium|playwright|pyppeteer)", src
 
 # ---------- 6) tâches du serveur (serveur-taches.json) : cohérence ----------
 T = json.loads((ICI / "serveur-taches.json").read_text(encoding="utf-8"))["agents"]
-assert set(T) == {"appels-sid", "devis", "rendez-vous", "reponses", "prospection", "resume-sid", "stripe-alerte", "panne-alerte", "surveillant"}, sorted(T)   # instagram retiré du serveur le 14/11/2026 (archive) ; resume-sid/stripe-alerte/panne-alerte ajoutés (étape Argent, 15/11/2026) ; surveillant du harness (15/11/2026)
+assert set(T) == {"appels-sid", "appels-liam", "devis", "rendez-vous", "reponses", "prospection", "resume-sid", "stripe-alerte", "panne-alerte", "surveillant"}, sorted(T)   # instagram retiré du serveur le 14/11/2026 (archive) ; resume-sid/stripe-alerte/panne-alerte ajoutés (étape Argent, 15/11/2026) ; surveillant du harness (15/11/2026)
 assert T["surveillant"]["heure"] == "19:45" and T["surveillant"]["lundi"] == "07:50" and T["surveillant"]["commandes"] == [["verifier"]]
 for nom, t in T.items():
     assert (ICI / t["script"]).is_file() and t["commandes"] and bool(t.get("toutes_minutes")) != bool(t.get("heure")), nom   # une cadence OU une heure
     for cmd in t["commandes"]: assert not set(cmd) & {"continu", "visuels", "ecouter", "demarrage", "google-autoriser", "installer-tache"}, (nom, cmd)   # ni boucle infinie, ni navigateur
 assert T["appels-sid"]["heure"] == "07:30" and T["appels-sid"]["commandes"] == [["jour"]]
+assert T["appels-liam"]["heure"] == "07:30" and T["appels-liam"]["commandes"] == [["jour"]]   # liste de Liam (registre commun, 15/11/2026), même heure que Sid
 assert "instagram" not in T and T["rendez-vous"]["commandes"] == [["jour"]] and T["devis"]["commandes"] == [["jour"]]
 
 # ---------- 7) refus de bout en bout : la vraie ligne de commande de chaque agent, dans une COPIE du dossier ----------

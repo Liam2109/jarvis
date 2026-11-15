@@ -41,7 +41,7 @@ Choisis toujours une de ces 8 valeurs, sans en inventer :
 - Trop cher : l'objection de prix est venue.
 - Déjà un site : il en a déjà un.
 - Pas le temps : il n'a pas le temps.
-Dans Note, écris la phrase exacte qui a mené au « non » : c'est ce qui permet d'améliorer les appels.
+Dans Note, écris la phrase exacte du client : celle qui a mené au « non », ou celle où il dit ce qui le gêne (« j'ai pas le temps », « mon neveu me l'a fait »…). C'est ce qui permet d'améliorer les appels.
 
 ## À ne jamais faire
 - Donner un prix, un délai ou une promesse de résultat. Ne jamais dire « sans abonnement » ni « sans frais ».

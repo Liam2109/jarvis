@@ -335,3 +335,9 @@ Contexte : Liam utilise un petit PC portable (celui de Mathéo, avec carte Wi-Fi
 - Sortie elegante si pas de confiance : « on a passe du temps ensemble, je comprends, c'est dommage mais si vous le souhaitez... » puis maquette par e-mail sans engagement.
 - Sid note la phrase exacte de douleur du client dans Note : munition pour la question de blocage.
 - Fichier : B2B/docs/TECHNIQUES-CLOSING.md (a rechercher et enrichir avec de bonnes phrases de vente).
+
+## 2026-11-15 (20 h 30) - Liste d'appels de Liam et journal
+- Liam veut sa propre petite liste d'appels, 10 à 20 par jour, en plus de celle de Sid : feuille « Appels Liam AAAA-MM-JJ », sans doublon avec Sid, agent séparé (contrat, garde, test, fiche).
+- Journal : suppression automatique des entrées de plus d'un mois, jour par jour (le 15 nov. on retire le 15 oct.). Règle enregistrée en mémoire.
+- Règle des listes (Sid + Liam), 20 h 35 : chaque matin ouvré, entreprises toutes différentes sur toute la Normandie (76, 27, 14, 50, 61, métiers mélangés) ; une entreprise déjà donnée n'est jamais redonnée, sauf les non joints (recyclés) ; un registre commun empêche tout doublon entre listes, lots et la liste de Liam. Script de Sid : propre, pas vendeur.
+- Fait le 15/11 (22 h, Claude Code) : registre commun, liste de Liam (agent appels-liam), reprises (vide en tête, Pas de réponse 3 jours ouvrés et 3 essais, À rappeler au jour de la Note, Je dois réfléchir chez Liam à 3 jours), actif mardi 17/11. Idée suivante : un onglet « relances » dans la feuille de Liam avec l'historique des essais de chaque entreprise.
