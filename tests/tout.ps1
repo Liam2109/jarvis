@@ -162,7 +162,8 @@ $saute = @{
 function Get-Instantane {
     $mem = Join-Path $racine 'memoire'
     @{ config = (Get-FileHash (Join-Path $racine 'config.json')).Hash
-       memoire = (@(Get-ChildItem $mem -File -ErrorAction SilentlyContinue | Sort-Object Name | ForEach-Object { "$($_.Name):$($_.Length):$($_.LastWriteTimeUtc.Ticks)" }) -join '|')
+       # arret.json, modejeu.flag, session-en-cours.jsonl : écrits par Jarvis lui-même quand Liam l'a lancé pendant la passe (faux rouge du 15/11/2026), jamais par un test
+       memoire = (@(Get-ChildItem $mem -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -notin @('arret.json', 'modejeu.flag', 'session-en-cours.jsonl') } | Sort-Object Name | ForEach-Object { "$($_.Name):$($_.Length):$($_.LastWriteTimeUtc.Ticks)" }) -join '|')
        env = (Get-FileHash (Join-Path $racine '.env') -ErrorAction SilentlyContinue).Hash }
 }
 function Get-ProcessusJarvis { @(Get-CimInstance Win32_Process | Where-Object { $_.ProcessId -ne $PID -and $_.CommandLine -match 'Jarvis\\jarvis\.ps1|jarvis\.ps1|ecoute\.py|reveil\.py|coffre-dialogue|jarvis-edge|JarvisOrb|ollama|pont-discord|faux-pont' -and $_.CommandLine -notmatch 'tests\\tout\.ps1' }) }

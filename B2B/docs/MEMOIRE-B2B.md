@@ -9,15 +9,15 @@ Fichier tenu à jour pour ne rien perdre entre deux conversations. Les idées d�
 - Point d'image : ce site présente LM MULTI-SERVICES comme une entreprise de débarras. Un artisan qui vérifie le nom de l'expéditeur y tombera. Prévoir une page « création de sites pour artisans » ou un nom d'enseigne dédié.
 
 ## Objectif
-- Première vente d'une landing page (590 €) avant la fin de cette semaine (au plus tard dimanche 1er nov. 2026).
+- Première vente d'une page web (595 € une fois, puis 49 €/mois, premier mois offert) avant la fin de cette semaine (au plus tard dimanche 1er nov. 2026).
 - Ensuite : environ 100 e-mails de prospection par jour, toute la France, tous les métiers, tous les jours.
 
 ## Offres et prix (décidés par Liam)
 - Landing page pro : 595 € (pack unique depuis le 10 nov. 2026, voir « Mise à jour du domaine… » plus bas : inclut domaine, e-mail pro, hébergement, maintenance).
-- Site complet : 990 à 1 490 € (`offre=complet` pas encore construit : on le construit si un prospect le demande).
+- Site complet : 994 € une fois, puis 49 €/mois, premier mois offert, arrêt à tout moment (`offre=complet` pas encore construit : on le construit si un prospect le demande).
 - Nom de domaine / DNS : 40 € + prix coûtant, domaine au nom du client.
 - E-mail professionnel : sur devis.
-- Maintenance : 49 € par mois (comprise dans le pack unique depuis le 10 nov. 2026 ; l'ancien intervalle 29 à 49 € est résolu).
+- Abonnement : 49 € par mois après le prix unique (hébergement, maintenance, support et nom de domaine compris), premier mois offert, arrêt possible à tout moment ; compris dans les deux liens Stripe (référence : `docs\OFFRE-REFERENCE.json`, 15/11/2026).
 - Devis type, script d'appel et 8 réponses aux objections : `docs\DEVIS-ET-OBJECTIONS.md` (brouillon à valider ; points à confirmer : délai, TVA, rétractation, relecture juridique ; paiement décidé le 14/11/2026 : prix complet en une fois, lien de paiement direct).
 
 ## Parcours de vente
@@ -77,7 +77,7 @@ Jamais d'appel à froid.
 ## Site vitrine de l'activité (créé le 26 oct. 2026)
 - Dossier `sites/agence/` (accueil, mentions légales, confidentialité). Régénération : `python sites/agence/build.py` ; contrôle : `node sites/outils/qa-agence.mjs`. Doc : `sites/agence/LISEZ-MOI.md`.
 - Répond au « point d'image » : le site de débarras LM & LS Multi-Services reste séparé ; cette vitrine présente la création de sites pour artisans et commerces sous le nom LM MULTI-SERVICES, avec Liam Emo.
-- Contenu : prix 590 € (landing), 990 à 1 490 € (site complet), domaine/DNS 40 € + prix coûtant, e-mail pro sur devis, maintenance 29 à 49 €/mois ; parcours message, appel de 15 minutes, devis, paiement sécurisé ; 3 exemples en ligne (électricien, bistro, céramique) présentés comme fictifs.
+- Contenu : prix de la première version (remplacés depuis : 595 € ou 994 € une fois, puis 49 €/mois, voir `docs\OFFRE-REFERENCE.json`) ; parcours message, appel de 15 minutes, devis, paiement sécurisé ; 3 exemples en ligne (électricien, bistro, céramique) présentés comme fictifs.
 - À compléter par Liam avant mise en ligne : téléphone, e-mail (identite.json), forme juridique, adresse, TVA. Les numéros du site de débarras ne sont PAS repris tant que Liam ne les a pas confirmés.
 - État : non déployé ; il faut un NOUVEAU projet Vercel (déploiement depuis une copie hors dépôt Git) et l'OK de Liam. Noindex à retirer quand le domaine est branché.
 - Page confidentialité : prospection B2B, STOP, durées (3 ans après le dernier échange sans collaboration), à faire relire.
@@ -91,6 +91,6 @@ Jamais d'appel à froid.
 
 ## Mise à jour du domaine lmlsmulti-services.com (10 nov. 2026)
 - Le domaine n'héberge plus le débarras depuis au moins le 10 nov. : vérifié en ligne, c'est déjà `sites/agence/index.html` (version avant pack unique) qui y est publié, sur Netlify. La mise en garde « NE PAS l'utiliser » plus haut (ligne « Domaine existant ») ne s'applique donc plus ; elle date du tout premier jour (26 oct.), avant la bascule.
-- Contenu mis à jour le 10 nov. (demande de Liam) : pack unique 595 € + 20 €/mois (site, domaine, e-mail pro, hébergement, maintenance inclus) ; bandeau et gros bouton « Page exemple gratuite » reliés à Messenger (`facebook_page` dans `identite.json` = `https://m.me/61583238278448`) ; exemples électricien/plombier/coiffeur (liens b2b-demos + `exemple-plombier-phi.vercel.app`) ; déroulé en 4 étapes sans devis ni appel de 15 minutes. Téléphone et e-mail déjà confirmés (06 68 50 64 19, emoliam255@gmail.com). Détail dans `sites/agence/LISEZ-MOI.md` et l'historique de conversation du jour.
+- Contenu mis à jour le 10 nov. (demande de Liam) : pack unique 595 € puis un abonnement mensuel (site, domaine, e-mail pro, hébergement, maintenance inclus ; montant actuel 49 €/mois, premier mois offert, voir `docs\OFFRE-REFERENCE.json`) ; bandeau et gros bouton « Page exemple gratuite » reliés à Messenger (`facebook_page` dans `identite.json` = `https://m.me/61583238278448`) ; exemples électricien/plombier/coiffeur (liens b2b-demos + `exemple-plombier-phi.vercel.app`) ; déroulé en 4 étapes sans devis ni appel de 15 minutes. Téléphone et e-mail déjà confirmés (06 68 50 64 19, emoliam255@gmail.com). Détail dans `sites/agence/LISEZ-MOI.md` et l'historique de conversation du jour.
 - Pas de `.netlify` lié ni de `netlify-cli` installés sur cette machine au 10 nov. : le déploiement se fait avec `npx netlify-cli` depuis `sites/agence/`, lien/connexion au site existant à faire par Liam lui-même (choix interactif).
 - Refonte du 10 nov. (soir, demande de Liam) : la ligne 94 ci-dessus est dépassée. Prix réel maintenant 595 € une fois + **49 €/mois** (plus de 20 €). Bouton principal partout (en-tête, hero, offre, contact, barre fixe mobile) = « Réserver un appel de 15 min » vers `rdv_url` (`identite.json`, Google Calendar). Interaction signature : curseur avant/après « Sans site / Avec votre page » dans le hero (CSS + `assets/slider.js`, fonctionne sans JS à 50/50 fixe). Titres révélés ligne par ligne, numéros de section en contour, photos à rideau + léger zoom au défilement (`assets/style.css`, toujours coupé en `prefers-reduced-motion`). Bug de contraste corrigé (carte prix sur fond sombre héritait du texte clair du fond — `.dark .card`). QA (`qa-agence.mjs`, corrigé : MIME `.js` manquant, ids de sections obsolètes, délai de capture trop court pour les animations) : 0 débordement, 0 erreur console, accessibilité/SEO/bonnes pratiques 100 sur les 3 pages. Déploiement de TEST (pas la production Netlify) : `npx vercel deploy` depuis une copie hors dépôt (jamais `build.py` ni `agents/identite.json`), environnement preview, protégé par l'authentification Vercel de Liam.

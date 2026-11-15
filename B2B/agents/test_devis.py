@@ -41,10 +41,10 @@ rm = D.construire(D.lire_fiche(MODELE), IDENT, "DEV-2026-009", JOUR); assert rm[
 
 # --- prix et lien de paiement du prix complet (paiement en une fois, 14/11/2026) : uniquement ceux de docs\KIT-RDV-15MIN.md / liens-paiement.md ---
 d, manques = D.construire(f, IDENT, "DEV-2026-001", JOUR)
-assert not manques and d["prix"] == 595 and "acompte" not in d and "solde" not in d and d["lien_paiement"] == "https://buy.stripe.com/bJebJ2ceVdZjbLN0ly5EY06", (d, manques)
+assert not manques and d["prix"] == 595 and "acompte" not in d and "solde" not in d and d["lien_paiement"] == "https://buy.stripe.com/3cIbJ2diZ3kF9DF9W85EY0a", (d, manques)
 assert d["maintenance"] is True and d["delai_jours"] == 8 and d["valide_jusqu"] == "2026-11-19" and len(d["livrables"]) == 4 and d["offre_nom"] == "Page web"
 ds, m2 = D.construire(D.lire_fiche(FICHE_SITE), IDENT, "DEV-2026-002", JOUR)
-assert not m2 and ds["prix"] == 994 and ds["lien_paiement"] == "https://buy.stripe.com/7sYaEY2ElaN7179d8k5EY07" and ds["maintenance"] is False
+assert not m2 and ds["prix"] == 994 and ds["lien_paiement"] == "https://buy.stripe.com/bJeaEY7YF4oJ035d8k5EY0b" and ds["maintenance"] is False
 assert D.euros(590) == "590 €" and D.euros(1490) == "1 490 €"
 
 # --- information manquante ou sans source : signalée, aucun devis (rien d'inventé) ---
@@ -59,9 +59,9 @@ assert manquent(FICHE_PAGE.replace("Livrables : photos de la boutique ; horaires
 assert manquent(FICHE_PAGE.replace("Offre : page web", "Offre : refonte totale"))[0] is None
 r, mq = manquent(FICHE_PAGE.replace("maintenance", "maintenance ; nom de domaine")); assert r is None and any("domaine" in x and "prix" in x for x in mq), mq   # option sans prix dans les sources
 assert manquent(FICHE_PAGE + "Prix : 500 €\n")[0] is None                                          # la page web coûte 595 €, pas un autre montant
-assert manquent(FICHE_PAGE.replace("Offre : page web", "Offre : site complet"))[0] is None         # site complet sans prix (990 à 1 490 €) : à décider par Liam
-assert manquent(FICHE_PAGE.replace("Offre : page web", "Offre : site complet\nPrix : 700 €"))[0] is None   # hors de 990 à 1 490 €
-r, mq = manquent(FICHE_PAGE.replace("Offre : page web", "Offre : site complet\nPrix : 1 190 €")); assert r is None and any("lien" in x and "994 €" in x for x in mq), mq   # lien de paiement à créer par Liam
+assert manquent(FICHE_PAGE.replace("Offre : page web", "Offre : site complet"))[0]["prix"] == 994 and manquent(FICHE_PAGE.replace("Offre : page web", "Offre : site complet"))[0]["lien_paiement"] == D.LIEN_SITE   # site complet sans prix : 994 € (prix unique, OFFRE-REFERENCE.json)
+assert manquent(FICHE_PAGE.replace("Offre : page web", "Offre : site complet\nPrix : 700 €"))[0] is None   # le site complet est à 994 €, rien d'autre
+r, mq = manquent(FICHE_PAGE.replace("Offre : page web", "Offre : site complet\nPrix : 1 190 €")); assert r is None and any("994 €" in x and "lien Stripe" in x for x in mq), mq   # autre montant : lien à créer par Liam, jamais inventé
 assert manquent(FICHE_PAGE.replace("Offre : page web", "Offre : site complet\nPrix : 990 €"))[0] is None   # 990 € : aucun lien de ce montant
 assert manquent(FICHE_PAGE.replace("Offre : page web", "Offre : site complet\nPrix : 1 600 €"))[0] is None
 assert manquent(FICHE_PAGE, {**IDENT, "siret": ""})[0] is None and manquent(FICHE_PAGE, {**IDENT, "email_reponse": ""})[0] is None   # en-tête incomplet
@@ -72,7 +72,7 @@ for attendu in ("LM MULTI-SERVICES", "entreprise individuelle", "101 839 033 000
                 "595 €", "en une fois", "8 jours ouvrés", "valable 15 jours", "19/11/2026", d["lien_paiement"], "aperçu", "49 € par mois", "photos de la boutique", "carte et itinéraire"):
     assert attendu in txt, attendu
 assert not re.search(r"garanti|n°\s?1|meilleur|\bavis\b|clients? satisfaits|référence", txt, re.I)   # aucune promesse ni avis inventés
-assert "49 €" in D.texte_devis(d) and "49 €" not in D.texte_devis(ds) and ds["lien_paiement"] in D.texte_devis(ds) and "994 €" in D.texte_devis(ds)   # maintenance seulement si demandée, jamais ajoutée au total
+assert all("49 € par mois" in t and "premier mois offert" in t and "arrêt possible à tout moment" in t and "facultati" not in t for t in (" ".join(D.texte_devis(x).split()) + " " + " ".join(D.texte_message(x).split()) for x in (d, ds))) and ds["lien_paiement"] in D.texte_devis(ds) and "994 €" in D.texte_devis(ds)   # abonnement inclus dans le lien : toujours annoncé (15/11/2026)
 msg = D.texte_message(d)
 for t in (txt, msg, D.texte_devis(ds), D.texte_message(ds)): assert not re.search(r"acompte|solde|30 %", t, re.I), t   # paiement en une fois : aucune étape intermédiaire
 assert msg.startswith("Objet : Devis page web pour Boulangerie Fictive Dupont") and "Bonjour Jeanne Martin" in msg and "Je veux que les gens m'appellent" in msg and d["lien_paiement"] in msg and "DEV-2026-001" in msg and "Liam Emo" in msg and "valable 15 jours" in msg
@@ -229,11 +229,11 @@ effacer(); fx = Faux(); r = D.cmd_rapide(conf, LIGNE, False, JOUR, IDENT, alerte
 assert r["action"] == "préparé" and r["numero"] == "DEV-2026-001"
 q = D.etat_lire()["devis"]["DEV-2026-001"]; assert q["statut"] == "préparé" and q["prix"] == 595 and "acompte" not in q and q["lien_paiement"] == D.LIEN_PAGE and q["maintenance"] is True and q["offre_nom"] == "Page web"
 t = (D.DOSSIER / "DEV-2026-001.txt").read_text(encoding="utf-8")
-for x in ("595 €", "en une fois", "49 € par mois", "8 jours ouvrés", "photos de la boutique", "bouton d'appel", "Je veux être appelé", "https://buy.stripe.com/bJebJ2ceVdZjbLN0ly5EY06", "TVA non applicable"): assert x in t, x
+for x in ("595 €", "en une fois", "49 € par mois", "8 jours ouvrés", "photos de la boutique", "bouton d'appel", "Je veux être appelé", "https://buy.stripe.com/3cIbJ2diZ3kF9DF9W85EY0a", "TVA non applicable"): assert x in t, x
 assert "acompte" not in t.lower() and "acompte" not in (D.DOSSIER / "DEV-2026-001-message.txt").read_text(encoding="utf-8").lower()
 assert "attention de" not in t and (D.DOSSIER / "DEV-2026-001.pdf").read_bytes().startswith(b"%PDF") and (D.DOSSIER / "DEV-2026-001-message.txt").read_text(encoding="utf-8").startswith("Objet : Devis page web pour Boulangerie Fictive Dupont\n\nBonjour,")
 assert not fx.appels and not alertes                                                          # simulation : aucun Discord, aucune alerte
-effacer(); D.cmd_rapide(conf, LIGNE.replace("| oui |", "| non |"), False, JOUR, IDENT, alerte); assert "49 €" not in (D.DOSSIER / "DEV-2026-001.txt").read_text(encoding="utf-8")
+effacer(); D.cmd_rapide(conf, LIGNE.replace("| oui |", "| non |"), False, JOUR, IDENT, alerte); assert "49 € par mois" in " ".join((D.DOSSIER / "DEV-2026-001.txt").read_text(encoding="utf-8").split())   # abonnement inclus dans le lien : annoncé même sans « maintenance » (15/11/2026)
 # un seul devis en validation, à blanc, champ manquant ou invalide : rien créé, numéro non brûlé
 assert D.cmd_rapide(conf, LIGNE, False, JOUR, IDENT, alerte)["action"] == "refusé"
 effacer(); assert D.cmd_rapide(conf, LIGNE, True, JOUR, IDENT, alerte)["action"] == "à blanc" and not D.ETAT.exists() and not list(D.DOSSIER.glob("*"))

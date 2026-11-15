@@ -12,8 +12,8 @@ Même architecture que prospection.py et instagram.py : script autonome, réglag
   python agents\\devis.py annuler DEV-AAAA-NNN             libère la place d'un devis préparé ou validé (jamais d'un devis envoyé)
   python agents\\devis.py arreter | reprendre              arrêt de secours de la boucle | lève la suspension après une erreur
 
-Prix et liens de paiement : UNIQUEMENT ceux de docs\\KIT-RDV-15MIN.md et docs\\liens-paiement.md (page web 595 €, site complet 990 à 1 490 €, maintenance 49 €/mois). Paiement en une fois (décision
-de Liam, 14/11/2026) : le devis donne directement le lien de paiement du prix complet. Une information absente de la fiche ou des sources (délai, livrables, prix d'un site, option sans prix,
+Prix et liens de paiement : UNIQUEMENT ceux de docs\\OFFRE-REFERENCE.json (page web 595 € ou site complet 994 €, une fois, puis 49 €/mois avec hébergement, maintenance, support et nom de domaine,
+premier mois offert, arrêt à tout moment ; le lien Stripe comprend l'abonnement, 15/11/2026). Le devis donne directement ce lien. Une information absente de la fiche ou des sources (délai, livrables, option sans prix,
 lien de paiement sur mesure) est SIGNALÉE et l'agent s'arrête : rien n'est inventé.
 Statut de paiement : l'agent n'accède ni à la banque ni à Stripe ; Liam coche « payé » à la main (`marquer`). Un seul devis à la fois « préparé » (en cours de validation).
 envoi_automatique = false (défaut) : SIMULATION (aucun message Discord ; Liam valide en ligne de commande). true : aperçu et lecture du « ok devis » sur Discord (toujours rien vers le client)."""
@@ -32,10 +32,11 @@ ARRET, VERROU, JOURNAL = ICI / "devis.arret", ICI / "devis-continu.verrou", ICI 
 DEFAUT = {"envoi_automatique": False, "cycle_minutes": 3, "salon_nom": ""}
 STATUTS = ["préparé", "validé", "envoyé", "accepté", "payé"]
 
-# Sources : docs\KIT-RDV-15MIN.md (section 2 et 4) et docs\liens-paiement.md. Rien d'autre n'est un prix. Paiement en une fois : un lien = le prix complet.
-PRIX_PAGE, PRIX_SITE_MIN, PRIX_SITE_MAX, PRIX_SITE_LIEN, MAINTENANCE, VALIDITE_JOURS = 595, 990, 1490, 994, 49, 15
-LIEN_PAGE = "https://buy.stripe.com/bJebJ2ceVdZjbLN0ly5EY06"      # « Pack landing page » 595 € (liens-paiement.md, 12/11/2026)
-LIEN_SITE = "https://buy.stripe.com/7sYaEY2ElaN7179d8k5EY07"      # « Site complet » 994 € (seul montant de site couvert par un lien)
+# Source : docs\OFFRE-REFERENCE.json (= liens-paiement.md, 15/11/2026). Rien d'autre n'est un prix. Un lien = le prix unique + l'abonnement de 49 €/mois (premier mois offert).
+PRIX_PAGE, PRIX_SITE_LIEN, MAINTENANCE, VALIDITE_JOURS = 595, 994, 49, 15
+LIEN_PAGE = "https://buy.stripe.com/3cIbJ2diZ3kF9DF9W85EY0a"      # « Pack page web » 595 € puis 49 €/mois, 1er mois offert (OFFRE-REFERENCE.json)
+LIEN_SITE = "https://buy.stripe.com/bJeaEY7YF4oJ035d8k5EY0b"      # « Site complet » 994 € puis 49 €/mois, 1er mois offert (OFFRE-REFERENCE.json)
+ABONNEMENT = f"Ensuite {MAINTENANCE} € par mois (hébergement, maintenance, support et nom de domaine compris), premier mois offert, arrêt possible à tout moment ; cet abonnement est inclus dans le lien de paiement."
 OFFRES = {"page": "Page web", "site": "Site complet"}
 ALIAS = {"entreprise": "entreprise", "nomdelentreprise": "entreprise", "societe": "entreprise", "metier": "metier", "ville": "ville", "contact": "contact", "nom": "contact", "nomducontact": "contact",
          "client": "contact", "email": "email", "mail": "email", "courriel": "email", "telephone": "telephone", "tel": "telephone", "offre": "offre", "offrechoisie": "offre", "prix": "prix",
@@ -102,16 +103,14 @@ def construire(f, ident, numero, jour, rapide=False):
     offre = None
     if f.get("offre"):
         n = _norm(f["offre"]); offre = "site" if "complet" in n or n.startswith("site") else "page" if "page" in n else None
-        if not offre: m.append(f"offre : « {f['offre']} » inconnue (page web {euros(PRIX_PAGE)} ou site complet {euros(PRIX_SITE_MIN)} à {euros(PRIX_SITE_MAX)})")
+        if not offre: m.append(f"offre : « {f['offre']} » inconnue (page web {euros(PRIX_PAGE)} ou site complet {euros(PRIX_SITE_LIEN)})")
     prix, lien, pv = None, None, _entier(f.get("prix"))
     if offre == "page":
         prix, lien = PRIX_PAGE, LIEN_PAGE
         if pv and pv != PRIX_PAGE: m.append(f"prix : la page web est à {euros(PRIX_PAGE)} (docs\\KIT-RDV-15MIN.md), pas {euros(pv)}")
     elif offre == "site":
-        if not pv: m.append(f"prix du site complet à fixer par Liam ({euros(PRIX_SITE_MIN)} à {euros(PRIX_SITE_MAX)}) : aucun prix inventé")
-        elif not PRIX_SITE_MIN <= pv <= PRIX_SITE_MAX: m.append(f"prix : le site complet va de {euros(PRIX_SITE_MIN)} à {euros(PRIX_SITE_MAX)}, pas {euros(pv)}")
-        elif pv != PRIX_SITE_LIEN: m.append(f"lien de paiement à créer par Liam : le lien « site complet » est fixé à {euros(PRIX_SITE_LIEN)} ; pour {euros(pv)}, créer le lien Stripe de ce montant puis l'ajouter à docs\\liens-paiement.md")
-        else: prix, lien = pv, LIEN_SITE
+        if pv and pv != PRIX_SITE_LIEN: m.append(f"prix : le site complet est à {euros(PRIX_SITE_LIEN)} (docs\\OFFRE-REFERENCE.json), pas {euros(pv)} ; un autre montant demande un lien Stripe créé par Liam")
+        else: prix, lien = PRIX_SITE_LIEN, LIEN_SITE
     dj = _entier((re.search(r"\d+\s*jours?", f.get("delai", "")) or [""])[0])
     if not dj: m.append("délai : un nombre de jours ouvrés est nécessaire dans la fiche (aucun délai n'est inventé)")
     elif "ouvr" not in _norm(f["delai"]): m.append("délai : précise « jours ouvrés » dans la fiche"); dj = None
@@ -141,7 +140,7 @@ def blocs_devis(d):
     b += [("sep", ""), ("h2", "Ce qui est livré"), ("p", f"{d['offre_nom']} pour {d['entreprise']} :")] + [("li", x) for x in d["livrables"]]
     b += [("sep", ""), ("h2", "Prix"), ("p", f"Prix {'de la' if d['offre'] == 'page' else 'du'} {d['offre_nom'].lower()} : {euros(d['prix'])}"),
           ("p", f"Paiement en une fois à la commande : {euros(d['prix'])}, avec le lien ci-dessous.")]
-    if d["maintenance"]: b.append(("p", f"Maintenance (facultative, non comprise dans le prix ci-dessus) : {MAINTENANCE} € par mois (hébergement, petites modifications, sauvegardes)."))
+    b.append(("p", ABONNEMENT))
     b += [("sep", ""), ("h2", "Délai"), ("p", f"{d['delai_jours']} jours ouvrés après réception du paiement et de vos photos."), ("sep", ""), ("h2", "Régler"),
           ("p", f"Lien de paiement ({euros(d['prix'])}) :"), ("p", d["lien_paiement"]), ("sep", ""), ("h2", "Conditions"),
           ("li", "Vous validez ce devis et réglez avec le lien ci-dessus ; je commence dès le paiement reçu."),
@@ -170,7 +169,7 @@ def texte_message(d):
     if d["besoin"]: l.append(f"Ce que vous voulez (vos mots) : {d['besoin']}")
     l += [f"Ce que je réalise : {d['offre_nom']} : " + ", ".join(d["livrables"]) + ".", f"Délai : {d['delai_jours']} jours ouvrés après réception du paiement et de vos photos.",
           f"Prix : {euros(d['prix'])}, réglé en une fois à la commande. Je vous montre un aperçu privé ; la mise en ligne a lieu après votre validation."]
-    if d["maintenance"]: l.append(f"Maintenance (facultative) : {MAINTENANCE} € par mois.")
+    l.append(ABONNEMENT)
     l += [f"Lien de paiement : {d['lien_paiement']}", f"Le devis n° {d['numero']} est joint (PDF). Devis valable {VALIDITE_JOURS} jours, jusqu'au {d['valide_fr']}.", "",
           "Cordialement,", f"{e['prenom_nom']}, {e['entreprise']}, SIRET {_siret(e['siret'])}", "TVA non applicable, art. 293 B du CGI."]
     return "\n".join(l) + "\n"
@@ -245,7 +244,7 @@ OK_DEVIS = re.compile(r"\s*ok\s+devis(?:\s+(DEV-\d{4}-\d{3}))?\s*[.!]*\s*", re.I
 
 def texte_apercu(num, v, uid):
     return (f"<@{uid}> **Devis {num} : à valider** — {v['entreprise']} ({v['ville']})\n{v['offre_nom']} {euros(v['prix'])} en une fois · délai {v['delai_jours']} jours ouvrés"
-            + (f" · maintenance {MAINTENANCE} €/mois" if v.get("maintenance") else "") + f"\nLien de paiement : {v.get('lien_paiement', '')}\nFichiers : devis\\{num}.pdf, devis\\{num}.txt, devis\\{num}-message.txt\n"
+            + f" · puis {MAINTENANCE} €/mois (1er mois offert, inclus dans le lien)" + f"\nLien de paiement : {v.get('lien_paiement', '')}\nFichiers : devis\\{num}.pdf, devis\\{num}.txt, devis\\{num}-message.txt\n"
             f"Réponds `ok devis` (ou ✅ sur ce message) pour valider. **Rien ne part vers le client** : tu l'envoies toi-même, puis `python agents\\devis.py marquer {num} envoye`.")[:1900]
 
 

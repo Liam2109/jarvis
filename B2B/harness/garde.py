@@ -89,7 +89,7 @@ def verifier_envoi(agent, canal, texte, destinataire="", maintenant=None, ctx=No
     bas = texte.lower()
     for ph in r["phrases_interdites"]:
         if ph == "facultative":
-            if "facultati" in bas and re.search(r"maintenance|abonnement|h[ée]bergement|€|mois", bas): bloque.append("phrase interdite « facultative » (offre)")
+            if any("facultati" in s and re.search(r"maintenance|abonnement|h[ée]bergement|€|mois", s) for s in re.split(r"[.;|!?\n]", bas)): bloque.append("phrase interdite « facultative » (offre)")   # même phrase ou même champ
         elif ph.lower() in bas: bloque.append(f"phrase interdite « {ph} »")
     for s in secrets_dans(texte): bloque.append(f"secret dans le texte ({s})")
     if canal == "email_client":

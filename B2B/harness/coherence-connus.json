@@ -1,59 +1,12 @@
 {
- "_aide": "Fautes de cohérence déjà présentes le 15/11/2026 (étape 1.4 : listées, pas corrigées). Elles avertissent sans bloquer. Retirer une entrée dès que Liam a corrigé le fichier.",
+ "_aide": "Fautes de cohérence restantes (15/11/2026, après correction des liens, prix et promesses) : seulement les anciennes valeurs de Résultat citées pour la compatibilité avec les anciennes feuilles de Sid. Elles avertissent sans bloquer. Retirer une entrée dès que le fichier est corrigé.",
  "connus": [
-  {
-   "fichier": ".claude/skills/scripts-appel/SKILL.md",
-   "regle": "phrase",
-   "lignes": [
-    "45: phrase interdite « maintenance facultative »"
-   ]
-  },
   {
    "fichier": "B2B/agents/appels-sid.md",
    "regle": "resultat",
    "lignes": [
     "66: ancienne valeur de Résultat « Répondu »",
     "66: ancienne valeur de Résultat « Refus »"
-   ]
-  },
-  {
-   "fichier": "B2B/agents/devis.md",
-   "regle": "autre",
-   "lignes": [
-    "13: ancien prix du site (990 à 1 490 €) : 994 €"
-   ]
-  },
-  {
-   "fichier": "B2B/agents/devis.md",
-   "regle": "phrase",
-   "lignes": [
-    "13: « facultative » à propos de l'offre",
-    "25: « facultative » à propos de l'offre"
-   ]
-  },
-  {
-   "fichier": "B2B/agents/devis.py",
-   "regle": "autre",
-   "lignes": [
-    "15: ancien prix du site (990 à 1 490 €) : 994 €"
-   ]
-  },
-  {
-   "fichier": "B2B/agents/devis.py",
-   "regle": "lien",
-   "lignes": [
-    "37: lien Stripe non autorisé y5EY06",
-    "38: lien Stripe non autorisé k5EY07"
-   ]
-  },
-  {
-   "fichier": "B2B/agents/devis.py",
-   "regle": "phrase",
-   "lignes": [
-    "144: « facultative » à propos de l'offre",
-    "173: « facultative » à propos de l'offre",
-    "281: « facultative » à propos de l'offre",
-    "284: « facultative » à propos de l'offre"
    ]
   },
   {
@@ -64,79 +17,6 @@
     "2: ancienne valeur de Résultat « Refus »",
     "14: ancienne valeur de Résultat « Répondu »",
     "14: ancienne valeur de Résultat « Refus »"
-   ]
-  },
-  {
-   "fichier": "B2B/agents/stripe-alerte.md",
-   "regle": "autre",
-   "lignes": [
-    "17: acompte : supprimé le 14/11 (paiement complet)"
-   ]
-  },
-  {
-   "fichier": "B2B/docs/APPEL-SID.md",
-   "regle": "autre",
-   "lignes": [
-    "14: ancien prix du site (990 à 1 490 €) : 994 €"
-   ]
-  },
-  {
-   "fichier": "B2B/docs/KIT-RDV-15MIN.md",
-   "regle": "autre",
-   "lignes": [
-    "32: ancien prix du site (990 à 1 490 €) : 994 €"
-   ]
-  },
-  {
-   "fichier": "B2B/docs/KIT-RDV-15MIN.md",
-   "regle": "lien",
-   "lignes": [
-    "54: lien Stripe non autorisé y5EY06",
-    "55: lien Stripe non autorisé k5EY07"
-   ]
-  },
-  {
-   "fichier": "B2B/docs/KIT-RDV-15MIN.md",
-   "regle": "phrase",
-   "lignes": [
-    "33: « facultative » à propos de l'offre",
-    "56: phrase interdite « 29 €/mois »",
-    "70: « facultative » à propos de l'offre"
-   ]
-  },
-  {
-   "fichier": "B2B/docs/MEMOIRE-B2B.md",
-   "regle": "autre",
-   "lignes": [
-    "17: ancien prix du site (990 à 1 490 €) : 994 €",
-    "20: ancienne maintenance 29 à 49 € : 49 €/mois",
-    "80: ancien prix du site (990 à 1 490 €) : 994 €",
-    "80: ancienne maintenance 29 à 49 € : 49 €/mois",
-    "94: ancienne maintenance 20 €/mois : 49 €/mois"
-   ]
-  },
-  {
-   "fichier": "B2B/docs/MEMOIRE-B2B.md",
-   "regle": "phrase",
-   "lignes": [
-    "12: phrase interdite « 590 € »",
-    "80: phrase interdite « 590 € »"
-   ]
-  },
-  {
-   "fichier": "B2B/sites/agence/luxe2/index.html",
-   "regle": "lien",
-   "lignes": [
-    "293: lien Stripe non autorisé y5EY06",
-    "310: lien Stripe non autorisé k5EY07"
-   ]
-  },
-  {
-   "fichier": "B2B/sites/sorties/agence-prod/index.html",
-   "regle": "lien",
-   "lignes": [
-    "296: lien Stripe non autorisé y5EY06",
-    "307: lien Stripe non autorisé k5EY07"
    ]
   }
  ]

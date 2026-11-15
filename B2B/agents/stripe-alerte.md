@@ -14,7 +14,7 @@ Rôle : une **alerte Discord dès qu'un nouveau paiement Stripe arrive**, sans a
 Au tout premier lancement (aucun point de départ encore enregistré dans `stripe-alerte-etat.json`), l'agent lit les derniers paiements existants, les mémorise comme déjà vus, et **n'alerte rien** : ce sont des paiements d'avant l'activation, pas des nouveautés. Le journal le dit (« premier passage : point de départ fixé »). Les passages suivants n'alertent que les paiements **créés depuis le dernier passage**, réussis (`paid` et `status=succeeded`), jamais deux fois le même (identifiant Stripe mémorisé, jusqu'à 300 gardés). Clé absente, refusée ou Stripe injoignable : rien n'est inventé, code de sortie 2, le prochain passage réessaie.
 
 ## Le message Discord
-Uniquement un **montant**, une **devise** et, si Stripe en fournit une, une **description courte** du paiement (max 80 caractères) — jamais un nom, un e-mail ou un numéro de carte. Exemple : « Nouveau paiement Stripe : 297,00 euros (Acompte 30 % du site complet) ».
+Uniquement un **montant**, une **devise** et, si Stripe en fournit une, une **description courte** du paiement (max 80 caractères) — jamais un nom, un e-mail ou un numéro de carte. Exemple : « Nouveau paiement Stripe : 994 euros (Site complet) ».
 
 ## Pour l'activer (Liam)
 1. `STRIPE_RESTRICTED_KEY` renseignée dans `Jarvis\.env` (voir `.env.example`) ; une clé **restreinte** (lecture seule sur les paiements suffit), jamais la clé secrète complète.

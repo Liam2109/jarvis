@@ -53,7 +53,7 @@ def fautes_ligne(ligne, ref, nom, suffixe):
     bas = ligne.lower()
     for ph in ref["phrases_interdites"]:
         if ph == "facultative":   # mot courant (« caméra facultative ») : interdit seulement à propos de l'offre
-            if "facultati" in bas and re.search(r"maintenance|abonnement|h[ée]bergement|€|mois", bas): f.append(("phrase", "« facultative » à propos de l'offre"))
+            if any("facultati" in s and re.search(r"maintenance|abonnement|h[ée]bergement|€|mois", s) for s in re.split(r"[.;|!?]", bas)): f.append(("phrase", "« facultative » à propos de l'offre"))   # même phrase ou même champ
         elif ph.lower() in bas and not (ph == "facultative"): f.append(("phrase", f"phrase interdite « {ph} »"))
     if "maintenance facultative" in bas: f = [x for x in f if x[1] != "« facultative » à propos de l'offre"]
     if suffixe == ".md":   # anciennes valeurs de Résultat, quand elles sont citées comme valeurs (liste, guillemets, tableau)
