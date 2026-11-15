@@ -14,6 +14,7 @@ _Mise à jour : 15 nov. 2026, 19 h 20 (le fait est supprimé ; l'historique est 
 - [ ] Décider : petit acompte (environ 100 €) pour le client sans confiance ? Contredit « sans acompte » ; pas dans les scripts avant décision
 - [ ] Dire à Sid de noter dans Note la phrase exacte de douleur du client (pas seulement celle du non)
 - [ ] Test de cohérence : ajouter « pas obligatoire » aux phrases interdites (non détecté avant la correction de objections.md)
+- [ ] Test de cohérence : étendre aux notes docs\decisions et docs\agents (la note « Offre 595 + 49 » avait encore 990–1 490 € et « lien à créer », hors du périmètre du test) ; vérifier aussi les 3 autres notes de décision
 - [ ] Valider les règles de reprise des appels (Pas de réponse = 3 tentatives, etc.)
 
 ## Liam
