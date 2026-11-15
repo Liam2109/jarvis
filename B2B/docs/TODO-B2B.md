@@ -1,6 +1,6 @@
 # To-do B2B — LM MULTI-SERVICES
 
-_Mise à jour : 15 nov. 2026, 23 h 30 (le fait est supprimé ; l'historique est dans le journal et dans git)_
+_Mise à jour : 15 nov. 2026, 23 h 45 (le fait est supprimé ; l'historique est dans le journal et dans git)_
 
 ## Lundi 16 nov. (appels d'abord)
 - [ ] 07 h 20 : session ouverte sur le serveur ; 07 h 35 : la feuille de Sid existe, sinon `Start-ScheduledTask Jarvis-B2B-appels-sid`
@@ -16,7 +16,6 @@ _Mise à jour : 15 nov. 2026, 23 h 30 (le fait est supprimé ; l'historique est 
 
 ## Liam
 - [ ] Valider la liste des idées supprimées d'IDEES-MASTER.md (sauvegarde dans B2B\donnees\sauvegardes\) et trancher la section « À trancher »
-- [ ] Décider : raccourcir JOURNAL-B2B.md (35 Ko, entrées de plusieurs lignes) à une phrase par fait
 - [ ] Lundi 16 : prendre les ~15 dernières lignes de la feuille de Sid (ta propre liste « Appels Liam » commence mardi 17)
 - [ ] Serveur : accepter la mise à jour puis ajouter appels-liam aux agents actifs (et envoi_automatique à true dans la config locale d'appels-liam pour la feuille Google)
 - [ ] Envoyer SCRIPT-APPEL-SID.md à Sid (seulement celui-là ; closing et techniques restent à toi)
@@ -29,7 +28,7 @@ _Mise à jour : 15 nov. 2026, 23 h 30 (le fait est supprimé ; l'historique est 
 
 ## Agents (ensuite, une étape à la fois)
 - [ ] Les tests laissent des dossiers dans %TEMP% : les faire se nettoyer eux-mêmes ; 6 mentions « Répondu / Refus » gardées exprès (anciennes feuilles de Sid)
-- [ ] Étape Vente, en commençant par réparer reponses.py (caractères de contrôle) : Réponses (lire contact.lmsites et liamdigital2109), Rendez-vous, Devis, Relances J+3 / J+7 et lead chaud ; chacun avec contrat, garde, test et fiche avant activation
+- [ ] Terminer l'étape Vente (réparer reponses.py, puis Réponses, Rendez-vous, Devis, Relances J+3 et J+7, lead chaud), chacun avec contrat + garde + test + fiche avant activation
 - [ ] Fiches agents : 19 « à compléter par Liam » (production, vente-relances, responsables Vente / Argent / Production) à remplir avec l'étape Vente ; agents sur le serveur : relancer generer-fiches.py là-bas pour avoir les traces
 - [ ] Faire passer la publication et le déploiement des pages exemples par la garde (non branchés)
 - [ ] CEO Jarvis autonome, pont Discord de Jarvis (connecte: false) : après la 1re vente
@@ -37,7 +36,9 @@ _Mise à jour : 15 nov. 2026, 23 h 30 (le fait est supprimé ; l'historique est 
 - [ ] Tableau de bord (maquette validée, voir IDEES-MASTER 14/11) : agents en ligne, courbes, closing, commissions, pipeline
 - [ ] Fiche d'accueil client (photos, couleurs, logo, avis, spécificités)
 - [ ] Recruter d'autres appelants (15 %), un spécialiste restaurants, des closers (10 %)
-- [ ] Relire TECHNIQUES-CLOSING.md (créé le 15/11), le dire à voix haute, jeu de rôle du closing (« je dois réfléchir », « trop cher », plombier méfiant)
+- [ ] Enrichir TECHNIQUES-CLOSING.md avec de bonnes phrases de vente
+- [ ] Liam s'entraîne au jeu de rôle des objections (« Je dois réfléchir », « C'est trop cher »)
+- [ ] Sid doit faire plus d'appels par jour
 - [ ] Domaine : renouvellement annuel dans Stripe (plus tard), clarifier « Playwork »
 - [ ] Question jamais tranchée : `veille_mail` = bon mapping pour « agent Réponses » ?
 - [ ] Parrainage (1 mois de maintenance offert) ; paiement en 3x sans frais (Alma/Floa)
