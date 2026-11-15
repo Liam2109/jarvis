@@ -31,6 +31,7 @@ Chaque idée est notée à la date où Liam la dit. Une idée pas encore faite r
 - 14/11 — Pré-génération de pages au nom des prospects (20 d'avance), URL prête avant l'appel.
 - 14/11 — CEO Jarvis autonome après la 1re vente : lit les résultats, relances, lead chaud, devis, résumé du soir ; décisions engageantes soumises à Liam.
 - 15/11 — Boîte aux lettres Liam ↔ Claude Code : B2B/docs/FILE-ATTENTE.md et RESULTATS.md, après l'étape Vente.
+- 30/10 — Agent Réponses : classer comme refus les refus polis (compliments puis « non », cas LM ELEC), exclure l'adresse et prévenir Liam dans 💬-réponses (à vérifier dans reponses.py).
 - 14/11 — Gabarit unique pour créer les skills (entrées, procédure, règles, critère de fin, exemples).
 
 ## Sites et pages exemples
