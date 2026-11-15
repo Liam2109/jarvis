@@ -1,0 +1,44 @@
+{
+ "nom": "vente-relances",
+ "responsable": "Vente",
+ "mission": "Relancer à J+3 et J+7 les prospects qui ont reçu un devis, brouillons écrits dans B2B/a-valider pour Liam.",
+ "statut": "prevu",
+ "script": "",
+ "jours": [
+  0,
+  1,
+  2,
+  3,
+  4
+ ],
+ "heures": {
+  "debut": "08:00",
+  "fin": "19:00"
+ },
+ "fichiers_lus": [
+  "suivi-prospects.csv",
+  "devis envoyés"
+ ],
+ "fichiers_ecrits": [
+  "B2B/a-valider/AAAA-MM-JJ-vente-relances.md"
+ ],
+ "canaux_discord": [
+  "devis"
+ ],
+ "envoi_client": true,
+ "actions_interdites": [
+  "envoyer au client sans accord de Liam",
+  "encaisser ou rembourser",
+  "publier",
+  "signer ou promettre un résultat",
+  "afficher un secret (jeton, clé, adresse iCal)",
+  "plus de deux relances",
+  "relancer un STOP"
+ ],
+ "plafonds": {
+  "messages_par_jour": 20
+ },
+ "peut_engager": false,
+ "alerte_si_silence": null,
+ "tests": []
+}

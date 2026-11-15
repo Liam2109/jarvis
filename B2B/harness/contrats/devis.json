@@ -1,0 +1,50 @@
+{
+ "nom": "devis",
+ "responsable": "Vente",
+ "mission": "Préparer le devis écrit (texte et PDF) à partir d'une fiche, le montrer à Liam et attendre « ok devis » ; rien ne part au client.",
+ "statut": "simulation",
+ "script": "B2B/agents/devis.py",
+ "jours": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6
+ ],
+ "heures": {
+  "debut": "07:00",
+  "fin": "22:00"
+ },
+ "fichiers_lus": [
+  "fiche devis",
+  "B2B/agents/identite.json",
+  "Discord (ok devis)"
+ ],
+ "fichiers_ecrits": [
+  "devis PDF/texte",
+  "B2B/agents/devis-etat.json"
+ ],
+ "canaux_discord": [
+  "devis"
+ ],
+ "envoi_client": false,
+ "actions_interdites": [
+  "envoyer au client sans accord de Liam",
+  "encaisser ou rembourser",
+  "publier",
+  "signer ou promettre un résultat",
+  "afficher un secret (jeton, clé, adresse iCal)",
+  "envoyer le devis au client",
+  "changer un prix"
+ ],
+ "plafonds": {
+  "messages_par_jour": 20
+ },
+ "peut_engager": false,
+ "alerte_si_silence": null,
+ "tests": [
+  "B2B/agents/test_devis.py"
+ ]
+}

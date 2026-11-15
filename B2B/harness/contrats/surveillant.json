@@ -1,0 +1,46 @@
+{
+ "nom": "surveillant",
+ "responsable": "Jarvis (CEO)",
+ "mission": "Lire contrats et traces et signaler sur Discord chaque agent en défaut ; une ligne « harness OK » le lundi.",
+ "statut": "simulation",
+ "script": "B2B/harness/surveillant.py",
+ "jours": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6
+ ],
+ "heures": {
+  "debut": "07:00",
+  "fin": "20:30"
+ },
+ "fichiers_lus": [
+  "B2B/harness/contrats",
+  "B2B/logs/agents"
+ ],
+ "fichiers_ecrits": [
+  "B2B/logs/agents/surveillant"
+ ],
+ "canaux_discord": [
+  "alertes"
+ ],
+ "envoi_client": false,
+ "actions_interdites": [
+  "envoyer au client sans accord de Liam",
+  "encaisser ou rembourser",
+  "publier",
+  "signer ou promettre un résultat",
+  "afficher un secret (jeton, clé, adresse iCal)"
+ ],
+ "plafonds": {
+  "messages_par_jour": 20
+ },
+ "peut_engager": false,
+ "alerte_si_silence": null,
+ "tests": [
+  "tests/agents/test_panne_alerte.py"
+ ]
+}

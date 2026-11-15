@@ -315,7 +315,11 @@ def salon_par_nom(jeton, cle, nom, defaut, lire=None, chemin_cfg=None):
 
 
 def poster(jeton, salon, contenu, uid):
-    req = urllib.request.Request(f"https://discord.com/api/v10/channels/{salon}/messages", method="POST",
+    try:   # garde commune du harness (B2B\harness\garde.py, 15/11/2026) : False = envoi bloqué
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "harness")); import garde
+        if not garde.avant_envoi("discord", contenu, agent="reponses"): return False
+    except ImportError: pass
+    req =urllib.request.Request(f"https://discord.com/api/v10/channels/{salon}/messages", method="POST",
         data=json.dumps({"content": contenu, "allowed_mentions": {"users": [str(uid)]}}).encode(),
         headers={"Authorization": "Bot " + jeton, "Content-Type": "application/json", "User-Agent": "DiscordBot (reponses-b2b, 1.0)"})
     try:

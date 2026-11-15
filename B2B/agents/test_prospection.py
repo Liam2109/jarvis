@@ -2,6 +2,7 @@
 """Tests silencieux de l'agent Prospection : aucun réseau, aucun vrai envoi, fichiers temporaires, .env jamais lu.  python agents\\test_prospection.py"""
 import os, sys, tempfile, json
 os.environ.setdefault("JARVIS_TEST", "1")   # jamais de vrai appel Discord depuis les tests
+os.environ.setdefault("JARVIS_GARDE_MAINTENANT", "2026-11-17T10:00")   # garde du harness : un mardi 10 h (envoi client permis), quel que soit le jour du test
 from datetime import date, timedelta
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))

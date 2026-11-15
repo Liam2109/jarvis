@@ -1,0 +1,50 @@
+{
+ "nom": "resume-sid",
+ "responsable": "Jarvis (CEO)",
+ "mission": "Poster à 19:00 le résumé du soir : appels de Sid par valeur de Résultat et chiffre d'affaires Stripe du jour.",
+ "statut": "simulation",
+ "script": "B2B/agents/resume-sid.py",
+ "jours": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6
+ ],
+ "heures": {
+  "debut": "18:00",
+  "fin": "23:00"
+ },
+ "fichiers_lus": [
+  "Google Sheets : Appels AAAA-MM-JJ (lecture)",
+  "Stripe charges (lecture)"
+ ],
+ "fichiers_ecrits": [
+  "B2B/agents/resume-sid-etat.json",
+  "B2B/agents/resume-sid-journal.log"
+ ],
+ "canaux_discord": [
+  "alertes"
+ ],
+ "envoi_client": false,
+ "actions_interdites": [
+  "envoyer au client sans accord de Liam",
+  "encaisser ou rembourser",
+  "publier",
+  "signer ou promettre un résultat",
+  "afficher un secret (jeton, clé, adresse iCal)",
+  "inventer un chiffre",
+  "écrire dans la feuille de Sid"
+ ],
+ "plafonds": {
+  "messages_par_jour": 2
+ },
+ "peut_engager": false,
+ "alerte_si_silence": "19:30",
+ "tests": [
+  "B2B/agents/test_resume_sid.py",
+  "tests/agents/test_resume_sid.py"
+ ]
+}

@@ -1,0 +1,4 @@
+{
+  "_aide": "Surveillant du harness : false = simulation (rien sur Discord). Le passer à true seulement dans surveillant-config.local.json, sur la machine active.",
+  "envoi_automatique": false
+}

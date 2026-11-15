@@ -1,0 +1,45 @@
+{
+ "nom": "instagram",
+ "responsable": "Prospection",
+ "mission": "Publier un post par jour à 12:30 (agent retiré par décision de Liam).",
+ "statut": "inactif",
+ "script": "B2B/agents/instagram.py",
+ "jours": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6
+ ],
+ "heures": {
+  "debut": "12:30",
+  "fin": "14:00"
+ },
+ "fichiers_lus": [
+  "B2B/docs/INSTAGRAM-PLAN.md"
+ ],
+ "fichiers_ecrits": [
+  "état instagram"
+ ],
+ "canaux_discord": [
+  "instagram"
+ ],
+ "envoi_client": false,
+ "actions_interdites": [
+  "envoyer au client sans accord de Liam",
+  "encaisser ou rembourser",
+  "publier",
+  "signer ou promettre un résultat",
+  "afficher un secret (jeton, clé, adresse iCal)"
+ ],
+ "plafonds": {
+  "messages_par_jour": 1
+ },
+ "peut_engager": false,
+ "alerte_si_silence": null,
+ "tests": [
+  "B2B/agents/test_instagram.py"
+ ]
+}

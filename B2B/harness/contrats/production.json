@@ -1,0 +1,43 @@
+{
+ "nom": "production",
+ "responsable": "Production",
+ "mission": "Produire le site du client après paiement, le faire valider par Liam avant toute mise en ligne.",
+ "statut": "prevu",
+ "script": "",
+ "jours": [
+  0,
+  1,
+  2,
+  3,
+  4
+ ],
+ "heures": {
+  "debut": "08:00",
+  "fin": "19:00"
+ },
+ "fichiers_lus": [
+  "devis signé",
+  "paiement Stripe (lecture)"
+ ],
+ "fichiers_ecrits": [
+  "B2B/a-valider/AAAA-MM-JJ-production.md"
+ ],
+ "canaux_discord": [
+  "pages"
+ ],
+ "envoi_client": false,
+ "actions_interdites": [
+  "envoyer au client sans accord de Liam",
+  "encaisser ou rembourser",
+  "publier",
+  "signer ou promettre un résultat",
+  "afficher un secret (jeton, clé, adresse iCal)",
+  "mettre en ligne sans accord"
+ ],
+ "plafonds": {
+  "messages_par_jour": 10
+ },
+ "peut_engager": false,
+ "alerte_si_silence": null,
+ "tests": []
+}

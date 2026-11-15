@@ -1070,7 +1070,16 @@ def refus(b, etat, conf, cles, mails, lien_ok):
     if R.A_COMPLETER in b["corps"] or "[LIEN" in b["corps"]: return "texte « à compléter » restant"
     if R.INTERDITS.search(b["corps"]) or R.INTERDITS.search(b["objet"]): return "mot interdit (promesse, chiffre, urgence)"
     if not lien_ok(m.get("lien", "")): return "lien de la maquette inaccessible (déployer d'abord, avec ton accord)"
+    if not garde_harness("email_client", b["objet"] + "\n" + b["corps"]): return "garde du harness : envoi bloqué (lien Stripe, phrase interdite, secret, horaire client ou B2B\\STOP)"
     return ""
+
+
+def garde_harness(canal, texte):
+    """Garde commune (B2B\\harness\\garde.py, 15/11/2026) juste avant un envoi : False = bloqué. Sans la garde (fichier absent), l'envoi n'est pas empêché."""
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "harness")); import garde
+    except Exception: return True
+    return garde.avant_envoi(canal, texte)
 
 
 def marquer(texte, id_, nouveau):
@@ -1177,6 +1186,7 @@ def cmd_envoyer(a_blanc, conf, envoi=None, dormir=time.sleep, lien_ok=lien_acces
 # --- Discord : publication du lot et approbation par Liam seul ----------------------------------------------
 def discord(jeton, methode, chemin, corps=None):
     """Appel REST Discord (bot Jarvis, aucun lancement de Jarvis). Renvoie le JSON (ou {}), None en cas d'échec. Le jeton n'est jamais affiché."""
+    if methode == "POST" and chemin.endswith("/messages") and isinstance(corps, dict) and not garde_harness("discord", str(corps.get("content", ""))): return None
     rq = urllib.request.Request("https://discord.com/api/v10" + chemin, method=methode, data=None if corps is None else json.dumps(corps).encode(),
                                 headers={"Authorization": "Bot " + jeton, "Content-Type": "application/json", "User-Agent": "DiscordBot (prospection-b2b, 1.0)"})
     try:

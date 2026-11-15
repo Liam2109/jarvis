@@ -1,0 +1,49 @@
+{
+ "nom": "jarvis-ceo",
+ "responsable": "Liam",
+ "mission": "Lire l'état des responsables, décider, déléguer et prévenir Liam ; ne produit que des décisions structurées (jarvis-sortie.schema.json).",
+ "statut": "simulation",
+ "script": ".claude/skills/jarvis-ceo/SKILL.md",
+ "jours": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6
+ ],
+ "heures": {
+  "debut": "07:30",
+  "fin": "21:00"
+ },
+ "fichiers_lus": [
+  "états et journaux des agents",
+  "B2B/logs/agents",
+  "B2B/docs/TODO-B2B.md"
+ ],
+ "fichiers_ecrits": [
+  "B2B/a-valider/AAAA-MM-JJ-jarvis-ceo.md"
+ ],
+ "canaux_discord": [
+  "alertes"
+ ],
+ "envoi_client": false,
+ "actions_interdites": [
+  "envoyer au client sans accord de Liam",
+  "encaisser ou rembourser",
+  "publier",
+  "signer ou promettre un résultat",
+  "afficher un secret (jeton, clé, adresse iCal)",
+  "promettre au client",
+  "faire la tâche d'un agent"
+ ],
+ "plafonds": {
+  "messages_par_jour": 6
+ },
+ "peut_engager": false,
+ "alerte_si_silence": null,
+ "tests": [
+  "tests/agents/test_jarvis_sortie.py"
+ ]
+}

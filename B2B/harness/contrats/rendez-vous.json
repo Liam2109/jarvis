@@ -1,0 +1,49 @@
+{
+ "nom": "rendez-vous",
+ "responsable": "Vente",
+ "mission": "Annoncer sur Discord chaque rendez-vous de 15 minutes nouveau, déplacé, annulé ou proche, lu dans l'agenda iCal.",
+ "statut": "actif",
+ "script": "B2B/agents/rendez-vous.py",
+ "jours": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6
+ ],
+ "heures": {
+  "debut": "00:00",
+  "fin": "24:00"
+ },
+ "fichiers_lus": [
+  "agenda iCal (adresse secrète, rendez-vous-config.local.json)"
+ ],
+ "fichiers_ecrits": [
+  "B2B/agents/rendez-vous-etat.json",
+  "B2B/agents/rendez-vous-journal.log"
+ ],
+ "canaux_discord": [
+  "rdv"
+ ],
+ "envoi_client": false,
+ "actions_interdites": [
+  "envoyer au client sans accord de Liam",
+  "encaisser ou rembourser",
+  "publier",
+  "signer ou promettre un résultat",
+  "afficher un secret (jeton, clé, adresse iCal)",
+  "répondre au prospect",
+  "modifier l'agenda"
+ ],
+ "plafonds": {
+  "messages_par_jour": 40
+ },
+ "peut_engager": false,
+ "alerte_si_silence": "19:30",
+ "tests": [
+  "B2B/agents/test_rendez_vous.py",
+  "tests/agents/test_rendez_vous.py"
+ ]
+}

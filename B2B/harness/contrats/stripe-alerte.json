@@ -1,0 +1,49 @@
+{
+ "nom": "stripe-alerte",
+ "responsable": "Argent",
+ "mission": "Alerter Liam sur Discord à chaque nouveau paiement Stripe réussi, en lecture seule.",
+ "statut": "simulation",
+ "script": "B2B/agents/stripe-alerte.py",
+ "jours": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6
+ ],
+ "heures": {
+  "debut": "00:00",
+  "fin": "24:00"
+ },
+ "fichiers_lus": [
+  "Stripe charges (clé restreinte, lecture)"
+ ],
+ "fichiers_ecrits": [
+  "B2B/agents/stripe-alerte-etat.json",
+  "B2B/agents/stripe-alerte-journal.log"
+ ],
+ "canaux_discord": [
+  "alertes"
+ ],
+ "envoi_client": false,
+ "actions_interdites": [
+  "envoyer au client sans accord de Liam",
+  "encaisser ou rembourser",
+  "publier",
+  "signer ou promettre un résultat",
+  "afficher un secret (jeton, clé, adresse iCal)",
+  "écrire sur Stripe",
+  "créer un lien de paiement"
+ ],
+ "plafonds": {
+  "messages_par_jour": 30
+ },
+ "peut_engager": false,
+ "alerte_si_silence": "19:30",
+ "tests": [
+  "B2B/agents/test_stripe_alerte.py",
+  "tests/agents/test_stripe_alerte.py"
+ ]
+}

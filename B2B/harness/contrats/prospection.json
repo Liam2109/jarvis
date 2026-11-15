@@ -1,0 +1,49 @@
+{
+ "nom": "prospection",
+ "responsable": "Prospection",
+ "mission": "Trouver des entreprises locales, préparer les lots d'e-mails, les soumettre à Liam et n'envoyer que les lots approuvés.",
+ "statut": "simulation",
+ "script": "B2B/agents/prospection.py",
+ "jours": [
+  0,
+  1,
+  2,
+  3,
+  4
+ ],
+ "heures": {
+  "debut": "08:00",
+  "fin": "19:00"
+ },
+ "fichiers_lus": [
+  "API entreprises, OSM, sites publics",
+  "B2B/agents/prospection-etat.json"
+ ],
+ "fichiers_ecrits": [
+  "lots",
+  "messages-a-valider.md",
+  "B2B/agents/prospection-etat.json"
+ ],
+ "canaux_discord": [
+  "lots",
+  "alertes"
+ ],
+ "envoi_client": true,
+ "actions_interdites": [
+  "envoyer au client sans accord de Liam",
+  "encaisser ou rembourser",
+  "publier",
+  "signer ou promettre un résultat",
+  "afficher un secret (jeton, clé, adresse iCal)",
+  "écrire à un STOP ou un exclu",
+  "dépasser par_boite_par_jour"
+ ],
+ "plafonds": {
+  "messages_par_jour": 40
+ },
+ "peut_engager": false,
+ "alerte_si_silence": "19:30",
+ "tests": [
+  "B2B/agents/test_prospection.py"
+ ]
+}

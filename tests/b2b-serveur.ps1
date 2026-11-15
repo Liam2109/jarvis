@@ -110,7 +110,8 @@ $AGT = Join-Path $TR 'B2B\agents'; New-Item -ItemType Directory $AGT | Out-Null
 Copy-Item (Join-Path $AG 'serveur-b2b.ps1') $AGT
 $tableReelle = Lire (Join-Path $AG 'serveur-taches.json') | ConvertFrom-Json
 $nomsReels = @($tableReelle.agents.PSObject.Properties | ForEach-Object { $_.Name })
-Verifier ('instagram' -notin $nomsReels -and $nomsReels.Count -eq 8) "serveur-taches.json : instagram retiré (décision du 14/11/2026), resume-sid/stripe-alerte/panne-alerte ajoutés (étape Argent, 15/11/2026), $($nomsReels.Count) agents restants"
+Verifier ('instagram' -notin $nomsReels -and 'surveillant' -in $nomsReels -and $nomsReels.Count -eq 9) "serveur-taches.json : instagram retiré (décision du 14/11/2026), resume-sid/stripe-alerte/panne-alerte ajoutés (étape Argent, 15/11/2026), surveillant du harness (15/11/2026), $($nomsReels.Count) agents"
+Verifier ($tableReelle.agents.surveillant.heure -eq '19:45' -and $tableReelle.agents.surveillant.lundi -eq '07:50') 'serveur-taches.json : surveillant chaque jour à 19:45 et le lundi à 07:50'
 Verifier (@($tableReelle.agents.PSObject.Properties | Where-Object { ($_.Value.commandes | ForEach-Object { $_ -join ' ' }) -match 'continu|visuels' }).Count -eq 0) 'serveur-taches.json : aucune commande « continu » ni « visuels » (Edge)'
 # agent FICTIF à deux commandes, seulement dans la copie temporaire : vérifie l'ordre des commandes et l'arrêt du cycle sur échec
 $tableReelle.agents | Add-Member -NotePropertyName 'deux-etapes' -NotePropertyValue ([pscustomobject]@{ script = 'deux-etapes.py'; commandes = (@('jour'), @('valider')); toutes_minutes = 5 })

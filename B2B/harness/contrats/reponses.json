@@ -1,0 +1,50 @@
+{
+ "nom": "reponses",
+ "responsable": "Vente",
+ "mission": "Lire les réponses des prospects, les classer et prévenir Liam sur Discord avec deux créneaux proposés ; aucun envoi au prospect.",
+ "statut": "actif",
+ "script": "B2B/agents/reponses.py",
+ "jours": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6
+ ],
+ "heures": {
+  "debut": "00:00",
+  "fin": "24:00"
+ },
+ "fichiers_lus": [
+  "boîtes mail (lecture)",
+  "agenda (créneaux)",
+  "suivi-prospects.csv"
+ ],
+ "fichiers_ecrits": [
+  "reponses-traitees.json",
+  "suivi-prospects.csv",
+  "exclus-emails.json"
+ ],
+ "canaux_discord": [
+  "reponses"
+ ],
+ "envoi_client": false,
+ "actions_interdites": [
+  "envoyer au client sans accord de Liam",
+  "encaisser ou rembourser",
+  "publier",
+  "signer ou promettre un résultat",
+  "afficher un secret (jeton, clé, adresse iCal)",
+  "répondre au prospect"
+ ],
+ "plafonds": {
+  "messages_par_jour": 40
+ },
+ "peut_engager": false,
+ "alerte_si_silence": "19:30",
+ "tests": [
+  "B2B/agents/test_reponses.py"
+ ]
+}

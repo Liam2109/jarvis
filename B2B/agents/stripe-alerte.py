@@ -196,4 +196,8 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    _t0 = time.time(); _code = main()
+    if sys.argv[1:2] == ["verifier"] and "--a-blanc" not in sys.argv:   # trace du harness (B2B\logs\agents\stripe-alerte), jamais bloquante
+        try: sys.path.insert(0, str(ICI.parent / "harness")); import traces; traces.ecrire("stripe-alerte", "verifier", "terminé" if _code == 0 else "échec", time.time() - _t0, ok=_code == 0, erreur=None if _code == 0 else f"code {_code}")
+        except Exception: pass
+    sys.exit(_code)

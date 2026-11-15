@@ -12,6 +12,17 @@ $ErrorActionPreference = 'Stop'
 $AG = $PSScriptRoot; $B2B = Split-Path -Parent $AG
 $journal = Join-Path $AG 'serveur-b2b.log'
 function Log([string]$t) { try { Add-Content -LiteralPath $journal -Value ("{0:yyyy-MM-dd HH:mm:ss} | {1} | {2}" -f (Get-Date), $Agent, $t) -Encoding UTF8 } catch { }; Write-Host $t }
+# Trace du harness (15/11/2026) : une ligne JSON par exécution dans B2B\logs\agents\<agent>\AAAA-MM-JJ.jsonl (aucune donnée client ; jamais bloquant)
+function Trace([string]$decision, [string]$resultat, [double]$duree, [bool]$ok, [string]$erreur = '') {
+    try {
+        $d = $(if ($env:JARVIS_HARNESS_LOGS) { Join-Path $env:JARVIS_HARNESS_LOGS $Agent } else { Join-Path $B2B "logs\agents\$Agent" })
+        New-Item -ItemType Directory -Force $d | Out-Null
+        $o = [ordered]@{ heure = (Get-Date -Format 'yyyy-MM-ddTHH:mm:ss'); decision = $decision; resultat = $resultat; duree_s = [math]::Round($duree, 2); ok = $ok }
+        if ($erreur) { $o.erreur = $erreur }
+        [IO.File]::AppendAllText((Join-Path $d ("{0:yyyy-MM-dd}.jsonl" -f (Get-Date))), (($o | ConvertTo-Json -Compress) + "`n"), (New-Object System.Text.UTF8Encoding($false)))
+    } catch { }
+}
+if (Test-Path -LiteralPath (Join-Path $B2B 'STOP')) { Log 'refusé : kill-switch B2B\STOP présent : aucun agent ne tourne'; Trace 'cycle' 'refusé (B2B\STOP)' 0 $false 'kill-switch'; exit 8 }
 
 # 1) machine
 $loc = $null; $fl = Join-Path $AG 'b2b.local.json'
@@ -45,10 +56,11 @@ try {
         $args2 = ('"{0}" {1}' -f $script, ($c -join ' ')).TrimEnd()
         $psi = New-Object System.Diagnostics.ProcessStartInfo; $psi.FileName = $py; $psi.Arguments = $args2; $psi.UseShellExecute = $false; $psi.CreateNoWindow = $true; $psi.WorkingDirectory = $B2B
         $psi.EnvironmentVariables['JARVIS_B2B_SERVEUR'] = '1'; $psi.EnvironmentVariables['PYTHONIOENCODING'] = 'utf-8'; $psi.EnvironmentVariables['PYTHONDONTWRITEBYTECODE'] = '1'
-        $p = [System.Diagnostics.Process]::Start($psi)
+        $p = [System.Diagnostics.Process]::Start($psi); $t0 = Get-Date; $dec = ($c -join ' ')
         try { $p.PriorityClass = [System.Diagnostics.ProcessPriorityClass]::BelowNormal; Log "$(Split-Path $script -Leaf) $($c -join ' ') : priorité BelowNormal appliquée (pid $($p.Id))" } catch { Log "priorité non appliquée : $($_.Exception.Message)" }
-        if (-not $p.WaitForExit($DelaiMinutes * 60000)) { try { $p.Kill() } catch { }; Log "échec : $(Split-Path $script -Leaf) $($c -join ' ') arrêté (délai de $DelaiMinutes min dépassé)"; exit 1 }
-        if ($p.ExitCode -ne 0) { Log "échec : $(Split-Path $script -Leaf) $($c -join ' ') a rendu le code $($p.ExitCode) : cycle arrêté"; exit 1 }
+        if (-not $p.WaitForExit($DelaiMinutes * 60000)) { try { $p.Kill() } catch { }; Log "échec : $(Split-Path $script -Leaf) $($c -join ' ') arrêté (délai de $DelaiMinutes min dépassé)"; Trace $dec 'arrêté' ((Get-Date) - $t0).TotalSeconds $false "délai de $DelaiMinutes min dépassé"; exit 1 }
+        if ($p.ExitCode -ne 0) { Log "échec : $(Split-Path $script -Leaf) $($c -join ' ') a rendu le code $($p.ExitCode) : cycle arrêté"; Trace $dec 'échec' ((Get-Date) - $t0).TotalSeconds $false "code $($p.ExitCode)"; exit 1 }
+        Trace $dec 'terminé' ((Get-Date) - $t0).TotalSeconds $true
     }
     Log 'terminé'
 } finally { if ($pris) { try { $mx.ReleaseMutex() } catch { } }; $mx.Dispose() }
