@@ -118,7 +118,7 @@ for nom, t in T.items():
     assert (ICI / t["script"]).is_file() and t["commandes"] and bool(t.get("toutes_minutes")) != bool(t.get("heure")), nom   # une cadence OU une heure
     for cmd in t["commandes"]: assert not set(cmd) & {"continu", "visuels", "ecouter", "demarrage", "google-autoriser", "installer-tache"}, (nom, cmd)   # ni boucle infinie, ni navigateur
 assert T["appels-sid"]["heure"] == "07:30" and T["appels-sid"]["commandes"] == [["jour"]]
-assert T["appels-liam"]["heure"] == "07:30" and T["appels-liam"]["commandes"] == [["jour"]]   # liste de Liam (registre commun, 15/11/2026), même heure que Sid
+assert T["appels-liam"]["heure"] == "07:30" and T["appels-liam"]["commandes"] == [["jour"]] and T["appels-liam"]["actif_le"] == "2026-11-17" and T["appels-liam"]["jours"] == [0, 1, 2, 3, 4]   # liste de Liam (registre commun, 15/11/2026), même heure que Sid
 assert "instagram" not in T and T["rendez-vous"]["commandes"] == [["jour"]] and T["devis"]["commandes"] == [["jour"]]
 
 # ---------- 7) refus de bout en bout : la vraie ligne de commande de chaque agent, dans une COPIE du dossier ----------

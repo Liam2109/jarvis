@@ -79,12 +79,35 @@ def alerter_discord(texte):
 
 
 # --- détection ------------------------------------------------------------------------------------------------------
-def en_panne(agents, maintenant, grace_minutes):
-    """-> [(nom, heure)] des agents actifs, planifiés à heure fixe (ex. « chaque jour à 07:30 »), dont l'heure + délai de grâce est dépassée sans passage aujourd'hui."""
+def taches_serveur():
+    """serveur-taches.json › agents : « actif_le » (AAAA-MM-JJ) et « jours » (0 = lundi) de chaque tâche ; {} s'il est illisible."""
+    try: return json.loads((ICI / "serveur-taches.json").read_text(encoding="utf-8"))["agents"]
+    except (OSError, ValueError, KeyError): return {}
+
+
+def jours_contrat(nom):
+    """Jours du contrat de l'agent (B2B/harness/contrats/<nom>.json), None sans contrat."""
+    try: return json.loads((RACINE / "harness" / "contrats" / f"{nom}.json").read_text(encoding="utf-8"))["jours"]
+    except (OSError, ValueError, KeyError): return None
+
+
+def attendu_ce_jour(nom, jour, taches, jours=None):
+    """Faux avant la date d'activation (actif_le) et hors des jours prévus (tâche, sinon contrat) : week-end d'un agent des jours ouvrés = aucune alerte (15/11/2026)."""
+    t = taches.get(nom) or {}
+    if t.get("actif_le") and jour.isoformat() < str(t["actif_le"]): return False
+    js = t.get("jours") or (jours if jours is not None else jours_contrat(nom))
+    return js is None or jour.weekday() in js
+
+
+def en_panne(agents, maintenant, grace_minutes, taches=None, jours=None):
+    """-> [(nom, heure)] des agents actifs, planifiés à heure fixe (ex. « chaque jour à 07:30 »), dont l'heure + délai de grâce est dépassée sans passage aujourd'hui.
+    Jamais un agent pas encore actif (actif_le de serveur-taches.json) ni hors de ses jours (contrat : lundi-vendredi -> rien le samedi et le dimanche). `jours` (tests) : {nom: [jours]}."""
     j = maintenant.date().isoformat(); minute_actuelle = maintenant.hour * 60 + maintenant.minute
+    taches = taches_serveur() if taches is None else taches
     out = []
     for a in agents:
         if not a.get("planifie"): continue
+        if not attendu_ce_jour(a["nom"], maintenant.date(), taches, (jours or {}).get(a["nom"]) if jours is not None else None): continue
         m = re.match(r"chaque jour à (\d{2}):(\d{2})$", str(a.get("horaire") or ""))
         if not m: continue
         heure = m.group(1) + ":" + m.group(2); minute_prevue = int(m.group(1)) * 60 + int(m.group(2))
@@ -94,10 +117,10 @@ def en_panne(agents, maintenant, grace_minutes):
     return out
 
 
-def cmd_verifier(conf, a_blanc):
-    agents = construire_agents()
-    pannes = en_panne(agents, datetime.now(), conf["grace_minutes"])
-    j = date.today().isoformat()
+def cmd_verifier(conf, a_blanc, maintenant=None):
+    agents = construire_agents(); maintenant = maintenant or datetime.now()   # maintenant : heure figée (tests)
+    pannes = en_panne(agents, maintenant, conf["grace_minutes"])
+    j = maintenant.date().isoformat()
     etat = etat_lire()
     deja = etat["alertes"].get(j, {})
     nouveaux = [(nom, heure) for nom, heure in pannes if nom not in deja]

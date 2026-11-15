@@ -36,6 +36,11 @@ $t = $(if ($table) { $table.PSObject.Properties[$Agent] } else { $null })
 if (-not $t) { Log "agent inconnu : « $Agent » (serveur-taches.json)"; exit 6 }
 $actifs = @($(if ($loc.PSObject.Properties['agents_actifs']) { $loc.agents_actifs })) | ForEach-Object { "$_" }
 if ($Agent -notin $actifs) { Log "agent « $Agent » non marqué actif dans agents_actifs (b2b.local.json) : rien lancé"; exit 4 }
+# 2 bis) date d'activation et jours (serveur-taches.json : « actif_le » AAAA-MM-JJ, « jours » 0 = lundi … 6 = dimanche ; 15/11/2026) : avant la date ou hors jours, rien n'est lancé (code 0, aucune trace)
+$auj = Get-Date
+if ($env:JARVIS_B2B_AUJOURDHUI) { $auj = [datetime]::ParseExact($env:JARVIS_B2B_AUJOURDHUI, 'yyyy-MM-dd', $null) }   # tests : jour figé
+if ($t.Value.PSObject.Properties['actif_le'] -and [string]::CompareOrdinal($auj.ToString('yyyy-MM-dd'), "$($t.Value.actif_le)") -lt 0) { Log "pas encore actif : « $Agent » commence le $($t.Value.actif_le), rien lancé"; exit 0 }
+if ($t.Value.PSObject.Properties['jours'] -and ((([int]$auj.DayOfWeek) + 6) % 7) -notin @($t.Value.jours | ForEach-Object { [int]$_ })) { Log "jour hors planning pour « $Agent » : rien lancé"; exit 0 }
 $script = Join-Path $AG $t.Value.script
 $commandes = @($t.Value.commandes | ForEach-Object { , @($_) })
 # 3) python

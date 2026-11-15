@@ -34,17 +34,33 @@ def contrats_surveilles():
     return [c for c in cs if c["nom"] not in serveur or c["nom"] in actifs]
 
 
-def defauts(maintenant, cs=None, dossier=None):
-    """Lignes de défaut (une par agent) et nombre d'agents surveillés."""
+def taches_serveur():
+    """serveur-taches.json › agents (actif_le, jours) ; {} s'il est illisible."""
+    try: return json.loads((AGENTS / "serveur-taches.json").read_text(encoding="utf-8"))["agents"]
+    except (OSError, ValueError, KeyError): return {}
+
+
+def attendu(nom, jours_contrat, jour_date, taches):
+    """Vrai si l'agent doit tourner ce jour-là : date d'activation atteinte (« actif_le » de serveur-taches.json) et jour prévu (contrat, et « jours » de la tâche s'il y en a)."""
+    t = taches.get(nom) or {}
+    if t.get("actif_le") and jour_date.isoformat() < str(t["actif_le"]): return False
+    return jour_date.weekday() in jours_contrat and (not t.get("jours") or jour_date.weekday() in t["jours"])
+
+
+def defauts(maintenant, cs=None, dossier=None, taches=None):
+    """Lignes de défaut (une par agent) et nombre d'agents surveillés. Un agent pas encore actif (actif_le) ou hors de ses jours (week-end d'un agent des jours ouvrés) : silence."""
     jour = f"{maintenant:%Y-%m-%d}"; minutes = maintenant.hour * 60 + maintenant.minute; out = []; n = 0
+    taches = taches_serveur() if taches is None else taches
     for c in (cs if cs is not None else contrats()):
         if c["statut"] not in SURVEILLES or c["nom"] == "surveillant": continue
+        t_ = taches.get(c["nom"]) or {}
+        if t_.get("actif_le") and jour < str(t_["actif_le"]): continue   # pas encore actif : ni compté ni alerté
         n += 1; t = T.lire(c["nom"], jour, dossier)
         execs = [x for x in t if not str(x.get("decision", "")).startswith("garde ")]
         erreurs = [x for x in t if not x.get("ok", True)]
         if erreurs:
             e = erreurs[-1]; out.append(f"agent {c['nom']} : erreur ({str(e.get('erreur') or e.get('resultat'))[:120]}, {e.get('heure', '')[11:16]})")
-        elif c.get("alerte_si_silence") and maintenant.weekday() in c["jours"] and minutes >= _hm(c["alerte_si_silence"]) and not execs:
+        elif c.get("alerte_si_silence") and attendu(c["nom"], c["jours"], maintenant.date(), taches) and minutes >= _hm(c["alerte_si_silence"]) and not execs:
             out.append(f"agent {c['nom']} n'a pas tourné aujourd'hui (attendu avant {c['alerte_si_silence']})")
     return out, n
 

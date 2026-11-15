@@ -10,6 +10,7 @@ import commun as C
 R = C.agent("rendez-vous")
 SV = C.harness("surveillant")
 T = C.harness("traces")
+MARDI = datetime(2026, 11, 17, 20, 0)   # jour ouvré figé : le test ne dépend plus du jour où il tourne (un dimanche, aucune panne n'est attendue)
 CONTRAT = {"nom": "agent-test", "statut": "actif", "jours": [0, 1, 2, 3, 4], "alerte_si_silence": "07:45"}
 
 
@@ -64,12 +65,38 @@ class AgentPanneAlerte(unittest.TestCase):
     def test_une_seule_alerte_et_simulation(self):
         self.PA.construire_agents = lambda: self.agents; envoyes = []; self.PA.alerter_discord = lambda t: envoyes.append(t) or True
         with redirect_stdout(io.StringIO()) as f:
-            self.PA.cmd_verifier({"envoi_automatique": False, "grace_minutes": 0}, False)
+            self.PA.cmd_verifier({"envoi_automatique": False, "grace_minutes": 0}, False, MARDI)
         self.assertEqual(envoyes, []); self.assertIn("[simulation", f.getvalue())
         self.PA.ETAT.unlink()
         with redirect_stdout(io.StringIO()):
-            self.PA.cmd_verifier({"envoi_automatique": True, "grace_minutes": 0}, False); self.PA.cmd_verifier({"envoi_automatique": True, "grace_minutes": 0}, False)
-        self.assertEqual(len(envoyes), len(self.PA.en_panne(self.agents, datetime.now(), 0)), "jamais deux fois la même alerte le même jour")
+            self.PA.cmd_verifier({"envoi_automatique": True, "grace_minutes": 0}, False, MARDI); self.PA.cmd_verifier({"envoi_automatique": True, "grace_minutes": 0}, False, MARDI)
+        self.assertEqual(len(envoyes), len(self.PA.en_panne(self.agents, MARDI, 0)), "jamais deux fois la même alerte le même jour")
+
+
+class ActivationEtJoursOuvres(unittest.TestCase):
+    """15/11/2026 : « Panne : appels-liam, aucune exécution aujourd'hui » reçue à tort un dimanche. Agent pas encore actif = silence ; week-end d'un agent des jours ouvrés = silence ;
+    agent actif, jour ouvré, aucune exécution = alerte. Vérifié pour l'agent panne-alerte ET pour le surveillant du harness."""
+    TACHES = {"appels-liam": {"heure": "07:30", "actif_le": "2026-11-17", "jours": [0, 1, 2, 3, 4]}}
+    CONTRAT = {"nom": "appels-liam", "statut": "simulation", "jours": [0, 1, 2, 3, 4], "alerte_si_silence": "07:45"}
+    AGENTS = [{"nom": "appels-liam", "planifie": True, "horaire": "chaque jour à 07:30", "dernier_passage": ""}]
+    SILENCE = [datetime(2026, 11, 15, 20, 0), datetime(2026, 11, 16, 20, 0), datetime(2026, 11, 21, 20, 0), datetime(2026, 11, 22, 9, 0)]   # dim. 15, lun. 16 (avant le 17), sam. 21, dim. 22
+
+    def setUp(self): self.PA = C.agent("panne-alerte"); self.vide = Path(tempfile.mkdtemp()) / "logs"
+
+    def test_panne_alerte(self):
+        for n in self.SILENCE: self.assertEqual(self.PA.en_panne(self.AGENTS, n, 15, self.TACHES), [], f"silence le {n:%A %d/%m}")
+        self.assertEqual(self.PA.en_panne(self.AGENTS, datetime(2026, 11, 17, 7, 50), 15, self.TACHES), [("appels-liam", "07:30")], "mardi 17/11, actif, aucune exécution : alerte")
+
+    def test_surveillant(self):
+        for n in self.SILENCE: self.assertEqual(SV.defauts(n, [self.CONTRAT], self.vide, self.TACHES)[0], [], f"silence le {n:%A %d/%m}")
+        self.assertEqual(SV.defauts(datetime(2026, 11, 17, 8, 0), [self.CONTRAT], self.vide, self.TACHES)[0], ["agent appels-liam n'a pas tourné aujourd'hui (attendu avant 07:45)"])
+
+    def test_vrais_reglages_dimanche(self):
+        """Avec le vrai serveur-taches.json et les vrais contrats : aucun agent des jours ouvrés n'est en panne un dimanche, appels-liam pas avant le 17/11."""
+        agents = [{"nom": n, "planifie": True, "horaire": "chaque jour à 07:30", "dernier_passage": ""} for n in ("appels-liam", "appels-sid")]
+        self.assertEqual(self.PA.en_panne(agents, datetime(2026, 11, 15, 20, 0), 15), [])
+        self.assertEqual(self.PA.en_panne(agents, datetime(2026, 11, 16, 8, 0), 15), [("appels-sid", "07:30")], "lundi 16 : appels-sid attendu, appels-liam pas encore")
+        self.assertEqual(self.PA.taches_serveur()["appels-liam"]["actif_le"], "2026-11-17")
 
 
 if __name__ == "__main__":
