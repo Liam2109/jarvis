@@ -1,0 +1,19 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Fixture harness//FR
+BEGIN:VEVENT
+UID:fixture-1@exemple.invalid
+SEQUENCE:0
+DTSTART:20261117T090000Z
+DTEND:20261117T091500Z
+SUMMARY:Rendez-vous de 15 minutes (Sid)
+DESCRIPTION:Réservé par Sid\nhttps://meet.google.com/abc-defg-hij
+ATTENDEE;CN=Sid Plomberie Durand:mailto:contact@plomberie-fictive.invalid
+ORGANIZER:mailto:agenda@exemple.invalid
+END:VEVENT
+BEGIN:VEVENT
+UID:fixture-2@exemple.invalid
+DTSTART:20261118T130000Z
+SUMMARY:Réunion perso
+END:VEVENT
+END:VCALENDAR

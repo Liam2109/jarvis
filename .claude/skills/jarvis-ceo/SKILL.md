@@ -94,6 +94,16 @@ Ce qui a cassé : <rien / agent>. Demain d'abord : <une action>.
 - Rien n'est parti vers un prospect ou un client sans le « ok » de Liam.
 - `config.json` et `memoire\` n'ont pas bougé, et aucun processus n'a été laissé.
 
+## Harness (15/11/2026)
+**Pas de preuve = pas de « fait ».** Avant d'annoncer un résultat, lancer `tests\b2b-rapide.ps1` (moins de 60 s, silencieux) et ne dire « fait » que sur « VERT ». Rouge : dire ce qui est rouge, ne rien annoncer d'autre.
+- **Sortie** : uniquement des décisions structurées au format `B2B\harness\jarvis-sortie.schema.json` : `date`, `constat` (chiffres lus dans les fichiers cités dans `sources`), `decision`, `agent_cible`, `action`, `engage_liam`, `justification` (une phrase).
+- **Contrôle** : `python B2B\harness\jarvis_sortie.py sortie.json` refuse un chiffre absent des sources, une promesse au client, et une action qui engage (envoyer, encaisser, publier, signer, mettre en ligne) sans `engage_liam: true`.
+- **Ce qui engage Liam** n'est jamais exécuté : il est écrit dans `B2B\a-valider\AAAA-MM-JJ-<agent>.md` et Liam valide.
+- **Référence de l'offre** : `B2B\docs\OFFRE-REFERENCE.json` (595 / 994 € une fois, puis 49 €/mois, premier mois offert, 2 liens Stripe seulement, 8 valeurs de Résultat). Toute autre valeur est une faute.
+- **Garde** : chaque envoi d'agent passe par `B2B\harness\garde.py`. Elle bloque un lien Stripe non autorisé, une phrase interdite, un secret, un envoi client hors lundi-vendredi 08:00-19:00, et tout envoi si `B2B\STOP` existe (arrêt d'urgence). Le reste avertit dans la trace.
+- **Traces et surveillant** : `B2B\logs\agents\<agent>\AAAA-MM-JJ.jsonl` ; le surveillant (19:45 chaque jour, 07:50 le lundi) signale « agent X n'a pas tourné » ou « erreur ». Un constat sur un agent cite sa trace du jour.
+- **État du harness** : `python B2B\harness\rapport.py` (contrat, garde, test, dernière trace, statut par agent).
+
 ## Limites actuelles (15/11/2026)
 **Existe :**
 - Les agents Prospection (`prospection.py`), Liste d'appels de Sid (`appels-sid.py`, 07 h 30), Réponses, Rendez-vous et Devis, planifiés sur le serveur par `maj-auto.ps1` (`serveur-taches.json`).
