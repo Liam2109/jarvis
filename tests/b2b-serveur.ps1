@@ -110,7 +110,7 @@ $AGT = Join-Path $TR 'B2B\agents'; New-Item -ItemType Directory $AGT | Out-Null
 Copy-Item (Join-Path $AG 'serveur-b2b.ps1') $AGT
 $tableReelle = Lire (Join-Path $AG 'serveur-taches.json') | ConvertFrom-Json
 $nomsReels = @($tableReelle.agents.PSObject.Properties | ForEach-Object { $_.Name })
-Verifier ('instagram' -notin $nomsReels -and 'surveillant' -in $nomsReels -and 'appels-liam' -in $nomsReels -and $nomsReels.Count -eq 10) "serveur-taches.json : instagram retiré (décision du 14/11/2026), resume-sid/stripe-alerte/panne-alerte ajoutés (étape Argent, 15/11/2026), surveillant du harness et appels-liam (15/11/2026), $($nomsReels.Count) agents"
+Verifier ('instagram' -notin $nomsReels -and 'surveillant' -in $nomsReels -and 'appels-liam' -in $nomsReels -and $nomsReels.Count -eq 11) "serveur-taches.json : instagram retiré (décision du 14/11/2026), resume-sid/stripe-alerte/panne-alerte ajoutés (étape Argent, 15/11/2026), surveillant du harness, appels-liam et nettoyage-fichiers (15/11/2026), $($nomsReels.Count) agents"
 $al = $tableReelle.agents.'appels-liam'
 Verifier ($al.heure -eq '07:30' -and $al.actif_le -eq '2026-11-17' -and (@($al.jours) -join ',') -eq '0,1,2,3,4' -and (@($al.commandes | ForEach-Object { $_ -join ' ' }) -join ';') -eq 'jour') 'serveur-taches.json : appels-liam à 07:30, actif le 17/11/2026, lundi à vendredi seulement'
 Verifier ($tableReelle.agents.surveillant.heure -eq '19:45' -and $tableReelle.agents.surveillant.lundi -eq '07:50') 'serveur-taches.json : surveillant chaque jour à 19:45 et le lundi à 07:50'

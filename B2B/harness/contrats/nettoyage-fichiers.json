@@ -1,0 +1,26 @@
+{
+ "nom": "nettoyage-fichiers",
+ "responsable": "Jarvis (CEO)",
+ "mission": "Chaque jour à 03:00, supprimer les traces B2B/logs/agents et les entrées de JOURNAL-B2B.md de plus de 30 jours, sans token ni réseau.",
+ "statut": "actif",
+ "script": "B2B/agents/nettoyage-fichiers.py",
+ "jours": [0, 1, 2, 3, 4, 5, 6],
+ "heures": {"debut": "03:00", "fin": "04:00"},
+ "fichiers_lus": ["B2B/logs/agents", "B2B/docs/JOURNAL-B2B.md"],
+ "fichiers_ecrits": ["B2B/logs/agents", "B2B/docs/JOURNAL-B2B.md", "B2B/agents/nettoyage-fichiers-journal.log"],
+ "canaux_discord": [],
+ "envoi_client": false,
+ "actions_interdites": [
+  "toucher à B2B/donnees/registre-entreprises.json",
+  "toucher à memoire/",
+  "toucher à .env, config.json ou un fichier *.local.json",
+  "supprimer un fichier hors de B2B/logs/agents et de JOURNAL-B2B.md",
+  "supprimer une trace ou une entrée de 30 jours ou moins",
+  "envoyer au client, encaisser, publier ou signer",
+  "afficher un secret (jeton, clé, adresse iCal)"
+ ],
+ "plafonds": {"messages_par_jour": 0},
+ "peut_engager": false,
+ "alerte_si_silence": "03:30",
+ "tests": ["tests/agents/test_nettoyage_fichiers.py"]
+}

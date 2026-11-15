@@ -94,6 +94,15 @@
       ],
       "heure": "19:45",
       "lundi": "07:50"
+    },
+    "nettoyage-fichiers": {
+      "script": "nettoyage-fichiers.py",
+      "commandes": [
+        [
+          "nettoyer"
+        ]
+      ],
+      "heure": "03:00"
     }
   }
 }

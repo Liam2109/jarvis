@@ -112,7 +112,8 @@ assert not re.search(r"^\s*(import|from)\s+(selenium|playwright|pyppeteer)", src
 
 # ---------- 6) tâches du serveur (serveur-taches.json) : cohérence ----------
 T = json.loads((ICI / "serveur-taches.json").read_text(encoding="utf-8"))["agents"]
-assert set(T) == {"appels-sid", "appels-liam", "devis", "rendez-vous", "reponses", "prospection", "resume-sid", "stripe-alerte", "panne-alerte", "surveillant"}, sorted(T)   # instagram retiré du serveur le 14/11/2026 (archive) ; resume-sid/stripe-alerte/panne-alerte ajoutés (étape Argent, 15/11/2026) ; surveillant du harness (15/11/2026)
+assert set(T) == {"appels-sid", "appels-liam", "devis", "rendez-vous", "reponses", "prospection", "resume-sid", "stripe-alerte", "panne-alerte", "surveillant", "nettoyage-fichiers"}, sorted(T)   # instagram retiré du serveur le 14/11/2026 (archive) ; resume-sid/stripe-alerte/panne-alerte ajoutés (étape Argent, 15/11/2026) ; surveillant du harness (15/11/2026)
+assert T["nettoyage-fichiers"]["heure"] == "03:00" and T["nettoyage-fichiers"]["commandes"] == [["nettoyer"]]   # nettoyage des traces et du journal de plus de 30 jours (15/11/2026)
 assert T["surveillant"]["heure"] == "19:45" and T["surveillant"]["lundi"] == "07:50" and T["surveillant"]["commandes"] == [["verifier"]]
 for nom, t in T.items():
     assert (ICI / t["script"]).is_file() and t["commandes"] and bool(t.get("toutes_minutes")) != bool(t.get("heure")), nom   # une cadence OU une heure
