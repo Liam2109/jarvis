@@ -1,7 +1,7 @@
 {
  "nom": "resume-sid",
  "responsable": "Jarvis (CEO)",
- "mission": "Poster à 19:00 le résumé du soir : appels de Sid par valeur de Résultat et chiffre d'affaires Stripe du jour.",
+ "mission": "Poster à 19:30 (jours ouvrés) le résumé du soir : appels de Sid par valeur de Résultat et chiffre d'affaires Stripe du jour.",
  "statut": "simulation",
  "script": "B2B/agents/resume-sid.py",
  "jours": [
@@ -9,9 +9,7 @@
   1,
   2,
   3,
-  4,
-  5,
-  6
+  4
  ],
  "heures": {
   "debut": "18:00",
@@ -42,7 +40,7 @@
   "messages_par_jour": 2
  },
  "peut_engager": false,
- "alerte_si_silence": "19:30",
+ "alerte_si_silence": "19:40",
  "tests": [
   "B2B/agents/test_resume_sid.py",
   "tests/agents/test_resume_sid.py"

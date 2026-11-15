@@ -48,5 +48,29 @@ class PanneAlerte(unittest.TestCase):
         self.assertEqual(envoyes, [])
 
 
+class AgentPanneAlerte(unittest.TestCase):
+    """B2B\\agents\\panne-alerte.py (étape Argent, 15/11/2026) : agent à heure fixe sans passage après le délai de grâce -> une alerte, une seule fois par jour."""
+    def setUp(self):
+        self.PA = C.agent("panne-alerte"); tmp = Path(tempfile.mkdtemp()); self.PA.ETAT, self.PA.JOURNAL = tmp / "etat.json", tmp / "journal.log"
+        self.agents = [{"nom": "appels-sid", "planifie": True, "horaire": "chaque jour à 07:30", "dernier_passage": "2026-11-16 07:31"},
+                       {"nom": "resume-sid", "planifie": True, "horaire": "chaque jour à 19:30", "dernier_passage": ""},
+                       {"nom": "devis", "planifie": True, "horaire": "toutes les 3 min", "dernier_passage": ""}]
+
+    def test_en_panne(self):
+        self.assertEqual(self.PA.en_panne(self.agents, datetime(2026, 11, 17, 7, 50), 15), [("appels-sid", "07:30")])
+        self.assertEqual(self.PA.en_panne(self.agents, datetime(2026, 11, 17, 7, 40), 15), [], "délai de grâce")
+        self.assertEqual(self.PA.en_panne(self.agents, datetime(2026, 11, 17, 20, 0), 15), [("appels-sid", "07:30"), ("resume-sid", "19:30")])
+
+    def test_une_seule_alerte_et_simulation(self):
+        self.PA.construire_agents = lambda: self.agents; envoyes = []; self.PA.alerter_discord = lambda t: envoyes.append(t) or True
+        with redirect_stdout(io.StringIO()) as f:
+            self.PA.cmd_verifier({"envoi_automatique": False, "grace_minutes": 0}, False)
+        self.assertEqual(envoyes, []); self.assertIn("[simulation", f.getvalue())
+        self.PA.ETAT.unlink()
+        with redirect_stdout(io.StringIO()):
+            self.PA.cmd_verifier({"envoi_automatique": True, "grace_minutes": 0}, False); self.PA.cmd_verifier({"envoi_automatique": True, "grace_minutes": 0}, False)
+        self.assertEqual(len(envoyes), len(self.PA.en_panne(self.agents, datetime.now(), 0)), "jamais deux fois la même alerte le même jour")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)

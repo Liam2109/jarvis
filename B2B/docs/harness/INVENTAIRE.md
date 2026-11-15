@@ -5,8 +5,9 @@ Lecture seule du dépôt. Tous les envois Discord des agents passent par `prospe
 | Agent | Script | Horaire | Lit | Écrit | Canaux | Flags |
 |---|---|---|---|---|---|---|
 | appels-sid | `B2B\agents\appels-sid.py jour` | 07:30 (tâche serveur Jarvis-B2B-appels-sid), jours ouvrés | prospects Maps/CSV, historique, config | tableur Google « Appels AAAA-MM-JJ » (Drive de Sid), état, historique, journal | Google Sheets/Drive, Discord (alertes) | machine_active, envoi_automatique=false (versionné) |
-| resume-sid | `resume-sid.py resume` | 19:00 (tâche Windows locale `installer-tache`) | feuille Google du jour (lecture), Stripe charges (lecture) | état, journal | Discord | machine_active, envoi_automatique=false |
-| stripe-alerte | `stripe-alerte.py verifier` | toutes les 5 min (tâche Windows locale) | Stripe charges (clé restreinte, lecture) | état, journal | Discord | machine_active, envoi_automatique=false |
+| panne-alerte | `panne-alerte.py verifier` | toutes les 5 min (tâche serveur, ajouté par l'étape Argent le 15/11) | outils\agents-json.py, journaux des agents | état, journal | Discord (alertes) | machine_active, envoi_automatique=false |
+| resume-sid | `resume-sid.py resume` | 19:30 jours ouvrés (tâche serveur depuis l'étape Argent, 15/11) | feuille Google du jour (lecture), Stripe charges (lecture) | état, journal | Discord | machine_active, envoi_automatique=false |
+| stripe-alerte | `stripe-alerte.py verifier` | toutes les 5 min (tâche serveur depuis l'étape Argent, 15/11) | Stripe charges (clé restreinte, lecture) | état, journal | Discord | machine_active, envoi_automatique=false |
 | rendez-vous | `rendez-vous.py jour` | toutes les 5 min (tâche serveur) | agenda iCal (adresse secrète dans le .local) | état, journal | Discord salon « rdv » | machine_active, **envoi_automatique=true dans le fichier versionné** |
 | devis | `devis.py jour` | toutes les 3 min (tâche serveur) | fiche devis, identite.json, Discord (« ok devis ») | PDF/texte devis, état, journal | Discord (aperçu à Liam ; rien vers le client) | machine_active, envoi_automatique=false ; **liens Stripe anciens (…06, …07) dans le code** |
 | reponses | `reponses.py --jours 14` | toutes les 15 min (tâche serveur) | boîtes mail (IMAP/API Gmail), agenda (créneaux), suivi | reponses-traitees.json, suivi, exclus | Discord (`reponses.poster`) | machine_active, envoi_automatique (local) |
@@ -24,4 +25,4 @@ Lecture seule du dépôt. Tous les envois Discord des agents passent par `prospe
 `agent-appels-sid`, `agent-lots-emails`, `agent-recherche`, `responsable-prospection`, `scripts-appel`, `jarvis-ceo` : fiches de rôle lues par Claude, aucun envoi propre.
 
 ## Tâches serveur (`B2B\agents\serveur-taches.json`)
-appels-sid 07:30 · devis 3 min · rendez-vous 5 min · reponses 15 min · prospection 10 min. Créées par `maj-auto.ps1` seulement pour les agents de `agents_actifs` (b2b.local.json).
+appels-sid 07:30 · devis 3 min · rendez-vous 5 min · reponses 15 min · prospection 10 min · resume-sid 19:30 · stripe-alerte 5 min · panne-alerte 5 min · surveillant 19:45 et lundi 07:50. Créées par `maj-auto.ps1` seulement pour les agents de `agents_actifs` (b2b.local.json).

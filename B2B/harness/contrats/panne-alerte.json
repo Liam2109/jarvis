@@ -1,0 +1,49 @@
+{
+ "nom": "panne-alerte",
+ "responsable": "Jarvis (CEO)",
+ "mission": "Alerter Liam sur Discord quand un agent planifié à heure fixe n'a pas tourné après son délai de grâce, une seule fois par jour.",
+ "statut": "simulation",
+ "script": "B2B/agents/panne-alerte.py",
+ "jours": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6
+ ],
+ "heures": {
+  "debut": "00:00",
+  "fin": "24:00"
+ },
+ "fichiers_lus": [
+  "outils/agents-json.py",
+  "journaux des agents",
+  "B2B/agents/serveur-taches.json"
+ ],
+ "fichiers_ecrits": [
+  "B2B/agents/panne-alerte-etat.json",
+  "B2B/agents/panne-alerte-journal.log"
+ ],
+ "canaux_discord": [
+  "alertes"
+ ],
+ "envoi_client": false,
+ "actions_interdites": [
+  "envoyer au client sans accord de Liam",
+  "encaisser ou rembourser",
+  "publier",
+  "signer ou promettre un résultat",
+  "afficher un secret (jeton, clé, adresse iCal)",
+  "relancer un agent"
+ ],
+ "plafonds": {
+  "messages_par_jour": 10
+ },
+ "peut_engager": false,
+ "alerte_si_silence": "19:40",
+ "tests": [
+  "tests/agents/test_panne_alerte.py"
+ ]
+}
