@@ -328,3 +328,10 @@ Contexte : Liam utilise un petit PC portable (celui de Mathéo, avec carte Wi-Fi
 - Organigramme en graphe (00-ORGANIGRAMME.md, liens [[...]] et bloc Mermaid) : Liam, Jarvis (CEO), 4 responsables, agents. Zone "Notes de Liam" conservee a chaque regeneration.
 - Un skill par agent dans .claude/skills/agent-<nom> (copie dans B2B/docs/agents/skills) ; tests/b2b-rapide.ps1 verifie que chaque contrat a sa fiche a jour et chaque agent actif son skill.
 - 2026-11-15 (20 h) - Un seul graphe Obsidian : le hub INDEX, les fiches détaillées générées dans les notes agents
+
+## 2026-11-15 (20 h) - Techniques de closing de Liam
+- Face a « je dois reflechir » : demander combien de temps, laisser PLUS que demande (1 semaine -> 2 semaines) pour le detendre, puis poser la question de blocage avec la phrase de douleur dite par le client : « qu'est-ce qui vous bloque aujourd'hui et qui permettrait de passer a l'action directement ? ». Version plus directe : « qu'est-ce qui vous empeche de passer a l'action maintenant ? ».
+- Si la raison est la confiance : idee de Liam d'un petit acompte (environ 100 EUR) qui paie un appel de travail, puis infos et site prepare sous 24 h. A DECIDER : contredit « sans acompte » (liens d'acompte desactives le 15/11) ; en attendant, chemin sans argent (maquette gratuite, apercu prive, premier mois offert, appel de cadrage gratuit).
+- Sortie elegante si pas de confiance : « on a passe du temps ensemble, je comprends, c'est dommage mais si vous le souhaitez... » puis maquette par e-mail sans engagement.
+- Sid note la phrase exacte de douleur du client dans Note : munition pour la question de blocage.
+- Fichier : B2B/docs/TECHNIQUES-CLOSING.md (a rechercher et enrichir avec de bonnes phrases de vente).

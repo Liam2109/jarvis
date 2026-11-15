@@ -25,4 +25,4 @@ Règles : aucun chiffre inventé, aucune promesse de résultat Google, aucun dé
 
 ## Points à ne pas oublier
 - Je n'ai jamais livré de site de plusieurs pages : pour le site complet, je confirme le contenu précis par écrit dans le devis avant de prendre le paiement.
-- Un « Je dois réfléchir » : devis par e-mail, rappel à un jour précis, noté dans le suivi.
+- Un « Je dois réfléchir » : je n'envoie pas le devis en premier. Je suis B2B/docs/TECHNIQUES-CLOSING.md : espace, question de blocage avec ses mots, date et heure précises, puis le devis valable 15 jours.

@@ -11,6 +11,9 @@ _Mise à jour : 15 nov. 2026, 19 h 20 (le fait est supprimé ; l'historique est 
 - [ ] Droit de rétractation (vente à distance), formulation d'arrêt, transfert du domaine (code chez le bureau d'enregistrement) : à faire relire
 - [ ] Prévoir comment livrer un site complet multi-pages avant d'en vendre un
 - [ ] Décider les commissions (≈10 % appelant, 10 % closer ?) et si c'est sur le premier paiement seulement ou aussi sur les 49 €/mois
+- [ ] Décider : petit acompte (environ 100 €) pour le client sans confiance ? Contredit « sans acompte » ; pas dans les scripts avant décision
+- [ ] Dire à Sid de noter dans Note la phrase exacte de douleur du client (pas seulement celle du non)
+- [ ] Test de cohérence : ajouter « pas obligatoire » aux phrases interdites (non détecté avant la correction de objections.md)
 - [ ] Valider les règles de reprise des appels (Pas de réponse = 3 tentatives, etc.)
 
 ## Liam
@@ -32,7 +35,7 @@ _Mise à jour : 15 nov. 2026, 19 h 20 (le fait est supprimé ; l'historique est 
 - [ ] Tableau de bord (maquette validée, voir IDEES-MASTER 14/11) : agents en ligne, courbes, closing, commissions, pipeline
 - [ ] Fiche d'accueil client (photos, couleurs, logo, avis, spécificités)
 - [ ] Recruter d'autres appelants (15 %), un spécialiste restaurants, des closers (10 %)
-- [ ] Refaire TECHNIQUES-CLOSING.md ; jeu de rôle du closing (« je dois réfléchir », « trop cher », plombier méfiant)
+- [ ] Relire TECHNIQUES-CLOSING.md (créé le 15/11), le dire à voix haute, jeu de rôle du closing (« je dois réfléchir », « trop cher », plombier méfiant)
 - [ ] Domaine : renouvellement annuel dans Stripe (plus tard), clarifier « Playwork »
 - [ ] Question jamais tranchée : `veille_mail` = bon mapping pour « agent Réponses » ?
 - [ ] Parrainage (1 mois de maintenance offert) ; paiement en 3x sans frais (Alma/Floa)
