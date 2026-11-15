@@ -1,5 +1,5 @@
 {
   "envoi_automatique": false,
-  "heure_tache": "19:00",
-  "_aide": "envoi_automatique : false = SIMULATION (le résumé du soir est affiché en console et journalisé, rien sur Discord) ; true = posté sur Discord, dans le salon habituel des agents (réglages déjà en place : salon_paiement_id, DISCORD_USER_ID, DISCORD_BOT_TOKEN). heure_tache : heure de la tâche planifiée (installer-tache), 19:00 par défaut. compte_google (absent ici, comme dans appels-sid-config.json : valeur par défaut dans le code, à mettre dans resume-sid-config.local.json pour une autre valeur) : compte Google (lecture seule) autorisé par `python agents\\appels-sid.py google-autoriser`, pour lire la feuille du jour de Sid. Voir agents\\resume-sid.md."
+  "heure_tache": "19:30",
+  "_aide": "envoi_automatique : false (défaut versionné, SIMULATION) ; l'activation réelle se fait dans resume-sid-config.local.json (propre à la machine, jamais versionné), pas ici. heure_tache : heure de la tâche planifiée (serveur-taches.json / installer-tache), 19:30 (jours ouvrés seulement : samedi et dimanche, l'agent s'arrête sans rien lire ni envoyer, comme appels-sid.py). compte_google (absent ici, comme dans appels-sid-config.json : valeur par défaut dans le code, à mettre dans resume-sid-config.local.json pour une autre valeur) : compte Google (lecture seule) autorisé par `python agents\\appels-sid.py google-autoriser`, pour lire la feuille du jour de Sid. Voir agents\\resume-sid.md."
 }

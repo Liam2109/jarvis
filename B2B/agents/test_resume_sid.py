@@ -27,6 +27,7 @@ ALERTES, EXEC, STRIPE_APPELS = [], [], []
 def faux_alerte(texte): ALERTES.append(texte); return True
 def faux_executer(cmd): EXEC.append(cmd); return 0, ""
 A.alerter_discord = faux_alerte; A.executer = faux_executer
+A.maintenant_paris = lambda: datetime(2026, 11, 16)   # lundi (jour ouvré) : indépendant du jour réel d'exécution des tests
 
 
 class FauxDrive:
@@ -187,6 +188,16 @@ monde(config={"envoi_automatique": True}, appels_sid_etat={"google": {JOUR: {"fe
 code, sortie = lancer("resume", "--jour", JOUR)
 verifier(code == 0 and "non envoyé" in sortie, "Discord injoignable : annoncé, l'agent ne plante pas")
 A.alerter_discord = faux_alerte
+
+print("7 bis. jour hors planning (week-end) : aucune lecture, aucun envoi, comme appels-sid.py")
+reel_maintenant_paris = A.maintenant_paris
+monde(config={"envoi_automatique": True}, appels_sid_etat={"google": {JOUR: {"feuille": "F1"}}}, env="")
+for nom, jour_simule in (("samedi", datetime(2026, 11, 14)), ("dimanche", datetime(2026, 11, 15))):
+    A.maintenant_paris = lambda j=jour_simule: j
+    code, sortie = lancer("resume", "--jour", JOUR)
+    verifier(code == 0 and "hors planning" in sortie and nom in sortie and not ALERTES, f"{nom} : jour hors planning, rien envoyé")
+    verifier(JOUR not in A.etat_lire()["envoyes"], f"{nom} : rien n'est marqué envoyé pour {JOUR}")
+A.maintenant_paris = reel_maintenant_paris
 
 print("8. resume sans --jour : le jour d'aujourd'hui")
 monde(config={"envoi_automatique": False})

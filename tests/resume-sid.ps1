@@ -14,7 +14,7 @@ Write-Host '1. Fichiers et réglages'
 foreach ($f in 'resume-sid.py', 'resume-sid-config.json', 'resume-sid.md', 'test_resume_sid.py') { Verifier (Test-Path (Join-Path $ag $f)) "B2B\agents\$f présent" }
 $cfgAgent = Get-Content (Join-Path $ag 'resume-sid-config.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 Verifier ($cfgAgent.envoi_automatique -eq $false) 'resume-sid-config.json : envoi_automatique = false par défaut (fichier versionné ; activation réelle par machine dans resume-sid-config.local.json, ignoré par git)'
-Verifier ($cfgAgent.heure_tache -eq '19:00') 'resume-sid-config.json : heure_tache = 19:00 par défaut'
+Verifier ($cfgAgent.heure_tache -eq '19:30') 'resume-sid-config.json : heure_tache = 19:30 (jours ouvrés, étape Argent du 15/11/2026)'
 $src = Get-Content (Join-Path $ag 'resume-sid.py') -Raw -Encoding UTF8
 Verifier ($src -notmatch 'smtplib|send_message|gmail_api|webbrowser|os\.system|shell=True|places\.googleapis|stripe\.com/v1/(refunds|payouts|transfers|customers)') 'resume-sid.py : aucun envoi d''e-mail ni de message à une entreprise, aucune écriture Stripe (lecture seule)'
 Verifier ($src -match 'lire_feuille' -and $src -notmatch 'creer_feuille|creer_dossier|partager\(') 'resume-sid.py : lit la feuille Google de Sid, n''en crée ni n''en partage aucune (lecture seule)'

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Agent resume-sid (LM MULTI-SERVICES) : résumé Discord en fin de journée (19 h par défaut) de l'activité de Sid et du chiffre d'affaires Stripe du jour. Aucun envoi au prospect ni à Sid,
+"""Agent resume-sid (LM MULTI-SERVICES) : résumé Discord en fin de journée (jours ouvrés, heure_tache) de l'activité de Sid et du chiffre d'affaires Stripe du jour. Aucun envoi au prospect ni à Sid,
 aucune écriture dans la feuille Google (lecture seule) ; même modèle que les autres agents B2B : réglages (resume-sid-config.json), état (resume-sid-etat.json), journal, tests écrits avant le code.
-`envoi_automatique: false` (défaut) = SIMULATION : rien sur Discord, la console (et le journal) disent ce qui serait envoyé.
+`envoi_automatique: false` (défaut) = SIMULATION : rien sur Discord, la console (et le journal) disent ce qui serait envoyé. Samedi et dimanche : aucun résumé (jour hors planning, comme appels-sid.py).
 
-  python agents\\resume-sid.py resume [--jour AAAA-MM-JJ] [--a-blanc]      calcule et poste (ou affiche) le résumé du jour ; c'est ce que lance la tâche planifiée de 19 h
+  python agents\\resume-sid.py resume [--jour AAAA-MM-JJ] [--a-blanc]      calcule et poste (ou affiche) le résumé du jour (sauf week-end) ; c'est ce que lance la tâche planifiée du soir
   python agents\\resume-sid.py etat                                       dernier résumé envoyé (ou simulé)
   python agents\\resume-sid.py installer-tache | retirer-tache [--oui]    tâche planifiée Windows (heure_tache, 19:00 par défaut) ; sans --oui, affiche seulement la commande
 
@@ -27,7 +27,13 @@ DEFAUT = {"envoi_automatique": False, "heure_tache": "19:00", "compte_google": "
 COLONNES_SUIVIES = ["Appelé", "Répondu", "Rendez-vous pris", "Refus"]   # anciennes feuilles (cases à cocher)
 RESULTATS = ["Pas de réponse", "À rappeler", "RDV pris", "Non catégorique", "Je dois réfléchir", "Trop cher", "Déjà un site", "Pas le temps"]   # colonne Résultat du tableur « Appels » (= appels-sid.RESULTATS)
 NOMS_DEVISE = {"EUR": "euros", "USD": "dollars", "GBP": "livres"}
+JOURS_SEMAINE = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
 TACHE = "Jarvis-ResumeSid"
+
+
+def maintenant_paris():
+    """Date et heure actuelles à Paris (P.heure_paris) ; remplacée par une doublure dans les tests pour simuler un jour de semaine."""
+    return P.heure_paris()
 
 
 class ErreurAgent(Exception):
@@ -184,6 +190,11 @@ def alerter_discord(texte):
 
 
 def cmd_resume(conf, jour, a_blanc, drive=None):
+    nom_jour = JOURS_SEMAINE[maintenant_paris().weekday()]
+    if nom_jour in ("samedi", "dimanche"):
+        if a_blanc: print(f"[à blanc] jour hors planning ({nom_jour}) : pas de résumé le week-end"); return 0
+        journaliser("resume", f"{jour} : jour hors planning, pas de résumé ({nom_jour})", a_blanc)
+        print(f"Jour hors planning ({nom_jour}) : pas de résumé le week-end."); return 0
     etat = etat_lire()
     if not a_blanc and etat["envoyes"].get(jour):
         print(f"Résumé du {jour} déjà envoyé (ou simulé) aujourd'hui : rien de plus."); return 0

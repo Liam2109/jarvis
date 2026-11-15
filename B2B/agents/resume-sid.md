@@ -1,12 +1,12 @@
-# Agent resume-sid (9 nov. 2026)
-Rôle : un **résumé Discord en fin de journée** (19 h par défaut) de l'activité B2B du jour : les cases cochées par Sid sur sa feuille Google du jour (`Appelé`, `Répondu`, `Rendez-vous pris`, `Refus` — même feuille que l'agent `appels-sid`, lue en **lecture seule**) et le **chiffre d'affaires Stripe** encaissé depuis minuit (Europe/Paris). **N'envoie rien à un prospect, à Sid ni à un client** : le seul message qu'il poste est le résumé, dans le salon Discord habituel des agents. Code : `agents\resume-sid.py` (lit `agents\google_sheets.py` et `agents\appels-sid-etat.json`, jamais écrits) ; tests : `agents\test_resume_sid.py` + `tests\resume-sid.ps1` (listé dans `tests\tout.ps1`) ; réglages : `agents\resume-sid-config.json` ; état : `agents\resume-sid-etat.json` ; journal : `agents\resume-sid-journal.log`.
+# Agent resume-sid (9 nov. 2026, heure_tache avancée à 19 h 30 le 15/11/2026)
+Rôle : un **résumé Discord en fin de journée, jours ouvrés seulement** (19 h 30 par défaut ; samedi et dimanche, aucun résumé, comme `appels-sid`) de l'activité B2B du jour : les cases cochées par Sid sur sa feuille Google du jour (`Appelé`, `Répondu`, `Rendez-vous pris`, `Refus` — même feuille que l'agent `appels-sid`, lue en **lecture seule**) et le **chiffre d'affaires Stripe** encaissé depuis minuit (Europe/Paris). **N'envoie rien à un prospect, à Sid ni à un client** : le seul message qu'il poste est le résumé, dans le salon Discord habituel des agents. Code : `agents\resume-sid.py` (lit `agents\google_sheets.py` et `agents\appels-sid-etat.json`, jamais écrits) ; tests : `agents\test_resume_sid.py` + `tests\resume-sid.ps1` (listé dans `tests\tout.ps1`) ; réglages : `agents\resume-sid-config.json` ; état : `agents\resume-sid-etat.json` ; journal : `agents\resume-sid-journal.log`.
 
 **Simulation par défaut** (`envoi_automatique: false`) : le résumé est calculé et affiché en console (et journalisé), **rien sur Discord**. Un jour sans feuille Google (simulation d'appels-sid, jour hors planning, pas encore sourcé) ou sans clé Stripe valide : annoncé sans chiffre inventé, jamais un zéro silencieux.
 
 ## Commandes
 | Commande | Effet |
 |---|---|
-| `python agents\resume-sid.py resume [--jour AAAA-MM-JJ] [--a-blanc]` | Calcule le résumé du jour et le poste (mode réel) ou l'affiche (simulation / `--a-blanc`). Un résumé par jour : un second lancement le même jour ne refait rien (sauf `--a-blanc`, qui affiche toujours). C'est ce que lance la tâche planifiée de 19 h. |
+| `python agents\resume-sid.py resume [--jour AAAA-MM-JJ] [--a-blanc]` | Calcule le résumé du jour et le poste (mode réel) ou l'affiche (simulation / `--a-blanc`). Un résumé par jour : un second lancement le même jour ne refait rien (sauf `--a-blanc`, qui affiche toujours). C'est ce que lance la tâche planifiée du soir (jours ouvrés seulement). |
 | `etat` | Date du dernier résumé envoyé (ou simulé). |
 | `installer-tache` / `retirer-tache` `[--oui]` | Tâche planifiée Windows. **Sans `--oui` : affiche seulement la commande PowerShell, n'exécute rien.** |
 
@@ -19,5 +19,5 @@ Rôle : un **résumé Discord en fin de journée** (19 h par défaut) de l'activ
 1. `appels-sid` doit déjà tourner pour de vrai (`envoi_automatique: true` dans `agents\appels-sid-config.local.json`) pour qu'une feuille Google existe chaque jour de rappel ; sans ça, la partie « Appels Sid » du résumé dit toujours « aucune feuille ».
 2. `STRIPE_RESTRICTED_KEY` renseignée dans `Jarvis\.env` (voir `.env.example`) pour la partie chiffre d'affaires.
 3. **Jamais dans `agents\resume-sid-config.json`** (fichier versionné, poussé sur GitHub) : `envoi_automatique: true` se met dans `agents\resume-sid-config.local.json` (créé à la main, ignoré par git, propre à cette machine). Le fichier versionné reste `envoi_automatique: false`.
-4. `python agents\resume-sid.py installer-tache --oui` (tâche de 19 h 00, `heure_tache` du réglage).
+4. `python agents\resume-sid.py installer-tache --oui` (tâche de 19 h 30, `heure_tache` du réglage).
 5. Contrôle le lendemain : `python agents\resume-sid.py etat`, le journal, le salon Discord habituel.

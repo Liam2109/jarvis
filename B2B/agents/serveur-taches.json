@@ -46,6 +46,33 @@
         ]
       ],
       "toutes_minutes": 10
+    },
+    "resume-sid": {
+      "script": "resume-sid.py",
+      "commandes": [
+        [
+          "resume"
+        ]
+      ],
+      "heure": "19:30"
+    },
+    "stripe-alerte": {
+      "script": "stripe-alerte.py",
+      "commandes": [
+        [
+          "verifier"
+        ]
+      ],
+      "toutes_minutes": 5
+    },
+    "panne-alerte": {
+      "script": "panne-alerte.py",
+      "commandes": [
+        [
+          "verifier"
+        ]
+      ],
+      "toutes_minutes": 5
     }
   }
 }

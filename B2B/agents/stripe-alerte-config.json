@@ -1,5 +1,5 @@
 {
   "envoi_automatique": false,
   "intervalle_minutes": 5,
-  "_aide": "envoi_automatique : false = SIMULATION (chaque vérification affiche en console et journalise ce qui serait envoyé, rien sur Discord) ; true = posté sur Discord, dans le salon habituel des agents (réglages déjà en place : salon_paiement_id, DISCORD_USER_ID, DISCORD_BOT_TOKEN). intervalle_minutes : fréquence de la tâche planifiée (installer-tache), 5 minutes par défaut. Clé Stripe (STRIPE_RESTRICTED_KEY) dans Jarvis\\.env, jamais ici. Voir agents\\stripe-alerte.md."
+  "_aide": "envoi_automatique : false (défaut versionné, SIMULATION) ; l'activation réelle se fait dans stripe-alerte-config.local.json (propre à la machine, jamais versionné), pas ici. intervalle_minutes : fréquence de la tâche planifiée (serveur-taches.json / installer-tache), 5 minutes par défaut. Clé Stripe (STRIPE_RESTRICTED_KEY) dans Jarvis\\.env, jamais ici. Voir agents\\stripe-alerte.md."
 }

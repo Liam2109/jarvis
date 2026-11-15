@@ -112,7 +112,7 @@ assert not re.search(r"^\s*(import|from)\s+(selenium|playwright|pyppeteer)", src
 
 # ---------- 6) tâches du serveur (serveur-taches.json) : cohérence ----------
 T = json.loads((ICI / "serveur-taches.json").read_text(encoding="utf-8"))["agents"]
-assert set(T) == {"appels-sid", "devis", "rendez-vous", "reponses", "prospection"}, sorted(T)   # instagram retiré du serveur le 14/11/2026 (archive)
+assert set(T) == {"appels-sid", "devis", "rendez-vous", "reponses", "prospection", "resume-sid", "stripe-alerte", "panne-alerte"}, sorted(T)   # instagram retiré du serveur le 14/11/2026 (archive) ; resume-sid/stripe-alerte/panne-alerte ajoutés (étape Argent, 15/11/2026)
 for nom, t in T.items():
     assert (ICI / t["script"]).is_file() and t["commandes"] and bool(t.get("toutes_minutes")) != bool(t.get("heure")), nom   # une cadence OU une heure
     for cmd in t["commandes"]: assert not set(cmd) & {"continu", "visuels", "ecouter", "demarrage", "google-autoriser", "installer-tache"}, (nom, cmd)   # ni boucle infinie, ni navigateur
@@ -128,7 +128,7 @@ if (ICI.parent / "sites" / "moteur").is_dir():
     for f in (ICI.parent / "sites" / "moteur").glob("*.py"): shutil.copy(f, copie / "sites" / "moteur" / f.name)
 ecrire(copie / "agents" / "b2b.local.json", {"machine_active": "UNE-AUTRE-MACHINE-QUI-N-EXISTE-PAS"})
 env = {**os.environ, "JARVIS_TEST": "1", "PYTHONIOENCODING": "utf-8", "PYTHONDONTWRITEBYTECODE": "1"}
-for agent, args in [(n, [] if n == "reponses" else ["jour"]) for n in T] + [("instagram", ["jour"])]:   # chaque agent du serveur + l'archive instagram (lancée à la main : refusée aussi)
+for agent, args in [(n, [] if n == "reponses" else ["resume"] if n == "resume-sid" else ["verifier"] if n in ("stripe-alerte", "panne-alerte") else ["jour"]) for n in T] + [("instagram", ["jour"])]:   # chaque agent du serveur (sa vraie commande) + l'archive instagram (lancée à la main : refusée aussi)
     p = subprocess.run([sys.executable, str(copie / "agents" / (agent + ".py"))] + args, capture_output=True, text=True, timeout=60, env=env, cwd=str(copie))
     assert p.returncode == 3, (agent, p.returncode, p.stdout[-300:], p.stderr[-300:])
     jr = copie / "agents" / f"{agent}-journal.log"

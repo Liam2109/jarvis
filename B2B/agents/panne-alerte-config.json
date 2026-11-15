@@ -1,0 +1,6 @@
+{
+  "envoi_automatique": false,
+  "intervalle_minutes": 5,
+  "grace_minutes": 15,
+  "_aide": "envoi_automatique : false (défaut versionné, SIMULATION) ; l'activation réelle se fait dans panne-alerte-config.local.json (propre à la machine, jamais versionné), pas ici. Lecture seule (outils\\agents-json.py + journaux des agents), aucune relance. intervalle_minutes : fréquence de la tâche planifiée (serveur-taches.json), 5 minutes par défaut. grace_minutes : délai après l'heure prévue d'un agent à heure fixe (ex. appels-sid 07:30) avant de considérer qu'il n'a pas tourné, 15 minutes par défaut. Voir agents\\panne-alerte.py."
+}

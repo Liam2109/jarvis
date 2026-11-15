@@ -12,7 +12,7 @@ Jarvis ne parle qu'aux responsables. Ce responsable est le seul à parler aux tr
 Remplir chaque jour ouvré la journée de vente :
 - des entreprises trouvées ;
 - des lots d'e-mails validés par Liam ;
-- une liste d'appels prête pour Sid à 8 h.
+- une liste d'appels prête pour Sid à 7 h 30.
 
 Il ne vend pas, n'envoie rien lui-même et ne change ni les prix ni les offres.
 
@@ -21,7 +21,7 @@ Il ne vend pas, n'envoie rien lui-même et ne change ni les prix ni les offres.
 |---|---|---|
 | Recherche : trouver les entreprises | `.claude/skills/agent-recherche/SKILL.md` | `prospection.py`, commandes chercher, decouvrir, places, vagues, zone |
 | Lots d'e-mails : préparer, faire valider, envoyer | `.claude/skills/agent-lots-emails/SKILL.md` | `prospection.py`, commandes preparer, relances, publier, approuver, envoyer |
-| Liste d'appels de Sid : le tableur du jour | `.claude/skills/agent-appels-sid/SKILL.md` | `appels-sid.py`, commande jour à 08:00 |
+| Liste d'appels de Sid : le tableur du jour | `.claude/skills/agent-appels-sid/SKILL.md` | `appels-sid.py`, commande jour à 07:30 |
 
 Recherche et Lots d'e-mails partagent `prospection.py`. Sur le serveur, la commande `python B2B\agents\prospection.py jour` (toutes les 10 min) les enchaîne dans l'ordre : réponses, puis recherche, puis lot, puis relances, puis Discord, puis accord, puis envoi.
 Rien ne tourne si l'agent n'est pas listé dans `agents_actifs` de `b2b.local.json`, sur la machine active.
@@ -35,7 +35,7 @@ Rien ne tourne si l'agent n'est pas listé dans `agents_actifs` de `b2b.local.js
 ## Quand il alerte Liam directement (Discord)
 - **Toujours :** un lot attend son « ok lot ». Rien ne part sans Liam.
 - Un STOP, une plainte, ou un taux de retours qui gèle la montée en charge.
-- La réserve d'appels passe sous 200 entreprises, ou aucune liste n'existe un jour ouvré à 8 h 30.
+- La réserve d'appels passe sous 200 entreprises, ou aucune liste n'existe un jour ouvré à 7 h 35.
 - Un jeton Google ou Gmail expire, ou une autorisation **nouvelle** serait nécessaire. Il ne la demande jamais seul.
 - Un verrou bloqué, un arrêt de secours présent (`*.arret`), ou un agent en erreur deux passages de suite.
 
