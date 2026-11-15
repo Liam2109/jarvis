@@ -50,3 +50,4 @@
 - 2026-11-15 (23 h 30) : règle 18 « fichiers de suivi courts » ajoutée, IDEES-MASTER réduit de 70 à 7 Ko et MEMOIRE-B2B de 12 à 3 Ko (sauvegardes hors git).
 - 2026-11-15 (23 h 45) : journal réduit à une phrase par fait (35,5 Ko avant), to-do complétée (étape Vente, closing, jeu de rôle, appels de Sid), README racine laissé tel quel.
 - 2026-11-15 (minuit) : agent nettoyage-fichiers créé (03:00 sur le serveur, traces et journal de plus de 30 jours, sans token), avec contrat, garde, test, fiche et skill.
+- 2026-11-16 (0 h 30) : fichiers de prospects de la racine ignorés par git ; import des anciens lots dans le registre prêt (324 entreprises à blanc), à lancer sur le serveur.

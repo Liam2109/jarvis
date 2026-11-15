@@ -125,3 +125,13 @@ B2B/docs/agents/*
 B2B/docs/agents/skills/*
 !B2B/docs/agents/skills/*.md
 B2B/docs/agents/.obsidian/
+
+# ---------- Anciens fichiers de prospects à la racine (15/11/2026) : données personnelles, jamais sur GitHub ----------
+lots/*
+!lots/README.md
+/prospects*.csv
+/suivi-prospects.csv
+/prospection-*.json
+/prospection-trouves.csv
+/reponses-traitees.json
+/messages-a-valider.md

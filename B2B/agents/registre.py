@@ -187,3 +187,59 @@ def liberer(reg, feuille, jour):
         else: x.update(statut="à reprendre", retour=jour, pour=x.get("a_qui", SID))
         n += 1
     return n
+
+
+# --- anciens lots (décision de Liam du 15/11/2026) ---------------------------------------------------------------------
+# Entreprises déjà données avant le registre : lots d'e-mails (B2B\lots\*.csv), fiches « préparé » de prospection-trouves.csv, prospects « envoyé »,
+# « STOP » ou « refusé » de suivi-prospects.csv. Importées comme données au lot e-mail, SANS résultat d'appel ; une entreprise déjà connue n'est pas recopiée.
+# Les annuaires bruts (prospects*.csv) ne sont PAS importés : personne n'a jamais reçu ces entreprises, elles restent la réserve des listes d'appels.
+DONNEES_TROUVES = ("préparé",)
+DONNEES_SUIVI = ("envoyé", "STOP", "refusé")
+
+
+def _csv(f):
+    import csv
+    try:
+        with open(f, encoding="utf-8-sig", newline="") as h: return list(csv.DictReader(h, delimiter=";"))
+    except OSError: return []
+
+
+def anciens(racine=RACINE):
+    """-> [(entreprise, jour, source)] des fichiers anciens présents dans `racine` (dossier B2B)."""
+    import zone as ZN
+    racine = Path(racine); out = []
+    def e(l): return {"nom": (l.get("nom") or "").strip(), "ville": l.get("ville", ""), "tel": l.get("telephone", ""), "metier": l.get("metier", ""), "dept": ZN.dept_de_cp(str(l.get("cp", ""))) or ""}
+    for f in sorted((racine / "lots").glob("*.csv")):
+        m = re.search(r"\d{4}-\d{2}-\d{2}", f.name)
+        for l in _csv(f): out.append((e(l), m.group(0) if m else (l.get("date_collecte") or "2026-10-26")[:10], f"lots/{f.name}"))
+    for l in _csv(racine / "prospection-trouves.csv"):
+        if l.get("statut") in DONNEES_TROUVES: out.append((e(l), (l.get("date_collecte") or "2026-10-27")[:10], "prospection-trouves.csv"))
+    for l in _csv(racine / "suivi-prospects.csv"):
+        if l.get("statut") in DONNEES_SUIVI: out.append((e(l), (l.get("date_envoi") or l.get("date_statut") or "2026-10-27")[:10], "suivi-prospects.csv"))
+    return [x for x in out if x[0]["nom"]]
+
+
+def importer_anciens(reg, lignes):
+    """Ajoute au registre les entreprises inconnues (ni même clé, ni même téléphone, ni même nom et commune). -> {source: ajoutées}."""
+    n = {}
+    for e, jour, source in lignes:
+        n.setdefault(source, 0)
+        if trouver(reg, e["nom"], e["ville"], e["tel"]): continue
+        k = donner(reg, e, LOT, jour, feuille=f"ancien|{source}"); reg["entreprises"][k]["statut"] = "donnée"; n[source] += 1
+    return n
+
+
+if __name__ == "__main__":
+    import argparse, sys
+    p = argparse.ArgumentParser(prog="registre", description="Registre commun des entreprises.")
+    sp = p.add_subparsers(dest="cmd", required=True)
+    sp.add_parser("importer-anciens").add_argument("--a-blanc", action="store_true")
+    a = p.parse_args()
+    sys.path.insert(0, str(Path(__file__).resolve().parent)); import machine as M
+    M.exiger("registre", a.cmd, a.a_blanc)
+    lignes = anciens()
+    with (contextlib.nullcontext() if a.a_blanc else verrou()):
+        reg = charger(); avant = len(reg["entreprises"]); n = importer_anciens(reg, lignes)
+        if not a.a_blanc: sauver(reg)
+    for s, x in n.items(): print(f"  {s} : {x} ajoutée(s)")
+    print(f"{sum(n.values())} entreprise(s) ajoutée(s) sur {len(lignes)} ligne(s) lue(s) ; registre : {avant} -> {len(reg['entreprises'])}" + (" (à blanc, rien écrit)" if a.a_blanc else ""))
