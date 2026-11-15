@@ -61,6 +61,41 @@ Regle : tout prompt Claude Code se termine par la machine : « gros PC » ou « 
 - [ ] Skill de design de site, puis equipe design / code / publication (apres la 1re vente)
 - [ ] Connecteur d'ecoute de reunions : nom a donner par Liam ; verifier gratuite et accord des participants
 - [ ] CEO Jarvis autonome (resume Discord le soir) apres la 1re vente
-- [ ] Stripe : nom public LM MULTI-SERVICES, SIRET en pied de facture, desactiver les anciens liens quand Liam dit « desactive »
+- [ ] Stripe : SIRET en pied de facture, desactiver les anciens liens quand Liam dit « desactive »
 - [ ] Serveur : netplwiz (ouverture de session automatique), secrets des agents s'il en manque
 - [ ] Appels uniquement du lundi au vendredi ; jamais de presentiel
+
+## Mise a jour du 14 nov. 2026 (apres-midi tardif)
+
+Avant lundi 16/11, 8 h (ordre de priorite)
+- [ ] Lancer sur le gros PC le prompt de correction de l'etape 1 (8 valeurs Resultat, regles de reprise, hors zone, melange des metiers, test reel du tableur Google, rangement des anciens liste-appels, .obsidian/graph.json)
+- [ ] Valider les regles de reprise des appels (Pas de reponse = 3 tentatives, etc.)
+- [ ] Decider les commissions : 10 % appelant + 10 % closer ? sur le premier paiement seulement ou aussi sur les 49 EUR/mois ?
+- [ ] Sid : lire l'accroche a voix haute et donner les phrases exactes qui ont fait dire non
+- [ ] Scripts d'appel : phrase des 49 EUR/mois avant le paiement, 1er mois offert, arret possible (site reste en ligne sans support) ; retirer l'ancien lien de reservation dans SCRIPT-APPEL-SID.md ; recreer TECHNIQUES-CLOSING.md et SCRIPT-CLOSING-LIAM.md (accord de Liam)
+- [ ] Entrainement : jeu de role du plombier mefiant (autre conversation)
+
+Ensuite
+- [ ] Etape Vente : agents Reponses, Rendez-vous, Devis, Relances J+3/J+7, chacun avec sa fiche de role (prompt apres la revue de l'etape 1)
+- [ ] Etape Argent : Alerte Stripe, Resume du soir, Alerte pannes
+- [ ] Tableau de bord (maquette validee, voir IDEES-MASTER du 14/11 apres-midi tardif) : verre blanc/bleu, barre gauche au survol, courbes de la semaine, taux de closing, creneaux, refus, commissions, pipeline, agents en ligne (heure de derniere execution a ajouter dans agents-json.py)
+- [ ] Fiche d'accueil client (photos, couleurs, logo, avis, specificites)
+- [ ] Stripe : desactiver les anciens liens (acompte, solde, 2 liens du matin) quand Liam dit « desactive »
+- [ ] Stripe : mention « TVA non applicable art. 293 B » + SIRET dans les reglages de facturation
+- [ ] Domaine : titulaire = client, renouvellement annuel dans Stripe (plus tard), corriger le texte du produit de maintenance, clarifier « Playwork »
+- [ ] Faire relire la formulation d'arret/resiliation et le droit de retractation (vente a distance)
+- [ ] Prevoir comment livrer un site complet multi-pages avant d'en vendre un
+- [ ] Skills du catalogue Claude : Liam colle les noms (Ventes, Contacts et prospects, E-mails et messages, Marketing, Sites web)
+- [ ] Hebergement : Vercel Pro deja pris (ok pour l'usage commercial)
+
+## Ajout du 14 nov. 2026 (soir)
+- [ ] Plugin Codex dans Claude Code (gros PC, apres la fin du run en cours) : /plugin marketplace add openai/codex-plugin-cc ; /plugin install codex@openai-codex ; /reload-plugins ; /codex:setup ; connexion ChatGPT par Liam. Usage : seconde relecture des scripts qui touchent a l argent (agent Argent, alerte Stripe, devis). Pas de gain de CA avant la 1re vente.
+- [ ] Stripe : reste le site web (encore ecom-quiz.vercel.app) et la description publique (ancien projet formation) a mettre sur LM MULTI-SERVICES. Nom public et libelle de releve : fait et verifie le 14/11.
+- [ ] Activer Google Sheets API (console Google Cloud, projet du client OAuth) : sans ca, tableur de Sid sans liste Resultat ni en-tete fige.
+- [ ] Serveur : git checkout -- .obsidian/graph.json une fois, puis zone --a-blanc puis zone (prompt lance le 14/11 17 h).
+- [ ] Etape Vente : commencer par reparer reponses.py (caracteres de controle).
+
+- [ ] Codex : plugin installe (v1.0.6) ; Liam dit avoir fait /reload-plugins et /codex:setup (non verifie). Usage : relire un script de l etape Argent. Ne pas donner de cle API.
+- [ ] Skill detaille pour CHAQUE agent et responsable, en commencant par Jarvis (CEO) : mission, ordres, regles, ce qui demande la validation de Liam.
+- [ ] Serveur : verifier la tache Jarvis-B2B-appels-sid (07:30), doublon Jarvis-AppelsSid, veille du PC, pourquoi pas de liste les 11 et 13/11. Plan de secours lundi 7 h 35 : Start-ScheduledTask Jarvis-B2B-appels-sid.
+- [ ] Harness : brancher la garde, un contrat et un test sur chaque nouvel agent Vente (reponses, devis, relances J+3 et J+7) avant de l activer (checklist B2B/docs/harness/README.md).

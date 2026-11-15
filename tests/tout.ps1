@@ -80,6 +80,7 @@ $liste = @(
     @{ n = 'agent resume-sid (résumé Discord du soir : appels Sid comptés sur la feuille Google en lecture seule, chiffre d''affaires Stripe du jour, désactivé par défaut, aucun chiffre inventé)'; f = 'resume-sid.ps1' }
     @{ n = 'agent stripe-alerte (alerte Discord sur nouveau paiement Stripe, lecture seule, désactivé par défaut, premier passage sans rafale sur l''historique, jamais deux fois le même paiement)'; f = 'stripe-alerte.ps1' }
     @{ n = 'agents B2B sur le serveur (liste blanche git sans secret, *.local.json, machine active, lanceur serveur 6 Go, tâches Jarvis-B2B idempotentes, intégration maj-auto, transfert)'; f = 'b2b-serveur.ps1' }
+    @{ n = 'harness B2B (cohérence de l''offre, contrats d''agents, garde des envois, traces, surveillant en simulation, tests d''agents, sorties de Jarvis CEO)'; f = 'harness.ps1' }
     @{ n = 'chemins (protection du dossier Jarvis sous un chemin avec espace et en nom court 8.3 « SERVEU~1 », forme longue)'; f = 'chemins.ps1' }
     @{ n = 'diagnostic Discord du portable (faux serveur local, code 403 expliqué, jeton jamais affiché, rien d''envoyé)'; f = 'diag-discord.ps1' }
     @{ n = 'profil serveur (revue de chaque série, séries sautées, memoire\ non contrôlé, tableau lisible, tests-dernier.txt)'; f = 'profil-serveur.ps1' }
@@ -146,6 +147,7 @@ $liste = @(
 #   resume-sid.ps1         garde   agent B2B, lecture seule (feuille Google + Stripe simulés)
 #   stripe-alerte.ps1      garde   agent B2B, lecture seule (Stripe simulé)
 #   b2b-serveur.ps1        garde   agents B2B sur le serveur (requis sur le serveur)
+#   harness.ps1            garde   harness B2B : aucun réseau, aucun envoi, traces temporaires (requis sur le serveur)
 #   profil-serveur.ps1     garde   texte de tout.ps1 seulement
 #   diag-discord.ps1       garde   faux serveur local 127.0.0.1 : le diagnostic des alertes Discord sert justement sur le serveur
 $exigeCommande = @{ }      # 'serie.ps1' = @('commande', ...) : séries qui exigent vraiment une commande installée (vide : aucune aujourd'hui)
