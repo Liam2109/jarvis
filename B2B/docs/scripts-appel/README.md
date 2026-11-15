@@ -36,7 +36,7 @@ Meilleur moment d'appel : du lundi au vendredi, 15 h - 17 h (entre deux services
 2. **La question** : « Vos clients, ils réservent plutôt comment aujourd'hui ? » *(Silence. Écouter.)*
 3. **Reformuler** : « Si je comprends bien, [ses mots]. Ce que je fais : une page au nom du Petit Comptoir, avec votre carte, vos photos, vos horaires, et un bouton pour vous appeler et réserver. Quelqu'un qui cherche un restaurant à Darnétal sur son téléphone voit tout ça et peut vous appeler en un geste. »
 4. **Conclure** : « Le plus simple : je vous envoie ce soir un exemple et un devis écrit. Vous regardez tranquillement. Si ça vous va, le lien de paiement est dans le devis, et je vous montre un aperçu avant toute mise en ligne. Je vous l'envoie à quelle adresse ? » Puis : « Je vous rappelle jeudi pour savoir ce que vous en pensez. »
-5. **Si « c'est combien ? »** : « Pour une page comme celle-là, c'est 595 euros, payés une fois. Si vous voulez plusieurs pages, le site complet, c'est 994 euros. Ensuite, si vous le souhaitez, 49 euros par mois pour l'hébergement, le nom de domaine, l'adresse e-mail et les petites modifications ; ce n'est pas obligatoire. » *(Se taire.)*
+5. **Si « c'est combien ? »** : « Pour une page comme celle-là, c'est 595 euros, payés une fois. Si vous voulez plusieurs pages, le site complet, c'est 994 euros. Ensuite, 49 euros par mois pour l'hébergement, la maintenance, le support et le nom de domaine, le premier mois est offert, et vous pouvez arrêter quand vous voulez. » *(Se taire.)*
 6. **Si non** : non net : « Pas de souci, merci de m'avoir répondu. Bonne journée ! » Non hésitant, une seule fois : « Je vous envoie quand même l'exemple par e-mail, sans rien attendre en retour ? »
 
 **Objections probables**
@@ -77,7 +77,7 @@ Meilleur moment d'appel : du mardi au vendredi, 9 h 30 - 10 h 30 (avant le premi
 2. **La question** : « Vos nouveaux clients, ils vous trouvent comment, aujourd'hui ? » *(Silence. Écouter.)*
 3. **Reformuler** : « Si je comprends bien, [ses mots]. Ce que je fais : une page au nom du salon, avec vos prestations, vos photos, vos horaires, et un bouton pour vous appeler. Quelqu'un qui cherche un coiffeur à Mont-Saint-Aignan sur son téléphone voit tout ça et peut vous appeler en un geste. »
 4. **Conclure** : « Le plus simple : je vous envoie ce soir un exemple et un devis écrit. Vous regardez tranquillement. Si ça vous va, le lien de paiement est dans le devis, et je vous montre un aperçu avant toute mise en ligne. Je vous l'envoie à quelle adresse ? » Puis : « Je vous rappelle vendredi matin pour savoir ce que vous en pensez. »
-5. **Si « c'est combien ? »** : « Pour une page comme celle-là, c'est 595 euros, payés une fois. Si vous voulez plusieurs pages, le site complet, c'est 994 euros. Ensuite, si vous le souhaitez, 49 euros par mois pour l'hébergement, le nom de domaine, l'adresse e-mail et les petites modifications ; ce n'est pas obligatoire. » *(Se taire.)*
+5. **Si « c'est combien ? »** : « Pour une page comme celle-là, c'est 595 euros, payés une fois. Si vous voulez plusieurs pages, le site complet, c'est 994 euros. Ensuite, 49 euros par mois pour l'hébergement, la maintenance, le support et le nom de domaine, le premier mois est offert, et vous pouvez arrêter quand vous voulez. » *(Se taire.)*
 6. **Si non** : non net : « Pas de souci, merci de m'avoir répondu. Bonne journée ! » Non hésitant, une seule fois : « Je vous envoie quand même l'exemple par e-mail, sans rien attendre en retour ? »
 
 **Objections probables**
@@ -118,7 +118,7 @@ Meilleur moment d'appel : du lundi au vendredi, 12 h 15 - 13 h 30 ou 17 h 30 - 1
 2. **La question** : « Vos dépannages, ils vous arrivent comment, aujourd'hui ? » *(Silence. Écouter.)*
 3. **Reformuler** : « Si je comprends bien, [ses mots]. Ce que je fais : une page au nom de Durand Plomberie, avec vos interventions, votre zone, vos photos de chantier, et un bouton pour vous appeler. Quelqu'un qui a une fuite à Sotteville et cherche un plombier sur son téléphone voit tout ça et peut vous appeler en un geste. »
 4. **Conclure** : « Le plus simple : je vous envoie ce soir un exemple et un devis écrit. Vous regardez tranquillement. Si ça vous va, le lien de paiement est dans le devis, et je vous montre un aperçu avant toute mise en ligne. Je vous l'envoie à quelle adresse ? » Puis : « Je vous rappelle jeudi vers 12 h 30 pour savoir ce que vous en pensez. »
-5. **Si « c'est combien ? »** : « Pour une page comme celle-là, c'est 595 euros, payés une fois. Si vous voulez plusieurs pages, le site complet, c'est 994 euros. Ensuite, si vous le souhaitez, 49 euros par mois pour l'hébergement, le nom de domaine, l'adresse e-mail et les petites modifications ; ce n'est pas obligatoire. » *(Se taire.)*
+5. **Si « c'est combien ? »** : « Pour une page comme celle-là, c'est 595 euros, payés une fois. Si vous voulez plusieurs pages, le site complet, c'est 994 euros. Ensuite, 49 euros par mois pour l'hébergement, la maintenance, le support et le nom de domaine, le premier mois est offert, et vous pouvez arrêter quand vous voulez. » *(Se taire.)*
 6. **Si non** : non net : « Pas de souci, merci de m'avoir répondu. Bonne journée ! » Non hésitant, une seule fois : « Je vous envoie quand même l'exemple par e-mail, sans rien attendre en retour ? »
 
 **Objections probables**
@@ -160,7 +160,7 @@ Meilleur moment d'appel : du mardi au jeudi, 10 h - 12 h (jamais le vendredi, ve
 2. **La question** : « Vos réservations pour les fêtes, elles vous arrivent comment, aujourd'hui ? » *(Silence. Écouter.)*
 3. **Reformuler** : « Si je comprends bien, [ses mots]. Ce que je fais : une page au nom des Grands Jeux de Bois, avec la liste de vos jeux en photos, votre zone de livraison, et un bouton pour vous appeler. Quelqu'un qui prépare un mariage près d'Elbeuf voit tout ça sur son téléphone, même sans compte Facebook, et peut vous appeler en un geste. »
 4. **Conclure** : « Le plus simple : je vous envoie ce soir un exemple et un devis écrit. Vous regardez tranquillement. Si ça vous va, le lien de paiement est dans le devis, et je vous montre un aperçu avant toute mise en ligne. Je vous l'envoie à quelle adresse ? » Puis : « Je vous rappelle mercredi pour savoir ce que vous en pensez. »
-5. **Si « c'est combien ? »** : « Pour une page comme celle-là, c'est 595 euros, payés une fois. Si vous voulez plusieurs pages, le site complet, c'est 994 euros. Ensuite, si vous le souhaitez, 49 euros par mois pour l'hébergement, le nom de domaine, l'adresse e-mail et les petites modifications ; ce n'est pas obligatoire. » *(Se taire.)*
+5. **Si « c'est combien ? »** : « Pour une page comme celle-là, c'est 595 euros, payés une fois. Si vous voulez plusieurs pages, le site complet, c'est 994 euros. Ensuite, 49 euros par mois pour l'hébergement, la maintenance, le support et le nom de domaine, le premier mois est offert, et vous pouvez arrêter quand vous voulez. » *(Se taire.)*
 6. **Si non** : non net : « Pas de souci, merci de m'avoir répondu. Bonne journée ! » Non hésitant, une seule fois : « Je vous envoie quand même l'exemple par e-mail, sans rien attendre en retour ? »
 
 **Objections probables**

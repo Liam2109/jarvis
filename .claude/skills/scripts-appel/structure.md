@@ -51,7 +51,7 @@ La même que Sid (celle de la fiche métier). Écouter. Noter ses mots.
 Puis : « Je vous rappelle [jour précis] pour savoir ce que vous en pensez. » Noter le jour.
 
 ### 5. Si « c'est combien ? » (seul endroit où le prix est dit)
-« Pour une page comme celle-là, c'est 595 euros, payés une fois. Si vous voulez plusieurs pages, le site complet, c'est 994 euros. Ensuite, si vous le souhaitez, 49 euros par mois pour l'hébergement, le nom de domaine, l'adresse e-mail et les petites modifications ; ce n'est pas obligatoire. »
+« Pour une page comme celle-là, c'est 595 euros, payés une fois. Si vous voulez plusieurs pages, le site complet, c'est 994 euros. Ensuite, 49 euros par mois pour l'hébergement, la maintenance, le support et le nom de domaine, le premier mois est offert, et vous pouvez arrêter quand vous voulez. »
 Puis se taire. Ne jamais baisser le prix pendant l'appel.
 
 ### 6. Si non : sortie polie
