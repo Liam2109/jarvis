@@ -322,3 +322,8 @@ Contexte : Liam utilise un petit PC portable (celui de Mathéo, avec carte Wi-Fi
 - Surveillant : 19:45 chaque jour et 07:50 le lundi ; une ligne par agent en defaut (n a pas tourne, erreur), silence sinon, "harness OK, N agents" le lundi.
 - Jarvis CEO ne sort que des decisions structurees (jarvis-sortie.schema.json) : chiffres trouves dans les sources, aucune promesse client, engage_liam a true des qu une action engage.
 - Claude Code a son propre harness : CLAUDE.md (regles 13 a 17), hooks .claude/hooks (ajout global a git, reset dur, clean, push force, lecture de .env et *.local.json, ecriture dans memoire/), hook git pre-commit (secrets et coherence). Pas de preuve = pas de "fait" : tests/b2b-rapide.ps1 (moins de 60 s).
+
+### 2026-11-15 (18 h) - Fiches Obsidian par agent
+- Une fiche par agent (B2B/docs/agents/<agent>.md) generee depuis son contrat, son skill et ses traces par python B2B/harness/generer-fiches.py : mission, etapes, entrees et sorties, interdits, harness (garde, tests, derniere trace, alerte si silence), skill, historique sans donnees client.
+- Organigramme en graphe (00-ORGANIGRAMME.md, liens [[...]] et bloc Mermaid) : Liam, Jarvis (CEO), 4 responsables, agents. Zone "Notes de Liam" conservee a chaque regeneration.
+- Un skill par agent dans .claude/skills/agent-<nom> (copie dans B2B/docs/agents/skills) ; tests/b2b-rapide.ps1 verifie que chaque contrat a sa fiche a jour et chaque agent actif son skill.

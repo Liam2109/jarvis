@@ -8,9 +8,7 @@ _Mise à jour : 15 nov. 2026, 19 h 20 (le fait est supprimé ; l'historique est 
 - [ ] Sid : lire l'accroche à voix haute, noter les phrases exactes qui ont fait dire non ; bilan Sid du 13 nov. à lui envoyer
 
 ## Avant le premier devis envoyé (ça coûte une vente)
-- [x] (fait le 15/11 ; site vitrine corrigé en source seulement, pas déployé ; il reste 6 mentions sans lien ni prix) Corriger les anciens liens …06 et …07 : devis.py:37-38, KIT-RDV-15MIN.md:54-56, site vitrine luxe2 boutons (index.html:296 et :307) ; liens valides …0a et …0b ; liste complète : B2B\harness\coherence-connus.json (36)
-- [x] (fait le 15/11, le skill concerné était scripts-appel) Corriger « maintenance facultative » (devis.py:144, skill agent-appels) et 590 € / 990–1 490 € (MEMOIRE-B2B.md)
-- [ ] Déployer le site vitrine quand Liam dit « déploie », puis désactiver les anciens liens Stripe quand Liam dit « désactive » (dans cet ordre)
+- [ ] Déployer le site vitrine (corrigé en source, hors git, pas encore en ligne) quand Liam dit « déploie », puis désactiver les anciens liens Stripe quand Liam dit « désactive » (dans cet ordre)
 - [ ] Droit de rétractation (vente à distance), formulation d'arrêt, transfert du domaine (code chez le bureau d'enregistrement) : à faire relire
 - [ ] Prévoir comment livrer un site complet multi-pages avant d'en vendre un
 - [ ] Décider les commissions (≈10 % appelant, 10 % closer ?) et si c'est sur le premier paiement seulement ou aussi sur les 49 €/mois
@@ -26,7 +24,7 @@ _Mise à jour : 15 nov. 2026, 19 h 20 (le fait est supprimé ; l'historique est 
 - [ ] Facebook Normandie et Leboncoin : poster l'offre « page exemple à ton nom »
 
 ## Agents (ensuite, une étape à la fois)
-- [x] (fait le 15/11) Faux rouge du test « memoire\ inchangé » : ignorer arret.json, modejeu.flag, session-en-cours.jsonl (écrits par Jarvis)
+- [ ] Les tests laissent des dossiers dans %TEMP% : les faire se nettoyer eux-mêmes ; 6 mentions « Répondu / Refus » gardées exprès (anciennes feuilles de Sid)
 - [ ] Étape Vente, en commençant par réparer reponses.py (caractères de contrôle) : Réponses (lire contact.lmsites et liamdigital2109), Rendez-vous, Devis, Relances J+3 / J+7 et lead chaud ; chacun avec contrat, garde, test et fiche avant activation
 - [ ] Faire passer la publication et le déploiement des pages exemples par la garde (non branchés)
 - [ ] CEO Jarvis autonome, pont Discord de Jarvis (connecte: false) : après la 1re vente
@@ -40,3 +38,4 @@ _Mise à jour : 15 nov. 2026, 19 h 20 (le fait est supprimé ; l'historique est 
 - [ ] Parrainage (1 mois de maintenance offert) ; paiement en 3x sans frais (Alma/Floa)
 - [ ] Connecteur d'écoute de réunions : nom à donner par Liam, vérifier gratuité et accord des participants
 - [ ] Skills du catalogue Claude : Liam colle les noms
+- [ ] Ouvrir B2B\docsgents comme coffre Obsidian

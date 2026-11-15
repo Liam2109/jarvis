@@ -15,3 +15,5 @@ Contrats, garde, traces et tests de chaque agent, sans token ni réseau. Inventa
 4. **Test** : `tests\agents\test_<agent>.py` avec fixtures dans `tests\fixtures`, sans réseau, listé dans le contrat.
 5. **Tâche** : entrée dans `B2B\agents\serveur-taches.json`, puis l'agent ajouté à `agents_actifs` du serveur par Liam.
 6. **Skill** : `.claude\skills\agent-<agent>\SKILL.md` (rôle, limites, « pas de preuve = pas de fait »), relié à Jarvis (CEO).
+
+Nouvel agent = contrat + skill + `python B2B\harness\generer-fiches.py` (fiches Obsidian dans `B2B\docsgents`, vérifiées par `tests2b-rapide.ps1`).

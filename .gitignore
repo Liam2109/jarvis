@@ -117,3 +117,11 @@ B2B/logs/
 B2B/a-valider/
 B2B/STOP
 *.local.json
+# Coffre Obsidian des agents (15/11/2026) : fiches et copies de skills suivies, réglages Obsidian ignorés
+!B2B/docs/agents/
+B2B/docs/agents/*
+!B2B/docs/agents/*.md
+!B2B/docs/agents/skills/
+B2B/docs/agents/skills/*
+!B2B/docs/agents/skills/*.md
+B2B/docs/agents/.obsidian/

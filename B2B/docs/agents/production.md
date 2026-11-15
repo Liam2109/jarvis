@@ -1,0 +1,69 @@
+---
+agent: production
+statut: prévu
+responsable: Production
+horaire: "à compléter par Liam"
+machine: à compléter par Liam
+tags: [agent-b2b]
+---
+<!-- GENERE:DEBUT (régénéré par python B2B\harness\generer-fiches.py : ne pas modifier) -->
+# production
+
+**Statut :** prévu · **Responsable :** [[responsable-production|Responsable Production]] · **Machine :** à compléter par Liam
+**Horaire :** à compléter par Liam
+**Script :** à compléter par Liam (aucun script) · **Contrat :** `B2B/harness/contrats/production.json`
+
+## Mission
+Produire le site du client après paiement, le faire valider par Liam avant toute mise en ligne.
+
+## Ce qu'il fait étape par étape
+à compléter par Liam (agent non construit).
+
+## Entrées et sorties
+**Lit :**
+- devis signé
+- paiement Stripe (lecture)
+
+**Écrit :**
+- B2B/a-valider/AAAA-MM-JJ-production.md
+
+**Discord :** pages · **Plafond :** 10 messages par jour · **Envoi au client :** non
+
+## Ce qu'il n'a pas le droit de faire
+- envoyer au client sans accord de Liam
+- encaisser ou rembourser
+- publier
+- signer ou promettre un résultat
+- afficher un secret (jeton, clé, adresse iCal)
+- mettre en ligne sans accord
+- Engager Liam (envoyer au client, encaisser, publier, signer) : `peut_engager: false`, tout passe par `B2B/a-valider/`.
+
+## Harness
+- **Contrat :** valide (`python B2B\harness\valider.py`)
+- **Garde branchée :** à brancher avant activation
+- Bloque : kill-switch `B2B\STOP`, lien Stripe non autorisé, phrase interdite (OFFRE-REFERENCE.json), secret dans le texte.
+- Avertit : machine non active, envoi_automatique = false (simulation), hors horaires du contrat (08:00-19:00), plafond de 10 messages par jour.
+- **Tests :** aucun : à compléter par Liam
+- **Alerte si silence :** aucune
+
+<!-- DYNAMIQUE:DEBUT -->
+**Derniers résultats de test (cette machine) :**
+- aucun test
+
+**Dernière trace :** aucune
+
+### Historique (5 dernières traces, sans données client)
+- aucune trace sur cette machine
+<!-- DYNAMIQUE:FIN -->
+
+## Skill
+- [[skills/agent-production|agent-production]]
+
+## Liens
+- Responsable : [[responsable-production|Responsable Production]]
+- Direction : [[jarvis-ceo|Jarvis (CEO)]] · [[00-ORGANIGRAMME|Organigramme]]
+<!-- GENERE:FIN -->
+
+## Notes de Liam
+
+_Zone libre, conservée telle quelle à chaque régénération._
