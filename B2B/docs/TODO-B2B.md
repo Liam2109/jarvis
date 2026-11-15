@@ -1,6 +1,6 @@
 # To-do B2B — LM MULTI-SERVICES
 
-_Mise à jour : 15 nov. 2026, 23 h (le fait est supprimé ; l'historique est dans le journal et dans git)_
+_Mise à jour : 15 nov. 2026, 23 h 30 (le fait est supprimé ; l'historique est dans le journal et dans git)_
 
 ## Lundi 16 nov. (appels d'abord)
 - [ ] 07 h 20 : session ouverte sur le serveur ; 07 h 35 : la feuille de Sid existe, sinon `Start-ScheduledTask Jarvis-B2B-appels-sid`
@@ -15,6 +15,8 @@ _Mise à jour : 15 nov. 2026, 23 h (le fait est supprimé ; l'historique est dan
 - [ ] Test de cohérence : étendre aux notes docs\decisions et docs\agents (la note « Offre 595 + 49 » avait encore 990–1 490 € et « lien à créer », hors du périmètre du test) ; vérifier aussi les 3 autres notes de décision
 
 ## Liam
+- [ ] Valider la liste des idées supprimées d'IDEES-MASTER.md (sauvegarde dans B2B\donnees\sauvegardes\) et trancher la section « À trancher »
+- [ ] Décider : raccourcir JOURNAL-B2B.md (35 Ko, entrées de plusieurs lignes) à une phrase par fait
 - [ ] Lundi 16 : prendre les ~15 dernières lignes de la feuille de Sid (ta propre liste « Appels Liam » commence mardi 17)
 - [ ] Serveur : accepter la mise à jour puis ajouter appels-liam aux agents actifs (et envoi_automatique à true dans la config locale d'appels-liam pour la feuille Google)
 - [ ] Envoyer SCRIPT-APPEL-SID.md à Sid (seulement celui-là ; closing et techniques restent à toi)
