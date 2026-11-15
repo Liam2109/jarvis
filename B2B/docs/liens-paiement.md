@@ -1,4 +1,4 @@
-# Liens de paiement Stripe (compte « Trouve ton produit », mode réel)
+# Liens de paiement Stripe (compte LM MULTI-SERVICES, mode réel)
 Créés le 27 oct. 2026. Un lien ne prélève rien tant qu'un client ne l'utilise pas. Ne pas envoyer sans devis écrit validé.
 
 | Offre | Montant | Lien |
@@ -19,9 +19,12 @@ Mentions : « TVA non applicable, art. 293 B du CGI » sur les factures. Stripe 
 À faire dans le tableau de bord Stripe : nom public de l'entreprise (affiché au client) à passer de « Trouve ton produit » à « LM MULTI-SERVICES ».
 **14 nov. 2026 : paiement en une fois (décision de Liam).** Le devis donne directement le lien du prix complet : page web → « Pack landing page » 595 €, site complet → « Site complet » 994 €. Les liens acompte/solde et maintenance 29 €/mois ci-dessus ne sont plus envoyés. Manquent (à créer par Liam dans Stripe) : maintenance 49 €/mois, lien unique « 595 € + 49 €/mois », liens de site à d'autres montants que 994 €.
 
-**14 nov. 2026 (nuit) - LIENS A UTILISER, abonnement inclus (créés par Claude via Stripe, mode réel) :**
+**15 nov. 2026 - LIENS A UTILISER (vérifiés actifs dans Stripe : premier mois de maintenance offert, puis 49 €/mois, arrêt libre) :**
 | Offre | Montant | Lien |
 |---|---|---|
-| Pack page web : 595 € à la commande, puis 49 €/mois (maintenance, hébergement, domaine) | 595 € + 49 €/mois | https://buy.stripe.com/7sYaEY4Mt8EZ9DF5FS5EY08 |
-| Site complet : 994 € à la commande, puis 49 €/mois | 994 € + 49 €/mois | https://buy.stripe.com/cNi7sMen308tdTV4BO5EY09 |
-Les deux collectent adresse de facturation et téléphone, et affichent un message de confirmation. Les anciens liens 595 € (…06) et 994 € (…07), sans abonnement, n'encaissent PAS le 49 €/mois : à désactiver (ou ne plus envoyer). Reste à faire par Liam dans Stripe : nom public LM MULTI-SERVICES, et SIRET en pied de facture dans Paramètres > Factures (les liens en abonnement n'acceptent pas de pied de facture propre).
+| Pack page web : 595 € à la commande, 1er mois offert, puis 49 €/mois (hébergement, maintenance, support, nom de domaine) | 595 € + 49 €/mois | https://buy.stripe.com/3cIbJ2diZ3kF9DF9W85EY0a |
+| Site complet : 994 € à la commande, 1er mois offert, puis 49 €/mois | 994 € + 49 €/mois | https://buy.stripe.com/bJeaEY7YF4oJ035d8k5EY0b |
+
+**NE PLUS ENVOYER** (sans premier mois offert, ou sans le 49 €/mois) : …08 et …09 (abonnement sans mois offert), …06 et …07 (prix seul, sans abonnement), et tous les liens acompte, solde et maintenance 29 €/mois de la table ci-dessus.
+**Attention : le bouton « Commander le site complet » du site vitrine luxe2 utilise encore le lien …07 (994 € sans le 49 €/mois).** À remplacer par le lien « Site complet » ci-dessus avant de désactiver l'ancien.
+Reste à faire par Liam dans Stripe : SIRET en pied de facture (Paramètres > Factures), site web et description publique du compte (encore l'ancien projet). Nom public et libellé de relevé : faits le 14 nov. 2026.

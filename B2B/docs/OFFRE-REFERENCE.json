@@ -1,0 +1,15 @@
+{
+  "_aide": "Référence unique de l'offre (15/11/2026). Lue par tests\\coherence-offre.py et B2B\\harness\\garde.py. Toute autre valeur dans les docs, skills ou agents est une contradiction.",
+  "offres": {
+    "pack": {"nom": "Pack landing page", "prix_unique_eur": 595, "lien_stripe": "https://buy.stripe.com/3cIbJ2diZ3kF9DF9W85EY0a"},
+    "site_complet": {"nom": "Site complet", "prix_unique_eur": 994, "lien_stripe": "https://buy.stripe.com/bJeaEY7YF4oJ035d8k5EY0b"}
+  },
+  "abonnement": {"prix_mensuel_eur": 49, "inclus": ["hébergement", "maintenance", "support", "nom de domaine"], "premier_mois_offert": true, "arret_possible_a_tout_moment": true},
+  "liens_stripe_autorises": ["https://buy.stripe.com/3cIbJ2diZ3kF9DF9W85EY0a", "https://buy.stripe.com/bJeaEY7YF4oJ035d8k5EY0b"],
+  "fichiers_liens_libres": ["liens-paiement.md", "OFFRE-REFERENCE.json"],
+  "resultats_appel": ["Pas de réponse", "À rappeler", "RDV pris", "Non catégorique", "Je dois réfléchir", "Trop cher", "Déjà un site", "Pas le temps"],
+  "resultats_anciens": ["Répondu", "Refus"],
+  "phrases_interdites": ["sans abonnement obligatoire", "maintenance facultative", "facultative", "29 €/mois", "590 €", "10 h à 12 h"],
+  "appels_sid": {"liste_creee_a": "07:30", "creneau_debut": "08:00", "creneau_fin": "19:00"},
+  "envoi_client": {"jours": [0, 1, 2, 3, 4], "debut": "08:00", "fin": "19:00"}
+}
