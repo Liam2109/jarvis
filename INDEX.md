@@ -38,4 +38,5 @@ Lire ce fichier, puis **seulement** la note du sujet en cours (jamais tous les d
 - Masqués : README, CLAUDE, listes d'appels, lots, mémoire, journaux, dashboard, node_modules, sites, notes orphelines.
 - Les noms apparaissent en zoomant ; molette pour zoomer, clic sur un point pour ouvrir la note.
 - Nouvel agent : créer `docs\agents\<Nom>.md` (avec `agent: <nom>` en tête) et l'ajouter aux liens de Jarvis (CEO).
+- Fiches détaillées (un seul graphe depuis le 15/11) : générées dans chaque note d'agent par `python B2B\harness\generer-fiches.py` ; nouvel agent = contrat + entrée dans `B2B\harness\fiches-noms.json` + lien dans Jarvis (CEO).
 - Réglages du graphe : `.obsidian\graph.json` (suivi par git, sans secret).

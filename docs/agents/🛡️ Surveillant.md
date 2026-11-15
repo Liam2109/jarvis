@@ -1,16 +1,21 @@
 ---
 agent: surveillant
+aliases: [🛡️ Surveillant]
+name: surveillant
+role: "Lire contrats et traces et signaler sur Discord chaque agent en défaut ; une ligne « harness OK » le lundi."
+machine: "serveur"
+planification: "chaque jour à 19:45 + lundi 07:50, plage tous les jours 07:00-20:30"
+sorties: "B2B/logs/agents/surveillant"
+responsable: Jarvis (CEO)
 statut: actif
 mode: simulation
-responsable: Jarvis (CEO)
 horaire: "chaque jour à 19:45 + lundi 07:50, plage tous les jours 07:00-20:30"
-machine: serveur
 tags: [agent-b2b]
 ---
 <!-- GENERE:DEBUT (régénéré par python B2B\harness\generer-fiches.py : ne pas modifier) -->
-# surveillant
+# 🛡️ Surveillant
 
-**Statut :** actif (simulation : envoi_automatique = false) · **Responsable :** [[jarvis-ceo|Jarvis (CEO)]] · **Machine :** serveur
+**Agent :** `surveillant` · **Statut :** actif (simulation : envoi_automatique = false) · **Responsable :** Jarvis (CEO) · **Machine :** serveur
 **Horaire :** chaque jour à 19:45 + lundi 07:50, plage tous les jours 07:00-20:30
 **Script :** `B2B/harness/surveillant.py` · **Contrat :** `B2B/harness/contrats/surveillant.json`
 
@@ -63,12 +68,14 @@ Lire contrats et traces et signaler sur Discord chaque agent en défaut ; une li
 <!-- DYNAMIQUE:FIN -->
 
 ## Skill
-- [[skills/agent-surveillant|agent-surveillant]]
-
-## Liens
-- Responsable : [[jarvis-ceo|Jarvis (CEO)]]
-- Direction : [[jarvis-ceo|Jarvis (CEO)]] · [[00-ORGANIGRAMME|Organigramme]]
+- `.claude/skills/agent-surveillant/SKILL.md` (copie : `docs/agents/skills/agent-surveillant.md`)
 <!-- GENERE:FIN -->
+
+## Liens et décisions
+
+_Zone conservée à chaque régénération : liens vers docs\decisions et docs clés seulement._
+
+Liens : aucun pour l'instant.
 
 ## Notes de Liam
 

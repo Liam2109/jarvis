@@ -16,4 +16,4 @@ Contrats, garde, traces et tests de chaque agent, sans token ni réseau. Inventa
 5. **Tâche** : entrée dans `B2B\agents\serveur-taches.json`, puis l'agent ajouté à `agents_actifs` du serveur par Liam.
 6. **Skill** : `.claude\skills\agent-<agent>\SKILL.md` (rôle, limites, « pas de preuve = pas de fait »), relié à Jarvis (CEO).
 
-Nouvel agent = contrat + skill + `python B2B\harness\generer-fiches.py` (fiches Obsidian dans `B2B\docsgents`, vérifiées par `tests2b-rapide.ps1`).
+Nouvel agent = contrat + skill + une entrée dans `B2B\harness\fiches-noms.json` (agent -> nom de la note) + un lien dans `docs\agents\🧠 Jarvis (CEO).md`, puis `python B2B\harness\generer-fiches.py`. La fiche détaillée est écrite dans le bloc GENERE de la note `docs\agents\<nom de la note>.md` (un seul graphe Obsidian, aucun lien vers un autre agent ; zones « Liens et décisions » et « Notes de Liam » conservées) ; les skills sont copiés dans `docs\agents\skills\`. Vérifié par `tests\b2b-rapide.ps1` : `generer-fiches.py --verifier` et `B2B\harness\graphe.py` (aucun lien cassé, liens vers les décisions identiques à git, une seule composante).

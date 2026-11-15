@@ -1,16 +1,21 @@
 ---
 agent: panne-alerte
+aliases: [🚨 Alerte pannes]
+name: panne-alerte
+role: "Alerter Liam sur Discord quand un agent planifié à heure fixe n'a pas tourné après son délai de grâce, une seule fois par jour."
+machine: "serveur"
+planification: "toutes les 5 min, plage tous les jours 00:00-24:00"
+sorties: "B2B/agents/panne-alerte-etat.json, B2B/agents/panne-alerte-journal.log"
+responsable: Jarvis (CEO)
 statut: actif
 mode: simulation
-responsable: Jarvis (CEO)
 horaire: "toutes les 5 min, plage tous les jours 00:00-24:00"
-machine: serveur
 tags: [agent-b2b]
 ---
 <!-- GENERE:DEBUT (régénéré par python B2B\harness\generer-fiches.py : ne pas modifier) -->
-# panne-alerte
+# 🚨 Alerte pannes
 
-**Statut :** actif (simulation : envoi_automatique = false) · **Responsable :** [[jarvis-ceo|Jarvis (CEO)]] · **Machine :** serveur
+**Agent :** `panne-alerte` · **Statut :** actif (simulation : envoi_automatique = false) · **Responsable :** Jarvis (CEO) · **Machine :** serveur
 **Horaire :** toutes les 5 min, plage tous les jours 00:00-24:00
 **Script :** `B2B/agents/panne-alerte.py` · **Contrat :** `B2B/harness/contrats/panne-alerte.json`
 
@@ -66,12 +71,14 @@ Alerter Liam sur Discord quand un agent planifié à heure fixe n'a pas tourné 
 <!-- DYNAMIQUE:FIN -->
 
 ## Skill
-- [[skills/agent-panne-alerte|agent-panne-alerte]]
-
-## Liens
-- Responsable : [[jarvis-ceo|Jarvis (CEO)]]
-- Direction : [[jarvis-ceo|Jarvis (CEO)]] · [[00-ORGANIGRAMME|Organigramme]]
+- `.claude/skills/agent-panne-alerte/SKILL.md` (copie : `docs/agents/skills/agent-panne-alerte.md`)
 <!-- GENERE:FIN -->
+
+## Liens et décisions
+
+_Zone conservée à chaque régénération : liens vers docs\decisions et docs clés seulement._
+
+Liens : aucun pour l'instant.
 
 ## Notes de Liam
 

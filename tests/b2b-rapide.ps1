@@ -10,8 +10,10 @@ foreach ($f in 'test_machine.py', 'test_stripe_alerte.py', 'test_resume_sid.py',
     $t = [Diagnostics.Stopwatch]::StartNew(); $o = & $py.Source (Join-Path $Root "B2B\agents\$f") 2>&1 | Out-String; $c = $LASTEXITCODE
     if ($c -eq 0) { Write-Host ("  OK    {0} ({1:N1} s)" -f $f, $t.Elapsed.TotalSeconds) } else { Write-Host ("  ECHEC {0} : {1}" -f $f, (($o -split "`n" | Select-Object -Last 2) -join ' ')) -ForegroundColor Red; $rouge++ }
 }
-Write-Host '6) Fiches Obsidian des agents : chaque contrat a sa fiche à jour, chaque agent actif a un skill'
+Write-Host '6) Fiches Obsidian des agents : chaque contrat a sa note dans docs\agents (fiches-noms.json) et son bloc GENERE à jour, chaque agent actif a un skill'
 & $py.Source (Join-Path $Root 'B2B\harness\generer-fiches.py') --verifier; if ($LASTEXITCODE -ne 0) { $rouge++ }
+Write-Host '7) Graphe Obsidian : aucun lien cassé, liens vers les décisions identiques à git, une seule composante'
+& $py.Source (Join-Path $Root 'B2B\harness\graphe.py'); if ($LASTEXITCODE -ne 0) { $rouge++ }
 Write-Host ("Durée : {0:N0} s" -f $sw.Elapsed.TotalSeconds)
 if ($rouge) { Write-Host "ROUGE : $rouge série(s) en échec." -ForegroundColor Red; exit 1 }
 Write-Host 'VERT : passe rapide B2B réussie.' -ForegroundColor Green; exit 0

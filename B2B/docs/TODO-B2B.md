@@ -8,7 +8,6 @@ _Mise à jour : 15 nov. 2026, 19 h 20 (le fait est supprimé ; l'historique est 
 - [ ] Sid : lire l'accroche à voix haute, noter les phrases exactes qui ont fait dire non ; bilan Sid du 13 nov. à lui envoyer
 
 ## Avant le premier devis envoyé (ça coûte une vente)
-- [ ] Désactiver les anciens liens Stripe (…06 à …09 encore actifs, plus les autres anciens) quand Liam dit « désactive » ; le site vitrine en ligne est déjà sur …0a et …0b (déployé le 15/11)
 - [ ] Droit de rétractation (vente à distance), formulation d'arrêt, transfert du domaine (code chez le bureau d'enregistrement) : à faire relire
 - [ ] Prévoir comment livrer un site complet multi-pages avant d'en vendre un
 - [ ] Décider les commissions (≈10 % appelant, 10 % closer ?) et si c'est sur le premier paiement seulement ou aussi sur les 49 €/mois

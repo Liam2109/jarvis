@@ -1,15 +1,20 @@
 ---
 agent: vente-relances
-statut: prévu
+aliases: [🔁 Relances]
+name: vente-relances
+role: "Relancer à J+3 et J+7 les prospects qui ont reçu un devis, brouillons écrits dans B2B/a-valider pour Liam."
+machine: "à compléter par Liam"
+planification: "à compléter par Liam"
+sorties: "B2B/a-valider/AAAA-MM-JJ-vente-relances.md"
 responsable: Vente
+statut: prévu
 horaire: "à compléter par Liam"
-machine: à compléter par Liam
 tags: [agent-b2b]
 ---
 <!-- GENERE:DEBUT (régénéré par python B2B\harness\generer-fiches.py : ne pas modifier) -->
-# vente-relances
+# 🔁 Relances
 
-**Statut :** prévu · **Responsable :** [[responsable-vente|Responsable Vente]] · **Machine :** à compléter par Liam
+**Agent :** `vente-relances` · **Statut :** prévu · **Responsable :** Vente (pôle) · **Machine :** à compléter par Liam
 **Horaire :** à compléter par Liam
 **Script :** à compléter par Liam (aucun script) · **Contrat :** `B2B/harness/contrats/vente-relances.json`
 
@@ -58,12 +63,14 @@ Relancer à J+3 et J+7 les prospects qui ont reçu un devis, brouillons écrits 
 <!-- DYNAMIQUE:FIN -->
 
 ## Skill
-- [[skills/agent-vente-relances|agent-vente-relances]]
-
-## Liens
-- Responsable : [[responsable-vente|Responsable Vente]]
-- Direction : [[jarvis-ceo|Jarvis (CEO)]] · [[00-ORGANIGRAMME|Organigramme]]
+- `.claude/skills/agent-vente-relances/SKILL.md` (copie : `docs/agents/skills/agent-vente-relances.md`)
 <!-- GENERE:FIN -->
+
+## Liens et décisions
+
+_Zone conservée à chaque régénération : liens vers docs\decisions et docs clés seulement._
+
+Liens : aucun pour l'instant.
 
 ## Notes de Liam
 

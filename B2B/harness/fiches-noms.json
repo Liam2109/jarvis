@@ -1,0 +1,17 @@
+{
+ "_lisez-moi": "Agent (nom du contrat) -> nom de sa note dans docs\\agents (sans .md). null = pas de note (agent retiré). Nouvel agent : contrat + une entrée ici + un lien dans « 🧠 Jarvis (CEO) ».",
+ "page-exemple": "🌐 Page exemple",
+ "reponses": "💬 Réponses",
+ "stripe-alerte": "💶 Alerte Stripe",
+ "rendez-vous": "📅 Rendez-vous",
+ "resume-sid": "📝 Résumé Sid",
+ "appels-sid": "📞 Appels Sid",
+ "prospection": "🔎 Prospection",
+ "jarvis-ceo": "🧠 Jarvis (CEO)",
+ "devis": "🧾 Devis",
+ "panne-alerte": "🚨 Alerte pannes",
+ "surveillant": "🛡️ Surveillant",
+ "vente-relances": "🔁 Relances",
+ "production": "🏭 Production",
+ "instagram": null
+}

@@ -1,15 +1,20 @@
 ---
 agent: production
-statut: prévu
+aliases: [🏭 Production]
+name: production
+role: "Produire le site du client après paiement, le faire valider par Liam avant toute mise en ligne."
+machine: "à compléter par Liam"
+planification: "à compléter par Liam"
+sorties: "B2B/a-valider/AAAA-MM-JJ-production.md"
 responsable: Production
+statut: prévu
 horaire: "à compléter par Liam"
-machine: à compléter par Liam
 tags: [agent-b2b]
 ---
 <!-- GENERE:DEBUT (régénéré par python B2B\harness\generer-fiches.py : ne pas modifier) -->
-# production
+# 🏭 Production
 
-**Statut :** prévu · **Responsable :** [[responsable-production|Responsable Production]] · **Machine :** à compléter par Liam
+**Agent :** `production` · **Statut :** prévu · **Responsable :** Production (pôle) · **Machine :** à compléter par Liam
 **Horaire :** à compléter par Liam
 **Script :** à compléter par Liam (aucun script) · **Contrat :** `B2B/harness/contrats/production.json`
 
@@ -57,12 +62,14 @@ Produire le site du client après paiement, le faire valider par Liam avant tout
 <!-- DYNAMIQUE:FIN -->
 
 ## Skill
-- [[skills/agent-production|agent-production]]
-
-## Liens
-- Responsable : [[responsable-production|Responsable Production]]
-- Direction : [[jarvis-ceo|Jarvis (CEO)]] · [[00-ORGANIGRAMME|Organigramme]]
+- `.claude/skills/agent-production/SKILL.md` (copie : `docs/agents/skills/agent-production.md`)
 <!-- GENERE:FIN -->
+
+## Liens et décisions
+
+_Zone conservée à chaque régénération : liens vers docs\decisions et docs clés seulement._
+
+Liens : aucun pour l'instant.
 
 ## Notes de Liam
 

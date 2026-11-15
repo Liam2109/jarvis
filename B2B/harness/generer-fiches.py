@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
-"""Fiches Obsidian des agents (15/11/2026) : une fiche par contrat dans B2B\\docs\\agents\\<agent>.md, l'organigramme, une note par responsable
-et une copie de chaque skill (source : .claude\\skills\\<skill>\\SKILL.md -> B2B\\docs\\agents\\skills\\<skill>.md). Lecture seule du code, sans réseau ni IA.
-Seule la partie entre <!-- GENERE:DEBUT --> et <!-- GENERE:FIN --> (et le frontmatter) est réécrite ; la zone « Notes de Liam » qui suit est conservée telle quelle.
+"""Fiches Obsidian des agents (15/11/2026, un seul graphe depuis 20 h) : la fiche détaillée de chaque contrat est écrite DANS sa note
+docs\\agents\\<nom de la note>.md (correspondance : B2B\\harness\\fiches-noms.json ; null = pas de note). La note « 🧠 Jarvis (CEO) » reçoit
+en plus les responsables et l'organigramme (Mermaid). Copie de chaque skill (.claude\\skills\\<skill>\\SKILL.md -> docs\\agents\\skills\\<skill>.md).
+Lecture seule du code, sans réseau ni IA. Règle du graphe : la partie générée ne contient AUCUN lien [[...]] (chemins en texte simple).
+Dans le frontmatter, seules les clés statut, mode, horaire, tags sont réécrites (les autres restent) ; seule la partie entre
+<!-- GENERE:DEBUT --> et <!-- GENERE:FIN --> est réécrite ; les zones « Liens et décisions » et « Notes de Liam » qui suivent sont conservées.
 Le bloc DYNAMIQUE (derniers tests, dernières traces) change d'une machine à l'autre : il n'entre pas dans la vérification.
   python B2B\\harness\\generer-fiches.py              régénère les fiches
   python B2B\\harness\\generer-fiches.py --tests      lance d'abord les tests des contrats (JARVIS_TEST=1) et note leur résultat (B2B\\logs\\agents\\_tests-fiches.json, hors git)
@@ -17,11 +20,17 @@ import rapport as R   # noqa: E402
 from valider import valider   # noqa: E402
 
 CONTRATS, SKILLS = ICI / "contrats", RACINE / ".claude" / "skills"
-SORTIE = RACINE / "B2B" / "docs" / "agents"; COPIES = SORTIE / "skills"
+SORTIE = RACINE / "docs" / "agents"; COPIES = SORTIE / "skills"; NOMS_JSON = ICI / "fiches-noms.json"
 TACHES = RACINE / "B2B" / "agents" / "serveur-taches.json"
 DEBUT, FIN = "<!-- GENERE:DEBUT (régénéré par python B2B\\harness\\generer-fiches.py : ne pas modifier) -->", "<!-- GENERE:FIN -->"
 DYN_D, DYN_F = "<!-- DYNAMIQUE:DEBUT -->", "<!-- DYNAMIQUE:FIN -->"
 NOTES = "## Notes de Liam\n\n_Zone libre, conservée telle quelle à chaque régénération._\n"
+LIENS = "## Liens et décisions\n\n_Zone conservée à chaque régénération : liens vers docs\\decisions et docs clés seulement._\n"
+GENERES = ("statut", "mode", "horaire", "tags")   # clés du frontmatter réécrites ; les autres sont gardées
+MISSIONS_RESP = {"Prospection": "Remplir chaque jour ouvré la journée de vente : entreprises trouvées, lots d'e-mails validés par Liam, liste d'appels prête pour Sid à 7 h 30.",
+                 "Vente": "Transformer réponses et rendez-vous en devis montrés à Liam, puis relancer, sans jamais rien envoyer au client sans son accord.",
+                 "Argent": "Suivre les paiements Stripe en lecture seule et prévenir Liam de chaque encaissement.",
+                 "Production": "Produire les pages et sites des clients, validés par Liam avant toute mise en ligne."}
 AC = "à compléter par Liam"
 STATUT = {"actif": "actif", "simulation": "actif", "inactif": "arrêté", "prevu": "prévu"}
 SKILLS_AGENT = {"prospection": ["agent-recherche", "agent-lots-emails"], "jarvis-ceo": ["jarvis-ceo"]}   # sinon agent-<nom>
@@ -30,9 +39,12 @@ JOURS = ["lun", "mar", "mer", "jeu", "ven", "sam", "dim"]
 RESULTATS_TESTS = T.dossier_logs() / "_tests-fiches.json"
 
 
-def lien_resp(r): return "[[jarvis-ceo|Jarvis (CEO)]]" if r == "Jarvis (CEO)" else ("Liam" if r == "Liam" else f"[[responsable-{r.lower()}|Responsable {r}]]")
+def texte_resp(r): return r if r in ("Jarvis (CEO)", "Liam") else f"{r} (pôle)"
 def skills_de(nom): return SKILLS_AGENT.get(nom, [f"agent-{nom}"])
 def contrats(): return [json.loads(p.read_text(encoding="utf-8")) for p in sorted(CONTRATS.glob("*.json"))]
+def noms(): return {k: v for k, v in json.loads(NOMS_JSON.read_text(encoding="utf-8")).items() if not k.startswith("_")}
+def sans_liens(t): return re.sub(r"\[\[(?:[^\]|]*\|)?([^\]]*)\]\]", r"\1", t)   # [[cible|texte]] -> texte
+def q(v): return '"' + str(v).replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
 def taches():
@@ -67,7 +79,7 @@ def etapes(c):
         p = SKILLS / s / "SKILL.md"
         if not p.is_file(): continue
         t = section(p.read_text(encoding="utf-8"), r"Ordres pas à pas|Ce qu'il fait|Rythme")
-        if t: out.append((f"**Selon [[skills/{s}|{s}]] :**\n" if len(skills_de(c["nom"])) > 1 else "") + t)
+        if t: out.append((f"**Selon le skill `{s}` :**\n" if len(skills_de(c["nom"])) > 1 else "") + t)
     return "\n\n".join(out) or AC + " (aucun skill ne décrit les étapes)."
 
 
@@ -118,15 +130,48 @@ def dynamique(c):
             f"\n\n**Dernière trace :** {R.derniere_trace(c['nom'])}\n\n### Historique (5 dernières traces, sans données client)\n" + ("\n".join(f"- {x}" for x in h) or "- aucune trace sur cette machine") + f"\n{DYN_F}")
 
 
-def fiche(c, schema, t):
-    nom, st = c["nom"], STATUT[c["statut"]]
-    fm = ["---", f"agent: {nom}", f"statut: {st}"] + ([f"mode: {'simulation' if c['statut'] == 'simulation' else 'réel'}"] if st == "actif" else []) + \
-         [f"responsable: {c['responsable']}", f"horaire: \"{horaire(c, t)}\"", f"machine: {machine(c, t)}", "tags: [agent-b2b]", "---"]
-    tests = [f"`{x}`" + ("" if (RACINE / x).is_file() else " (FICHIER ABSENT)") for x in c["tests"]]
-    sk = [f"[[skills/{s}|{s}]]" + ("" if (SKILLS / s / "SKILL.md").is_file() else f" (skill absent : {AC})") for s in skills_de(nom)]
-    corps = f"""# {nom}
+def entete(c, t, titre, ancien_fm):
+    """Frontmatter : celui de la note (ordre et valeurs gardés) + statut, mode, horaire, tags recalculés ; pour une note neuve, un frontmatter complet."""
+    if ancien_fm is None:
+        ancien_fm = [f"agent: {c['nom']}", f"aliases: [{titre}]", f"name: {c['nom']}", f"role: {q(c['mission'])}", f"machine: {q(machine(c, t))}",
+                     f"planification: {q(horaire(c, t))}", f"sorties: {q(', '.join(c['fichiers_ecrits']) or AC)}"]
+    l = [x for x in ancien_fm if x.split(":", 1)[0].strip() not in GENERES]
+    if not any(x.split(":", 1)[0].strip() == "responsable" for x in l): l.append(f"responsable: {c['responsable']}")
+    st = STATUT[c["statut"]]
+    l += [f"statut: {st}"] + ([f"mode: {'simulation' if c['statut'] == 'simulation' else 'réel'}"] if st == "actif" else []) + [f"horaire: {q(horaire(c, t))}", "tags: [agent-b2b]"]
+    return "---\n" + "\n".join(l) + "\n---\n"
 
-**Statut :** {st}{' (simulation : envoi_automatique = false)' if c['statut'] == 'simulation' else ''} · **Responsable :** {lien_resp(c['responsable'])} · **Machine :** {machine(c, t)}
+
+def libelle(c, n): return f"{n.get(c['nom']) or c['nom']} ({STATUT[c['statut']]})"
+
+
+def responsables(cs, n):
+    l = ["## Responsables", "", "Liam décide ; Jarvis (CEO) pilote ; chaque responsable pilote ses agents et rend compte à Jarvis.", "",
+         "- **Rattachés directement à Jarvis (CEO) :** " + (", ".join(libelle(c, n) for c in cs if c["responsable"] == "Jarvis (CEO)") or "aucun") + "."]
+    for r in RESPONSABLES:
+        ag = [libelle(c, n) for c in cs if c["responsable"] == r]
+        l.append(f"- **{r} :** {MISSIONS_RESP[r]} Agents : {', '.join(ag) or 'aucun sous contrat'}.")
+    return "\n".join(l)
+
+
+def organigramme(cs, n):
+    ceo = [c for c in cs if c["responsable"] == "Jarvis (CEO)"]
+    m = ["## Organigramme", "", "Généré depuis les contrats (`B2B/harness/contrats`).", "", "```mermaid", "flowchart TD", '  liam["Liam"] --> ceo["Jarvis (CEO)"]']
+    for c in ceo: m.append(f'  ceo --> {c["nom"].replace("-", "_")}["{libelle(c, n)}"]')
+    for r in RESPONSABLES:
+        m.append(f'  ceo --> r_{r.lower()}["Responsable {r}"]')
+        m += [f'  r_{r.lower()} --> {c["nom"].replace("-", "_")}["{libelle(c, n)}"]' for c in cs if c["responsable"] == r]
+    return "\n".join(m + ["```"])
+
+
+def fiche(c, schema, t, titre, cs, n):
+    """Bloc GENERE (sans frontmatter), sans aucun lien [[...]]."""
+    nom, st = c["nom"], STATUT[c["statut"]]
+    tests = [f"`{x}`" + ("" if (RACINE / x).is_file() else " (FICHIER ABSENT)") for x in c["tests"]]
+    sk = [f"`.claude/skills/{s}/SKILL.md` (copie : `docs/agents/skills/{s}.md`)" if (SKILLS / s / "SKILL.md").is_file() else f"`{s}` (skill absent : {AC})" for s in skills_de(nom)]
+    corps = f"""# {titre}
+
+**Agent :** `{nom}` · **Statut :** {st}{' (simulation : envoi_automatique = false)' if c['statut'] == 'simulation' else ''} · **Responsable :** {texte_resp(c['responsable'])} · **Machine :** {machine(c, t)}
 **Horaire :** {horaire(c, t)}
 **Script :** {f"`{c['script']}`" if c.get('script') else AC + ' (aucun script)'} · **Contrat :** `B2B/harness/contrats/{nom}.json`
 
@@ -160,78 +205,52 @@ def fiche(c, schema, t):
 
 ## Skill
 {puces(sk)}
-
-## Liens
-- Responsable : {lien_resp(c['responsable'])}
-- Direction : [[jarvis-ceo|Jarvis (CEO)]] · [[00-ORGANIGRAMME|Organigramme]]
 """
-    return "\n".join(fm) + "\n" + DEBUT + "\n" + corps + FIN + "\n"
+    if nom == "jarvis-ceo": corps += "\n" + responsables(cs, n) + "\n\n" + organigramme(cs, n) + "\n"
+    return DEBUT + "\n" + sans_liens(corps) + FIN + "\n"
 
 
-def responsable(r, cs):
-    s = SKILLS / f"responsable-{r.lower()}" / "SKILL.md"
-    ag = [c for c in cs if c["responsable"] == r]
-    return f"""---
-responsable: {r}
-tags: [responsable-b2b]
----
-{DEBUT}
-# Responsable {r}
-
-**Rend compte à :** [[jarvis-ceo|Jarvis (CEO)]] · [[00-ORGANIGRAMME|Organigramme]]
-**Skill :** {f'[[skills/responsable-{r.lower()}|responsable-{r.lower()}]]' if s.is_file() else 'aucun : ' + AC}
-
-## Ses agents
-{puces([f"[[{c['nom']}]] ({STATUT[c['statut']]}) : {c['mission']}" for c in ag], 'aucun agent sous contrat : ' + AC)}
-{FIN}
-"""
+def decouper(texte):
+    """-> (lignes du frontmatter ou None, texte qui suit le frontmatter)."""
+    m = re.match(r"---\n(.*?)\n---\n?", texte or "", re.S)
+    return (m.group(1).splitlines(), texte[m.end():]) if m else (None, texte or "")
 
 
-def organigramme(cs):
-    ceo = [c for c in cs if c["responsable"] == "Jarvis (CEO)"]
-    lignes = ["# Organigramme B2B", "", "Généré depuis les contrats (`B2B/harness/contrats`). Liam décide ; Jarvis (CEO) pilote ; chaque responsable pilote ses agents.", "",
-              "- Liam", "  - [[jarvis-ceo|Jarvis (CEO)]]"]
-    for c in ceo: lignes.append(f"    - [[{c['nom']}]] ({STATUT[c['statut']]}, rattaché directement à Jarvis)")
-    for r in RESPONSABLES:
-        lignes.append(f"    - [[responsable-{r.lower()}|Responsable {r}]]")
-        lignes += [f"      - [[{c['nom']}]] ({STATUT[c['statut']]})" for c in cs if c["responsable"] == r]
-    m = ["```mermaid", "flowchart TD", '  liam["Liam"] --> ceo["Jarvis (CEO)"]']
-    for c in ceo: m.append(f'  ceo --> {c["nom"].replace("-", "_")}["{c["nom"]} ({STATUT[c["statut"]]})"]')
-    for r in RESPONSABLES:
-        m.append(f'  ceo --> r_{r.lower()}["Responsable {r}"]')
-        m += [f'  r_{r.lower()} --> {c["nom"].replace("-", "_")}["{c["nom"]} ({STATUT[c["statut"]]})"]' for c in cs if c["responsable"] == r]
-    m.append("```")
-    return "---\ntags: [organigramme]\n---\n" + DEBUT + "\n" + "\n".join(lignes + [""] + m) + "\n" + FIN + "\n"
+def zone_conservee(reste):
+    """Ce qui suit GENERE:FIN (Liens et décisions, Notes de Liam) ; à la première exécution, le corps de l'ancienne note courte (sans son titre)."""
+    if FIN in reste: return reste.split(FIN, 1)[1].lstrip("\n")
+    corps = "\n".join(l for l in reste.strip("\n").splitlines() if not l.startswith("# ")).strip()
+    return LIENS + "\n" + (corps or "Liens : aucun pour l'instant.") + "\n\n" + NOTES
 
 
-def avec_notes(neuf, ancien):
-    """Garde tout ce qui suit GENERE:FIN dans l'ancienne fiche (notes de Liam) ; sinon la zone vide par défaut."""
-    reste = ancien.split(FIN, 1)[1].lstrip("\n") if ancien and FIN in ancien else NOTES
-    return neuf + "\n" + reste
+def note(c, schema, t, titre, ancien, cs, n):
+    fm, reste = decouper(ancien)
+    return entete(c, t, titre, fm) + fiche(c, schema, t, titre, cs, n) + "\n" + zone_conservee(reste)
 
 
 def sans_dynamique(t): return re.sub(re.escape(DYN_D) + r".*?" + re.escape(DYN_F), "", t, flags=re.S)
 
 
-def attendus(cs):
-    """{chemin: contenu généré (sans notes)} pour toutes les fiches, responsables, organigramme ; {chemin: texte} pour les copies de skills."""
-    schema = json.loads((ICI / "contrat.schema.json").read_text(encoding="utf-8")); ts = taches()
-    gen = {SORTIE / f"{c['nom']}.md": fiche(c, schema, ts.get(c["nom"])) for c in cs}
-    gen.update({SORTIE / f"responsable-{r.lower()}.md": responsable(r, cs) for r in RESPONSABLES})
-    gen[SORTIE / "00-ORGANIGRAMME.md"] = organigramme(cs)
-    copies = {COPIES / f"{p.parent.name}.md": p.read_text(encoding="utf-8") for p in sorted(SKILLS.glob("*/SKILL.md"))}
-    return gen, copies
+def cibles(cs):
+    """-> (correspondance, [(contrat, chemin de la note)]) pour les agents qui ont une note."""
+    n = noms(); return n, [(c, SORTIE / f"{n[c['nom']]}.md") for c in cs if n.get(c["nom"])]
+
+
+def copies_skills(): return {COPIES / f"{p.parent.name}.md": sans_liens(p.read_text(encoding="utf-8")) for p in sorted(SKILLS.glob("*/SKILL.md"))}
 
 
 def lire(p): return p.read_text(encoding="utf-8") if p.is_file() else None
 
 
 def verifier(cs):
-    gen, copies = attendus(cs); pb = []
-    for p, t in gen.items():
+    schema = json.loads((ICI / "contrat.schema.json").read_text(encoding="utf-8")); ts = taches(); pb = []
+    n, cb = cibles(cs); copies = copies_skills()
+    pb += [f"contrat sans entrée dans B2B/harness/fiches-noms.json : {c['nom']}" for c in cs if c["nom"] not in n]
+    for c, p in cb:
         a = lire(p)
-        if a is None: pb.append(f"fiche absente : {p.relative_to(RACINE)}"); continue
-        if FIN not in a or sans_dynamique(a.split(FIN, 1)[0]) != sans_dynamique(t.split(FIN, 1)[0]): pb.append(f"fiche pas à jour : {p.relative_to(RACINE)}")
+        if a is None: pb.append(f"note absente : {p.relative_to(RACINE)}"); continue
+        t = note(c, schema, ts.get(c["nom"]), p.stem, a, cs, n)
+        if FIN not in a or sans_dynamique(a.split(FIN, 1)[0]) != sans_dynamique(t.split(FIN, 1)[0]): pb.append(f"bloc GENERE pas à jour : {p.relative_to(RACINE)}")
     for p, t in copies.items():
         if lire(p) != t: pb.append(f"copie de skill absente ou pas à jour : {p.relative_to(RACINE)}")
     for c in cs:
@@ -251,15 +270,15 @@ def main(argv=None):
     if a.verifier:
         pb = verifier(cs)
         for x in pb: print("  ECHEC " + x)
-        print(f"  OK    {len(cs)} fiches à jour, skills des agents actifs présents" if not pb else f"{len(pb)} problème(s) : python B2B\\harness\\generer-fiches.py")
+        print(f"  OK    {len(cibles(cs)[1])} notes d'agents à jour dans docs/agents, skills des agents actifs présents" if not pb else f"{len(pb)} problème(s) : python B2B\\harness\\generer-fiches.py")
         return 1 if pb else 0
     if a.tests: lancer_tests(cs)
-    gen, copies = attendus(cs)
-    for p, t in gen.items(): ecrire(p, avec_notes(t, lire(p)))
+    schema = json.loads((ICI / "contrat.schema.json").read_text(encoding="utf-8")); ts = taches(); n, cb = cibles(cs); copies = copies_skills()
+    for c, p in cb: ecrire(p, note(c, schema, ts.get(c["nom"]), p.stem, lire(p), cs, n))   # relue juste avant d'être écrite (Obsidian peut être ouvert)
     for p in (COPIES.glob("*.md") if COPIES.is_dir() else []):
         if p not in copies: p.unlink()   # dossier entièrement généré : une copie sans source est retirée
     for p, t in copies.items(): ecrire(p, t)
-    print(f"{len(cs)} fiches d'agents, {len(RESPONSABLES)} responsables, organigramme et {len(copies)} copies de skills écrits dans {SORTIE.relative_to(RACINE)}")
+    print(f"{len(cb)} notes d'agents (bloc GENERE) et {len(copies)} copies de skills écrites dans {SORTIE.relative_to(RACINE)}")
     return 0
 
 

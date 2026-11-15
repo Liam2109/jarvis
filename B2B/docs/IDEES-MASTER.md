@@ -327,3 +327,4 @@ Contexte : Liam utilise un petit PC portable (celui de Mathéo, avec carte Wi-Fi
 - Une fiche par agent (B2B/docs/agents/<agent>.md) generee depuis son contrat, son skill et ses traces par python B2B/harness/generer-fiches.py : mission, etapes, entrees et sorties, interdits, harness (garde, tests, derniere trace, alerte si silence), skill, historique sans donnees client.
 - Organigramme en graphe (00-ORGANIGRAMME.md, liens [[...]] et bloc Mermaid) : Liam, Jarvis (CEO), 4 responsables, agents. Zone "Notes de Liam" conservee a chaque regeneration.
 - Un skill par agent dans .claude/skills/agent-<nom> (copie dans B2B/docs/agents/skills) ; tests/b2b-rapide.ps1 verifie que chaque contrat a sa fiche a jour et chaque agent actif son skill.
+- 2026-11-15 (20 h) - Un seul graphe Obsidian : le hub INDEX, les fiches détaillées générées dans les notes agents
