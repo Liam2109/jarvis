@@ -1,12 +1,14 @@
 # To-do B2B — LM MULTI-SERVICES
 
-_Mise à jour : 16 nov. 2026, 8 h (le fait est supprimé ; l'historique est dans le journal et dans git)_
+_Mise à jour : 16 nov. 2026, 13 h (le fait est supprimé ; l'historique est dans le journal et dans git)_
 
 ## Lundi 16 nov. (appels d'abord)
 - [x] 07 h 35 : la feuille de Sid n'existait pas (simulation depuis le 13/11 au soir) ; corrigé, feuille « Appels 2026-11-16 » créée (100 lignes), alerte surveillant 08:15 ajoutée pour la prochaine fois
+- [x] Cause du 13/11 cherchée : aucun test ni agent fautif trouvé (probablement une étape manuelle de TRANSFERT-SERVEUR.md interrompue) ; garde ajoutée dans tests\tout.ps1 pour la détecter à l'avenir
 - [ ] 19 h 30 : le résumé Discord compte bien les 8 valeurs de Résultat
 - [ ] Sid : lire l'accroche à voix haute, noter les phrases exactes qui ont fait dire non ; bilan Sid du 13 nov. à lui envoyer
 - [ ] Vérifier dans quelques jours que les lignes reprises depuis le 13/11 obtiennent enfin un vrai Résultat (la liste ne doit plus être 100 % reprises)
+- [ ] Plombier-chauffagiste, électricien, maçon, couvreur, coiffeur : réserve quasi à 0 même après un passage élargi (3 trouvés sur plus de 100 appels SIRENE) ; à surveiller, pas de solution miracle (données publiques rares pour ces métiers)
 
 ## Avant le premier devis envoyé (ça coûte une vente)
 - [ ] Droit de rétractation (vente à distance), formulation d'arrêt, transfert du domaine (code chez le bureau d'enregistrement) : à faire relire
