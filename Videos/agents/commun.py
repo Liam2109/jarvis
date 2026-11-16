@@ -23,9 +23,9 @@ OLLAMA_URL = "http://127.0.0.1:11434"
 SKILL = VIDEOS / "SKILL-VIDEOS.md"
 HOOKS_BASE, HOOKS = VIDEOS / "hooks-base.md", VIDEOS / "hooks.md"
 JOURNAL_CSV = VIDEOS / "journal-videos.csv"
-CSV_COLONNES = ["date", "agent", "video", "ligne", "compte", "statut", "hook", "detail"]
+CSV_COLONNES = ["date", "agent", "video", "ligne", "compte", "statut", "hook", "detail", "tts"]   # tts : moteur de voix réellement utilisé (edge-tts ou kokoro)
 SECTIONS_SKILL = ("## Règles pour Qwen", "## Grille des accroches", "## Publication", "## Deux lignes éditoriales", "## Sous-titres", "## Nettoyage")
-LIGNE_DEFAUT = {"nom": "", "compte": "", "ton": "", "tutoiement": False, "go_publier": False, "profil_navigateur": "", "hashtags": "", "taux_commission": "",
+LIGNE_DEFAUT = {"nom": "", "compte": "", "ton": "", "tutoiement": False, "go_publier": False, "profil_navigateur": "", "hashtags": "", "taux_commission": "", "voix": {},
                 "message": "", "brouillon_hook": "", "lieux_interdits": []}
 DEFAUT = {"outil": "stickfigure-pipeline-v2", "voix": "fr-FR-RemyMultilingualNeural", "modele": "qwen2.5:3b", "passages": ["06:00", "14:00", "22:00"],
           "series_par_passage": {"06:00": "A", "14:00": "B", "22:00": "A"}, "mots_min": 52, "mots_max": 88, "duree_min_s": 20, "duree_max_s": 35,
@@ -78,7 +78,7 @@ def hooks_texte():
     return ""
 
 
-def csv_ligne(agent, video="", ligne="", compte="", statut="", hook="", detail="", a_blanc=False, quand=None):
+def csv_ligne(agent, video="", ligne="", compte="", statut="", hook="", detail="", a_blanc=False, quand=None, tts=""):
     """Une ligne dans Videos\\journal-videos.csv (séparateur « ; », en-tête écrit à la création). Jamais de secret ni de donnée personnelle."""
     if a_blanc: return
     import csv
@@ -86,7 +86,7 @@ def csv_ligne(agent, video="", ligne="", compte="", statut="", hook="", detail="
     with JOURNAL_CSV.open("a", encoding="utf-8-sig" if neuf else "utf-8", newline="") as f:
         w = csv.writer(f, delimiter=";")
         if neuf: w.writerow(CSV_COLONNES)
-        w.writerow([f"{quand or datetime.now():%Y-%m-%d %H:%M}", agent, video, ligne, compte, statut, " ".join(str(hook).split())[:200], " ".join(str(detail).split())[:300]])
+        w.writerow([f"{quand or datetime.now():%Y-%m-%d %H:%M}", agent, video, ligne, compte, statut, " ".join(str(hook).split())[:200], " ".join(str(detail).split())[:300], tts])
 
 
 VIDES = set("le la les l un une des de du d à au aux et ou mais donc or ni car que qu qui quoi ce c cet cette ces se s sa son ses ta ton tes ma mon mes vos votre "

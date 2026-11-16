@@ -4,7 +4,7 @@
   A) stickman divertissement / explications pour artisans et commerçants -> fin : planning de 15 min de Liam (lien LU dans B2B\\docs\\SCRIPT-APPEL-SID.md) ;
   B) recrutement de call callers pour vendre des sites web (aucun lieu, aucun revenu) -> fin : « à la commission » (taux seulement s'il est dans la config), lien en bio.
 Règles relues avant chaque exécution : Videos\\SKILL-VIDEOS.md (section « Règles pour Qwen » injectée dans les consignes).
-Garde-fous vérifiés par le code (le script est refusé et réécrit sinon, 4 essais) : aucun chiffre ni nombre écrit par Qwen (les seuls chiffres, 15 minutes et le taux de commission de la config, sont
+Garde-fous vérifiés par le code (le script est refusé et réécrit sinon, 6 essais) : aucun chiffre ni nombre écrit par Qwen (les seuls chiffres, 15 minutes et le taux de commission de la config, sont
 ajoutés par le code), aucune promesse de gain ou de résultat, aucun témoignage inventé, une seule idée, accroche courte, jamais le même sujet deux fois
 (Videos\\scripts\\sujets.json), longueur pour 20 à 35 secondes, aucune phrase molle. Rien n'est publié ici.
   python Videos\\agents\\scripts.py jour [--a-blanc] [--jour AAAA-MM-JJ]
@@ -32,7 +32,7 @@ SERIES = {
                      "le bouche-à-oreille qui continue en ligne", "les questions qu'on vous pose sans arrêt, réglées par une page"]},
     "B": {"theme": "Liam cherche des call callers pour vendre des sites web : on appelle depuis chez soi, on décroche des rendez-vous, commission sur chaque vente, pas de salaire fixe, liste et script fournis",
           "public": "personnes qui savent parler au téléphone et cherchent une activité depuis chez elles (tutoiement, ton direct et franc)",
-          "fin": "Pas de salaire fixe, je te le dis cash : tu touches {commission} sur chaque vente. Liste et script fournis. Postule via le lien en bio. Alors, tu sais parler au téléphone ?",
+          "fin": "Pas de salaire fixe, je te le dis cash : c'est {commission}, sur chaque vente. Liste et script fournis. Postule via le lien en bio. Alors, tu sais parler au téléphone ?",
           "hashtags": "#recrutement #teletravail #prospection #commission",
           "angles": ["ce que fait un apporteur d'affaires au téléphone", "obtenir un rendez-vous, pas vendre", "travailler depuis chez soi avec un téléphone",
                      "décrocher un rendez-vous plutôt que forcer une vente", "commission sans fixe : être honnête sur le risque", "appeler aux heures où les artisans répondent",
@@ -58,8 +58,24 @@ SYSTEME_B = ("Tu écris des scripts de vidéos TikTok de 20 à 35 secondes, en f
 SYSTEME_FIN = ("Règles absolues (fichier de règles de l'équipe) :\n{regles}\n"
                "Pas d'appel à l'action ni de lien : la fin de la vidéo est ajoutée ensuite. Reste exactement sur l'angle du jour. Réponds uniquement avec un objet JSON valide.")
 DIDASCALIES = re.compile(r"cam[ée]ra|gros plan|\bplan\b|\bsc[èe]ne\b|on voit|à l'image|la vidéo (commence|montre)|narrateur|voix off", re.I)
-MOLLES = re.compile(r"dans cette vidéo|aujourd'hui,? (on|nous|je) (va|allons|vais)|il est important de|n'h[ée]sitez pas|n'h[ée]site pas|tout simplement|d[ée]couvrez|"
+MOLLES = re.compile(r"dans cette vidéo|voici comment|apprenez comment|aujourd'hui,? (on|nous|je) (va|allons|vais)|il est important de|n'h[ée]sitez pas|n'h[ée]site pas|tout simplement|d[ée]couvrez|"
                     r"\bbonjour\b|\bsalut à tous\b|sans plus attendre|comme vous le savez", re.I)
+ADRESSE = re.compile(r"https?|www|\.(com|fr|net|org|io)\b|\bpoint (com|fr|net)\b|arobase|@|\bslash\b|tiret bas|bit\.ly|linktr", re.I)   # jamais une adresse épelée : « lien en bio » / « description » suffit
+# Bon public : A parle À l'artisan ou au commerçant (vouvoiement), jamais à son client ; B parle au futur call caller (tutoiement), jamais en vouvoyant.
+METIERS = r"(artisan|commer[çc]ant|plombier|[ée]lectricien|boulanger|garagiste|coiffeu(r|se)|menuisier|ma[çc]on|peintre|fleuriste|professionnel|prestataire)s?"
+PUBLIC_FAUX = {"A": re.compile(rf"\b(votre|vos|ton|ta|tes)\s+{METIERS}\b|\b(tu|toi|ton|ta|tes)\b|\bt'|\bte\b"
+                              # point de vue du client qui cherche un artisan (« trouver les numéros d'artisans ») : la ligne A parle À l'artisan de SA page
+                              rf"|\b(trouver|trouvez|obtenir|obtenez|chercher|cherchez|contacter|contactez|joindre|joignez|appeler|appelez|choisir|choisissez|comparer|comparez)\b[^.?!]{{0,60}}?(\bd'|\b(des|un|une|les|le|la|du)\s+){METIERS}\b", re.I),
+               "B": re.compile(r"\b(vous|votre|vos)\b", re.I)}
+
+
+def public_faux(texte, serie):
+    """Mot qui montre que le texte ne parle pas au bon public de la ligne (None si correct). Les paroles citées entre « » ou "" ne comptent pas."""
+    sans_citation = re.sub(r"«[^»]*»|\"[^\"]*\"", " ", texte or "")
+    m = PUBLIC_FAUX.get(serie, PUBLIC_FAUX["A"]).search(sans_citation)
+    return m.group(0) if m else None
+
+
 ROLES = ["l'accroche parlée : huit mots au plus, une question, une contradiction ou une erreur courante qui intrigue dès la première seconde",
          "le problème concret, vu du côté du public", "pourquoi ce problème arrive", "ce qui change concrètement", "un exemple concret de ce qu'on voit ou fait",
          "la phrase qui conclut l'idée et renvoie à l'accroche, sans appel à l'action"]
@@ -73,10 +89,10 @@ def systeme(serie, conf, regles):
 
 
 def fin(serie, conf):
-    """Phrase de fin ajoutée par le code. Ligne B : « une commission » tant que taux_commission est vide (jamais de taux inventé)."""
+    """Phrase de fin ajoutée par le code. Ligne B : « à la commission » tant que taux_commission est vide (jamais de taux inventé) ; « lien en bio », jamais d'adresse épelée."""
     if serie != "B": return SERIES[serie]["fin"]
     taux = conf["lignes"]["B"]["taux_commission"]
-    return SERIES["B"]["fin"].format(commission=f"{taux} de commission" if taux else "une commission")
+    return SERIES["B"]["fin"].format(commission=f"{taux} de commission" if taux else "à la commission")
 
 
 def lieu_interdit(texte, conf):
@@ -124,9 +140,14 @@ def note_veille(jour):
     return " ; ".join(lignes)[:900] or "aucune note de veille aujourd'hui"
 
 
+EXEMPLE_PUBLIC = {"A": "Bonne phrase : « Votre client cherche votre numéro le soir. » Mauvaise phrase (interdite) : « Vous cherchez le numéro d'un artisan ? ». "
+                        "La vidéo parle à l'artisan de SA propre page et de ce que SES clients y voient.",
+                  "B": "Bonne phrase : « Tu appelles, tu décroches un rendez-vous. » Mauvaise phrase (interdite) : « Vous cherchez un emploi ? ». Tutoie toujours."}
+
+
 def demande(serie, angle, historique, veille):
     s = SERIES[serie]; deja = [h["sujet"] for h in historique if h.get("serie") == serie][-25:]
-    return (f"Série : {s['theme']}. Public : {s['public']}. " + (f"Angle du jour : {angle}. " if angle else "Choisis toi-même un angle nouveau. ")
+    return (f"Série : {s['theme']}. Public : {s['public']}. {EXEMPLE_PUBLIC.get(serie, '')} " + (f"Angle du jour : {angle}. " if angle else "Choisis toi-même un angle nouveau. ")
             + "Sujets déjà traités, à ne jamais refaire : " + ("; ".join(deja) if deja else "aucun") + ". "
             + f"Titres d'articles repérés par la veille du jour (pour le format, pas pour les faits) : {veille}. "
             + "Écris : sujet (une phrase : l'idée unique de la vidéo), titre (cinq à huit mots), accroche (texte affiché à l'écran, trois à six mots, qui donne envie de rester), "
@@ -160,6 +181,12 @@ def verifier(s, serie, historique, conf):
     for t in textes:
         m = MOLLES.search(t)
         if m: pb.append(f"phrase molle (« {m.group(0)} »)"); break
+    for t in textes:
+        m = ADRESSE.search(t)
+        if m: pb.append(f"adresse épelée interdite (« {m.group(0)} ») : dire seulement « lien en bio » ou « dans la description »"); break
+    for t in [champs["sujet"] or "", champs["titre"] or "", champs["accroche"] or ""] + scenes:
+        faux = public_faux(t, serie)
+        if faux: pb.append(f"mauvais public (« {faux} ») : " + ("parle À l'artisan ou au commerçant, en vouvoyant, jamais à son client" if serie == "A" else "parle au futur call caller, en le tutoyant")); break
     if serie == "B":
         for t in textes:
             lieu = lieu_interdit(t, conf)
@@ -187,7 +214,7 @@ def legende(serie, s, conf):
     return "\n\n".join(x for x in (s["titre"].strip(), s["legende"].strip(), renvoi, C.MENTION_IA, tags) if x)
 
 
-def ecrire_script(conf, jour, heure, ollama, historique, a_blanc, essais=4):
+def ecrire_script(conf, jour, heure, ollama, historique, a_blanc, essais=6):
     """Écrit Videos\\scripts\\AAAA-MM-JJ-HHMM.json pour ce passage (rien si déjà fait). -> chemin, ou None après `essais` refus."""
     fichier = C.SCRIPTS / f"{jour}-{heure.replace(':', '')}.json"
     if fichier.exists(): print(f"  {heure} : script déjà écrit ({fichier.name})"); return fichier

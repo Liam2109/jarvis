@@ -3,7 +3,9 @@
 scripts (garde-fous : chiffres, promesses, phrases molles, lieux sur la ligne B, mise en scène, sujet déjà traité ; taux de commission seulement depuis la config),
 marketing (grille des accroches, 3 accroches notées, rythme, sous-titres, journal-videos.csv), création (sous-titres mot à mot en .ass dans la zone sûre, carte de fin),
 publication (fermée sans « go publier » par ligne, essai obligatoire, captcha = arrêt + alerte, plafond par compte, STOP, verrou, CSV ; TikTok remplacé par un bouchon),
-nettoyage (nettoyage.ps1 dans un dossier temporaire : vieux .mp4 et intermédiaires supprimés, ligne CSV avant, skill / scripts / veille / vidéos protégées intacts).
+nettoyage (nettoyage.ps1 dans un dossier temporaire : vieux .mp4 et intermédiaires supprimés, ligne CSV avant, skill / scripts / veille / vidéos protégées intacts),
+voix (edge-tts simulé en échec -> bascule Kokoro, moteur dans la colonne tts ; vrai Kokoro local sur une phrase si le modèle est là, sans aucun son joué),
+formules d'accroche à trous (hooks-base.md, bon public par ligne), correctif Windows de stick-stage (sur une copie, puis vérification de l'outil réel s'il est cloné).
 Tout se passe dans un dossier temporaire : aucun réseau, aucun Ollama, aucun navigateur, aucun rendu, rien de publié."""
 import csv, importlib.util, io, json, os, shutil, subprocess, sys, tempfile, time, unittest
 from contextlib import redirect_stdout
@@ -21,8 +23,10 @@ def charger(nom):
 
 C = charger("commun"); sys.modules["commun"] = C
 V, S = charger("veille"), charger("scripts"); sys.modules["scripts"] = S
+VX = charger("voix"); sys.modules["voix"] = VX
 MK, K, P = charger("marketing"), charger("creation"), charger("publication")
-for m in (V, S, MK, K, P): m.C = C
+for m in (V, S, MK, K, P, VX): m.C = C
+K.VX = VX
 MK.S = S
 
 BON = {"sujet": "Le client qui cherche vos horaires un dimanche soir", "titre": "Vos horaires visibles le dimanche soir",
@@ -100,7 +104,7 @@ class Veille(Base):
         self.assertTrue(all("news.google.com" in u for u in self.urls))            # aucune page de TikTok n'est ouverte
         self.assertFalse((C.VEILLE / "2026-09-01.md").exists()); self.assertTrue((C.VEILLE / "2026-10-20.md").exists())   # notes gardées 30 jours
         h = C.HOOKS.read_text(encoding="utf-8")
-        self.assertIn("Formules de base", h); self.assertIn("Pourquoi vos vidéos décrochent", h); self.assertNotIn("Format court qui marche", h)
+        self.assertIn("Formules ligne A", h); self.assertIn("Pourquoi vos vidéos décrochent", h); self.assertNotIn("Format court qui marche", h)
         with redirect_stdout(io.StringIO()): V.cmd_jour(self.conf(veille_requetes=["a"]), "2026-11-17", False, ouvrir=self.ouvrir)
         self.assertEqual(C.HOOKS.read_text(encoding="utf-8").count("Pourquoi vos vidéos décrochent"), 1)   # jamais deux fois la même formule
 
@@ -133,11 +137,20 @@ class Scripts(Base):
         self.assertTrue(any("revenu" in p.lower() or "formulation" in p for p in S.verifier(dict(BON, legende="Un revenu chaque mois."), "B", [], c)))
         self.assertIn("sujet déjà traité", S.verifier(BON, "A", [{"sujet": BON["sujet"], "titre": "autre"}], c))
         self.assertTrue(any("longueur" in p for p in S.verifier(dict(BON, scenes=["Vos horaires ?", "Une page claire.", "Un bouton Appeler.", "Votre adresse visible."]), "A", [], c)))
+        # bon public : A parle à l'artisan (jamais à son client, jamais en tutoyant) ; B tutoie le futur call caller ; jamais d'adresse épelée
+        mauvais_a = dict(BON, scenes=["Trouvez les horaires de votre artisan."] + BON["scenes"][1:])
+        self.assertTrue(any("mauvais public" in p for p in S.verifier(mauvais_a, "A", [], c)))
+        self.assertTrue(any("mauvais public" in p for p in S.verifier(dict(BON, accroche="Tu cherches ?"), "A", [], c)))
+        self.assertTrue(any("mauvais public" in p for p in S.verifier(BON, "B", [], c)))          # BON vouvoie : refusé sur la ligne B
+        self.assertTrue(any("adresse" in p for p in S.verifier(dict(BON, legende="Tout est sur www point monsite."), "A", [], c)))
+        self.assertIsNone(S.public_faux("Tu lui dis : « Vous avez un site ? »", "B"))        # une parole citée ne compte pas
+        self.assertTrue(any("mauvais public" in p for p in S.verifier(dict(BON, sujet="Obtenir vite les numéros de téléphone d'artisans"), "A", [], c)))   # point de vue du client
+        self.assertIsNone(S.public_faux("Un client qui cherche un artisan tombe sur votre page.", "A"))
 
     def test_ligne_b_produite_sans_lien_et_commission_de_la_config(self):
         self.assertEqual(S.serie_du_passage(self.conf(lien_candidature=""), "14:00"), "B")
         c = self.conf(); f = S.fin("B", c)
-        self.assertIn("une commission", f); self.assertNotRegex(f, r"\d|%"); self.assertIn("lien en bio", f); self.assertTrue(f.rstrip().endswith("?"))   # fin en boucle
+        self.assertIn("à la commission", f); self.assertNotRegex(f, r"\d|%"); self.assertIsNone(S.ADRESSE.search(f)); self.assertIn("lien en bio", f); self.assertTrue(f.rstrip().endswith("?"))   # fin en boucle
         self.assertNotIn("Normandie", S.systeme("B", c, C.regles())); self.assertIn("aucun chiffre", S.systeme("B", c, C.regles()).lower())
         c["lignes"]["B"]["taux_commission"] = "15 %"
         self.assertIn("15 % de commission", S.fin("B", c)); self.assertIn("(15 % sur chaque vente)", S.legende("B", BON, c))
@@ -154,7 +167,7 @@ class Scripts(Base):
         self.assertEqual(json.loads(C.SUJETS.read_text(encoding="utf-8"))[0]["sujet"], BON["sujet"])
         self.assertTrue(20 <= doc["mots"] / 2.6 <= 35, doc["mots"])                # ~2,6 mots par seconde : 20 à 35 s
         with redirect_stdout(io.StringIO()):                                        # même sujet le lendemain : refusé
-            self.assertIsNone(S.ecrire_script(self.conf(), "2026-11-17", "06:00", FauxQwen([BON] * 4), json.loads(C.SUJETS.read_text(encoding="utf-8")), False))
+            self.assertIsNone(S.ecrire_script(self.conf(), "2026-11-17", "06:00", FauxQwen([BON] * 6), json.loads(C.SUJETS.read_text(encoding="utf-8")), False))
 
 
 class Marketing(Base):
@@ -186,13 +199,17 @@ class Marketing(Base):
                "scenes": ["Tu veux un travail depuis chez toi ?", "Tu appelles des artisans avec une liste et un script déjà prêts pour toi, sans chercher.",
                           "Ton rôle : décrocher un rendez-vous.", S.fin("B", self.conf())]}
         (C.SCRIPTS / "2026-11-16-1400.json").write_text(json.dumps(doc, ensure_ascii=False), encoding="utf-8")
-        q = FauxQwen([{"accroches": ["Tu sais décrocher un téléphone ?", "Un revenu de 2000 euros ?", "Bonjour à tous, voici une offre"]}])
+        q = FauxQwen([{"choix": [{"id": "B03", "trous": {"quoi": "la prise de rendez-vous"}}, {"id": "B04", "trous": {"erreur": "viser 2000 euros"}},
+                                 {"id": "Z99", "trous": {}}, {"id": "B05", "trous": {"action": "un deux trois quatre cinq"}}]}])
         with redirect_stdout(io.StringIO()): code = MK.traiter(self.conf(), "2026-11-16", ["14:00"], ollama_cls=lambda m: q)
         self.assertEqual(code, 0)
         d = json.loads((C.SCRIPTS / "2026-11-16-1400.json").read_text(encoding="utf-8"))
-        m = d["marketing"]; self.assertEqual(len(m["accroches"]), 4)                 # 3 de Qwen + le brouillon de Liam
-        self.assertIn(m["gardee"], ("Tu sais décrocher un téléphone ?", "Tu sais parler au téléphone ?")); self.assertEqual(d["scenes"][0], m["gardee"])
-        self.assertEqual([a["note"] for a in m["accroches"] if "2000" in a["texte"]], [0])
+        m = d["marketing"]; textes = [a["texte"] for a in m["accroches"]]
+        self.assertEqual(len(textes), len(set(textes))); self.assertIn(len(textes), (3, 4))       # 3 formules (+ le brouillon de Liam s'il est différent)
+        self.assertIn("Personne ne te dit ça sur la prise de rendez-vous.", textes)                  # trou rempli, formule inchangée
+        self.assertTrue(all(a["formule"] in ("brouillon de Liam",) or a["formule"].startswith("B") for a in m["accroches"]))   # jamais inventée ; Z99 et trou de 5 mots rejetés
+        self.assertEqual([a["note"] for a in m["accroches"] if "2000" in a["texte"]], [0]); self.assertEqual(d["scenes"][0], m["gardee"])
+        self.assertTrue(m["formule"].startswith("B") or m["formule"] == "brouillon de Liam")
         self.assertGreater(len(d["scenes"]), len(doc["scenes"]))                    # phrase longue coupée en deux
         self.assertEqual(d["scenes"][-1], doc["scenes"][-1]); self.assertNotEqual(d["accroche"], "Découvrez comment.")
         self.assertEqual(len(d["sous_titres"]), len(d["scenes"]))
@@ -208,11 +225,20 @@ class Creation(Base):
         doc = {"jour": "2026-11-16", "passage": "22:00", "scenes": BON["scenes"]}
         e = K.entree_outil(doc, self.conf())
         self.assertEqual((e["format"], e["dark_mode"], e["title"]), ("portrait", True, "2026-11-16-2200")); self.assertTrue(e["voice"].startswith("fr-FR"))
+        self.assertNotIn("reuse_audio_from", e); self.assertEqual(K.entree_outil(doc, self.conf(), self.r / "voix")["reuse_audio_from"], str(self.r / "voix"))
         f = K.filtre_final("A", True, self.conf())
         for morceau in ("subtitles=sous-titres.ass", "accroche.txt", "lt(t,2.5)", "ia.txt", "fin0.txt", "concat=n=2"): self.assertIn(morceau, f)
         self.assertNotIn("subtitles=", K.filtre_final("B", False, self.conf()))
         self.assertEqual(K.passage_proche(datetime(2026, 11, 16, 6, 3)), "06:00"); self.assertEqual(K.passage_proche(datetime(2026, 11, 16, 21, 50)), "22:00")
         self.assertLess(K.IA_Y, 1500)                                                # mention IA au-dessus de l'interface du bas de TikTok
+
+    def test_accroche_ecran_dans_la_zone_sure(self):
+        for texte in ("Fermé ou ouvert ? Votre client hésite.", "Votre client vous cherche", "Tu sais parler au téléphone ?", "Court"):
+            t, taille = K.accroche_ecran(texte)
+            lignes = t.split("\n"); self.assertLessEqual(len(lignes), 2)
+            self.assertLessEqual(max(len(l) for l in lignes) * 0.6 * taille, K.ACCROCHE_LARGEUR + 1, texte)   # tient entre x = 120 et x = 900
+            self.assertFalse(any(l.startswith(("?", " ")) for l in lignes)); self.assertEqual(t.replace("\n", " ").replace(" ", " "), " ".join(texte.split()))
+        self.assertEqual(K.accroche_ecran("Court")[1], 92); self.assertIn("fontsize=60:", K.filtre_final("A", True, self.conf(), 60))
 
     def test_fin_ligne_b_sans_taux_invente(self):
         c = self.conf(); self.assertEqual(K.fins("B", c)[0], "À la commission, sans fixe"); self.assertFalse(any("%" in x for x in K.fins("B", c)))
@@ -236,6 +262,110 @@ class Creation(Base):
     def test_sans_script_rien_n_est_rendu(self):
         with redirect_stdout(io.StringIO()): self.assertEqual(K.fabriquer(self.conf(), "2026-11-16", "06:00"), 2)
         self.assertFalse(C.A_VALIDER.exists())
+
+
+class Voix(Base):
+    PHRASES = ["Votre client cherche vos horaires.", "Fermé ou ouvert ?"]
+
+    def faux_kokoro(self, phrases, voix, dossier, vitesse=1.0):
+        self.kokoro_appele = (voix, vitesse)
+        for i, _ in enumerate(phrases): VX.fichier_phrase(dossier, i).write_bytes(b"kokoro")
+
+    def test_voix_fixe_par_ligne(self):
+        c = self.conf(); a, b = VX.voix_ligne(c, "A"), VX.voix_ligne(c, "B")
+        self.assertTrue(a["edge"].startswith("fr-FR") and b["edge"].startswith("fr-FR")); self.assertNotEqual(a["edge"], b["edge"])
+        self.assertEqual(a["kokoro"], "ff_siwis")
+        c["lignes"]["A"]["voix"] = {}; self.assertEqual(VX.voix_ligne(c, "A")["edge"], c["voix"])   # sans réglage : voix générale
+
+    def test_edge_en_echec_bascule_sur_kokoro(self):
+        os.environ["JARVIS_VIDEOS_EDGE_ECHEC"] = "1"
+        try:
+            with self.assertRaises(RuntimeError): VX.edge_synthese(self.PHRASES, "fr-FR-HenriNeural", self.r)   # échec simulé, aucun réseau
+            r = VX.synthese(self.PHRASES, VX.voix_ligne(self.conf(), "B"), self.r / "voix", kokoro=self.faux_kokoro)
+        finally: os.environ.pop("JARVIS_VIDEOS_EDGE_ECHEC", None)
+        self.assertEqual(r["moteur"], "kokoro"); self.assertIn("edge-tts en échec", r["bascule"]); self.assertIsNone(r["temps"])
+        self.assertEqual(self.kokoro_appele, ("ff_siwis", VX.voix_ligne(self.conf(), "B")["kokoro_vitesse"]))
+        self.assertTrue(all(VX.fichier_phrase(self.r / "voix", i).read_bytes() == b"kokoro" for i in range(2)))
+
+    def test_edge_trop_lent_ou_incomplet(self):
+        import asyncio
+        def lent(*a): raise asyncio.TimeoutError()
+        r = VX.synthese(self.PHRASES, VX.voix_ligne(self.conf(), "A"), self.r / "v1", edge=lent, kokoro=self.faux_kokoro)
+        self.assertEqual((r["moteur"], r["bascule"]), ("kokoro", f"edge-tts en échec (plus de {VX.EDGE_DELAI_S} s)"))
+        def moitie(phrases, voix, dossier, delai):   # une phrase sans son : aucun mélange, toute la vidéo passe sur Kokoro
+            VX.fichier_phrase(dossier, 0).write_bytes(b"edge"); return [[(0.0, 0.5)]]
+        r = VX.synthese(self.PHRASES, VX.voix_ligne(self.conf(), "A"), self.r / "v2", edge=moitie, kokoro=self.faux_kokoro)
+        self.assertEqual(r["moteur"], "kokoro"); self.assertEqual(VX.fichier_phrase(self.r / "v2", 0).read_bytes(), b"kokoro")
+        def ok(phrases, voix, dossier, delai):
+            for i, _ in enumerate(phrases): VX.fichier_phrase(dossier, i).write_bytes(b"edge")
+            return [[(0.0, 0.4)], [(0.0, 0.3)]]
+        r = VX.synthese(self.PHRASES, VX.voix_ligne(self.conf(), "A"), self.r / "v3", edge=ok, kokoro=self.faux_kokoro)
+        self.assertEqual((r["moteur"], r["bascule"]), ("edge-tts", ""));
+        def panne(*a): raise RuntimeError("modèle absent")
+        with self.assertRaises(RuntimeError): VX.synthese(self.PHRASES, VX.voix_ligne(self.conf(), "A"), self.r / "v4", edge=lent, kokoro=panne)
+
+    def test_csv_colonne_tts_et_path_sans_edge(self):
+        C.csv_ligne("videos-creation", "2026-11-16-0600", "A", "compte", "à valider", "Fermé ou ouvert ?", "24 s", tts="kokoro")
+        self.assertEqual(self.csv()[0]["tts"], "kokoro"); self.assertEqual(C.CSV_COLONNES[-1], "tts")
+        avec = self.r / "scripts-py"; avec.mkdir(); (avec / "edge-tts.exe").write_bytes(b""); sans = self.r / "bin"; sans.mkdir()
+        self.assertEqual(VX.chemin_sans_edge(os.pathsep.join([str(avec), str(sans)])), str(sans))
+
+    @unittest.skipUnless(Path(str(charger("voix").KOKORO_MODELE)).exists(), "modèle Kokoro absent (Videos\\outils\\kokoro)")
+    def test_vrai_kokoro_local(self):
+        os.environ["JARVIS_VIDEOS_EDGE_ECHEC"] = "1"
+        try: r = VX.synthese(["Fermé ou ouvert ?"], VX.voix_ligne(self.conf(), "A"), self.r / "vrai")
+        finally: os.environ.pop("JARVIS_VIDEOS_EDGE_ECHEC", None)
+        f = VX.fichier_phrase(self.r / "vrai", 0)
+        self.assertEqual(r["moteur"], "kokoro"); self.assertGreater(f.stat().st_size, 2000)   # vrai mp3 écrit sur le disque, jamais joué
+        self.assertGreater(K.duree(f), 0.5)
+
+
+class Formules(Base):
+    def test_bibliotheque_a_trous(self):
+        base = C.HOOKS_BASE.read_text(encoding="utf-8")
+        for serie in ("A", "B"):
+            f = MK.formules(serie, base); ids = [i for i, _ in f]
+            self.assertGreaterEqual(len(f), 10); self.assertEqual(len(ids), len(set(ids)))
+            self.assertGreaterEqual(sum(not MK.TROU.search(x) for _, x in f), 3)               # toujours 3 accroches possibles sans Qwen
+            self.assertTrue(MK.trous_aide(serie, base).startswith("Trous"))
+            for i, x in f:                                                                      # chaque formule, trous remplis, passe les garde-fous de sa ligne
+                texte = MK.remplir(x, {n: "vos horaires" if serie == "A" else "les appels" for n in MK.TROU.findall(x)})
+                self.assertIsNone(MK.elimine(texte, serie, self.conf()), (i, texte))
+                self.assertNotRegex(texte.lower(), r"découvrez|comment\b")
+        self.assertEqual(MK.remplir("Votre client cherche {quoi}.", {"quoi": " vos horaires. "}), "Votre client cherche vos horaires.")
+        self.assertEqual(MK.remplir("{quand}, on cherche.", {"quand": "le dimanche soir"}), "Le dimanche soir, on cherche.")
+        self.assertIsNone(MK.remplir("Votre client cherche {quoi}.", {"quoi": "un deux trois quatre cinq"}))   # plus de 4 mots
+        self.assertIsNone(MK.remplir("Votre client cherche {quoi}.", {}))
+
+    def test_sans_reponse_de_qwen_des_formules_sans_trou(self):
+        doc = {"jour": "2026-11-16", "passage": "06:00", "serie": "A", "sujet": "horaires", "scenes": ["x", "y"]}
+        out = MK.demander_accroches(FauxQwen([{"rien": 1}]), doc, "A", self.conf(), C.regles(), (), "graine")
+        self.assertEqual(len(out), 3); self.assertTrue(all(i.startswith("A") and not MK.TROU.search(t) for t, i in out))
+        self.assertTrue(all(MK.noter_accroche(t, "A", self.conf())[0] > 0 for t, _ in out))
+        self.assertEqual(MK.noter_accroche("Découvrez comment.", "A", self.conf())[0], 0)
+        self.assertEqual(MK.noter_accroche("Tu sais parler au téléphone ?", "A", self.conf())[0], 0)   # mauvais public sur A
+        self.assertEqual(MK.noter_accroche("Vous savez parler au téléphone ?", "B", self.conf())[0], 0)
+
+
+class StickStage(Base):
+    CASSE = 'execFileSync(path.join(ws.root, "node_modules/.bin/remotion"), ["ffmpeg", "-y", ...args], { stdio: "inherit" });'
+
+    def test_correctif_windows(self):
+        sp = importlib.util.spec_from_file_location("stick_stage_windows", AG.parent / "correctifs" / "stick-stage-windows.py")
+        W = importlib.util.module_from_spec(sp); sp.loader.exec_module(W)
+        neuf, n = W.corriger_texte(self.CASSE)
+        self.assertEqual(n, 1); self.assertNotIn(".bin/remotion", neuf)
+        self.assertIn('execFileSync(process.execPath, [path.join(ws.root, "node_modules/@remotion/cli/remotion-cli.js"), "ffmpeg"', neuf)
+        self.assertEqual(W.corriger_texte(neuf), (neuf, 0))                                    # idempotent
+        copie = self.r / "stick-stage"
+        for rel in W.FICHIERS: (copie / rel).parent.mkdir(parents=True, exist_ok=True); (copie / rel).write_text(self.CASSE.replace("ws.root", "root"), encoding="utf-8")
+        self.assertEqual(W.corriger(copie, verifier=True)[1], 3); self.assertEqual(W.corriger(copie)[0], 3); self.assertEqual(W.corriger(copie, verifier=True)[1], 0)
+        reel = W.DOSSIER
+        if (reel / "node_modules" / "@remotion" / "cli" / "remotion-cli.js").exists():      # outil cloné sur cette machine : corrigé, et le lanceur répond
+            self.assertEqual(W.corriger(reel, verifier=True)[1], 0, "relancer python Videos\\correctifs\\stick-stage-windows.py")
+            r = subprocess.run([shutil.which("node") or "node", str(reel / "node_modules" / "@remotion" / "cli" / "remotion-cli.js"), "ffmpeg", "-version"],
+                               capture_output=True, text=True, timeout=120, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            self.assertEqual(r.returncode, 0, r.stderr[-300:]); self.assertIn("ffmpeg version", r.stdout)
 
 
 class Publication(Base):

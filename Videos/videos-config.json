@@ -22,6 +22,7 @@
       "compte": "compte TikTok actuel de Liam",
       "ton": "vivant, simple, à l'oral, vouvoiement : un bonhomme bâton explique une chose concrète du web à un artisan ou un commerçant",
       "tutoiement": false,
+      "voix": { "edge": "fr-FR-RemyMultilingualNeural", "kokoro": "ff_siwis", "kokoro_vitesse": 1.0 },
       "go_publier": false,
       "profil_navigateur": "%LOCALAPPDATA%\\JarvisTikTok\\ligne-A",
       "hashtags": "#stickman #artisan #commerce #siteweb"
@@ -31,6 +32,7 @@
       "compte": "compte TikTok séparé, recrutement",
       "ton": "direct, franc, tutoiement, « je te le dis cash »",
       "tutoiement": true,
+      "voix": { "edge": "fr-FR-HenriNeural", "kokoro": "ff_siwis", "kokoro_vitesse": 1.08 },
       "go_publier": false,
       "profil_navigateur": "%LOCALAPPDATA%\\JarvisTikTok\\ligne-B",
       "hashtags": "#recrutement #teletravail #prospection #commission",
@@ -47,5 +49,5 @@
   "nettoyage_jours": 14,
   "nettoyage_extensions": [".mp4", ".mov", ".webm", ".mkv", ".mp3", ".wav", ".m4a", ".aac", ".srt", ".ass", ".png", ".jpg", ".log", ".tmp"],
   "videos_protegees": ["2026-11-16-2200"],
-  "_aide": "Équipe Vidéos TikTok (16/11/2026), tout gratuit : Qwen local (Ollama), voix edge-tts, rendu stickfigure-pipeline-v2 (Videos\\outils, hors git). Règles : Videos\\SKILL-VIDEOS.md (relu par chaque agent). lignes : A = stickman divertissement / explications (compte actuel, fin = planning de 15 min de Liam, lien LU dans B2B\\docs\\SCRIPT-APPEL-SID.md) ; B = recrutement de call callers (compte séparé, fin = « postule via le lien en bio », aucune ville, aucun revenu chiffré). taux_commission vide = les vidéos disent seulement « à la commission » (Liam le renseigne, ex. « 15 % »). go_publier : false tant que Liam n'a pas dit « go publier » pour la première vidéo de la ligne ; à passer à true SEULEMENT dans videos-config.local.json (machine), avec videos-publication dans agents_actifs. profil_navigateur : profil persistant où Liam se connecte lui-même une fois (publication.py connexion --ligne X) ; l'agent ne tape jamais de mot de passe. nettoyage_jours : âge (jours) au-delà duquel nettoyage.ps1 supprime vidéos et intermédiaires ; videos_protegees : noms (sans extension) jamais supprimés. lien_candidature : lien du formulaire (pour la bio du compte B, jamais lu par les vidéos). Voir Videos\\README.md."
+  "_aide": "Équipe Vidéos TikTok (16/11/2026), tout gratuit : Qwen local (Ollama), voix edge-tts, rendu stickfigure-pipeline-v2 (Videos\\outils, hors git). Règles : Videos\\SKILL-VIDEOS.md (relu par chaque agent). lignes : A = stickman divertissement / explications (compte actuel, fin = planning de 15 min de Liam, lien LU dans B2B\\docs\\SCRIPT-APPEL-SID.md) ; B = recrutement de call callers (compte séparé, fin = « postule via le lien en bio », aucune ville, aucun revenu chiffré). taux_commission vide = les vidéos disent seulement « à la commission » (Liam le renseigne, ex. « 15 % »). go_publier : false tant que Liam n'a pas dit « go publier » pour la première vidéo de la ligne ; à passer à true SEULEMENT dans videos-config.local.json (machine), avec videos-publication dans agents_actifs. profil_navigateur : profil persistant où Liam se connecte lui-même une fois (publication.py connexion --ligne X) ; l'agent ne tape jamais de mot de passe. nettoyage_jours : âge (jours) au-delà duquel nettoyage.ps1 supprime vidéos et intermédiaires ; videos_protegees : noms (sans extension) jamais supprimés. voix (par ligne, fixe) : edge = voix edge-tts (principale, en ligne), kokoro = voix Kokoro locale de secours (ff_siwis = seule voix française de Kokoro ; B un peu plus rapide), bascule automatique si edge-tts échoue (erreur, pas d'internet, plus de 30 s), moteur noté dans journal-videos.csv (colonne tts). lien_candidature : lien du formulaire (pour la bio du compte B, jamais lu par les vidéos). Voir Videos\\README.md."
 }

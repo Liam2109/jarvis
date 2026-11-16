@@ -37,7 +37,7 @@ _Mise à jour : 16 nov. 2026, 17 h 30 (le fait est supprimé ; l'historique est 
 - [ ] Facebook Normandie et Leboncoin : poster l'offre « page exemple à ton nom »
 
 ## Agents (ensuite, une étape à la fois)
-- [ ] Vidéos : relire les scripts de Qwen 2.5 3b les premiers jours (textes plats, parfois adressés au client au lieu de l'artisan) ; garde-fous à resserrer si besoin
+- [ ] Vidéos : regarder la vidéo test Videos\a-valider\2026-11-16-1200.mp4 (ligne A) ; relire les scripts de Qwen 2.5 3b les premiers jours (public contrôlé par le code depuis le 16/11, textes encore plats)
 - [ ] Les tests laissent des dossiers dans %TEMP% : les faire se nettoyer eux-mêmes ; 6 mentions « Répondu / Refus » gardées exprès (anciennes feuilles de Sid)
 - [ ] Terminer l'étape Vente (réparer reponses.py, puis Réponses, Rendez-vous, Devis, Relances J+3 et J+7, lead chaud), chacun avec contrat + garde + test + fiche avant activation
 - [ ] Fiches agents : 19 « à compléter par Liam » (production, vente-relances, responsables Vente / Argent / Production) à remplir avec l'étape Vente ; agents sur le serveur : relancer generer-fiches.py là-bas pour avoir les traces

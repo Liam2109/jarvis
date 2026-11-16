@@ -1,6 +1,6 @@
 # Vidéos TikTok — équipe d'agents (16/11/2026)
 
-Tout est gratuit : Qwen local (Ollama, `qwen2.5:3b`) pour les textes, voix Microsoft gratuite (`edge-tts`), rendu `stickfigure-pipeline-v2`, ffmpeg, Playwright sur le navigateur Edge du serveur. Aucun token Claude, aucune carte bancaire.
+Tout est gratuit : Qwen local (Ollama, `qwen2.5:3b`) pour les textes, voix Microsoft gratuite (`edge-tts`) avec bascule automatique sur Kokoro en local (`agents/voix.py`), rendu `stickfigure-pipeline-v2`, ffmpeg, Playwright sur le navigateur Edge du serveur. Aucun token Claude, aucune carte bancaire.
 **Règles de toute l'équipe : `SKILL-VIDEOS.md`**, relu par chaque agent avant chaque exécution (fichier absent ou incomplet = l'agent refuse de tourner).
 
 | Agent | Script | Quand (serveur) | Sortie |
@@ -19,13 +19,14 @@ elles ne sont créées que pour les agents que Liam met dans `agents_actifs` (co
 ## Deux lignes, deux comptes
 - **A** : stickman divertissement / explications, compte TikTok actuel (passages 06:00 et 22:00).
 - **B** : recrutement de call callers pour vendre des sites web, compte séparé (passage 14:00). Aucune ville, aucun revenu chiffré ; « à la commission » tant que `lignes.B.taux_commission` est vide.
-Réglages : `videos-config.json` > `lignes` (ton, compte, hashtags, message, brouillon d'accroche, lieux interdits, taux de commission). Bibliothèque d'accroches : `hooks.md` (= `hooks-base.md` + formules repérées par la veille, hors git).
-`journal-videos.csv` (hors git) : une ligne par accroche choisie, vidéo prête, publication, arrêt et suppression (date ; agent ; vidéo ; ligne ; compte ; statut ; hook ; détail).
+Réglages : `videos-config.json` > `lignes` (ton, compte, voix, hashtags, message, brouillon d'accroche, lieux interdits, taux de commission). Bibliothèque d'accroches : `hooks.md` (= `hooks-base.md` + formules repérées par la veille, hors git) ; les formules à trous `- A01 | …` / `- B01 | …` de `hooks-base.md` sont écrites à la main : Qwen les choisit et remplit les trous, il n'invente pas l'accroche.
+`journal-videos.csv` (hors git) : une ligne par accroche choisie, vidéo prête, publication, arrêt et suppression (date ; agent ; vidéo ; ligne ; compte ; statut ; hook ; détail ; tts = moteur de voix réellement utilisé).
 
 ## Outils (dans `outils/`, hors git, à recloner sur une autre machine)
 - `git clone --depth 1 https://github.com/vishnukayyala/stickfigure-pipeline-v2` puis `npm install` et `node node_modules/puppeteer/install.mjs` (npm 11 bloque le script d'installation).
 - Python : `pip install --user edge-tts` ; ffmpeg : `winget install -e --id Gyan.FFmpeg --scope user`.
-- stick-stage (`tamtree-ai/stick-stage`) a été essayé sur le même sujet : il plante sous Windows (il lance `node_modules\.bin\remotion` sans `.cmd`, ENOENT). Écarté.
+- stick-stage (`tamtree-ai/stick-stage`, essayé puis écarté au profit de stickfigure-pipeline-v2) plantait sous Windows : il lance `node_modules\.bin\remotion` par `execFileSync` (sans shell, donc sans `.cmd`) : ENOENT. Correctif : `python Videos\correctifs\stick-stage-windows.py` (Node lance directement `@remotion/cli/remotion-cli.js` ; idempotent ; à relancer après chaque clonage ; `--verifier` pour contrôler). Testé dans `tests/agents/test_videos.py`.
+- Voix de secours Kokoro (locale, gratuite, sans compte) : `pip install --user kokoro-onnx`, puis dans `outils/kokoro/` le modèle `kokoro-v1.0.int8.onnx` et `voices-v1.0.bin` (github.com/thewh1teagle/kokoro-onnx, release model-files-v1.0). Le runtime Visual C++ n'est pas installé sur le serveur : `outils/kokoro/dll/` contient des copies signées Microsoft de `msvcp140.dll`, `msvcp140_1.dll`, `vcruntime140.dll`, `vcruntime140_1.dll` (prises dans Edge et OneDrive), chargées seulement par `voix.py`. Kokoro n'a qu'une voix française (`ff_siwis`, féminine). Échec d'edge-tts simulé : variable `JARVIS_VIDEOS_EDGE_ECHEC=1`.
 - Sous-titres mot à mot : faster-whisper ne se charge pas sur ce PC (DLL de ctranslate2 manquante) ; `creation.py` demande à edge-tts (gratuit, déjà utilisé pour la voix) le temps de chaque mot, recalé sur la durée réelle de chaque phrase (`scene_timings.json` de l'outil), et incruste un `.ass` (2 à 4 mots, mot clé en jaune, Arial Black, zone sûre TikTok).
 
 ## Publication : un seul « go publier » par ligne

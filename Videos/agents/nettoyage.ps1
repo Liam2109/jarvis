@@ -19,8 +19,8 @@ function Csv-Champ([string]$s) { $s = ("$s" -replace '\s+', ' ').Trim(); if ($s 
 function Csv-Ligne([string]$video, [string]$statut, [string]$hook, [string]$detail, [string]$ligne = '') {
     if ($Simulation) { return }
     $neuf = -not (Test-Path -LiteralPath $csv)
-    $l = (@((Get-Date -Format 'yyyy-MM-dd HH:mm'), $AGENT, $video, $ligne, '', $statut, $hook, $detail) | ForEach-Object { Csv-Champ $_ }) -join ';'
-    if ($neuf) { [IO.File]::WriteAllText($csv, "date;agent;video;ligne;compte;statut;hook;detail`r`n", (New-Object System.Text.UTF8Encoding($true))) }
+    $l = (@((Get-Date -Format 'yyyy-MM-dd HH:mm'), $AGENT, $video, $ligne, '', $statut, $hook, $detail, '') | ForEach-Object { Csv-Champ $_ }) -join ';'
+    if ($neuf) { [IO.File]::WriteAllText($csv, "date;agent;video;ligne;compte;statut;hook;detail;tts`r`n", (New-Object System.Text.UTF8Encoding($true))) }
     [IO.File]::AppendAllText($csv, "$l`r`n", $utf8)
 }
 

@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Agent videos-marketing (équipe Vidéos TikTok, 16/11/2026), entre videos-scripts (05:00) et videos-creation (06:00, 14:00, 22:00).
-Qwen local (Ollama, gratuit, aucun token Claude) réécrit l'accroche ; le code fait le reste, sans réseau :
-  1. accroche : Qwen propose 3 accroches (ligne B : + le brouillon de Liam), chacune notée sur 10 par la grille de Videos\\SKILL-VIDEOS.md
-     (noter_accroche : forme qui accroche, 2 secondes, adresse directe, concret, neuve ; éliminée si chiffre, promesse, mot interdit, phrase molle, lieu sur B) ;
+Qwen local (Ollama, gratuit, aucun token Claude) choisit l'accroche ; le code fait le reste, sans réseau :
+  1. accroche : Qwen n'invente pas : il choisit 3 formules à trous écrites à la main dans Videos\\hooks.md (ligne de la vidéo) et remplit seulement leurs trous
+     (1 à 4 mots) ; le code assemble, complète avec des formules sans trou si besoin, ajoute (ligne B) le brouillon de Liam, et note chaque accroche sur 10 (grille de Videos\\SKILL-VIDEOS.md
+     ; noter_accroche : forme qui accroche, 2 secondes, adresse directe, concret, neuve ; éliminée si chiffre, promesse, mot interdit, phrase molle, mauvais public,
+     adresse épelée, lieu sur B) ;
      la meilleure remplace la première phrase et est inscrite dans Videos\\journal-videos.csv avec les 3 notes ;
   2. rythme : phrases de plus de 11 mots coupées en deux (une image toutes les 2 à 4 secondes), durée estimée 20 à 35 s vérifiée ;
   3. sous-titres : groupes de 2 à 4 mots, mot clé en couleur d'accent (commun.decouper_sous_titres), utilisés par videos-creation.
@@ -10,7 +12,7 @@ Règles relues avant chaque exécution (SKILL-VIDEOS.md). Rien n'est publié ni 
   python Videos\\agents\\marketing.py jour [--jour AAAA-MM-JJ] [--a-blanc]
   python Videos\\agents\\marketing.py passage --heure 06:00 [--jour AAAA-MM-JJ] [--a-blanc]
   python Videos\\agents\\marketing.py etat"""
-import argparse, json, re, sys
+import argparse, json, random, re, sys
 from datetime import datetime
 from pathlib import Path
 
@@ -26,8 +28,10 @@ ACCROCHE_FORTE = re.compile(r"\?|\bpourtant\b|\bfaux\b|\barr[êe]te\b|\bpersonne
 CONCRET = re.compile(r"t[ée]l[ée]phone|horaire|bouton|appel|liste|script|rendez-vous|client|page|vitrine|photo|adresse|itin[ée]raire|num[ée]ro|"
                      r"dimanche|soir|matin|boutique|atelier|chantier|devis|carte|avis|commande|r[ée]servation|maison|canap[ée]", re.I)
 OUVERTURE_MOLLE = re.compile(r"^\s*(bonjour|salut|aujourd'hui|d[ée]couvrez|dans cette vid[ée]o|voici|alors voil[àa])\b", re.I)
-SYSTEME = ("Tu es l'agent marketing d'une équipe de vidéos TikTok en bonhomme bâton. Tu écris des accroches : la toute première phrase, lue en deux secondes, "
-           "qui crée de la tension ou de la curiosité (question, contradiction, erreur courante, ou résultat avant l'explication). Ton oral et naturel : {ton}. "
+FORMULE = re.compile(r"^- ([AB]\d{2}) \| (.+?)\s*$")
+TROU = re.compile(r"\{(\w+)\}")
+SYSTEME = ("Tu es l'agent marketing d'une équipe de vidéos TikTok en bonhomme bâton. L'accroche est la toute première phrase, lue en deux secondes. "
+           "Tu n'inventes jamais d'accroche : tu choisis des formules écrites à la main et tu remplis seulement leurs trous. Ton oral et naturel : {ton}. "
            "Grille de notation et règles de l'équipe :\n{grille}\n{regles}\nRéponds uniquement avec un objet JSON valide.")
 
 
@@ -35,10 +39,13 @@ def mots(t): return len(C.mots_de(t))
 
 
 def elimine(texte, serie, conf):
-    """Raison d'élimination d'une accroche (None si elle peut concourir) : mêmes garde-fous que les scripts."""
-    for rx, quoi in ((S.NOMBRES, "chiffre ou nombre"), (S.INTERDITS, "formulation interdite"), (S.MOLLES, "phrase molle"), (S.DIDASCALIES, "mise en scène")):
+    """Raison d'élimination d'une accroche (None si elle peut concourir) : mêmes garde-fous que les scripts, plus le bon public de la ligne."""
+    for rx, quoi in ((S.NOMBRES, "chiffre ou nombre"), (S.INTERDITS, "formulation interdite"), (S.MOLLES, "phrase molle"), (S.DIDASCALIES, "mise en scène"),
+                     (S.ADRESSE, "adresse épelée")):
         m = rx.search(texte or "")
         if m: return f"{quoi} (« {m.group(0)} »)"
+    faux = S.public_faux(texte, serie)
+    if faux: return f"mauvais public (« {faux} »)"
     if serie == "B":
         m = S.INTERDITS_B.search(texte or "")
         if m: return f"formulation interdite (« {m.group(0)} »)"
@@ -93,28 +100,70 @@ def recentes_du_journal(n=20):
     return [r.get("hook", "") for r in C.csv_lire() if r.get("agent") == AGENT and r.get("hook")][-n:]
 
 
-def demander_accroches(ollama, doc, serie, conf, regles):
-    l = conf["lignes"][serie]
+def formules(serie, texte=None):
+    """Formules à trous écrites à la main pour la ligne (Videos\\hooks.md, sinon hooks-base.md). -> [(id, formule)]"""
+    return [(m.group(1), m.group(2)) for m in (FORMULE.match(x.strip()) for x in (C.hooks_texte() if texte is None else texte).splitlines())
+            if m and m.group(1).startswith(serie)]
+
+
+def trous_aide(serie, texte=None):
+    """Ligne « Trous : … » de la section de la ligne dans hooks.md (ce que chaque trou doit contenir)."""
+    sec = C.section(C.hooks_texte() if texte is None else texte, f"Formules ligne {serie}")
+    return next((x for x in sec.splitlines() if x.startswith("Trous")), "")
+
+
+def remplir(formule, trous):
+    """Remplit les trous d'une formule. -> texte, ou None si un trou manque, est vide ou dépasse 4 mots (le reste de la formule n'est jamais modifié)."""
+    vals = {}
+    for n in TROU.findall(formule):
+        v = " ".join(str((trous if isinstance(trous, dict) else {}).get(n) or "").split()).strip(" .,;:!?«»\"'")
+        if not v or len(v.split()) > 4 or "{" in v or "}" in v: return None
+        vals[n] = v
+    texte = TROU.sub(lambda m: vals[m.group(1)], formule)
+    return texte[:1].upper() + texte[1:]
+
+
+def demander_accroches(ollama, doc, serie, conf, regles, recentes=(), graine=""):
+    """3 accroches tirées des formules de la ligne : Qwen choisit les formules et remplit les trous ; complétées par des formules sans trou (jamais inventées).
+    -> [(texte, id de formule)]"""
+    l = conf["lignes"][serie]; liste = formules(serie)
+    if not liste: return []
     consignes = SYSTEME.format(ton=l.get("ton") or "simple", grille=C.section(regles, "Grille des accroches"), regles=C.section(regles, "Règles pour Qwen"))
-    formules = "\n".join(x for x in C.hooks_texte().splitlines() if x.startswith("- "))[:1500]
-    demande = (f"Ligne : {l.get('nom') or serie}. Sujet de la vidéo : {doc.get('sujet')}. Script : {' '.join(doc.get('scenes', [])[:-1])} "
-               f"Formules qui marchent (à adapter, jamais à copier) :\n{formules}\n"
-               f"Écris exactement trois accroches différentes, de huit mots au plus, {'en tutoyant' if l.get('tutoiement') else 'en vouvoyant'}, "
-               'sans chiffre ni promesse. Format : {"accroches": ["...", "...", "..."]}')
-    try: r = json.loads(ollama.chat(consignes, demande, temperature=0.9, num_predict=300))
-    except (ValueError, KeyError): return []
-    a = r.get("accroches") if isinstance(r, dict) else None
-    return [x for x in a if isinstance(x, str)][:3] if isinstance(a, list) else []
+    demande = (f"Ligne : {l.get('nom') or serie}. Sujet de la vidéo : {doc.get('sujet')}. Script : {' '.join(doc.get('scenes', [])[:-1])}\n"
+               "Formules écrites à la main (à remplir, jamais à modifier) :\n" + "\n".join(f"{i} : {f}" for i, f in liste) + f"\n{trous_aide(serie)}\n"
+               "Choisis exactement trois formules différentes, celles qui collent le mieux au sujet, et remplis chacun de leurs trous avec un à quatre mots "
+               f"tirés du sujet, {'en tutoyant' if l.get('tutoiement') else 'en vouvoyant'}. Ne change aucun autre mot, n'écris aucune autre phrase, aucun chiffre. "
+               'Une formule sans trou se choisit avec "trous": {}. Format : {"choix": [{"id": "...", "trous": {"nom_du_trou": "..."}}, ...]}')
+    choix = []
+    try:
+        r = json.loads(ollama.chat(consignes, demande, temperature=0.7, num_predict=300))
+        choix = r.get("choix") if isinstance(r, dict) and isinstance(r.get("choix"), list) else []
+    except (ValueError, KeyError): pass
+    par_id, out = dict(liste), []
+    for c in choix:
+        if not isinstance(c, dict): continue
+        i = str(c.get("id") or "").strip().upper()
+        if i not in par_id or any(i == x for _, x in out): continue
+        texte = remplir(par_id[i], c.get("trous"))
+        if texte: out.append((texte, i))
+        if len(out) == 3: return out
+    sans_trou = [(f, i) for i, f in liste if not TROU.search(f) and all(i != x for _, x in out)]
+    random.Random(graine).shuffle(sans_trou)
+    sans_trou.sort(key=lambda x: x[0] in recentes)   # les formules déjà utilisées récemment passent en dernier
+    return out + sans_trou[:3 - len(out)]
 
 
 def retravailler(doc, conf, ollama, regles, a_blanc=False):
     """Réécrit accroche, rythme et sous-titres d'un script (dict). -> doc modifié (champ « marketing »), ou None si aucune accroche valable."""
     serie = doc.get("serie", "A"); nom = f"{doc['jour']}-{doc['passage'].replace(':', '')}"
-    proposees = demander_accroches(ollama, doc, serie, conf, regles)
-    candidates = list(proposees)
+    recentes = recentes_du_journal()
+    proposees = demander_accroches(ollama, doc, serie, conf, regles, recentes, nom)
+    origine = {t: i for t, i in proposees}
+    candidates = [t for t, _ in proposees]
     if serie == "B" and conf["lignes"]["B"].get("brouillon_hook"):
-        candidates.append(re.split(r"(?<=[?.!])\s", conf["lignes"]["B"]["brouillon_hook"].strip())[0])   # brouillon de Liam : sa première phrase concourt aussi
-    best, notes = choisir(candidates, serie, conf, recentes_du_journal())
+        brouillon = re.split(r"(?<=[?.!])\s", conf["lignes"]["B"]["brouillon_hook"].strip())[0]   # brouillon de Liam : sa première phrase concourt aussi
+        if brouillon not in candidates: candidates.append(brouillon); origine[brouillon] = "brouillon de Liam"
+    best, notes = choisir(candidates, serie, conf, recentes)
     if not best:   # aucune accroche de Qwen ne passe : la première phrase du script est gardée si elle passe la grille
         best, notes2 = choisir([doc["scenes"][0]], serie, conf, ()); notes += notes2
     if not best:
@@ -125,15 +174,19 @@ def retravailler(doc, conf, ollama, regles, a_blanc=False):
     rythme = [morceau for p in corps for morceau in couper(p)]
     scenes = rythme + [doc["scenes"][-1]]
     d = duree_estimee(scenes)
-    if S.MOLLES.search(doc.get("accroche", "")) or mots(doc.get("accroche", "")) > 6:   # accroche écran molle ou longue : la meilleure accroche la remplace si elle est courte
-        if mots(best) <= 7: doc["accroche"] = best.rstrip(".")
+    # accroche écran = accroche parlée (même texte à l'écran et à l'oral) si elle a 7 mots au plus ; sinon la plus courte des accroches valables ;
+    # l'accroche du script ne reste que si aucune ne convient et qu'elle passe les garde-fous
+    courtes = sorted((t for t, n, _ in notes if n > 0 and mots(t) <= 7), key=lambda t: (t != best, mots(t)))
+    if courtes: doc["accroche"] = courtes[0].rstrip(".")
+    elif elimine(doc.get("accroche", ""), serie, conf) or mots(doc.get("accroche", "")) > 6: doc["accroche"] = best.rstrip(".")
     doc["scenes"] = scenes; doc["mots"] = sum(mots(s) for s in scenes)
     doc["sous_titres"] = [C.decouper_sous_titres(s) for s in scenes]
-    doc["marketing"] = {"accroches": [{"texte": t, "note": n, "raisons": r} for t, n, r in notes], "gardee": best, "phrases_coupees": len(rythme) - len(corps),
+    doc["marketing"] = {"accroches": [{"texte": t, "formule": origine.get(t, "script"), "note": n, "raisons": r} for t, n, r in notes], "gardee": best,
+                        "formule": origine.get(best, "script"), "phrases_coupees": len(rythme) - len(corps),
                         "duree_estimee_s": d, "duree_ok": conf["duree_min_s"] <= d <= conf["duree_max_s"], "fait_le": f"{datetime.now():%Y-%m-%d %H:%M}"}
     meilleure_note = max(n for t, n, _ in notes if t == best)
     C.csv_ligne(AGENT, nom, serie, conf["lignes"][serie].get("compte", ""), "accroche choisie", best,
-                f"note {meilleure_note}/10 ; autres : " + " | ".join(f"{t} = {n}" for t, n, _ in notes if t != best) + f" ; durée estimée {d} s", a_blanc)
+                f"formule {origine.get(best, 'script')} ; note {meilleure_note}/10 ; autres : " + " | ".join(f"{t} = {n}" for t, n, _ in notes if t != best) + f" ; durée estimée {d} s", a_blanc)
     return doc
 
 

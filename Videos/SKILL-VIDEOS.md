@@ -12,7 +12,7 @@ Les sections « Règles pour Qwen » et « Grille des accroches » sont injecté
 6. **Nettoyage** (`agents/nettoyage.ps1`, 03:30) : supprime les vidéos et fichiers intermédiaires de plus de `nettoyage_jours` jours, après une ligne dans `journal-videos.csv`.
 
 ## Gratuit, local, sans token Claude
-- Texte : Qwen local via Ollama (`modele`). Voix : edge-tts (gratuite). Montage : stickfigure-pipeline-v2 + ffmpeg. Navigateur : Playwright sur le navigateur déjà installé.
+- Texte : Qwen local via Ollama (`modele`). Voix : edge-tts (gratuite), bascule automatique sur Kokoro local s'il échoue (erreur, pas d'internet, plus de 30 s) ; une voix fixe par ligne (`lignes.<X>.voix`) ; moteur noté dans `journal-videos.csv` (colonne `tts`). Montage : stickfigure-pipeline-v2 + ffmpeg. Navigateur : Playwright sur le navigateur déjà installé.
 - Aucun service payant, aucune carte bancaire, aucun appel à Claude ni à une API payante.
 
 ## Rythme et format
@@ -34,6 +34,7 @@ Les sections « Règles pour Qwen » et « Grille des accroches » sont injecté
 - **B — recrutement d'appelants (call callers)** pour vendre des sites web, compte TikTok séparé. Ton : direct, tutoiement, « je te le dis cash ». Message : Liam cherche des call callers pour vendre des sites web ; on appelle depuis chez soi, on décroche des rendez-vous, on touche une commission sur chaque vente, pas de salaire fixe, liste et script fournis, postuler via le lien en bio (formulaire Google).
   - Ne cite ni ville ni lieu.
   - Taux de commission : champ `lignes.B.taux_commission`, laissé vide ; Liam le renseigne. Tant qu'il est vide, la vidéo dit seulement « à la commission ».
+  - Candidature : « lien en bio », jamais une adresse épelée (ni « www », ni « point com », ni lien).
   - INTERDIT : promettre ou chiffrer un revenu, citer un témoignage ou un nombre de ventes.
 
 ## Règles pour Qwen
@@ -44,13 +45,13 @@ Les sections « Règles pour Qwen » et « Grille des accroches » sont injecté
 - Ligne B : jamais de ville, de région ni de lieu ; jamais de montant, de pourcentage ni de nombre de ventes.
 
 ## Grille des accroches
-L'accroche est la première phrase : lue en 2 secondes au plus, elle crée tension ou curiosité. Note sur 10, calculée par le code (`marketing.noter_accroche`) :
+L'accroche est la première phrase : lue en 2 secondes au plus, elle crée tension ou curiosité. Elle vient TOUJOURS d'une formule à trous écrite à la main dans `hooks.md` (Qwen choisit la formule et remplit les trous, il n'invente pas). Ligne A : on parle à l'artisan ou au commerçant (vouvoiement), jamais à son client ; ligne B : on tutoie le futur call caller. Jamais « Découvrez comment ». Note sur 10, calculée par le code (`marketing.noter_accroche`) :
 - **+3** forme qui accroche : question, contradiction (« pourtant », « faux », « arrête », « personne ne »), erreur courante (« erreur », « vous perdez », « tu rates »), ou résultat montré avant l'explication.
 - **+3** courte : 6 mots ou moins (+3), 7 à 8 mots (+2), 9 à 10 mots (+1), plus de 10 mots (0 : plus de 2 secondes).
 - **+2** parle directement au public de la ligne (« vous » pour A, « tu » pour B).
 - **+1** concrète : nomme une chose qu'on voit (téléphone, horaires, bouton, appel, liste, rendez-vous, client, page…).
 - **+1** neuve : aucune des 20 dernières accroches de `journal-videos.csv` n'a les mêmes mots.
-- **Éliminée (0)** : chiffre, promesse, mot interdit ou phrase molle. Ouverture molle (« Bonjour », « Aujourd'hui », « Découvrez », « Dans cette vidéo ») : −3.
+- **Éliminée (0)** : chiffre, promesse, mot interdit, phrase molle, mauvais public ou adresse épelée. Ouverture molle (« Bonjour », « Aujourd'hui », « Découvrez », « Dans cette vidéo ») : −3.
 Égalité : la plus courte gagne. Les 3 accroches, leur note et la gagnante sont écrites dans `journal-videos.csv`.
 
 ## Rétention
