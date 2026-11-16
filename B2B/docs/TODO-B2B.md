@@ -22,7 +22,8 @@ _Mise à jour : 16 nov. 2026, 13 h (le fait est supprimé ; l'historique est dan
 - [ ] Valider la liste des idées supprimées d'IDEES-MASTER.md (sauvegarde dans B2B\donnees\sauvegardes\) et trancher la section « À trancher »
 - [ ] Lundi 16 : prendre les ~15 dernières lignes de la feuille de Sid (ta propre liste « Appels Liam » commence mardi 17)
 - [ ] Serveur : ajouter « nettoyage-fichiers » aux agents actifs (tâche chaque jour à 03:00)
-- [ ] Serveur, avant le 17/11 à 07 h 30 : lancer `python B2B\agents\registre.py importer-anciens` (anciens lots dans le registre, environ 324 entreprises, sans doublon)
+- [ ] Vérifier toi-même dans la config locale B2B\agents que agents_actifs contient surveillant, appels-liam et nettoyage-fichiers (lecture refusée à Claude par la garde des secrets)
+- [ ] Réserve neuve trop mince (334, dont 0 électricien, maçon, couvreur ou coiffeur) : liste de Sid du 17/11 prévue à 97 lignes au lieu de 100, à décider (plafond par métier ou nouvelles sources)
 - [ ] Serveur : accepter la mise à jour puis ajouter appels-liam aux agents actifs (et envoi_automatique à true dans la config locale d'appels-liam pour la feuille Google)
 - [ ] Envoyer SCRIPT-APPEL-SID.md à Sid (seulement celui-là ; closing et techniques restent à toi)
 - [ ] Serveur : `git -C <dossier Jarvis> config core.hooksPath .githooks`, ajouter « surveillant » aux agents actifs
