@@ -159,16 +159,18 @@ def retravailler(doc, conf, ollama, regles, a_blanc=False):
     recentes = recentes_du_journal()
     if doc.get("histoire"):   # ligne B : histoire écrite à la main, accroche comprise ; ni Qwen, ni découpe (le jeu de scène suit chaque réplique)
         best = doc["scenes"][0]; note, raisons = noter_accroche(best, serie, conf, recentes)
-        if note == 0:
+        sketch = doc.get("format") == "sketch"   # sketch à deux (17/11/2026) : la 1re réplique est un dialogue (vouvoiement possible), vérifiée par sketches.py
+        formule = doc.get("formule") or f"histoire {doc['histoire']}"
+        if note == 0 and not sketch:
             C.journal(AGENT, "erreur", f"{nom} : accroche de l'histoire {doc['histoire']} refusée ({'; '.join(raisons)})", a_blanc); return None
         d = duree_estimee(doc["scenes"])
-        doc["sous_titres"] = [C.decouper_sous_titres(s) for s in doc["scenes"]]
-        doc["marketing"] = {"accroches": [{"texte": best, "formule": f"histoire {doc['histoire']}", "note": note, "raisons": raisons}], "gardee": best,
-                            "formule": f"histoire {doc['histoire']}", "phrases_coupees": 0, "duree_estimee_s": d,
+        doc["sous_titres"] = [C.decouper_sous_titres(s, maxi=3, mini=1, car_max=16) if sketch else C.decouper_sous_titres(s) for s in doc["scenes"]]
+        doc["marketing"] = {"accroches": [{"texte": best, "formule": formule, "note": note, "raisons": raisons}], "gardee": best,
+                            "formule": formule, "phrases_coupees": 0, "duree_estimee_s": d,
                             "duree_ok": conf["duree_min_s"] <= d <= conf["duree_max_s"], "fait_le": f"{datetime.now():%Y-%m-%d %H:%M}"}
         C.csv_ligne(AGENT, nom, serie, conf["lignes"][serie].get("compte", ""), "accroche choisie", best,
-                    f"histoire {doc['histoire']} ({doc.get('variante', 'original')}, {doc.get('structure', 'classique')}) ; note {note}/10 ; durée estimée {d} s", a_blanc,
-                    histoire=doc["histoire"], formule=f"histoire {doc['histoire']}", theme=doc.get("theme", ""), fin=doc.get("fin_variante", ""))
+                    (f"sketch {doc['sketch']} ({doc.get('variante', 'code')})" if sketch else f"histoire {doc['histoire']} ({doc.get('variante', 'original')}, {doc.get('structure', 'classique')})")
+                    + f" ; note {note}/10 ; durée estimée {d} s", a_blanc, histoire=doc["histoire"], formule=formule, theme=doc.get("theme", ""), fin=doc.get("fin_variante", ""))
         return doc
     proposees = demander_accroches(ollama, doc, serie, conf, regles, recentes, nom)
     origine = {t: i for t, i in proposees}

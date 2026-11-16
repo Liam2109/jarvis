@@ -116,8 +116,9 @@ def mots_de(phrase):
     return re.findall(r"[\wÀ-ÿ'’%-]+(?:[?!.,:;…]| [?!:;»])*", p)
 
 
-def decouper_sous_titres(phrase, maxi=4, mini=2):
+def decouper_sous_titres(phrase, maxi=4, mini=2, car_max=None):
     """Groupes de 2 à 4 mots pour les sous-titres, coupés après une ponctuation puis en groupes de taille égale ; le mot clé (couleur d'accent) = le plus long mot plein.
+    Sketch de la ligne B (17/11/2026) : maxi=3, mini=1, car_max=16 (1 à 3 mots, groupe trop large pour l'écran recoupé en deux).
     -> [{"mots": [...], "cle": index}]"""
     ms = mots_de(phrase); segments, cur = [], []
     for m in ms:   # morceaux de phrase coupés après une ponctuation
@@ -135,6 +136,12 @@ def decouper_sous_titres(phrase, maxi=4, mini=2):
             if i > 0 and len(groupes[i - 1]) < maxi: groupes[i - 1] += groupes.pop(i); continue
             if i + 1 < len(groupes) and len(groupes[i + 1]) < maxi: seul = groupes.pop(i); groupes[i] = seul + groupes[i]; continue   # (avant le 17/11 : mauvais indice, mot dupliqué ou perdu)
         i += 1
+    if car_max:   # groupe trop large (caractères) : recoupé en deux tant qu'il a plus d'un mot
+        i = 0
+        while i < len(groupes):
+            g = groupes[i]
+            if len(g) > 1 and len(" ".join(g)) > car_max: k = len(g) // 2; groupes[i:i + 1] = [g[:k], g[k:]]; continue
+            i += 1
     out = []
     for g in groupes:
         nus = [re.sub(r"[\s ?!.,:;…»]+$", "", m).lower().replace("’", "'") for m in g]

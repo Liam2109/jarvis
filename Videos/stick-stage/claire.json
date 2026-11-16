@@ -1,0 +1,109 @@
+{
+ "schemaVersion": 1,
+ "id": "claire",
+ "displayName": "Interlocutrice",
+ "proportions": {
+  "height": 0.98,
+  "headRadius": 0.18,
+  "neck": 0.02,
+  "torso": 0.28,
+  "upperArm": 0.15,
+  "forearm": 0.14,
+  "thigh": 0.16,
+  "shin": 0.16
+ },
+ "style": {
+  "build": "toon",
+  "stroke": "#1b1b1f",
+  "strokeWidth": 12,
+  "headFill": "#ffffff",
+  "torso": {
+   "style": "bean",
+   "fill": "#2e8b74",
+   "width": 0.16
+  },
+  "limbCurve": 0.3,
+  "hands": "nub",
+  "feet": "oval",
+  "footFill": "#4a3426",
+  "headShape": {
+   "sx": 1.04,
+   "sy": 1.0,
+   "dx": 0.03
+  }
+ },
+ "face": {
+  "eyes": "big-pupil",
+  "brows": true,
+  "mouthSet": "default",
+  "offsetX": 0.16,
+  "eyeSpacing": 0.46,
+  "eyeY": -0.02,
+  "mouthY": 0.46
+ },
+ "accessories": [],
+ "toon": {
+  "proportions": {
+   "height": 0.95,
+   "headRadius": 0.12,
+   "neck": 0.018,
+   "torso": 0.31,
+   "upperArm": 0.172,
+   "forearm": 0.16,
+   "thigh": 0.21,
+   "shin": 0.2
+  },
+  "skin": "#c98d68",
+  "skinShade": "#b07455",
+  "body": {
+   "shoulders": 86,
+   "waist": 60,
+   "hips": 78,
+   "arm": 24,
+   "neck": 22
+  },
+  "eyes": {
+   "iris": "#4a3020",
+   "lashes": true
+  },
+  "brows": {
+   "color": "#2a1a12",
+   "thickness": 6,
+   "gap": 0.5
+  },
+  "lip": "#a8434f",
+  "nose": "button",
+  "cheeks": {
+   "color": "#e8737a",
+   "opacity": 0.22
+  },
+  "hair": {
+   "kind": "long-streak",
+   "fill": "#3a2418",
+   "shade": "#2a180f",
+   "streak": "#6b4630"
+  },
+  "top": {
+   "kind": "tee",
+   "fill": "#2e8b74",
+   "shade": "#226b59"
+  },
+  "bottom": {
+   "kind": "jeans",
+   "fill": "#3b4a66",
+   "shade": "#2c3850",
+   "cuff": "#56658a"
+  },
+  "shoes": {
+   "kind": "sneaker",
+   "fill": "#f2f2f2",
+   "shade": "#cfcfcf"
+  },
+  "details": []
+ },
+ "energy": 0.5,
+ "personality": "L'interlocutrice de Gérard (cliente, collègue, voisine) : calme, directe, toujours un temps d'avance.",
+ "voice": {
+  "say": "Thomas"
+ }
+}

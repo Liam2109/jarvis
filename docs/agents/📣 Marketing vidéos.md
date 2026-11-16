@@ -24,8 +24,8 @@ tags: [agent-b2b]
 
 ## Ce qu'il fait étape par étape
 1. `C.exiger` (machine active) puis `C.exiger_regles` (skill présent et complet, sinon refus code 3).
-2. Pour chaque script du jour sans champ `marketing` : Qwen propose 3 accroches (8 mots au plus) en s'inspirant de `Videos/hooks.md` ; ligne B : la première phrase du brouillon de Liam concourt aussi.
-3. `noter_accroche` : note sur 10 (forme qui accroche +3, courte +3, adresse directe +2, concrète +1, neuve +1, ouverture molle −3) ; éliminée (0) si chiffre, promesse, mot interdit, phrase molle ou lieu (ligne B). La meilleure remplace la première phrase ; égalité = la plus courte.
+2. Pour chaque script du jour sans champ `marketing` : Qwen choisit 3 formules de la ligne dans `Videos/hooks.md` (`- A01 | …`, `- B01 | …`) et remplit leurs trous (1 à 4 mots) ; il n'invente aucune phrase. Formule inconnue ou trou invalide = rejeté, complété par des formules sans trou (jamais inventées). Ligne B : la première phrase du brouillon de Liam concourt aussi (si elle est différente).
+3. `noter_accroche` : note sur 10 (forme qui accroche +3, courte +3, adresse directe +2, concrète +1, neuve +1, ouverture molle −3) ; éliminée (0) si chiffre, promesse, mot interdit, phrase molle, mauvais public (A : vouvoyer l'artisan, jamais son client ; B : tutoyer le futur call caller), adresse épelée ou lieu (ligne B). L'accroche écran = l'accroche gardée (7 mots au plus). La meilleure remplace la première phrase ; égalité = la plus courte.
 4. Rythme : phrase de plus de 11 mots coupée en deux (une image toutes les 2 à 4 s) ; durée estimée (2,6 mots/s + carte de fin) comparée à 20-35 s.
 5. Sous-titres : groupes de 2 à 4 mots, mot clé (le plus long mot plein) en couleur d'accent ; utilisés par l'agent Création.
 6. Une ligne dans `Videos/journal-videos.csv` (accroche gardée, sa note et celle des autres) et une dans le journal de l'agent.

@@ -11,7 +11,7 @@ ajoutés par le code), aucune promesse de gain ou de résultat, aucun témoignag
   python Videos\\agents\\scripts.py passage --heure 06:00 [--a-blanc]
   python Videos\\agents\\scripts.py etat"""
 import argparse, json, re, sys, unicodedata
-from types import SimpleNamespace   # garde-fous de ce module passés à histoires.verifier
+from types import SimpleNamespace   # garde-fous de ce module passés à sketches.py
 from datetime import datetime
 from pathlib import Path
 
@@ -220,7 +220,7 @@ def ecrire_script(conf, jour, heure, ollama, historique, a_blanc, essais=6):
     fichier = C.SCRIPTS / f"{jour}-{heure.replace(':', '')}.json"
     if fichier.exists(): print(f"  {heure} : script déjà écrit ({fichier.name})"); return fichier
     serie = serie_du_passage(conf, heure)
-    if serie == "B": return ecrire_histoire(conf, jour, heure, ollama, historique, a_blanc, fichier)
+    if serie == "B": return ecrire_sketch(conf, jour, heure, ollama, historique, a_blanc, fichier)
     angle = angle_libre(serie, historique); veille = note_veille(jour)
     try: consignes = systeme(serie, conf, C.regles())
     except RuntimeError: consignes = systeme(serie, conf, "")
@@ -244,33 +244,30 @@ def ecrire_script(conf, jour, heure, ollama, historique, a_blanc, essais=6):
     print(f"  ! {heure} : aucun script valable après {essais} essais"); return None
 
 
-def ecrire_histoire(conf, jour, heure, ollama, historique, a_blanc, fichier):
-    """Ligne B : une histoire écrite à la main (Videos\\histoires-base.md), variée par Qwen (prénoms, métiers, détails seulement), puis l'appel à l'action tournant.
-    Refusée (None) si elle rate l'appel à l'action ou contient un interdit, même après retour à l'histoire d'origine."""
-    import histoires as H
-    hs, ctas = H.lire()
-    if not hs or not ctas: print("  ! histoires-base.md sans histoire ou sans appel à l'action"); C.journal(AGENT, "erreur", "histoires-base.md incomplet", a_blanc); return None
-    n_b = sum(1 for x in historique if x.get("serie") == "B"); cta = H.appel_action(historique, ctas); recents = H.textes_recents(C.SCRIPTS)
-    doc, refus = None, []
-    for h in H.candidates(historique, hs, H.FENETRE)[:3]:   # jamais une histoire des 20 dernières vidéos ; 3 essais au plus
-        lignes, origine = H.varier(ollama, h, "Tu varies des histoires courtes en français sans rien inventer. Réponds uniquement avec un objet JSON valide.")
-        raisons = H.verifier(lignes, cta, conf, SimpleNamespace(**globals()))
-        if raisons and origine == "qwen":   # la variante passe mal : l'histoire d'origine
-            lignes, origine = [l["texte"] for l in h["lignes"]], "original"; raisons = H.verifier(lignes, cta, conf, SimpleNamespace(**globals()))
-        lignes, roles, structure, d_est = H.structure_qui_tient(h, lignes, cta, n_b)
-        if not raisons and d_est > H.DUREE_MAX_S: raisons = [f"trop longue (~{d_est} s estimées, {H.DUREE_MAX_S} s au plus)"]
-        if not raisons and H.trop_proche(" ".join(lignes), recents): raisons = ["trop proche d'une des 20 dernières vidéos"]
-        if raisons: refus.append(f"{h['id']} : {'; '.join(raisons)}"); continue
-        doc = H.document(h, lignes, cta, conf, jour, heure, origine, roles, structure, f"CTA{ctas.index(cta) + 1}") | {"cree_le": f"{datetime.now():%Y-%m-%d %H:%M}"}; break
-    if not doc:
-        C.journal(AGENT, "erreur", f"{jour} {heure} : aucune histoire acceptée ({' | '.join(refus)[:200]})", a_blanc)
-        print(f"  ! {heure} : aucune histoire acceptée ({' | '.join(refus) or 'toutes jouées dans les 20 dernières vidéos'})"); return None
-    h = next(x for x in hs if x["id"] == doc["histoire"])
-    if a_blanc: print(f"[à blanc] {heure} (série B, histoire {h['id']}) : {json.dumps(doc, ensure_ascii=False, indent=1)}"); return fichier
+def ecrire_sketch(conf, jour, heure, ollama, historique, a_blanc, fichier):
+    """Ligne B (17/11/2026) : un sketch à deux écrit à la main (Videos\sketches-base.json). Qwen choisit seulement le sketch (parmi 3 autorisés) et les valeurs
+    de ses champs dans les listes ; aucune phrase inventée. Refus (None) si la base ne passe pas les garde-fous, si tous les sketches sont dans les 20 dernières vidéos,
+    ou si la vidéo est trop proche d'une des 20 dernières."""
+    import sketches as K
+    base = K.lire(); garde = SimpleNamespace(**globals())
+    pb = K.verifier_base(base, conf, garde)
+    if pb:
+        C.journal(AGENT, "erreur", f"sketches-base.json refusé ({'; '.join(pb)[:200]})", a_blanc); print(f"  ! sketches-base.json refusé : {'; '.join(pb)[:300]}"); return None
+    s, valeurs, genre, origine = K.choisir(ollama, historique, base)
+    if not s:
+        C.journal(AGENT, "erreur", f"{jour} {heure} : tous les sketches sont dans les {K.FENETRE} dernières vidéos", a_blanc); print("  ! aucun sketch libre"); return None
+    i_fin, fin_ = K.fin_suivante(historique, base["fins"])
+    doc = K.document(s, valeurs, genre, i_fin, fin_, conf, jour, heure, origine) | {"cree_le": f"{datetime.now():%Y-%m-%d %H:%M}"}
+    raisons = [x for l in doc["scenes"][:-2] for x in K._garde(l, conf, garde)] + K.verifier_fin(fin_, conf, garde)
+    raisons += [f"réplique de {K.mots(l)} mots" for l in doc["scenes"] if K.mots(l) > K.MOTS_MAX]
+    if not raisons and K.trop_proche(" ".join(doc["scenes"][:-2]), K.textes_recents(C.SCRIPTS)): raisons = [f"trop proche d'une des {K.FENETRE} dernières vidéos"]
+    if raisons:
+        C.journal(AGENT, "erreur", f"{jour} {heure} : sketch {s['id']} refusé ({'; '.join(raisons)[:200]})", a_blanc); print(f"  ! sketch {s['id']} refusé : {'; '.join(raisons)}"); return None
+    if a_blanc: print(f"[à blanc] {heure} (série B, sketch {s['id']}) : {json.dumps(doc, ensure_ascii=False, indent=1)}"); return fichier
     C.SCRIPTS.mkdir(parents=True, exist_ok=True); fichier.write_text(json.dumps(doc, ensure_ascii=False, indent=1), encoding="utf-8")
-    historique.append({"jour": jour, "passage": heure, "serie": "B", "histoire": h["id"], "sujet": h["titre"], "titre": h["titre"]}); sujets_ecrire(historique)
-    C.journal(AGENT, "script", f"{jour} {heure} : série B, histoire {h['id']} ({doc['variante']}, {doc['structure']}), {doc['mots']} mots")
-    print(f"  {heure} : série B, histoire {h['id']} « {h['titre']} » ({doc['variante']}, {doc['structure']}, {doc['mots']} mots)"); return fichier
+    historique.append({"jour": jour, "passage": heure, "serie": "B", "sketch": s["id"], "histoire": s["id"], "sujet": s["titre"], "titre": s["titre"]}); sujets_ecrire(historique)
+    C.journal(AGENT, "script", f"{jour} {heure} : série B, sketch {s['id']} ({origine}, {doc['fin_variante']}, valeurs {valeurs}), {doc['mots']} mots")
+    print(f"  {heure} : série B, sketch {s['id']} « {s['titre']} » (choix {origine}, {doc['fin_variante']}, {valeurs}, {doc['mots']} mots)"); return fichier
 
 
 def cmd(conf, jour, heures, a_blanc):

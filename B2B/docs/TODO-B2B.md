@@ -37,7 +37,7 @@ _Mise à jour : 16 nov. 2026, 17 h 30 (le fait est supprimé ; l'historique est 
 - [ ] Facebook Normandie et Leboncoin : poster l'offre « page exemple à ton nom »
 
 ## Agents (ensuite, une étape à la fois)
-- [ ] Vidéos : regarder les vidéos test B Videos\a-valider\2026-11-16-1400.mp4 (leçon L01) et 2026-11-15-1400.mp4 (comédie H01), nouveau rendu stick-stage ; relire les histoires de Videos\histoires-base.md (graines écrites à la main, à corriger librement)
+- [ ] Vidéos : regarder les 2 sketchs test de la ligne B (Videos\a-valider\2026-11-17-1400.mp4 = T03, 2026-11-18-1400.mp4 = L01) et relire Videos\sketches-base.json (30 sketches, à corriger librement) ; les anciennes vidéos B de narrateur (2026-11-15-1400, 2026-11-16-1400) ne servent plus
 - [ ] Vidéos : avant le « go publier », faire relever l'adresse TikTok par l'agent publication (colonne url_tiktok de journal-videos.csv, vide pour l'instant)
 - [ ] Les tests laissent des dossiers dans %TEMP% : les faire se nettoyer eux-mêmes ; 6 mentions « Répondu / Refus » gardées exprès (anciennes feuilles de Sid)
 - [ ] Terminer l'étape Vente (réparer reponses.py, puis Réponses, Rendez-vous, Devis, Relances J+3 et J+7, lead chaud), chacun avec contrat + garde + test + fiche avant activation

@@ -6,7 +6,8 @@ publication (fermée sans « go publier » par ligne, essai obligatoire, captcha
 nettoyage (nettoyage.ps1 dans un dossier temporaire : vieux .mp4 et intermédiaires supprimés, ligne CSV avant, skill / scripts / veille / vidéos protégées intacts),
 voix (edge-tts simulé en échec -> bascule Kokoro, moteur dans la colonne tts ; vrai Kokoro local sur une phrase si le modèle est là, sans aucun son joué),
 formules d'accroche à trous (hooks-base.md, bon public par ligne), correctif Windows de stick-stage (sur une copie, puis vérification de l'outil réel s'il est cloné).
-ligne B en histoires (histoires-base.md : 40 % leçons, 40 % comédie Gérard, 20 % autres ; jamais rejouée avant 20 vidéos ; appel à l'action exigé ; interdits),
+ligne B en sketch à deux (sketches-base.json : schéma, 10 mots par réplique, 40/40/20 %, jamais rejoué avant 20 vidéos, Qwen limité aux listes, 3 fins, interdits),
+voix par personnage, agent monteur (plans de 3 s au plus, durée prévue, sous-titres en zone sûre, contrôle qualité, mise à part après 3 essais),
 rendu stick-stage (skit construit, débuts des répliques), sous-titres sans mot perdu ni doublé, journal CSV migré vers les colonnes de suivi.
 Tout se passe dans un dossier temporaire : aucun réseau, aucun Ollama, aucun navigateur, aucun rendu, rien de publié."""
 import csv, importlib.util, io, json, os, shutil, subprocess, sys, tempfile, time, unittest
@@ -26,11 +27,12 @@ def charger(nom):
 C = charger("commun"); sys.modules["commun"] = C
 V, S = charger("veille"), charger("scripts"); sys.modules["scripts"] = S
 VX = charger("voix"); sys.modules["voix"] = VX
-H = charger("histoires"); sys.modules["histoires"] = H
+SK = charger("sketches"); sys.modules["sketches"] = SK
 RS = charger("rendu_stickstage"); sys.modules["rendu_stickstage"] = RS
+MT = charger("monteur"); sys.modules["monteur"] = MT
 MK, K, P = charger("marketing"), charger("creation"), charger("publication")
-for m in (V, S, MK, K, P, VX, H, RS): m.C = C
-K.RS = RS
+for m in (V, S, MK, K, P, VX, SK, RS, MT): m.C = C
+K.RS = RS; K.MT = MT; MT.RS = RS
 K.VX = VX
 MK.S = S
 
@@ -274,8 +276,8 @@ class Creation(Base):
 class Voix(Base):
     PHRASES = ["Votre client cherche vos horaires.", "Fermé ou ouvert ?"]
 
-    def faux_kokoro(self, phrases, voix, dossier, vitesse=1.0):
-        self.kokoro_appele = (voix, vitesse)
+    def faux_kokoro(self, phrases, voix, dossier, vitesse=1.0, hauteur=1.0):
+        self.kokoro_appele = (voix, vitesse); self.kokoro_hauteur = hauteur
         for i, _ in enumerate(phrases): VX.fichier_phrase(dossier, i).write_bytes(b"kokoro")
 
     def test_voix_fixe_par_ligne(self):
@@ -364,6 +366,8 @@ class StickStage(Base):
         self.assertEqual(n, 1); self.assertNotIn(".bin/remotion", neuf)
         self.assertIn('execFileSync(process.execPath, [path.join(ws.root, "node_modules/@remotion/cli/remotion-cli.js"), "ffmpeg"', neuf)
         self.assertEqual(W.corriger_texte(neuf), (neuf, 0))                                    # idempotent
+        rh = 'execFileSync(bin, ["-q", "-f", "json", "--extendedShapes", "GHX", "-d", dialog, wav], { encoding: "utf8" });'   # Rhubarb muet avec -q sous Windows
+        neuf, n = W.corriger_texte(rh); self.assertEqual(n, 1); self.assertIn('["-f", "json", "--extendedShapes"', neuf); self.assertEqual(W.corriger_texte(neuf)[1], 0)
         copie = self.r / "stick-stage"
         for rel in W.FICHIERS: (copie / rel).parent.mkdir(parents=True, exist_ok=True); (copie / rel).write_text(self.CASSE.replace("ws.root", "root"), encoding="utf-8")
         self.assertEqual(W.corriger(copie, verifier=True)[1], 3); self.assertEqual(W.corriger(copie)[0], 3); self.assertEqual(W.corriger(copie, verifier=True)[1], 0)
@@ -375,53 +379,127 @@ class StickStage(Base):
             self.assertEqual(r.returncode, 0, r.stderr[-300:]); self.assertIn("ffmpeg version", r.stdout)
 
 
-class Histoires(Base):
+class Sketches(Base):
     def setUp(self):
-        super().setUp(); self.hs, self.ctas = H.lire()
+        super().setUp(); self.b = SK.lire()
 
-    def lignes(self, i): return [l["texte"] for l in self.hs[i]["lignes"]]
+    def sk(self, i): return json.loads(json.dumps(self.b["sketches"][i]))
 
-    def test_graines_et_repartition(self):
-        cats = [H.categorie(h["theme"]) for h in self.hs]
-        self.assertEqual((cats.count("lecon"), cats.count("comedie")), (8, 8)); self.assertEqual(len(self.ctas), 5)
-        for h in self.hs:                                                              # chaque graine passe tous les garde-fous, avec chaque fin
-            for cta in self.ctas: self.assertEqual(H.verifier([l["texte"] for l in h["lignes"]], cta, self.conf(), S), [], (h["id"], cta))
+    def test_base_valide_et_repartition(self):
+        self.assertEqual(SK.verifier_base(self.b, self.conf(), S), []); self.assertEqual(len(self.b["sketches"]), 30); self.assertEqual(len(self.b["fins"]), 3)
+        cats = [SK.categorie(s) for s in self.b["sketches"]]; self.assertEqual((cats.count("comedie"), cats.count("lecon"), cats.count("autre")), (12, 12, 6))
+        long = {c: max(SK.liste_de(self.b, c, "libre"), key=SK.mots) for c in SK.CHAMPS}
+        for s in self.b["sketches"]:
+            self.assertTrue(6 <= len(s["repliques"]) <= 8, s["id"]); self.assertTrue(SK.champs_de(s), s["id"])
+            self.assertTrue(all(SK.mots(SK.remplir(x["texte"], long)) <= 10 for x in s["repliques"]), s["id"])
         hist, seq = [], []
         for _ in range(40):
-            h = H.choisir(hist, self.hs); hist.append({"serie": "B", "histoire": h["id"]}); seq.append(h["id"])
-        self.assertTrue(all(len(set(seq[i:i + 20])) == 20 for i in range(21)))     # aucune histoire rejouée avant 20 vidéos
-        vingt = [H.categorie(next(x for x in self.hs if x["id"] == i)["theme"]) for i in seq[:20]]
+            s, vals, genre, origine = SK.choisir(None, hist, self.b); hist.append({"serie": "B", "sketch": s["id"]}); seq.append(s["id"])
+            self.assertEqual(origine, "code"); self.assertTrue(SK.valeurs_valides(s, self.b, vals, genre))
+        self.assertTrue(all(len(set(seq[i:i + 20])) == 20 for i in range(21)))        # aucun sketch rejoué dans les 20 dernières vidéos
+        vingt = [SK.categorie(next(x for x in self.b["sketches"] if x["id"] == i)) for i in seq[:20]]
         self.assertEqual((vingt.count("lecon"), vingt.count("comedie"), vingt.count("autre")), (8, 8, 4))   # 40 / 40 / 20 %
+        self.assertEqual({SK.fin_suivante([{"serie": "B", "sketch": "x"}] * n, self.b["fins"])[0] for n in range(3)}, {0, 1, 2})   # 3 fins tournantes
 
     def test_refus(self):
-        c, l = self.conf(), self.lignes(0)
-        self.assertTrue(any("appel à l'action" in p for p in H.verifier(l, "Abonne-toi !", c, S)))
-        for mauvais, quoi in (("Mon closer gagne bien sa vie.", "interdit"), ("Selon une étude, ça marche.", "interdit"),
-                              ("Trouve le numéro privé du gérant.", "interdit"), ("Réserve un rendez-vous de quinze minutes.", "nombre"),
-                              ("Découvrez comment faire.", "molle"), ("Vous voulez un job ?", "public"), ("Comme dit Elon Musk.", "vraie personne")):
-            self.assertTrue(any(quoi in p for p in H.verifier(l[:-1] + [mauvais], self.ctas[0], c, S)), mauvais)
-        self.assertFalse(H.proche_de("Gérard a peur d'un seul mot : non.", "Gaston a peur d'un seul mot : non."))   # Gérard garde son prénom
-        self.assertTrue(H.proche_de("Il compose le numéro. Ça sonne.", "Il compose le numéro. Ça vibre."))
-        self.assertTrue(H.trop_proche(" ".join(l), ["Bonjour", " ".join(l)])); self.assertFalse(H.trop_proche(" ".join(l), [" ".join(self.lignes(20))]))
+        c = self.conf(); s = self.sk(0)
+        s["repliques"][0]["texte"] = "Un mot de trop dans cette phrase vraiment beaucoup trop longue pour Gérard."
+        self.assertTrue(any("mots (10 au plus)" in p for p in SK.verifier_sketch(s, self.b, c, S)))
+        for mauvais, quoi in (("Mon closer gagne bien.", "interdit"), ("Selon une étude, oui.", "interdit"), ("Trouve son numéro privé.", "interdit"),
+                              ("On en vend trois par jour.", "nombre"), ("Comme dit Elon Musk.", "vraie personne"), ("Il parle de {prix}.", "champ inconnu")):
+            s = self.sk(0); s["repliques"][1]["texte"] = mauvais
+            self.assertTrue(any(quoi in p for p in SK.verifier_sketch(s, self.b, c, S)), mauvais)
+        s = self.sk(0); s["repliques"] = [dict(x, qui="G") for x in s["repliques"]]; self.assertTrue(any("tous les deux" in p for p in SK.verifier_sketch(s, self.b, c, S)))
+        s = self.sk(0); s["repliques"][0]["sfx"] = "musique-connue"; self.assertTrue(any("bruitage inconnu" in p for p in SK.verifier_sketch(s, self.b, c, S)))
+        self.assertTrue(any("incomplète" in p for p in SK.verifier_fin(["On recrute des call callers.", "Lien en bio."], c, S)))
+        self.assertTrue(any("lieu" in p for p in SK.verifier_fin(["Call callers à la commission, près de Rouen.", "Bio ou DM."], c, S)))
+        self.assertTrue(any("public" in p for p in SK.verifier_fin(["Vous voulez être call caller, à la commission ?", "Bio ou DM."], c, S)))
 
-    def test_structures_document_et_duree(self):
-        h = next(x for x in self.hs if x["id"] == "H01"); l = [x["texte"] for x in h["lignes"]]
-        vues = {H.varier_structure(h, l, n)[2] for n in range(3)}; self.assertEqual(vues, set(H.STRUCTURES))
-        l2, r2, s, d = H.structure_qui_tient(h, l, self.ctas[0], 1); self.assertLessEqual(d, H.DUREE_MAX_S)
-        doc = H.document(h, l2, self.ctas[0], self.conf(), "2026-11-17", "14:00", "original", r2, s, "CTA1")
-        self.assertEqual(len(doc["jeu"]), len(doc["scenes"])); self.assertEqual(doc["scenes"][-1], self.ctas[0])
-        self.assertTrue(doc["scenes"][doc["punchline"]].startswith("Et Gérard")); self.assertEqual((doc["categorie"], doc["fin_variante"]), ("comedie", "CTA1"))
-        self.assertIn(C.MENTION_IA, doc["legende"]); self.assertNotIn("Gérard", doc["scenes"][-1])   # « on recrute » seulement dans la fin
+    def test_qwen_limite_aux_listes(self):
+        s = SK.candidates([], self.b["sketches"])[0]; champs = SK.champs_de(s)
+        _, _, _, o = SK.choisir(FauxQwen([{"sketch": s["id"], "genre": "h", "valeurs": {x: "astronaute" for x in champs}}]), [], self.b)
+        self.assertEqual(o, "code")                                                          # valeur hors des listes : refusée, choix du code
+        bon = {x: SK.liste_de(self.b, x, "h")[0] for x in champs}
+        s2, vals, genre, o = SK.choisir(FauxQwen([{"sketch": s["id"], "genre": "h", "valeurs": bon}]), [], self.b)
+        self.assertEqual((s2["id"], o, vals, genre), (s["id"], "qwen", bon, "h"))
 
     def test_ecrit_le_script_b(self):
-        q = FauxQwen([{"rien": 1}] * 3)
-        with redirect_stdout(io.StringIO()): f = S.ecrire_script(self.conf(), "2026-11-17", "14:00", q, [], False)
+        with redirect_stdout(io.StringIO()): f = S.ecrire_script(self.conf(), "2026-11-17", "14:00", FauxQwen([{"rien": 1}]), [], False)
         doc = json.loads(f.read_text(encoding="utf-8"))
-        self.assertEqual((doc["serie"], doc["histoire"], doc["variante"]), ("B", "L01", "original")); self.assertTrue(any(r.search(doc["scenes"][-1]) for r in H.CTA_OK))
-        self.assertEqual(json.loads(C.SUJETS.read_text(encoding="utf-8"))[0]["histoire"], "L01")
-        with redirect_stdout(io.StringIO()): MK.traiter(self.conf(), "2026-11-17", ["14:00"], ollama_cls=lambda m: FauxQwen([]))   # marketing : pas de Qwen pour une histoire
+        self.assertEqual((doc["serie"], doc["format"], doc["variante"], doc["fin_variante"]), ("B", "sketch", "code", "FIN1"))
+        self.assertEqual(len(doc["qui"]), len(doc["scenes"])); self.assertEqual(doc["qui"][-2:], ["G", "G"]); self.assertEqual(doc["scenes"][-2:], self.b["fins"][0])
+        self.assertFalse(any("{" in x for x in doc["scenes"])); self.assertIn(C.MENTION_IA, doc["legende"])
+        self.assertEqual(json.loads(C.SUJETS.read_text(encoding="utf-8"))[0]["sketch"], doc["sketch"])
+        with redirect_stdout(io.StringIO()): MK.traiter(self.conf(), "2026-11-17", ["14:00"], ollama_cls=lambda m: FauxQwen([]))
         d = json.loads(f.read_text(encoding="utf-8")); self.assertEqual(d["marketing"]["gardee"], d["scenes"][0])
-        self.assertEqual((self.csv()[-1]["histoire"], self.csv()[-1]["fin"]), ("L01", "CTA1"))
+        self.assertTrue(all(1 <= len(g["mots"]) <= 3 for st in d["sous_titres"] for g in st))   # sous-titres : 1 à 3 mots
+        l = self.csv()[-1]; self.assertEqual((l["histoire"], l["formule"], l["theme"], l["fin"], l["ligne"]), (doc["sketch"], doc["formule"], doc["theme"], "FIN1", "B"))
+
+
+class Monteur(Base):
+    def doc(self, i=0):
+        b = SK.lire(); s = b["sketches"][i]; vals, g = SK.valeurs_par_defaut(s, b, 1)
+        return SK.document(s, vals, g, 0, b["fins"][0], self.conf(), "2026-11-17", "14:00", "code")
+
+    def tl(self, total, coupes, punch=()):
+        return {"fps": 30, "durationInFrames": total, "scenes": [{"from": 0, "timeline": {
+            "shots": [{"frame": f, "framing": "two"} for f in coupes], "punchIns": [{"frame": f, "on": "gerard"} for f in punch], "durationInFrames": total,
+            "beats": [{"id": "n1", "from": 0, "to": total, "synthetic": False, "audioFrom": 0}]}}]}
+
+    def test_skit_dialogue_et_voix(self):
+        d = self.doc(11)   # T12 : sonnerie au début, bruitage du catalogue à la chute
+        dur = [3.5 if i % 3 == 0 else 1.5 for i in range(len(d["scenes"]))]
+        sk = RS.skit_dialogue(d, RS.decor(d["decor"]), dur)
+        self.assertEqual([c["id"] for c in sk["cast"]], ["gerard", "inter"]); self.assertEqual(len(sk["characters"]), 2)
+        self.assertEqual({b["speaker"] for b in sk["beats"]}, {"gerard", "inter"}); self.assertNotIn("narrator", sk)
+        plans = [(b["shot"]["framing"], b["shot"].get("on")) if "shot" in b else None for b in sk["beats"]]   # None : la chute, cadrée par le réalisateur
+        self.assertTrue(all(a != b for a, b in zip(plans, plans[1:]) if a and b))           # une coupe à chaque réplique
+        self.assertTrue(all("punchIn" in b["shot"] for b, x in zip(sk["beats"], dur) if x > RS.PLAN_LONG_S and "shot" in b))   # réplique longue : zoom
+        self.assertEqual(sk["beats"][0]["pauseBeforeMs"], RS.PAUSE_SONNERIE_MS)                # la sonnerie est mixée dans ce silence
+        self.assertEqual(sk["beats"][d["punchline"]]["sfx"][0]["id"], "register"); self.assertNotIn("shot", sk["beats"][d["punchline"]])
+        for i in d["fin_indices"]: self.assertEqual(sk["beats"][i]["actions"][0], {"who": "gerard", "do": "look", "to": "camera", "at": {"ms": 0}})
+        v = VX.voix_dialogue(self.conf(), "f"); self.assertNotEqual(v["G"]["edge"], v["I"]["edge"]); self.assertEqual(v["I"]["edge"], "fr-FR-DeniseNeural")
+        self.assertNotEqual(v["G"].get("kokoro_hauteur", 1.0), v["I"].get("kokoro_hauteur", 1.0))   # Kokoro : une seule voix, deux hauteurs
+        self.assertNotEqual(VX.voix_dialogue(self.conf(), "h")["I"]["edge"], v["G"]["edge"])
+
+    def test_plans_et_duree_prevue(self):
+        self.assertEqual(MT.plans_trop_longs(self.tl(300, [0, 60, 120])), [(4.0, 10.0)])
+        self.assertEqual(MT.plans_trop_longs(self.tl(300, [0, 60, 120], [180, 240])), [])
+        d = self.r / "skit"; (d / "generated").mkdir(parents=True)
+        (d / "skit.json").write_text(json.dumps({"beats": [{"id": "n1", "speaker": "gerard"}]}), encoding="utf-8")
+        (d / "generated" / "timeline.json").write_text(json.dumps(self.tl(840, [0, 60])), encoding="utf-8")   # 28 s + carte : bonne durée, plan long
+        self.assertTrue(MT.retoucher_plans(d)); self.assertIn("punchIn", json.loads((d / "skit.json").read_text(encoding="utf-8"))["beats"][0]["shot"])
+        (d / "generated" / "timeline.json").write_text(json.dumps(self.tl(1200, list(range(0, 1200, 60)))), encoding="utf-8")   # 40 s : trop long
+        self.assertTrue(MT.retoucher_plans(d)); self.assertEqual(json.loads((d / "skit.json").read_text(encoding="utf-8"))["style"], "snappy")
+        self.assertTrue(MT.retoucher_plans(d)); self.assertEqual(json.loads((d / "skit.json").read_text(encoding="utf-8"))["style"], "argument")
+        with self.assertRaises(MT.TropLong): MT.retoucher_plans(d)                            # même au rythme le plus serré : la voix sera accélérée avant le rendu
+
+    def test_sous_titres_et_controle(self):
+        d = self.doc(0); plan = [C.decouper_sous_titres(s, maxi=3, mini=1, car_max=16) for s in d["scenes"]]
+        self.assertTrue(all(1 <= len(g["mots"]) <= 3 for p in plan for g in p))
+        self.assertEqual(" ".join(m for p in plan for g in p for m in g["mots"]), " ".join(m for s in d["scenes"] for m in C.mots_de(s)))   # aucun mot perdu
+        temps = K.temps_mots(d["scenes"], [2.0] * len(d["scenes"]), edge=lambda *a: [])
+        ass = MT.sous_titres_ass(plan, temps); self.assertEqual(MT.controle_sous_titres(ass), []); self.assertIn("\\c&H00D7FF&", ass)
+        self.assertTrue(MT.controle_sous_titres(ass.replace(",120,200,680,1", ",20,20,100,1")))   # hors zone sûre : refusé
+        trop = MT.sous_titres_ass([[{"mots": ["anticonstitutionnellement"] * 3, "cle": 0}]], [[(0, 1)] * 3]); self.assertTrue(MT.controle_sous_titres(trop))
+        self.assertEqual(MT.controle(30.0, [], [], {"ecart_db": 18.0}, []), [])
+        pb = MT.controle(36.2, [(3.0, 3.5)], ["x"], {"ecart_db": 8.0}, [(1.0, 5.0)])
+        for mot in ("durée", "noire", "x", "voix", "plan"): self.assertTrue(any(mot in p for p in pb), mot)
+        self.assertEqual(MT.style_suivant("classic", ["durée 36.2 s"], 36.2), "snappy"); self.assertEqual(MT.style_suivant("classic", ["durée 22 s"], 22), "sitcom")
+        import wave
+        with wave.open(str(MT.sonnerie(self.r / "s.wav")), "rb") as w: self.assertAlmostEqual(w.getnframes() / w.getframerate(), MT.SONNERIE_S, places=2)
+
+    def test_mise_a_part_apres_trois_essais(self):
+        ancien, essais = (MT.A_PART, RS.rendre), []
+
+        def rendre(*a, **k): essais.append(1); raise RuntimeError("rendu simulé en échec")
+        MT.A_PART = self.r / "a-part"; RS.rendre = rendre
+        try:
+            with redirect_stdout(io.StringIO()):
+                r = MT.monter(self.doc(), self.conf(), "2026-11-17-1400", self.r, None, {"temps": None}, "x", "y", ["a"], K.accroche_ecran, K.temps_mots)
+        finally: MT.A_PART, RS.rendre = ancien
+        self.assertFalse(r["ok"]); self.assertEqual((len(essais), r["essais"]), (3, 3))
+        motif = json.loads((self.r / "a-part" / "2026-11-17-1400.json").read_text(encoding="utf-8")); self.assertIn("rendu simulé", motif["motifs"][0])
 
 
 class StickStageRendu(Base):

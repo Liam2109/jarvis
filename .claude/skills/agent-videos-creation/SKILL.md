@@ -7,7 +7,7 @@ description: Fiche de rôle de l'agent Création vidéos (équipe Vidéos TikTok
 
 **Responsable :** Jarvis (CEO). **Script :** `Videos/agents/creation.py`. **Contrat :** `B2B/harness/contrats/videos-creation.json`.
 **Tâche serveur :** `passage` à 06:00, 14:00 et 22:00 (`serveur-taches.json`, `heures_en_plus`, à partir du 17/11/2026, si `videos-creation` est dans `agents_actifs`).
-**Outil :** `Videos/outils/stickfigure-pipeline-v2` (cloné, hors git). stick-stage a été écarté le 16/11/2026 : il plante sous Windows (`node_modules\.bin\remotion` lancé sans `.cmd`).
+**Outil :** stick-stage (`Videos/outils/stick-stage`, MIT, cloné hors git, corrigé pour Windows par `Videos/correctifs/stick-stage-windows.py` : lanceur Remotion et Rhubarb sans « -q »). Ligne B (sketch à deux, 17/11/2026) : après la voix (une par personnage, `voix.voix_dialogue`), tout le montage est confié à l'agent monteur (`Videos/agents/monteur.py`, skill `agent-videos-monteur`) ; vidéo acceptée -> `a-valider`, refusée 3 fois -> `a-part` (motif en .json), ligne dans `journal-videos.csv` dans les deux cas.
 
 ## Ordres pas à pas (lus dans le script)
 1. `C.exiger("videos-creation", ...)` ; passage = l'heure prévue la plus proche (ou `--heure`) ; rien si la vidéo existe déjà ; code 2 si le script du passage manque.

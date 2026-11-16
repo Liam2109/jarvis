@@ -8,6 +8,7 @@ Les sections « Règles pour Qwen » et « Grille des accroches » sont injecté
 2. **Scripts** (`agents/scripts.py`, 05:00) : Qwen écrit le script de chaque passage (une idée, phrases courtes, légende).
 3. **Marketing** (`agents/marketing.py`, 05:30) : réécrit accroche, rythme et sous-titres ; 3 accroches notées, la meilleure gardée et inscrite dans `journal-videos.csv`.
 4. **Création** (`agents/creation.py`, 06:00, 14:00, 22:00) : fabrique la vidéo (stick-stage en style toon, voix edge-tts, ffmpeg) dans `a-valider\`.
+4 bis. **Monteur** (`agents/monteur.py`, appelé par Création pour la ligne B) : plans de 3 s au plus, musique et bruitages, sous-titres, contrôle qualité (25-35 s, aucune image noire, sous-titres en zone sûre, voix au moins 12 dB au-dessus de la musique) ; 2 reprises au plus, puis vidéo mise à part dans `a-part\` avec le motif.
 5. **Publication** (`agents/publication.py`, 06:20, 14:20, 22:20) : publie sur TikTok seulement les lignes que Liam a ouvertes par « go publier ».
 6. **Nettoyage** (`agents/nettoyage.ps1`, 03:30) : supprime les vidéos et fichiers intermédiaires de plus de `nettoyage_jours` jours, après une ligne dans `journal-videos.csv`.
 
@@ -31,7 +32,7 @@ Les sections « Règles pour Qwen » et « Grille des accroches » sont injecté
 
 ## Deux lignes éditoriales (réglages dans `videos-config.json` > `lignes`, surchargés par `videos-config.local.json`)
 - **A — stickman divertissement / explications**, compte TikTok actuel. Ton : vivant, simple, vouvoiement, un bonhomme bâton qui explique une chose concrète du web pour les artisans et commerçants. Fin : « votre page répond à ça ? le lien est dans la description » ; jamais de rendez-vous de 15 minutes, aucune promesse.
-- **B — histoires drôles du monde du business** (compte TikTok séparé, recrutement de call callers), ton sec, personnage récurrent Gérard, 25 à 35 s : 40 % leçons de vente au téléphone (accroche dans les 3 premières secondes, pivot, chute), 40 % comédie Gérard, 20 % entrepreneuriat et quotidien. Graines écrites à la main dans `histoires-base.md` ; Qwen ne fait que varier détails et métiers ; aucune histoire rejouée avant 20 vidéos ; ouverture, structure et fin tournantes ; vidéo trop proche d'une des 20 dernières refusée. « On recrute des call callers à la commission » seulement dans la fin (5 variantes : formulaire en bio ou DM).
+- **B — sketch à deux** (compte TikTok séparé, recrutement de call callers, décision de Liam du 17/11/2026) : Gérard + un interlocuteur (client, collègue, voisin…), 6 à 8 répliques de 10 mots au plus, chacune répond à la précédente, un retournement drôle, puis la fin dite par Gérard face caméra ; 25 à 35 s. 40 % comédie de Gérard au téléphone, 40 % leçons de vente au téléphone, 20 % entrepreneuriat et quotidien. Les 30 sketches sont écrits à la main dans `sketches-base.json` : **aucune phrase n'est inventée par Qwen**, qui choisit seulement le sketch et remplit les champs ({metier}, {objet}, {lieu}, {nom}) avec les listes écrites à la main (toute autre valeur est refusée). Aucun sketch rejoué dans les 20 dernières vidéos. 3 fins tournantes (« on recrute des call callers à la commission », formulaire en bio ou DM ; jamais « près de Rouen » ni « chez moi »). Deux voix edge-tts (Gérard : Henri ; interlocutrice : Denise ; interlocuteur : Rémy) ; en bascule Kokoro (une seule voix française), Gérard plus grave (hauteur 0,85) que l'interlocuteur.
   - Ne cite ni ville ni lieu.
   - Taux de commission : champ `lignes.B.taux_commission`, laissé vide ; Liam le renseigne. Tant qu'il est vide, la vidéo dit seulement « à la commission ».
   - Candidature : « lien en bio », jamais une adresse épelée (ni « www », ni « point com », ni lien).
@@ -58,9 +59,16 @@ L'accroche est la première phrase : lue en 2 secondes au plus, elle crée tensi
 - 20 à 35 secondes (fin comprise) ; un changement visuel toutes les 2 à 3 secondes (une phrase = une image, 4 à 11 mots par phrase) ; fin en boucle (la dernière phrase renvoie à l'accroche) ou question qui relance.
 
 ## Sous-titres
-- Mot par mot, synchronisés avec la voix : temps des mots donnés par edge-tts (déjà retenu, gratuit), recalés sur la durée réelle de chaque phrase ; à défaut, répartis selon la longueur des mots dans la phrase.
+- Mot par mot, synchronisés avec la voix : temps des mots donnés par edge-tts (repères WordBoundary, gratuits), recalés sur le début réel de chaque réplique dans la vidéo ; à défaut (Kokoro), répartis selon la longueur des mots.
+- Ligne B (sketch) : très grands (104 px), 1 à 3 mots à la fois (16 caractères au plus par groupe), au centre vers le bas (bas du texte à y = 1240), contour de 9 px, mot clé en jaune ; le monteur vérifie que chaque sous-titre tient en 2 lignes entre x = 120 et x = 880 et au-dessus de y = 1300.
 - Grosse police grasse (Arial Black / Arial gras), blanc sur contour noir épais, 2 à 4 mots à l'écran, le mot clé en couleur d'accent (jaune).
 - Zone sûre TikTok (1080x1920) : rien sous y = 1500 (légende et boutons du bas), rien à droite de x = 900 (boutons j'aime / commentaires / partage), rien au-dessus de y = 220. Sous-titres centrés vers y = 1150.
+
+## Musique et bruitages (ligne B, monteur) : licences
+- Musique de fond légère en continu, environ 18 dB sous la voix (mesurée en LUFS par ffmpeg), volume final normalisé à -14 LUFS (crête -1,5 dB). Fichiers : `outils/stick-stage/public/music/` (room pour la comédie, resolve pour les leçons, mystery pour le reste) : **CC0-1.0**, synthétisés par code par l'auteur de stick-stage (`scripts/music-gen.ts`, catalogue `src/data/music.json`).
+- Bruitages aux moments forts (pop, coup de bureau = thud, ding, rimshot, record-scratch, crickets, register, click, door-knock, buzzer) : catalogue de stick-stage `public/sfx/` : **CC0-1.0**, synthétisés par code (`scripts/sfx-gen.ts`, catalogue `src/data/sfx.json`).
+- Sonnerie de téléphone : générée par notre code (`agents/monteur.py`, fonction `sonnerie`, sinusoïdes) : aucun droit tiers.
+- Jamais de musique protégée (morceau du commerce, son « tendance » TikTok) ni de son téléchargé sans licence CC0 notée ici.
 
 ## Contenu interdit (toutes lignes)
 - Promesse fausse, chiffre ou témoignage inventé, contenu copié, données personnelles, ville ou lieu sur la ligne B.

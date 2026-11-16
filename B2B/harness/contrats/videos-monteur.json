@@ -1,0 +1,51 @@
+{
+ "nom": "videos-monteur",
+ "responsable": "Jarvis (CEO)",
+ "mission": "Monte chaque sketch de la ligne B (appelé par videos-creation) : plans de 3 s au plus, son CC0, sous-titres en zone sûre, contrôle qualité ; sinon mise à part.",
+ "statut": "actif",
+ "script": "Videos/agents/monteur.py",
+ "jours": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6
+ ],
+ "heures": {
+  "debut": "06:00",
+  "fin": "23:00"
+ },
+ "fichiers_lus": [
+  "Videos/travail/<vidéo> (voix, rendu)",
+  "Videos/outils/stick-stage (hors git : skit, timeline, musique et bruitages CC0)"
+ ],
+ "fichiers_ecrits": [
+  "Videos/travail/<vidéo> (temporaire)",
+  "Videos/a-part/AAAA-MM-JJ-HHMM.mp4 (+ .json, motif)",
+  "Videos/videos-monteur-journal.log",
+  "B2B/logs/agents/videos-monteur"
+ ],
+ "canaux_discord": [],
+ "envoi_client": false,
+ "actions_interdites": [
+  "publier une vidéo",
+  "rendre deux vidéos en même temps",
+  "utiliser une musique ou un son sans licence CC0 notée dans Videos/SKILL-VIDEOS.md",
+  "laisser un fond noir plein",
+  "produire une vidéo sans la mention « Contenu généré par IA »",
+  "appeler Claude ou un service payant",
+  "toucher à memoire/, .env, config.json, .obsidian/ ou un fichier *.local.json",
+  "envoyer au client, encaisser ou signer"
+ ],
+ "plafonds": {
+  "messages_par_jour": 0,
+  "videos_par_jour": 3
+ },
+ "peut_engager": false,
+ "alerte_si_silence": null,
+ "tests": [
+  "tests/agents/test_videos.py"
+ ]
+}

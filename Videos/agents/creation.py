@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import commun as C   # noqa: E402
 import voix as VX    # noqa: E402  (edge-tts, bascule Kokoro local)
 import rendu_stickstage as RS   # noqa: E402  (rendu toon en couleurs)
+import monteur as MT   # noqa: E402  (ligne B, sketch à deux : plans, musique, bruitages, contrôle qualité)
 
 AGENT = "videos-creation"
 OUTIL = C.VIDEOS / "outils" / "stickfigure-pipeline-v2"
@@ -208,10 +209,14 @@ def fabriquer(conf, jour, heure, a_blanc=False):
         shutil.rmtree(travail, ignore_errors=True)   # restes d'un passage précédent (un dossier ouvert ailleurs n'empêche pas le rendu)
         travail.mkdir(parents=True, exist_ok=True)
         # Voix d'abord (edge-tts, sinon Kokoro local) : l'outil reprend ces fichiers ; edge-tts est retiré de son PATH pour qu'il ne refasse pas la voix.
-        try: voix = VX.synthese(doc["scenes"], VX.voix_ligne(conf, doc["serie"]), travail / "voix")
+        sketch = doc.get("format") == "sketch"
+        voix_doc = [VX.voix_dialogue(conf, doc["interlocuteur"]["genre"])[q] for q in doc["qui"]] if sketch else VX.voix_ligne(conf, doc["serie"])
+        try: voix = VX.synthese(doc["scenes"], voix_doc, travail / "voix")
         except RuntimeError as e: C.journal(AGENT, "erreur", f"{nom} : {e}"); print(f"! Voix impossible : {e}"); return 1
         if voix["bascule"]: C.journal(AGENT, "bascule voix", f"{nom} : {voix['bascule']} -> Kokoro local"); print(f"  voix : {voix['bascule']}, bascule sur Kokoro local")
         print(f"  voix : {voix['moteur']} ({voix['duree_s']} s)")
+        if sketch:   # sketch à deux : l'agent monteur fait tout le reste (plans, son, sous-titres, contrôle qualité, 2 reprises, mise à part)
+            return finir_sketch(conf, doc, nom, travail, voix, t0)
         debuts = None
         if stickstage:   # skit stick-stage (toon, décor, plans) ; début réel de chaque réplique lu dans sa timeline
             try: corps, debuts, durees = RS.rendre(doc, doc["scenes"], travail / "voix", travail, lancer, nom)
@@ -264,6 +269,34 @@ def fabriquer(conf, jour, heure, a_blanc=False):
     finally:
         try: VERROU.unlink()
         except OSError: pass
+
+
+def finir_sketch(conf, doc, nom, travail, voix, t0):
+    """Vidéo d'un sketch montée par videos-monteur ; acceptée -> a-valider + journal + CSV ; refusée 3 fois -> déjà mise à part par le monteur (code 1)."""
+    r = MT.monter(doc, conf, nom, travail, lancer, voix, POLICE_SOURCE, POLICE_ST_SOURCE, fins(doc["serie"], conf), accroche_ecran, temps_mots)
+    moteur = voix["moteur"]; noms_voix = VX.voix_dialogue(conf, doc["interlocuteur"]["genre"])
+    voix_txt = " + ".join(noms_voix[k]["edge" if moteur == VX.MOTEUR_EDGE else "kokoro"] + (f" (hauteur {noms_voix[k].get('kokoro_hauteur', 1.0)})" if moteur != VX.MOTEUR_EDGE else "")
+                          for k in ("G", "I"))
+    if not r["ok"]:
+        C.journal(AGENT, "erreur", f"{nom} : sketch {doc['sketch']} mis à part ({'; '.join(r['motifs'])[:200]})")
+        C.csv_ligne(AGENT, nom, "B", conf["lignes"]["B"].get("compte", ""), "mise à part", doc["scenes"][0], "; ".join(r["motifs"])[:200], tts=moteur,
+                    histoire=doc["sketch"], formule=doc.get("formule", ""), theme=doc.get("theme", ""), fin=doc.get("fin_variante", ""), voix=voix_txt)
+        print(f"! Sketch {doc['sketch']} mis à part ({r['mp4']}) : {'; '.join(r['motifs'])}"); return 1
+    C.A_VALIDER.mkdir(parents=True, exist_ok=True); shutil.move(str(r["mp4"]), C.A_VALIDER / f"{nom}.mp4")
+    (C.A_VALIDER / f"{nom}.txt").write_text(doc["legende"] + "\n", encoding="utf-8")
+    d = r["duree_s"]; rapport = r["rapport"]
+    meta = {k: doc.get(k) for k in ("jour", "passage", "serie", "format", "sketch", "titre", "theme", "categorie", "formule", "fin_variante", "valeurs", "interlocuteur", "variante")} | {
+        "duree_s": d, "duree_ok": True, "contenu_ia": True, "etiquette_ia_tiktok": True, "outil": "stick-stage", "decor": RS.decor(doc.get("decor")), "histoire": doc["sketch"],
+        "tts": moteur, "voix": voix_txt, "tts_bascule": voix["bascule"], "musique": rapport.get("musique"), "musique_licence": "CC0-1.0 (stick-stage, synthétisée par code)",
+        "sonnerie": "générée par code (monteur.py)", "ecart_voix_musique_db": rapport.get("ecart_db"), "controle_qualite": rapport.get("controle"), "essais": r["essais"],
+        "rendu_s": round(time.time() - t0), "cree_le": f"{datetime.now():%Y-%m-%d %H:%M}"}
+    (C.A_VALIDER / f"{nom}.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
+    shutil.rmtree(travail, ignore_errors=True)
+    C.journal(AGENT, "video", f"{nom} : sketch {doc['sketch']}, {d:.1f} s, {r['essais']} essai(s), {meta['rendu_s']} s, voix {moteur}")
+    C.csv_ligne(AGENT, nom, "B", conf["lignes"]["B"].get("compte", ""), "à valider", doc["scenes"][0], f"{d:.1f} s, rendu en {meta['rendu_s']} s, sketch {doc['sketch']}, contrôle OK"
+                + (f" ; {voix['bascule']}" if voix["bascule"] else ""), tts=moteur, histoire=doc["sketch"], formule=doc.get("formule", ""), theme=doc.get("theme", ""),
+                fin=doc.get("fin_variante", ""), duree_s=f"{d:.1f}", voix=voix_txt)
+    print(f"Vidéo prête : {C.A_VALIDER / (nom + '.mp4')} ({d:.1f} s, {r['essais']} essai(s), rendu en {meta['rendu_s']} s, voix {moteur})"); return 0
 
 
 def cmd_etat():
