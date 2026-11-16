@@ -251,7 +251,9 @@ def cmd_publier(a_blanc=False, maintenant=None, ligne=None, essai=False, publieu
         etat["publications"] = dict(sorted(etat["publications"].items())[-31:])   # un mois suffit (le reste est dans le journal)
         C.etat_ecrire(AGENT, etat)
         C.journal(AGENT, "publié", f"ligne {ligne} : {mp4.name} « {meta.get('titre')} » (passage {passage}, étiquette IA)")
-        C.csv_ligne(AGENT, mp4.stem, ligne, compte(conf, ligne), "publié", hook, f"passage {passage}, étiquette IA")
+        C.csv_ligne(AGENT, mp4.stem, ligne, compte(conf, ligne), "publié", hook, f"passage {passage}, étiquette IA",
+                    histoire=meta.get("histoire") or "", theme=meta.get("theme") or "", duree_s=meta.get("duree_s") or "", voix=meta.get("voix") or "",
+                    publie_le=f"{maintenant:%Y-%m-%d %H:%M}", url_tiktok="")   # adresse TikTok : pas encore relevée après publication (à faire avant le go publier)
         alerter(f"🎬 TikTok ({compte(conf, ligne)}) : vidéo publiée « {meta.get('titre')} » ({mp4.name}, passage {passage}, étiquette IA activée).")
         print(f"Publié : {mp4.name}"); return 0
     finally: rendre_verrou()

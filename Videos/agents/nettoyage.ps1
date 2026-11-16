@@ -20,7 +20,7 @@ function Csv-Ligne([string]$video, [string]$statut, [string]$hook, [string]$deta
     if ($Simulation) { return }
     $neuf = -not (Test-Path -LiteralPath $csv)
     $l = (@((Get-Date -Format 'yyyy-MM-dd HH:mm'), $AGENT, $video, $ligne, '', $statut, $hook, $detail, '') | ForEach-Object { Csv-Champ $_ }) -join ';'
-    if ($neuf) { [IO.File]::WriteAllText($csv, "date;agent;video;ligne;compte;statut;hook;detail;tts`r`n", (New-Object System.Text.UTF8Encoding($true))) }
+    if ($neuf) { [IO.File]::WriteAllText($csv, "date;agent;video;ligne;compte;statut;hook;detail;tts;histoire;formule;theme;fin;duree_s;voix;publie_le;url_tiktok`r`n", (New-Object System.Text.UTF8Encoding($true))) }
     [IO.File]::AppendAllText($csv, "$l`r`n", $utf8)
 }
 

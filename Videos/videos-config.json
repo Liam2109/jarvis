@@ -1,5 +1,5 @@
 {
-  "outil": "stickfigure-pipeline-v2",
+  "outil": "stick-stage",
   "voix": "fr-FR-RemyMultilingualNeural",
   "modele": "qwen2.5:3b",
   "passages": ["06:00", "14:00", "22:00"],

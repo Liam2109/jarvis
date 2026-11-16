@@ -1,6 +1,6 @@
 ---
 name: agent-videos-scripts
-description: Fiche de rôle de l'agent Scripts vidéos (équipe Vidéos TikTok, rattachée à Jarvis CEO) — chaque jour à 05:00 sur le serveur, Qwen local (Ollama, gratuit, aucun token Claude) écrit le script et la légende des 3 passages (ligne A stickman divertissement / explications, ligne B recrutement de call callers) en suivant Videos\SKILL-VIDEOS.md avec garde-fous codés. À utiliser pour vérifier ou corriger Videos\agents\scripts.py (jour, passage, etat).
+description: Fiche de rôle de l'agent Scripts vidéos (équipe Vidéos TikTok, rattachée à Jarvis CEO) — chaque jour à 05:00 sur le serveur, Qwen local (Ollama, gratuit, aucun token Claude) écrit le script et la légende des 3 passages (ligne A stickman divertissement / explications, ligne B : histoires drôles du business avec Gérard, tirées de Videos\histoires-base.md, que Qwen varie seulement, jamais rejouées avant 20 vidéos, fin « on recrute des call callers » vérifiée par le code) en suivant Videos\SKILL-VIDEOS.md avec garde-fous codés. À utiliser pour vérifier ou corriger Videos\agents\scripts.py (jour, passage, etat).
 ---
 
 # Agent Scripts vidéos — un sujet neuf par vidéo, sans promesse

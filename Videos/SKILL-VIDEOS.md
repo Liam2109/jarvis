@@ -7,7 +7,7 @@ Les sections « Règles pour Qwen » et « Grille des accroches » sont injecté
 1. **Veille** (`agents/veille.py`, 04:30) : recherche web gratuite (flux RSS Google Actualités, jamais TikTok) de ce qui marche : stickman, motion design, formats courts ; note du jour dans `veille\`, formules d'accroche repérées ajoutées à `hooks.md` (bibliothèque = modèle versionné `hooks-base.md` + formules repérées, réécrite chaque jour).
 2. **Scripts** (`agents/scripts.py`, 05:00) : Qwen écrit le script de chaque passage (une idée, phrases courtes, légende).
 3. **Marketing** (`agents/marketing.py`, 05:30) : réécrit accroche, rythme et sous-titres ; 3 accroches notées, la meilleure gardée et inscrite dans `journal-videos.csv`.
-4. **Création** (`agents/creation.py`, 06:00, 14:00, 22:00) : fabrique la vidéo (stickfigure-pipeline-v2, voix edge-tts, ffmpeg) dans `a-valider\`.
+4. **Création** (`agents/creation.py`, 06:00, 14:00, 22:00) : fabrique la vidéo (stick-stage en style toon, voix edge-tts, ffmpeg) dans `a-valider\`.
 5. **Publication** (`agents/publication.py`, 06:20, 14:20, 22:20) : publie sur TikTok seulement les lignes que Liam a ouvertes par « go publier ».
 6. **Nettoyage** (`agents/nettoyage.ps1`, 03:30) : supprime les vidéos et fichiers intermédiaires de plus de `nettoyage_jours` jours, après une ligne dans `journal-videos.csv`.
 
@@ -17,7 +17,7 @@ Les sections « Règles pour Qwen » et « Grille des accroches » sont injecté
 
 ## Rythme et format
 - 3 vidéos par jour, aux heures de `passages` (06:00, 14:00, 22:00 : ne pas les changer sans Liam). Ligne de chaque passage : `series_par_passage`.
-- Vertical 9:16 (1080x1920), style bonhomme bâton (stickman) sur fond sombre.
+- Vertical 9:16 (1080x1920), rendu stick-stage en style toon : couleurs réalistes de jour, vrai décor (bureau, cabinet, librairie, café, cuisine, salon, rue, parc), Gérard articulé (expressions, gestes, bouche synchronisée), plusieurs plans, coupes et transitions ; jamais de fond noir plein (carte de fin bleu nuit).
 - TikTok uniquement. Chaque vidéo porte la mention « Contenu généré par IA » à l'écran et dans la légende, et l'étiquette TikTok « contenu généré par IA » est activée à la publication (introuvable = rien n'est publié).
 
 ## Publication : un seul « go publier » par ligne
@@ -30,12 +30,12 @@ Les sections « Règles pour Qwen » et « Grille des accroches » sont injecté
 - L'agent ne tape JAMAIS de mot de passe et n'en stocke aucun : Liam se connecte lui-même, une fois, dans le profil du navigateur de la ligne.
 
 ## Deux lignes éditoriales (réglages dans `videos-config.json` > `lignes`, surchargés par `videos-config.local.json`)
-- **A — stickman divertissement / explications**, compte TikTok actuel. Ton : vivant, simple, vouvoiement, un bonhomme bâton qui explique une chose concrète du web pour les artisans et commerçants. Fin : planning de 15 minutes de Liam (lien lu dans `B2B\docs\SCRIPT-APPEL-SID.md`, jamais recopié).
-- **B — recrutement d'appelants (call callers)** pour vendre des sites web, compte TikTok séparé. Ton : direct, tutoiement, « je te le dis cash ». Message : Liam cherche des call callers pour vendre des sites web ; on appelle depuis chez soi, on décroche des rendez-vous, on touche une commission sur chaque vente, pas de salaire fixe, liste et script fournis, postuler via le lien en bio (formulaire Google).
+- **A — stickman divertissement / explications**, compte TikTok actuel. Ton : vivant, simple, vouvoiement, un bonhomme bâton qui explique une chose concrète du web pour les artisans et commerçants. Fin : « votre page répond à ça ? le lien est dans la description » ; jamais de rendez-vous de 15 minutes, aucune promesse.
+- **B — histoires drôles du monde du business** (compte TikTok séparé, recrutement de call callers), ton sec, personnage récurrent Gérard, 25 à 35 s : 40 % leçons de vente au téléphone (accroche dans les 3 premières secondes, pivot, chute), 40 % comédie Gérard, 20 % entrepreneuriat et quotidien. Graines écrites à la main dans `histoires-base.md` ; Qwen ne fait que varier détails et métiers ; aucune histoire rejouée avant 20 vidéos ; ouverture, structure et fin tournantes ; vidéo trop proche d'une des 20 dernières refusée. « On recrute des call callers à la commission » seulement dans la fin (5 variantes : formulaire en bio ou DM).
   - Ne cite ni ville ni lieu.
   - Taux de commission : champ `lignes.B.taux_commission`, laissé vide ; Liam le renseigne. Tant qu'il est vide, la vidéo dit seulement « à la commission ».
   - Candidature : « lien en bio », jamais une adresse épelée (ni « www », ni « point com », ni lien).
-  - INTERDIT : promettre ou chiffrer un revenu, citer un témoignage ou un nombre de ventes.
+  - INTERDIT : promettre ou chiffrer un revenu, « mon closer gagne », témoignage (faux ou non), statistique non vérifiée, nombre de ventes, trouver le numéro privé d'un décideur, imiter une vraie personne, « rendez-vous de 15 minutes », « Découvrez comment ».
 
 ## Règles pour Qwen
 - Une seule idée par vidéo. Phrases courtes, à l'oral, naturelles, comme on parle. Aucune phrase molle (« dans cette vidéo », « aujourd'hui on va voir », « il est important de », « n'hésitez pas », « tout simplement », « découvrez »).

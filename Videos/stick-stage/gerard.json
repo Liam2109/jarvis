@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "gerard",
+  "displayName": "Gérard",
+  "proportions": { "height": 0.98, "headRadius": 0.18, "neck": 0.02, "torso": 0.28, "upperArm": 0.15, "forearm": 0.14, "thigh": 0.16, "shin": 0.16 },
+  "style": {
+    "build": "toon",
+    "stroke": "#1b1b1f",
+    "strokeWidth": 12,
+    "headFill": "#ffffff",
+    "torso": { "style": "bean", "fill": "#2f4c7a", "width": 0.16 },
+    "limbCurve": 0.3,
+    "hands": "nub",
+    "feet": "oval",
+    "footFill": "#4a3426",
+    "headShape": { "sx": 1.04, "sy": 1.0, "dx": 0.03 }
+  },
+  "face": { "eyes": "big-pupil", "brows": true, "mouthSet": "default", "offsetX": 0.16, "eyeSpacing": 0.46, "eyeY": -0.02, "mouthY": 0.46 },
+  "accessories": [],
+  "toon": {
+    "proportions": { "height": 0.98, "headRadius": 0.136, "neck": 0.01, "torso": 0.33, "upperArm": 0.175, "forearm": 0.162, "thigh": 0.2, "shin": 0.195 },
+    "skin": "#e9b894",
+    "skinShade": "#cf9a76",
+    "body": { "shoulders": 126, "hips": 100, "arm": 27, "neck": 30 },
+    "eyes": { "iris": "#3b5a7a" },
+    "brows": { "color": "#8e8e93", "thickness": 10, "gap": 0.4 },
+    "lip": "#a8574a",
+    "nose": "hook",
+    "cheeks": { "color": "#e8737a", "opacity": 0.22 },
+    "hair": { "kind": "curly-mop", "fill": "#9a9aa0", "shade": "#7a7a80" },
+    "glasses": { "kind": "cat-eye", "fill": "#2b2b30" },
+    "top": { "kind": "turtleneck", "fill": "#2f4c7a" },
+    "bottom": { "kind": "jeans", "fill": "#4b4b55", "shade": "#3b3b44", "cuff": "#6a6a75" },
+    "shoes": { "kind": "boot", "fill": "#5a3a28" },
+    "details": []
+  },
+  "energy": 0.5,
+  "personality": "Gérard, la cinquantaine, patron d'un petit cabinet : sérieux, plein de bonne volonté, toujours un temps de retard.",
+  "voice": { "say": "Thomas" }
+}

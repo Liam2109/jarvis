@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Agent videos-creation (équipe Vidéos TikTok, 16/11/2026) : fabrique la vidéo d'un passage (06:00, 14:00, 22:00) à partir du script écrit par videos-scripts.
-Règles relues avant chaque exécution : Videos\\SKILL-VIDEOS.md. Outil retenu : stickfigure-pipeline-v2 (Videos\\outils, hors git ; stick-stage écarté, voir Videos\\README.md). La voix est faite ici avant le rendu (agents/voix.py : edge-tts, bascule automatique
+Règles relues avant chaque exécution : Videos\\SKILL-VIDEOS.md. Outil de rendu (config « outil ») : stick-stage en style toon depuis le 17/11/2026
+(agents/rendu_stickstage.py : couleurs, vrai décor, Gérard articulé, plusieurs plans et transitions ; comparaison dans Videos\\README.md), ou l'ancien
+stickfigure-pipeline-v2 (fond sombre) si « outil » vaut « stickfigure-pipeline-v2 ». La voix est faite ici avant le rendu (agents/voix.py : edge-tts, bascule automatique
 sur Kokoro local s'il échoue ; voix fixe par ligne ; moteur noté dans journal-videos.csv, colonne tts) et reprise par l'outil, qui fait les dessins (bonhomme bâton, fond sombre) et le montage ; cet agent ajoute ensuite avec ffmpeg : sous-titres mot à mot (2 à 4 mots, mot clé en jaune, zone sûre TikTok ; temps des mots par edge-tts), accroche à l'écran pendant les 2 premières secondes,
 mention « Contenu généré par IA » pendant toute la vidéo, et une carte de fin en français (la carte anglaise de l'outil n'est pas utilisée).
 Sortie : Videos\\a-valider\\AAAA-MM-JJ-HHMM.mp4 + .txt (légende, avec la mention IA) + .json (métadonnées). RIEN n'est publié ici.
@@ -14,12 +16,18 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import commun as C   # noqa: E402
 import voix as VX    # noqa: E402  (edge-tts, bascule Kokoro local)
+import rendu_stickstage as RS   # noqa: E402  (rendu toon en couleurs)
 
 AGENT = "videos-creation"
 OUTIL = C.VIDEOS / "outils" / "stickfigure-pipeline-v2"
 VERROU = C.VIDEOS / "creation.verrou"
 DELAI_S = 25 * 60
 FIN_S = 3.0
+FIN_S_B = 2.0   # ligne B : l'appel à l'action est déjà dit à voix haute, la carte le rappelle 2 s (vidéo de 35 s au plus)
+
+
+def fin_s(serie): return FIN_S_B if serie == "B" else FIN_S
+FOND_FIN = "0x1F4E79"   # carte de fin bleu nuit : jamais de fond noir plein
 POLICE_SOURCE = Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts" / "arialbd.ttf"
 POLICE = "police.ttf"   # copiée dans le dossier de travail : aucun chemin Windows (« C: ») à échapper dans le filtre ffmpeg
 POLICE_ST_SOURCE = Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts" / "ariblk.ttf"   # Arial Black (sous-titres), sinon Arial gras
@@ -30,10 +38,11 @@ IA_Y = 1380   # mention « Contenu généré par IA » : au-dessus de l'interfac
 
 
 def fins(serie, conf):
-    """Carte de fin. Ligne B : « À la commission » tant que taux_commission est vide (jamais de taux inventé), aucun lieu."""
-    if serie != "B": return ["Réservez 15 minutes", "avec Liam", "Lien dans la description"]
+    """Carte de fin. Ligne A : une page à son nom, lien dans la description (jamais de rendez-vous de 15 minutes, aucune promesse).
+    Ligne B : on recrute des call callers à la commission (taux seulement s'il est dans la config), formulaire en bio ou DM ; aucun lieu."""
+    if serie != "B": return ["Une page à votre nom ?", "Parlons-en", "Lien dans la description"]
     taux = conf["lignes"]["B"]["taux_commission"]
-    return [f"Commission {taux}, sans fixe" if taux else "À la commission, sans fixe", "Liste et script fournis", "Postule : lien en bio"]
+    return ["On recrute des call callers", f"À la commission ({taux})" if taux else "À la commission", "Formulaire en bio ou DM"]
 
 
 def passage_proche(maintenant):
@@ -124,11 +133,13 @@ def temps_edge(phrase, voix):
     except Exception: return []
 
 
-def temps_mots(scenes, durees, voix="", edge=temps_edge):
-    """Début et fin (s, temps de la vidéo) de chaque mot de chaque phrase. Les phrases se suivent sans blanc (narration = phrases bout à bout, scene_timings.json).
+def temps_mots(scenes, durees, voix="", edge=temps_edge, debuts=None):
+    """Début et fin (s, temps de la vidéo) de chaque mot de chaque phrase. debuts : début réel de chaque phrase (stick-stage ajoute des pauses) ;
+    sans debuts, les phrases se suivent sans blanc (stickfigure-pipeline-v2 : narration = phrases bout à bout, scene_timings.json).
     Temps d'edge-tts recalés sur la durée réelle de la phrase ; si edge-tts ne répond pas ou ne compte pas les mêmes mots : mots répartis selon leur longueur."""
     t0, out = 0.0, []
-    for phrase, d in zip(scenes, durees):
+    for n, (phrase, d) in enumerate(zip(scenes, durees)):
+        if debuts: t0 = debuts[n]
         ms = C.mots_de(phrase); b = edge(phrase, voix) if ms else []
         if b and len(b) == len(ms) and b[-1][1] > 0:
             k = min(1.0, d / b[-1][1]) if b[-1][1] > d else 1.0
@@ -188,7 +199,9 @@ def fabriquer(conf, jour, heure, a_blanc=False):
     doc = json.loads(script.read_text(encoding="utf-8"))
     if a_blanc:
         print(f"[à blanc] {nom} : série {doc['serie']}, « {doc['titre']} », {len(doc['scenes'])} phrases, {doc.get('mots')} mots ; outil {conf['outil']} ; rien rendu."); return 0
-    if not (OUTIL / "scripts" / "run.js").exists(): print(f"! Outil absent : {OUTIL}"); C.journal(AGENT, "erreur", "outil stickfigure-pipeline-v2 absent"); return 1
+    stickstage = conf["outil"] == "stick-stage"
+    if not (RS.TSX.exists() if stickstage else (OUTIL / "scripts" / "run.js").exists()):
+        print(f"! Outil absent : {RS.OUTIL if stickstage else OUTIL}"); C.journal(AGENT, "erreur", f"outil {conf['outil']} absent"); return 1
     if not prendre_verrou(): print("Un autre rendu est en cours : ce passage est abandonné."); C.journal(AGENT, "occupé", nom); return 1
     t0 = time.time(); travail = C.TRAVAIL / nom
     try:
@@ -199,19 +212,23 @@ def fabriquer(conf, jour, heure, a_blanc=False):
         except RuntimeError as e: C.journal(AGENT, "erreur", f"{nom} : {e}"); print(f"! Voix impossible : {e}"); return 1
         if voix["bascule"]: C.journal(AGENT, "bascule voix", f"{nom} : {voix['bascule']} -> Kokoro local"); print(f"  voix : {voix['bascule']}, bascule sur Kokoro local")
         print(f"  voix : {voix['moteur']} ({voix['duree_s']} s)")
-        entree = travail / "entree.json"; entree.write_text(json.dumps(entree_outil(doc, conf, travail / "voix"), ensure_ascii=False, indent=1), encoding="utf-8")
-        for f in ("final/body.mp4", "audio/full_narration.srt", "audio/full_narration.ass", "audio/scene_timings.json"):   # jamais les fichiers d'un rendu précédent
-            (OUTIL / "output" / f).unlink(missing_ok=True)
-        code, sortie = lancer([C.executable("node"), "scripts/run.js", str(entree), "jarvis"], OUTIL, travail / "outil.log", chemin=VX.chemin_sans_edge(C.chemin_complet()))
-        corps = OUTIL / "output" / "final" / "body.mp4"
-        if code != 0 or not corps.exists():
-            C.journal(AGENT, "erreur", f"{nom} : rendu de l'outil en échec (code {code})"); print(f"! Rendu en échec (code {code}), voir {travail / 'outil.log'}"); return 1
-        # Les sous-titres incrustés par l'outil sont invisibles (MarginV=320 pour une hauteur de référence de 288 : hors du cadre) : on incruste toujours les nôtres,
-        # mot à mot (temps edge-tts recalés sur la durée réelle de chaque phrase, scene_timings.json de l'outil).
-        durees = durees_outil(len(doc["scenes"]))
-        if not durees: C.journal(AGENT, "erreur", f"{nom} : durées des phrases introuvables (scene_timings.json)"); print("! Durées des phrases introuvables."); return 1
+        debuts = None
+        if stickstage:   # skit stick-stage (toon, décor, plans) ; début réel de chaque réplique lu dans sa timeline
+            try: corps, debuts, durees = RS.rendre(doc, doc["scenes"], travail / "voix", travail, lancer, nom)
+            except RuntimeError as e: C.journal(AGENT, "erreur", f"{nom} : {e}"[:300]); print(f"! Rendu stick-stage en échec : {e}"); return 1
+        else:
+            entree = travail / "entree.json"; entree.write_text(json.dumps(entree_outil(doc, conf, travail / "voix"), ensure_ascii=False, indent=1), encoding="utf-8")
+            for f in ("final/body.mp4", "audio/full_narration.srt", "audio/full_narration.ass", "audio/scene_timings.json"):   # jamais les fichiers d'un rendu précédent
+                (OUTIL / "output" / f).unlink(missing_ok=True)
+            code, sortie = lancer([C.executable("node"), "scripts/run.js", str(entree), "jarvis"], OUTIL, travail / "outil.log", chemin=VX.chemin_sans_edge(C.chemin_complet()))
+            corps = OUTIL / "output" / "final" / "body.mp4"
+            if code != 0 or not corps.exists():
+                C.journal(AGENT, "erreur", f"{nom} : rendu de l'outil en échec (code {code})"); print(f"! Rendu en échec (code {code}), voir {travail / 'outil.log'}"); return 1
+            # Les sous-titres de l'outil sont invisibles (hors du cadre) : on incruste toujours les nôtres, mot à mot (scene_timings.json de l'outil).
+            durees = durees_outil(len(doc["scenes"]))
+            if not durees: C.journal(AGENT, "erreur", f"{nom} : durées des phrases introuvables (scene_timings.json)"); print("! Durées des phrases introuvables."); return 1
         deja_temps = dict(zip(doc["scenes"], voix["temps"] or []))   # temps des mots donnés par edge-tts pendant la synthèse ; Kokoro : répartis selon la longueur
-        temps = temps_mots(doc["scenes"], durees, edge=lambda p, v: deja_temps.get(p, []))
+        temps = temps_mots(doc["scenes"], durees, edge=lambda p, v: deja_temps.get(p, []), debuts=debuts)
         sans_st = True
         shutil.copy2(corps, travail / "corps.mp4"); shutil.copy2(POLICE_SOURCE, travail / POLICE)
         police_st = "Arial Black" if POLICE_ST_SOURCE.exists() else "Arial"
@@ -221,8 +238,8 @@ def fabriquer(conf, jour, heure, a_blanc=False):
         textes = {"accroche.txt": accroche, "ia.txt": "Contenu généré par IA"} | {f"fin{i}.txt": t for i, t in enumerate(fins(doc["serie"], conf))}
         for f, t in textes.items(): (travail / f).write_text(echapper_texte(t), encoding="utf-8")
         sortie_mp4 = travail / "final.mp4"
-        cmd = [C.executable("ffmpeg"), "-y", "-v", "error", "-i", "corps.mp4", "-f", "lavfi", "-i", f"color=c=0x141414:s=1080x1920:r=30:d={FIN_S}",
-               "-f", "lavfi", "-i", f"anullsrc=r=44100:cl=stereo:d={FIN_S}", "-filter_complex", filtre_final(doc["serie"], sans_st, conf, taille_accroche),
+        cmd = [C.executable("ffmpeg"), "-y", "-v", "error", "-i", "corps.mp4", "-f", "lavfi", "-i", f"color=c={FOND_FIN}:s=1080x1920:r=30:d={fin_s(doc['serie'])}",
+               "-f", "lavfi", "-i", f"anullsrc=r=44100:cl=stereo:d={fin_s(doc['serie'])}", "-filter_complex", filtre_final(doc["serie"], sans_st, conf, taille_accroche),
                "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k",
                "-movflags", "+faststart", "final.mp4"]
         code, sortie = lancer(cmd, travail, travail / "ffmpeg.log", delai=10 * 60)
@@ -232,15 +249,17 @@ def fabriquer(conf, jour, heure, a_blanc=False):
         C.A_VALIDER.mkdir(parents=True, exist_ok=True)
         shutil.move(str(sortie_mp4), C.A_VALIDER / f"{nom}.mp4")
         (C.A_VALIDER / f"{nom}.txt").write_text(doc["legende"] + "\n", encoding="utf-8")
-        meta = {k: doc.get(k) for k in ("jour", "passage", "serie", "sujet", "titre", "accroche")} | {
-            "duree_s": round(d, 1), "duree_ok": conf["duree_min_s"] <= d <= conf["duree_max_s"], "marketing": bool(doc.get("marketing")), "hook": (doc.get("marketing") or {}).get("gardee") or doc["scenes"][0], "contenu_ia": True, "etiquette_ia_tiktok": True, "outil": conf["outil"], "tts": voix["moteur"], "voix": VX.voix_ligne(conf, doc["serie"])["edge" if voix["moteur"] == VX.MOTEUR_EDGE else "kokoro"], "tts_bascule": voix["bascule"],
+        meta = {k: doc.get(k) for k in ("jour", "passage", "serie", "sujet", "titre", "accroche", "theme", "angle", "fin_variante", "structure")} | {
+            "duree_s": round(d, 1), "duree_ok": conf["duree_min_s"] <= d <= conf["duree_max_s"], "marketing": bool(doc.get("marketing")), "hook": (doc.get("marketing") or {}).get("gardee") or doc["scenes"][0], "contenu_ia": True, "etiquette_ia_tiktok": True, "outil": conf["outil"], "decor": RS.decor(doc.get("decor")) if stickstage else "", "histoire": doc.get("histoire"), "tts": voix["moteur"], "voix": VX.voix_ligne(conf, doc["serie"])["edge" if voix["moteur"] == VX.MOTEUR_EDGE else "kokoro"], "tts_bascule": voix["bascule"],
             "rendu_s": round(time.time() - t0), "cree_le": f"{datetime.now():%Y-%m-%d %H:%M}"}
         (C.A_VALIDER / f"{nom}.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
         shutil.rmtree(travail, ignore_errors=True)
         plage = f"{conf['duree_min_s']}-{conf['duree_max_s']} s"
-        C.journal(AGENT, "video", f"{nom} : {d:.1f} s, rendu en {meta['rendu_s']} s, série {doc['serie']}, voix {voix['moteur']}" + ("" if meta["duree_ok"] else f" (durée hors {plage})"))
-        C.csv_ligne(AGENT, nom, doc["serie"], conf["lignes"][doc["serie"]].get("compte", ""), "à valider", (doc.get("marketing") or {}).get("gardee") or doc["scenes"][0], f"{d:.1f} s, rendu en {meta['rendu_s']} s" + (f" ; {voix['bascule']}" if voix["bascule"] else ""), tts=voix["moteur"])
-        print(f"Vidéo prête : {C.A_VALIDER / (nom + '.mp4')} ({d:.1f} s, rendu en {meta['rendu_s']} s, voix {voix['moteur']})" + ("" if meta["duree_ok"] else f" ; ATTENTION durée hors {plage}"))
+        C.journal(AGENT, "video", f"{nom} : {d:.1f} s, rendu en {meta['rendu_s']} s, série {doc['serie']}, outil {conf['outil']}, voix {voix['moteur']}" + ("" if meta["duree_ok"] else f" (durée hors {plage})"))
+        C.csv_ligne(AGENT, nom, doc["serie"], conf["lignes"][doc["serie"]].get("compte", ""), "à valider", (doc.get("marketing") or {}).get("gardee") or doc["scenes"][0], f"{d:.1f} s, rendu en {meta['rendu_s']} s, {conf['outil']}" + (f", histoire {doc['histoire']}" if doc.get("histoire") else "") + (f" ; {voix['bascule']}" if voix["bascule"] else ""), tts=voix["moteur"],
+                    histoire=doc.get("histoire") or "", formule=(doc.get("marketing") or {}).get("formule", ""), theme=doc.get("theme") or doc.get("angle") or "",
+                    fin=doc.get("fin_variante") or ("fin A" if doc["serie"] == "A" else ""), duree_s=f"{d:.1f}", voix=meta["voix"])
+        print(f"Vidéo prête : {C.A_VALIDER / (nom + '.mp4')} ({d:.1f} s, rendu en {meta['rendu_s']} s, outil {conf['outil']}, voix {voix['moteur']})" + ("" if meta["duree_ok"] else f" ; ATTENTION durée hors {plage}"))
         return 0
     finally:
         try: VERROU.unlink()

@@ -1,5 +1,7 @@
 # Outils vidéo tiers (clonés, avec leurs dépendances) : jamais versionnés
 outils/
+# Essais de rendu (outils tiers clonés, sorties de comparaison) : jamais versionnés
+essais/
 # Données d'exécution : vidéos, notes de veille, scripts du jour, états, journaux, verrous
 a-valider/
 publiees/

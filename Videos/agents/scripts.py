@@ -11,6 +11,7 @@ ajoutés par le code), aucune promesse de gain ou de résultat, aucun témoignag
   python Videos\\agents\\scripts.py passage --heure 06:00 [--a-blanc]
   python Videos\\agents\\scripts.py etat"""
 import argparse, json, re, sys, unicodedata
+from types import SimpleNamespace   # garde-fous de ce module passés à histoires.verifier
 from datetime import datetime
 from pathlib import Path
 
@@ -21,7 +22,7 @@ AGENT = "videos-scripts"
 SERIES = {
     "A": {"theme": "explication en bonhomme bâton, vivante et un peu drôle : une chose concrète qu'une page web change pour un artisan ou un commerçant",
           "public": "artisans et commerçants : la voix parle AU professionnel (vouvoiement, « vous » = l'artisan ou le commerçant, jamais son client)",
-          "fin": "Et vous, votre page répond à ça ? Quinze minutes avec Liam : le lien est dans la description.",
+          "fin": "Et vous, votre page répond à ça ? Le lien est dans la description.",
           "hashtags": "#stickman #artisan #commerce #siteweb",
           "angles": ["le client qui cherche vos horaires un dimanche soir", "le bouton Appeler sur le téléphone du client", "les photos de vos réalisations",
                      "l'itinéraire jusqu'à votre boutique", "vos prestations visibles avant même de venir", "une page à votre nom plutôt qu'un seul réseau social",
@@ -206,7 +207,7 @@ def verifier(s, serie, historique, conf):
 def legende(serie, s, conf):
     """Légende complète : titre, phrase de Qwen, renvoi (lien lu, jamais recopié dans un fichier du dépôt), mention IA, mots-dièse."""
     if serie == "A":
-        lien = C.lien_rdv(); renvoi = f"Réserver 15 minutes avec Liam : {lien}" if lien else ""
+        lien = C.lien_rdv(); renvoi = f"Parlons de votre page : {lien}" if lien else ""   # jamais de « rendez-vous de 15 minutes », aucune promesse
     else:
         taux = conf["lignes"]["B"]["taux_commission"]
         renvoi = f"À la commission ({taux} sur chaque vente), pas de salaire fixe. Postule via le lien en bio." if taux else "À la commission, pas de salaire fixe. Postule via le lien en bio."
@@ -218,7 +219,9 @@ def ecrire_script(conf, jour, heure, ollama, historique, a_blanc, essais=6):
     """Écrit Videos\\scripts\\AAAA-MM-JJ-HHMM.json pour ce passage (rien si déjà fait). -> chemin, ou None après `essais` refus."""
     fichier = C.SCRIPTS / f"{jour}-{heure.replace(':', '')}.json"
     if fichier.exists(): print(f"  {heure} : script déjà écrit ({fichier.name})"); return fichier
-    serie = serie_du_passage(conf, heure); angle = angle_libre(serie, historique); veille = note_veille(jour)
+    serie = serie_du_passage(conf, heure)
+    if serie == "B": return ecrire_histoire(conf, jour, heure, ollama, historique, a_blanc, fichier)
+    angle = angle_libre(serie, historique); veille = note_veille(jour)
     try: consignes = systeme(serie, conf, C.regles())
     except RuntimeError: consignes = systeme(serie, conf, "")
     if serie == "A" and not C.lien_rdv(): print("  ! lien du planning de 15 min introuvable dans B2B\\docs\\SCRIPT-APPEL-SID.md : la fin renverra à la description sans lien")
@@ -239,6 +242,35 @@ def ecrire_script(conf, jour, heure, ollama, historique, a_blanc, essais=6):
         print(f"  {heure} : série {serie} « {doc['titre']} » ({doc['mots']} mots, essai {n})"); return fichier
     C.journal(AGENT, "erreur", f"{jour} {heure} : {essais} essais refusés ({'; '.join(raisons)[:160]})", a_blanc)
     print(f"  ! {heure} : aucun script valable après {essais} essais"); return None
+
+
+def ecrire_histoire(conf, jour, heure, ollama, historique, a_blanc, fichier):
+    """Ligne B : une histoire écrite à la main (Videos\\histoires-base.md), variée par Qwen (prénoms, métiers, détails seulement), puis l'appel à l'action tournant.
+    Refusée (None) si elle rate l'appel à l'action ou contient un interdit, même après retour à l'histoire d'origine."""
+    import histoires as H
+    hs, ctas = H.lire()
+    if not hs or not ctas: print("  ! histoires-base.md sans histoire ou sans appel à l'action"); C.journal(AGENT, "erreur", "histoires-base.md incomplet", a_blanc); return None
+    n_b = sum(1 for x in historique if x.get("serie") == "B"); cta = H.appel_action(historique, ctas); recents = H.textes_recents(C.SCRIPTS)
+    doc, refus = None, []
+    for h in H.candidates(historique, hs, H.FENETRE)[:3]:   # jamais une histoire des 20 dernières vidéos ; 3 essais au plus
+        lignes, origine = H.varier(ollama, h, "Tu varies des histoires courtes en français sans rien inventer. Réponds uniquement avec un objet JSON valide.")
+        raisons = H.verifier(lignes, cta, conf, SimpleNamespace(**globals()))
+        if raisons and origine == "qwen":   # la variante passe mal : l'histoire d'origine
+            lignes, origine = [l["texte"] for l in h["lignes"]], "original"; raisons = H.verifier(lignes, cta, conf, SimpleNamespace(**globals()))
+        lignes, roles, structure, d_est = H.structure_qui_tient(h, lignes, cta, n_b)
+        if not raisons and d_est > H.DUREE_MAX_S: raisons = [f"trop longue (~{d_est} s estimées, {H.DUREE_MAX_S} s au plus)"]
+        if not raisons and H.trop_proche(" ".join(lignes), recents): raisons = ["trop proche d'une des 20 dernières vidéos"]
+        if raisons: refus.append(f"{h['id']} : {'; '.join(raisons)}"); continue
+        doc = H.document(h, lignes, cta, conf, jour, heure, origine, roles, structure, f"CTA{ctas.index(cta) + 1}") | {"cree_le": f"{datetime.now():%Y-%m-%d %H:%M}"}; break
+    if not doc:
+        C.journal(AGENT, "erreur", f"{jour} {heure} : aucune histoire acceptée ({' | '.join(refus)[:200]})", a_blanc)
+        print(f"  ! {heure} : aucune histoire acceptée ({' | '.join(refus) or 'toutes jouées dans les 20 dernières vidéos'})"); return None
+    h = next(x for x in hs if x["id"] == doc["histoire"])
+    if a_blanc: print(f"[à blanc] {heure} (série B, histoire {h['id']}) : {json.dumps(doc, ensure_ascii=False, indent=1)}"); return fichier
+    C.SCRIPTS.mkdir(parents=True, exist_ok=True); fichier.write_text(json.dumps(doc, ensure_ascii=False, indent=1), encoding="utf-8")
+    historique.append({"jour": jour, "passage": heure, "serie": "B", "histoire": h["id"], "sujet": h["titre"], "titre": h["titre"]}); sujets_ecrire(historique)
+    C.journal(AGENT, "script", f"{jour} {heure} : série B, histoire {h['id']} ({doc['variante']}, {doc['structure']}), {doc['mots']} mots")
+    print(f"  {heure} : série B, histoire {h['id']} « {h['titre']} » ({doc['variante']}, {doc['structure']}, {doc['mots']} mots)"); return fichier
 
 
 def cmd(conf, jour, heures, a_blanc):

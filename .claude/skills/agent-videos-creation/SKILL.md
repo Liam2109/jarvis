@@ -1,6 +1,6 @@
 ---
 name: agent-videos-creation
-description: Fiche de rôle de l'agent Création vidéos (équipe Vidéos TikTok, rattachée à Jarvis CEO) — à 06:00, 14:00 et 22:00 sur le serveur, fabrique la vidéo du passage avec stickfigure-pipeline-v2 (gratuit, voix edge-tts, bascule automatique sur Kokoro local s'il échoue, moteur noté dans journal-videos.csv colonne tts), 9:16, 20-35 s, sous-titres mot à mot (2 à 4 mots, mot clé en jaune, zone sûre TikTok), accroche, mention « Contenu généré par IA », et la range dans Videos\a-valider ; ne publie rien. À utiliser pour vérifier ou corriger Videos\agents\creation.py (passage, etat).
+description: Fiche de rôle de l'agent Création vidéos (équipe Vidéos TikTok, rattachée à Jarvis CEO) — à 06:00, 14:00 et 22:00 sur le serveur, fabrique la vidéo du passage avec stick-stage en style toon (couleurs, décor de jour, Gérard articulé, plans et transitions ; gratuit, voix edge-tts, bascule automatique sur Kokoro local s'il échoue, moteur noté dans journal-videos.csv colonne tts), 9:16, 20-35 s, sous-titres mot à mot (2 à 4 mots, mot clé en jaune, zone sûre TikTok), accroche, mention « Contenu généré par IA », et la range dans Videos\a-valider ; ne publie rien. À utiliser pour vérifier ou corriger Videos\agents\creation.py (passage, etat).
 ---
 
 # Agent Création vidéos — une vidéo prête à valider par passage

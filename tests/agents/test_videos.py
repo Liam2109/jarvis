@@ -6,6 +6,8 @@ publication (fermée sans « go publier » par ligne, essai obligatoire, captcha
 nettoyage (nettoyage.ps1 dans un dossier temporaire : vieux .mp4 et intermédiaires supprimés, ligne CSV avant, skill / scripts / veille / vidéos protégées intacts),
 voix (edge-tts simulé en échec -> bascule Kokoro, moteur dans la colonne tts ; vrai Kokoro local sur une phrase si le modèle est là, sans aucun son joué),
 formules d'accroche à trous (hooks-base.md, bon public par ligne), correctif Windows de stick-stage (sur une copie, puis vérification de l'outil réel s'il est cloné).
+ligne B en histoires (histoires-base.md : 40 % leçons, 40 % comédie Gérard, 20 % autres ; jamais rejouée avant 20 vidéos ; appel à l'action exigé ; interdits),
+rendu stick-stage (skit construit, débuts des répliques), sous-titres sans mot perdu ni doublé, journal CSV migré vers les colonnes de suivi.
 Tout se passe dans un dossier temporaire : aucun réseau, aucun Ollama, aucun navigateur, aucun rendu, rien de publié."""
 import csv, importlib.util, io, json, os, shutil, subprocess, sys, tempfile, time, unittest
 from contextlib import redirect_stdout
@@ -24,8 +26,11 @@ def charger(nom):
 C = charger("commun"); sys.modules["commun"] = C
 V, S = charger("veille"), charger("scripts"); sys.modules["scripts"] = S
 VX = charger("voix"); sys.modules["voix"] = VX
+H = charger("histoires"); sys.modules["histoires"] = H
+RS = charger("rendu_stickstage"); sys.modules["rendu_stickstage"] = RS
 MK, K, P = charger("marketing"), charger("creation"), charger("publication")
-for m in (V, S, MK, K, P, VX): m.C = C
+for m in (V, S, MK, K, P, VX, H, RS): m.C = C
+K.RS = RS
 K.VX = VX
 MK.S = S
 
@@ -241,8 +246,10 @@ class Creation(Base):
         self.assertEqual(K.accroche_ecran("Court")[1], 92); self.assertIn("fontsize=60:", K.filtre_final("A", True, self.conf(), 60))
 
     def test_fin_ligne_b_sans_taux_invente(self):
-        c = self.conf(); self.assertEqual(K.fins("B", c)[0], "À la commission, sans fixe"); self.assertFalse(any("%" in x for x in K.fins("B", c)))
-        c["lignes"]["B"]["taux_commission"] = "20 %"; self.assertEqual(K.fins("B", c)[0], "Commission 20 %, sans fixe")
+        c = self.conf(); self.assertEqual(K.fins("B", c)[:2], ["On recrute des call callers", "À la commission"]); self.assertFalse(any("%" in x for x in K.fins("B", c)))
+        self.assertIn("DM", K.fins("B", c)[2]); self.assertFalse(any("15" in x or "minutes" in x for x in K.fins("A", c)))   # ligne A : jamais de rendez-vous de 15 minutes
+        c["lignes"]["B"]["taux_commission"] = "20 %"; self.assertEqual(K.fins("B", c)[1], "À la commission (20 %)")
+        self.assertEqual((K.fin_s("A"), K.fin_s("B")), (3.0, 2.0)); self.assertNotIn("0x141414", K.FOND_FIN)   # jamais de fond noir plein
 
     def test_sous_titres_mot_a_mot(self):
         scenes = ["Tu sais parler au téléphone ?", "Liste et script fournis."]
@@ -306,7 +313,7 @@ class Voix(Base):
 
     def test_csv_colonne_tts_et_path_sans_edge(self):
         C.csv_ligne("videos-creation", "2026-11-16-0600", "A", "compte", "à valider", "Fermé ou ouvert ?", "24 s", tts="kokoro")
-        self.assertEqual(self.csv()[0]["tts"], "kokoro"); self.assertEqual(C.CSV_COLONNES[-1], "tts")
+        self.assertEqual(self.csv()[0]["tts"], "kokoro"); self.assertEqual(C.CSV_COLONNES[8], "tts")
         avec = self.r / "scripts-py"; avec.mkdir(); (avec / "edge-tts.exe").write_bytes(b""); sans = self.r / "bin"; sans.mkdir()
         self.assertEqual(VX.chemin_sans_edge(os.pathsep.join([str(avec), str(sans)])), str(sans))
 
@@ -366,6 +373,83 @@ class StickStage(Base):
             r = subprocess.run([shutil.which("node") or "node", str(reel / "node_modules" / "@remotion" / "cli" / "remotion-cli.js"), "ffmpeg", "-version"],
                                capture_output=True, text=True, timeout=120, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
             self.assertEqual(r.returncode, 0, r.stderr[-300:]); self.assertIn("ffmpeg version", r.stdout)
+
+
+class Histoires(Base):
+    def setUp(self):
+        super().setUp(); self.hs, self.ctas = H.lire()
+
+    def lignes(self, i): return [l["texte"] for l in self.hs[i]["lignes"]]
+
+    def test_graines_et_repartition(self):
+        cats = [H.categorie(h["theme"]) for h in self.hs]
+        self.assertEqual((cats.count("lecon"), cats.count("comedie")), (8, 8)); self.assertEqual(len(self.ctas), 5)
+        for h in self.hs:                                                              # chaque graine passe tous les garde-fous, avec chaque fin
+            for cta in self.ctas: self.assertEqual(H.verifier([l["texte"] for l in h["lignes"]], cta, self.conf(), S), [], (h["id"], cta))
+        hist, seq = [], []
+        for _ in range(40):
+            h = H.choisir(hist, self.hs); hist.append({"serie": "B", "histoire": h["id"]}); seq.append(h["id"])
+        self.assertTrue(all(len(set(seq[i:i + 20])) == 20 for i in range(21)))     # aucune histoire rejouée avant 20 vidéos
+        vingt = [H.categorie(next(x for x in self.hs if x["id"] == i)["theme"]) for i in seq[:20]]
+        self.assertEqual((vingt.count("lecon"), vingt.count("comedie"), vingt.count("autre")), (8, 8, 4))   # 40 / 40 / 20 %
+
+    def test_refus(self):
+        c, l = self.conf(), self.lignes(0)
+        self.assertTrue(any("appel à l'action" in p for p in H.verifier(l, "Abonne-toi !", c, S)))
+        for mauvais, quoi in (("Mon closer gagne bien sa vie.", "interdit"), ("Selon une étude, ça marche.", "interdit"),
+                              ("Trouve le numéro privé du gérant.", "interdit"), ("Réserve un rendez-vous de quinze minutes.", "nombre"),
+                              ("Découvrez comment faire.", "molle"), ("Vous voulez un job ?", "public"), ("Comme dit Elon Musk.", "vraie personne")):
+            self.assertTrue(any(quoi in p for p in H.verifier(l[:-1] + [mauvais], self.ctas[0], c, S)), mauvais)
+        self.assertFalse(H.proche_de("Gérard a peur d'un seul mot : non.", "Gaston a peur d'un seul mot : non."))   # Gérard garde son prénom
+        self.assertTrue(H.proche_de("Il compose le numéro. Ça sonne.", "Il compose le numéro. Ça vibre."))
+        self.assertTrue(H.trop_proche(" ".join(l), ["Bonjour", " ".join(l)])); self.assertFalse(H.trop_proche(" ".join(l), [" ".join(self.lignes(20))]))
+
+    def test_structures_document_et_duree(self):
+        h = next(x for x in self.hs if x["id"] == "H01"); l = [x["texte"] for x in h["lignes"]]
+        vues = {H.varier_structure(h, l, n)[2] for n in range(3)}; self.assertEqual(vues, set(H.STRUCTURES))
+        l2, r2, s, d = H.structure_qui_tient(h, l, self.ctas[0], 1); self.assertLessEqual(d, H.DUREE_MAX_S)
+        doc = H.document(h, l2, self.ctas[0], self.conf(), "2026-11-17", "14:00", "original", r2, s, "CTA1")
+        self.assertEqual(len(doc["jeu"]), len(doc["scenes"])); self.assertEqual(doc["scenes"][-1], self.ctas[0])
+        self.assertTrue(doc["scenes"][doc["punchline"]].startswith("Et Gérard")); self.assertEqual((doc["categorie"], doc["fin_variante"]), ("comedie", "CTA1"))
+        self.assertIn(C.MENTION_IA, doc["legende"]); self.assertNotIn("Gérard", doc["scenes"][-1])   # « on recrute » seulement dans la fin
+
+    def test_ecrit_le_script_b(self):
+        q = FauxQwen([{"rien": 1}] * 3)
+        with redirect_stdout(io.StringIO()): f = S.ecrire_script(self.conf(), "2026-11-17", "14:00", q, [], False)
+        doc = json.loads(f.read_text(encoding="utf-8"))
+        self.assertEqual((doc["serie"], doc["histoire"], doc["variante"]), ("B", "L01", "original")); self.assertTrue(any(r.search(doc["scenes"][-1]) for r in H.CTA_OK))
+        self.assertEqual(json.loads(C.SUJETS.read_text(encoding="utf-8"))[0]["histoire"], "L01")
+        with redirect_stdout(io.StringIO()): MK.traiter(self.conf(), "2026-11-17", ["14:00"], ollama_cls=lambda m: FauxQwen([]))   # marketing : pas de Qwen pour une histoire
+        d = json.loads(f.read_text(encoding="utf-8")); self.assertEqual(d["marketing"]["gardee"], d["scenes"][0])
+        self.assertEqual((self.csv()[-1]["histoire"], self.csv()[-1]["fin"]), ("L01", "CTA1"))
+
+
+class StickStageRendu(Base):
+    def test_skit_et_debuts(self):
+        doc = {"titre": "Essai", "scenes": ["Gérard attend.", "Le téléphone sonne !", "C'était son premier client."], "jeu": [["sad", "slump"], None, ["embarrassed", "facepalm"]],
+               "punchline": 1, "style": "classic", "decor": "boutique"}
+        sk = RS.skit(doc, doc["scenes"], RS.decor(doc["decor"]))
+        self.assertEqual((sk["meta"]["aspect"], sk["set"], sk["style"]), ("9:16", "bookshop-morning", "classic"))
+        self.assertEqual(sk["characters"][0]["id"], "gerard"); self.assertEqual(sk["characters"][0]["style"]["build"], "toon")
+        self.assertEqual([b["line"] for b in sk["beats"]], doc["scenes"]); self.assertTrue(sk["beats"][1].get("punchline"))
+        self.assertEqual(sk["beats"][1]["actions"][0]["expression"], "shocked")              # sans indication : la ponctuation décide
+        self.assertEqual(RS.decor("cabinet"), "office-1"); self.assertEqual(RS.decor("inconnu"), "office-1")
+        g = self.r / "generated"; g.mkdir()
+        (g / "timeline.json").write_text(json.dumps({"fps": 30, "scenes": [{"from": 0, "timeline": {"audio": [{"beatId": "n1", "frame": 9}, {"beatId": "n2", "frame": 99}]}},
+                                                                            {"from": 150, "timeline": {"audio": [{"beatId": "n3", "frame": 15}]}}]}), encoding="utf-8")
+        self.assertEqual(RS.debuts_repliques(self.r, 3), [0.3, 3.3, 5.5])
+        t = K.temps_mots(["Un deux.", "Trois."], [1.0, 1.0], edge=lambda *a: [], debuts=[0.5, 4.0]); self.assertGreaterEqual(t[1][0][0], 4.0)
+
+    def test_sous_titres_sans_mot_perdu(self):
+        for p in ("Quelqu'un décroche !", "Gérard, par réflexe, répond : « Allô, oui, c'est pour quoi ? »", "Non. Oui. Peut-être.", "A. B c d e f."):
+            g = C.decouper_sous_titres(p); self.assertEqual(" ".join(m for x in g for m in x["mots"]), " ".join(C.mots_de(p)), p)
+
+    def test_csv_migre(self):
+        C.JOURNAL_CSV.write_text("date;agent;video;ligne;compte;statut;hook;detail;tts\r\n2026-11-16 10:00;a;v;A;c;s;h;d;edge-tts\r\n", encoding="utf-8-sig")
+        C.csv_ligne("videos-creation", "v2", "B", "c", "à valider", "h", "d", tts="kokoro", histoire="H01", fin="CTA2", duree_s="30.1")
+        l = self.csv(); self.assertEqual(list(l[0].keys()), C.CSV_COLONNES); self.assertEqual((l[0]["tts"], l[0]["histoire"]), ("edge-tts", ""))
+        self.assertEqual((l[1]["histoire"], l[1]["fin"], l[1]["duree_s"]), ("H01", "CTA2", "30.1"))
+        with self.assertRaises(ValueError): C.csv_ligne("x", inconnu="1")
 
 
 class Publication(Base):

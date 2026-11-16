@@ -28,6 +28,9 @@ Chaque idée est notée à la date où Liam la dit. Une idée pas encore faite r
 - 16/11 — Vidéos : voix Kokoro locale en secours si edge-tts échoue (réalisée le 16/11) ; sous-titres qui évitent les personnages (pas encore faite).
 - 16/11 — Vidéos : relier chaque formule d'accroche (colonne hook de journal-videos.csv) aux réservations de 15 min une fois la ligne A publiée, et garder les formules qui amènent des rendez-vous.
 - 16/11 — Vidéos : Kokoro n'a qu'une voix française féminine ; si la bascule sert souvent, essayer Piper (déjà utilisé par Jarvis) pour garder une voix masculine en secours.
+- 17/11 — Vidéos : demander à l'auteur de theunfinishedco (HUSS41N, sans licence) l'autorisation d'utiliser son moteur : c'était le plus beau rendu des essais.
+- 17/11 — Vidéos : faire marcher Gérard d'un point à un autre et varier les décors par histoire (stick-stage le place à une marque fixe, les 2 vidéos test sont au bureau).
+- 17/11 — Vidéos : recaler l'estimation de durée de la ligne B (histoires.duree_estimee) après une dizaine de rendus : elle se trompe encore de 4 s.
 
 ## Agents
 - 27/10 — Chaîne automatique entre agents (prospection → réponse positive → rendez-vous → devis → Stripe → site → mise en ligne → maintenance), validation de Liam seulement aux points à risque.

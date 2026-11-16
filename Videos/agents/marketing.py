@@ -157,6 +157,19 @@ def retravailler(doc, conf, ollama, regles, a_blanc=False):
     """Réécrit accroche, rythme et sous-titres d'un script (dict). -> doc modifié (champ « marketing »), ou None si aucune accroche valable."""
     serie = doc.get("serie", "A"); nom = f"{doc['jour']}-{doc['passage'].replace(':', '')}"
     recentes = recentes_du_journal()
+    if doc.get("histoire"):   # ligne B : histoire écrite à la main, accroche comprise ; ni Qwen, ni découpe (le jeu de scène suit chaque réplique)
+        best = doc["scenes"][0]; note, raisons = noter_accroche(best, serie, conf, recentes)
+        if note == 0:
+            C.journal(AGENT, "erreur", f"{nom} : accroche de l'histoire {doc['histoire']} refusée ({'; '.join(raisons)})", a_blanc); return None
+        d = duree_estimee(doc["scenes"])
+        doc["sous_titres"] = [C.decouper_sous_titres(s) for s in doc["scenes"]]
+        doc["marketing"] = {"accroches": [{"texte": best, "formule": f"histoire {doc['histoire']}", "note": note, "raisons": raisons}], "gardee": best,
+                            "formule": f"histoire {doc['histoire']}", "phrases_coupees": 0, "duree_estimee_s": d,
+                            "duree_ok": conf["duree_min_s"] <= d <= conf["duree_max_s"], "fait_le": f"{datetime.now():%Y-%m-%d %H:%M}"}
+        C.csv_ligne(AGENT, nom, serie, conf["lignes"][serie].get("compte", ""), "accroche choisie", best,
+                    f"histoire {doc['histoire']} ({doc.get('variante', 'original')}, {doc.get('structure', 'classique')}) ; note {note}/10 ; durée estimée {d} s", a_blanc,
+                    histoire=doc["histoire"], formule=f"histoire {doc['histoire']}", theme=doc.get("theme", ""), fin=doc.get("fin_variante", ""))
+        return doc
     proposees = demander_accroches(ollama, doc, serie, conf, regles, recentes, nom)
     origine = {t: i for t, i in proposees}
     candidates = [t for t, _ in proposees]
@@ -186,7 +199,8 @@ def retravailler(doc, conf, ollama, regles, a_blanc=False):
                         "duree_estimee_s": d, "duree_ok": conf["duree_min_s"] <= d <= conf["duree_max_s"], "fait_le": f"{datetime.now():%Y-%m-%d %H:%M}"}
     meilleure_note = max(n for t, n, _ in notes if t == best)
     C.csv_ligne(AGENT, nom, serie, conf["lignes"][serie].get("compte", ""), "accroche choisie", best,
-                f"formule {origine.get(best, 'script')} ; note {meilleure_note}/10 ; autres : " + " | ".join(f"{t} = {n}" for t, n, _ in notes if t != best) + f" ; durée estimée {d} s", a_blanc)
+                f"formule {origine.get(best, 'script')} ; note {meilleure_note}/10 ; autres : " + " | ".join(f"{t} = {n}" for t, n, _ in notes if t != best) + f" ; durée estimée {d} s", a_blanc,
+                formule=origine.get(best, "script"), theme=doc.get("angle", ""))
     return doc
 
 

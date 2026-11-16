@@ -23,7 +23,10 @@ OLLAMA_URL = "http://127.0.0.1:11434"
 SKILL = VIDEOS / "SKILL-VIDEOS.md"
 HOOKS_BASE, HOOKS = VIDEOS / "hooks-base.md", VIDEOS / "hooks.md"
 JOURNAL_CSV = VIDEOS / "journal-videos.csv"
-CSV_COLONNES = ["date", "agent", "video", "ligne", "compte", "statut", "hook", "detail", "tts"]   # tts : moteur de voix réellement utilisé (edge-tts ou kokoro)
+# tts : moteur de voix réellement utilisé (edge-tts ou kokoro). Suivi (17/11/2026) : histoire (H01…), formule d'accroche (A10, histoire H01…), thème,
+# fin (variante de l'appel à l'action), durée, voix, date et heure de publication, adresse TikTok (remplies par l'agent qui les connaît ; vides sinon).
+CSV_SUIVI = ["histoire", "formule", "theme", "fin", "duree_s", "voix", "publie_le", "url_tiktok"]
+CSV_COLONNES = ["date", "agent", "video", "ligne", "compte", "statut", "hook", "detail", "tts"] + CSV_SUIVI
 SECTIONS_SKILL = ("## Règles pour Qwen", "## Grille des accroches", "## Publication", "## Deux lignes éditoriales", "## Sous-titres", "## Nettoyage")
 LIGNE_DEFAUT = {"nom": "", "compte": "", "ton": "", "tutoiement": False, "go_publier": False, "profil_navigateur": "", "hashtags": "", "taux_commission": "", "voix": {},
                 "message": "", "brouillon_hook": "", "lieux_interdits": []}
@@ -78,15 +81,28 @@ def hooks_texte():
     return ""
 
 
-def csv_ligne(agent, video="", ligne="", compte="", statut="", hook="", detail="", a_blanc=False, quand=None, tts=""):
-    """Une ligne dans Videos\\journal-videos.csv (séparateur « ; », en-tête écrit à la création). Jamais de secret ni de donnée personnelle."""
+def csv_ligne(agent, video="", ligne="", compte="", statut="", hook="", detail="", a_blanc=False, quand=None, tts="", **suivi):
+    """Une ligne dans Videos\\journal-videos.csv (séparateur « ; », en-tête écrit à la création). Jamais de secret ni de donnée personnelle.
+    suivi : colonnes de suivi (CSV_SUIVI : histoire, formule, theme, fin, duree_s, voix, publie_le, url_tiktok). Un fichier à l'ancien en-tête est d'abord migré."""
     if a_blanc: return
     import csv
+    inconnues = set(suivi) - set(CSV_SUIVI)
+    if inconnues: raise ValueError(f"colonnes inconnues : {', '.join(sorted(inconnues))}")
+    if JOURNAL_CSV.exists():
+        with JOURNAL_CSV.open(encoding="utf-8-sig", newline="") as f: lignes = list(csv.reader(f, delimiter=";"))
+        if lignes and lignes[0] != CSV_COLONNES:   # ancien en-tête : on réécrit avec les nouvelles colonnes (vides pour les anciennes lignes)
+            ancien = lignes[0]
+            rangs = [{k: (r[i] if i < len(r) else "") for i, k in enumerate(ancien)} for r in lignes[1:] if any(x.strip() for x in r)]
+            tmp = JOURNAL_CSV.with_suffix(".tmp")
+            with tmp.open("w", encoding="utf-8-sig", newline="") as f:
+                w = csv.writer(f, delimiter=";"); w.writerow(CSV_COLONNES); w.writerows([[x.get(k, "") for k in CSV_COLONNES] for x in rangs])
+            os.replace(tmp, JOURNAL_CSV)
     neuf = not JOURNAL_CSV.exists()
     with JOURNAL_CSV.open("a", encoding="utf-8-sig" if neuf else "utf-8", newline="") as f:
         w = csv.writer(f, delimiter=";")
         if neuf: w.writerow(CSV_COLONNES)
-        w.writerow([f"{quand or datetime.now():%Y-%m-%d %H:%M}", agent, video, ligne, compte, statut, " ".join(str(hook).split())[:200], " ".join(str(detail).split())[:300], tts])
+        w.writerow([f"{quand or datetime.now():%Y-%m-%d %H:%M}", agent, video, ligne, compte, statut, " ".join(str(hook).split())[:200], " ".join(str(detail).split())[:300], tts]
+                   + [" ".join(str(suivi.get(k, "")).split())[:200] for k in CSV_SUIVI])
 
 
 VIDES = set("le la les l un une des de du d à au aux et ou mais donc or ni car que qu qui quoi ce c cet cette ces se s sa son ses ta ton tes ma mon mes vos votre "
@@ -117,7 +133,7 @@ def decouper_sous_titres(phrase, maxi=4, mini=2):
     while i < len(groupes):   # un mot seul rejoint son voisin s'il y a la place
         if len(groupes[i]) < mini and len(groupes) > 1:
             if i > 0 and len(groupes[i - 1]) < maxi: groupes[i - 1] += groupes.pop(i); continue
-            if i + 1 < len(groupes) and len(groupes[i + 1]) < maxi: groupes[i + 1] = groupes.pop(i) + groupes[i]; continue
+            if i + 1 < len(groupes) and len(groupes[i + 1]) < maxi: seul = groupes.pop(i); groupes[i] = seul + groupes[i]; continue   # (avant le 17/11 : mauvais indice, mot dupliqué ou perdu)
         i += 1
     out = []
     for g in groupes:
