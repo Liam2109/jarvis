@@ -1,6 +1,6 @@
 ---
 name: agent-appels-sid
-description: Fiche de rôle de l'agent Liste d'appels de Sid (pôle Prospection) — chaque jour ouvré à 7 h 30, un seul tableur Google « Appels AAAA-MM-JJ » de 100 entreprises triées par créneau, dans le dossier Drive de Sid. À utiliser pour préparer, vérifier ou corriger la liste d'appels (appels-sid.py jour, preparer, sourcer, etat, annuler).
+description: Fiche de rôle de l'agent Liste d'appels de Sid (pôle Prospection) — chaque jour ouvré à 7 h 30, un seul tableur Google « Appels Sid AAAA-MM-JJ » de 100 entreprises triées par créneau, dans le dossier Drive de Sid. À utiliser pour préparer, vérifier ou corriger la liste d'appels (appels-sid.py jour, preparer, sourcer, etat, annuler).
 ---
 
 # Agent Liste d'appels de Sid — le tableur du jour
@@ -23,12 +23,12 @@ description: Fiche de rôle de l'agent Liste d'appels de Sid (pôle Prospection)
   - Je dois réfléchir : relance dans la liste de Liam 3 jours plus tard, jamais chez Sid.
   - RDV pris, Non catégorique, Trop cher, Déjà un site, Pas le temps : jamais redonnée.
   - La liste du lundi 16/11 suit encore les anciennes règles ; elle est lue dans le registre le 17/11.
-- **Le tableur :** il crée **un seul** tableur Google « Appels AAAA-MM-JJ », posé directement dans le dossier Drive de Sid (`dossier_sid_id`), sans sous-dossier.
+- **Le tableur :** il crée **un seul** tableur Google « Appels Sid AAAA-MM-JJ », posé directement dans le dossier Drive « LM Multi-Services - Dossier Sid » (`dossier_sid_id`), sans sous-dossier ; jamais à la racine du Drive ni dans un dossier créé (`dossier_sid_id` vide = rien créé, erreur). Après création, il vérifie que la feuille est bien dans ce dossier et donne son nom et son nombre de lignes. Il ne touche jamais au document « Script d'appel Sid » du même dossier. (Nom « Appels AAAA-MM-JJ » jusqu'au 16/11/2026, encore reconnu pour le ménage.)
   - Les lignes sont triées par créneau, de 8 h à 19 h.
   - Les colonnes sont toujours, dans cet ordre : Créneau, Entreprise, Métier, Ville, Téléphone, Détail fiche, Résultat, Note.
   - Résultat est une liste de 8 valeurs, dans cet ordre : Pas de réponse, À rappeler, RDV pris, Non catégorique, Je dois réfléchir, Trop cher, Déjà un site, Pas le temps.
   - Les colonnes sont larges, l'en-tête est figé, aucune cellule n'est fusionnée.
-- **Le ménage :** il met à la **corbeille** (jamais une suppression définitive) les tableurs « Appels AAAA-MM-JJ » de plus de 7 jours, seulement s'ils ont déjà été lus dans le registre. Il ne crée aucun dossier et ne touche à aucun autre fichier.
+- **Le ménage :** il met à la **corbeille** (jamais une suppression définitive) les tableurs « Appels Sid AAAA-MM-JJ » de plus de 7 jours, seulement s'ils ont déjà été lus dans le registre. Il ne crée aucun dossier et ne touche à aucun autre fichier.
 - **Le stock :** sous 3 jours de listes (Sid et Liam) d'entreprises neuves, une trace en erreur que le surveillant signale ; silence sinon.
 - **La réserve :** il garnit sa réserve de numéros avec la commande `sourcer` (OpenStreetMap et SIRENE, gratuits).
 
@@ -51,7 +51,7 @@ description: Fiche de rôle de l'agent Liste d'appels de Sid (pôle Prospection)
   - le registre commun `B2B/donnees/registre-entreprises.json`.
 - **Sorties :**
   - `B2B/docs/sid/liste-sid-AAAA-MM-JJ.csv` ;
-  - le tableur Google « Appels AAAA-MM-JJ » ;
+  - le tableur Google « Appels Sid AAAA-MM-JJ » ;
   - `appels-sid-etat.json`, `appels-sid-historique.json`, `appels-sid-journal.log` ;
   - une alerte Discord si la réserve est basse ou si Google tombe en panne.
 
@@ -71,7 +71,7 @@ Sur le serveur, la commande `jour` tourne à 07:30 (`serveur-taches.json`, `heur
 ## Critère de fin (un passage `jour`)
 Le passage se termine avec le code 0 quand :
 - le CSV du jour existe ;
-- le tableur « Appels AAAA-MM-JJ » est en place, ou bien, en simulation (`envoi_automatique` = false), le journal dit ce qui aurait été créé ;
+- le tableur « Appels Sid AAAA-MM-JJ » est en place, ou bien, en simulation (`envoi_automatique` = false), le journal dit ce qui aurait été créé ;
 - le nettoyage et l'affichage de la réserve sont faits.
 
 Si la liste n'a pas pu être faite, le code est 2, avec une alerte.

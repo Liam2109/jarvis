@@ -21,7 +21,7 @@ tags: [agent-b2b]
 **Script :** `B2B/agents/appels-sid.py` · **Contrat :** `B2B/harness/contrats/appels-sid.json`
 
 ## Mission
-Créer chaque jour ouvré à 07:30 le tableur « Appels AAAA-MM-JJ » de Sid, trié par créneau de 08:00 à 19:00.
+Créer chaque jour ouvré à 07:30 le tableur « Appels Sid AAAA-MM-JJ » de Sid, trié par créneau de 08:00 à 19:00.
 
 ## Ce qu'il fait étape par étape
 - **Quand :** du lundi au vendredi (`jours_appel`), à 7 h 30, il prépare **une** liste de 100 entreprises. Il en met au moins 100 et au plus 130.
@@ -38,12 +38,12 @@ Créer chaque jour ouvré à 07:30 le tableur « Appels AAAA-MM-JJ » de Sid, tr
   - Je dois réfléchir : relance dans la liste de Liam 3 jours plus tard, jamais chez Sid.
   - RDV pris, Non catégorique, Trop cher, Déjà un site, Pas le temps : jamais redonnée.
   - La liste du lundi 16/11 suit encore les anciennes règles ; elle est lue dans le registre le 17/11.
-- **Le tableur :** il crée **un seul** tableur Google « Appels AAAA-MM-JJ », posé directement dans le dossier Drive de Sid (`dossier_sid_id`), sans sous-dossier.
+- **Le tableur :** il crée **un seul** tableur Google « Appels Sid AAAA-MM-JJ », posé directement dans le dossier Drive « LM Multi-Services - Dossier Sid » (`dossier_sid_id`), sans sous-dossier ; jamais à la racine du Drive ni dans un dossier créé (`dossier_sid_id` vide = rien créé, erreur). Après création, il vérifie que la feuille est bien dans ce dossier et donne son nom et son nombre de lignes. Il ne touche jamais au document « Script d'appel Sid » du même dossier. (Nom « Appels AAAA-MM-JJ » jusqu'au 16/11/2026, encore reconnu pour le ménage.)
   - Les lignes sont triées par créneau, de 8 h à 19 h.
   - Les colonnes sont toujours, dans cet ordre : Créneau, Entreprise, Métier, Ville, Téléphone, Détail fiche, Résultat, Note.
   - Résultat est une liste de 8 valeurs, dans cet ordre : Pas de réponse, À rappeler, RDV pris, Non catégorique, Je dois réfléchir, Trop cher, Déjà un site, Pas le temps.
   - Les colonnes sont larges, l'en-tête est figé, aucune cellule n'est fusionnée.
-- **Le ménage :** il met à la **corbeille** (jamais une suppression définitive) les tableurs « Appels AAAA-MM-JJ » de plus de 7 jours, seulement s'ils ont déjà été lus dans le registre. Il ne crée aucun dossier et ne touche à aucun autre fichier.
+- **Le ménage :** il met à la **corbeille** (jamais une suppression définitive) les tableurs « Appels Sid AAAA-MM-JJ » de plus de 7 jours, seulement s'ils ont déjà été lus dans le registre. Il ne crée aucun dossier et ne touche à aucun autre fichier.
 - **Le stock :** sous 3 jours de listes (Sid et Liam) d'entreprises neuves, une trace en erreur que le surveillant signale ; silence sinon.
 - **La réserve :** il garnit sa réserve de numéros avec la commande `sourcer` (OpenStreetMap et SIRENE, gratuits).
 
@@ -55,7 +55,7 @@ Créer chaque jour ouvré à 07:30 le tableur « Appels AAAA-MM-JJ » de Sid, tr
 - B2B/donnees/registre-entreprises.json
 
 **Écrit :**
-- Google Drive : Appels AAAA-MM-JJ
+- Google Drive : Appels Sid AAAA-MM-JJ
 - B2B/donnees/registre-entreprises.json
 - B2B/agents/appels-sid-etat.json
 - B2B/agents/appels-sid-journal.log

@@ -53,3 +53,4 @@
 - 2026-11-16 (0 h 30) : fichiers de prospects de la racine ignorés par git ; import des anciens lots dans le registre prêt (324 entreprises à blanc), à lancer sur le serveur.
 - 2026-11-16 : nettoyage-fichiers étendu à tout le dossier Jarvis (supprime seul les dossiers de test de %TEMP% de plus de 2 jours, les sauvegardes de plus de 30 jours et les __pycache__, liste le reste de vieux dans B2B\a-valider), test vert.
 - 2026-11-16 (8 h) : panne appels-sid du 13 au 16/11 corrigée (envoi_automatique local repassé à false le 13/11 au soir, resté muet tout le week-end) ; feuille « Appels 2026-11-16 » (100 lignes) créée pour de vrai ; surveillant alerte désormais à 08:15 si aucune feuille du jour n'existe.
+- 2026-11-16 : feuille de Sid renommée « Appels Sid AAAA-MM-JJ », toujours dans « LM Multi-Services - Dossier Sid » (plus de repli racine ni de dossier créé, dossier vérifié après création) ; celle du jour vérifiée : 100 lignes.

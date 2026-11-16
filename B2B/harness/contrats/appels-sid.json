@@ -1,7 +1,7 @@
 {
  "nom": "appels-sid",
  "responsable": "Prospection",
- "mission": "Créer chaque jour ouvré à 07:30 le tableur « Appels AAAA-MM-JJ » de Sid, trié par créneau de 08:00 à 19:00.",
+ "mission": "Créer chaque jour ouvré à 07:30 le tableur « Appels Sid AAAA-MM-JJ » de Sid, trié par créneau de 08:00 à 19:00.",
  "statut": "simulation",
  "script": "B2B/agents/appels-sid.py",
  "jours": [
@@ -22,7 +22,7 @@
   "B2B/donnees/registre-entreprises.json"
  ],
  "fichiers_ecrits": [
-  "Google Drive : Appels AAAA-MM-JJ",
+  "Google Drive : Appels Sid AAAA-MM-JJ",
   "B2B/donnees/registre-entreprises.json",
   "B2B/agents/appels-sid-etat.json",
   "B2B/agents/appels-sid-journal.log"

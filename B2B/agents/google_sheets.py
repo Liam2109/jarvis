@@ -87,6 +87,10 @@ class Drive:
         media = MediaIoBaseUpload(io.BytesIO(contenu_csv.encode("utf-8")), mimetype="text/csv", resumable=False)
         return _appel(self.svc.files().create(body={"name": titre, "mimeType": FEUILLE_MIME, "parents": [dossier]}, media_body=media, fields="id"))["id"]
 
+    def parents(self, id_):
+        """Dossiers parents d'un fichier (vérification après création)."""
+        return _appel(self.svc.files().get(fileId=id_, fields="parents")).get("parents", [])
+
     def lire_feuille(self, id_):
         """Contenu CSV (texte, séparateur « , » : c'est Sheets qui régénère l'export) d'une feuille déjà créée par cet agent.
         La portée drive.file suffit : elle couvre les fichiers créés par ce jeton, même partagés ensuite avec Sid."""

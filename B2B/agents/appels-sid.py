@@ -144,7 +144,7 @@ I_RESULTAT = COLONNES.index("Résultat")
 # Non catégorique / Trop cher / Déjà un site -> oubliée 1 an ; case vide -> la liste suivante.
 TENTATIVES_SANS_REPONSE = 3
 UNE_FOIS_7_JOURS = ("Je dois réfléchir", "Pas le temps")
-TITRE_FEUILLE = "Appels {}"   # un seul tableur par jour, posé directement dans le dossier Drive de Sid (aucun sous-dossier)
+TITRE_FEUILLE = "Appels Sid {}"   # un seul tableur par jour, posé directement dans le dossier Drive de Sid (aucun sous-dossier) ; « Appels AAAA-MM-JJ » avant le 17/11/2026
 EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$")
 CONSTAT_NEUTRE = "Aucun site trouvé lors de mes recherches, à confirmer avec vous"   # constat par défaut (rien de vérifié par note_besoin) : n'affirme jamais l'absence d'un site, seulement
                                                                                         # que la vérification (OpenStreetMap + recherche web, voir verifier_site) n'en a pas trouvé un
@@ -1006,7 +1006,7 @@ def nettoyer_feuilles_lues(qui, racine, jour, drive, a_blanc, envoi, fichier_reg
     if not envoi or a_blanc:
         print(f"  Google (nettoyage {qui}) : {'à blanc' if a_blanc else 'simulation (envoi_automatique=false)'} : rien n'est listé ni mis à la corbeille"); return 0
     if not racine: print(f"  Google (nettoyage {qui}) : aucun dossier pour l'instant"); return 0
-    reg = RG.charger(fichier_registre); motif = r"Appels (\d{4}-\d{2}-\d{2})" if qui == RG.SID else r"Appels Liam (\d{4}-\d{2}-\d{2})"
+    reg = RG.charger(fichier_registre); motif = r"Appels (?:Sid )?(\d{4}-\d{2}-\d{2})" if qui == RG.SID else r"Appels Liam (\d{4}-\d{2}-\d{2})"
     vieux = []
     for i, nom in drive.lister_feuilles(racine):
         m = re.fullmatch(motif, nom)
@@ -1284,9 +1284,10 @@ def _formater_sans_bloquer(drive, id_):
 
 
 # --- Google Drive : un tableur « Appels AAAA-MM-JJ » par jour, directement dans le dossier de Sid --------------------------
-def _racine(conf, etat, drive, creer=True):
-    """Dossier Drive de Sid : dossier_sid_id (réglage, l'ID fixe du dossier où Sid regarde déjà), sinon le dossier « Sid » à la racine du Drive (trouvé, ou créé si `creer`)."""
-    return conf["dossier_sid_id"] or etat["google"].get("racine") or drive.trouver_dossier("Sid") or (drive.creer_dossier("Sid") if creer else None)
+def _racine(conf, etat, drive):
+    """Dossier Drive de Sid : toujours dossier_sid_id (« LM Multi-Services - Dossier Sid »). Jamais la racine du Drive, jamais un dossier créé (décision de Liam, 16/11/2026)."""
+    if not conf["dossier_sid_id"]: raise ErreurAgent("dossier_sid_id vide dans appels-sid-config.json : rien créé (jamais à la racine du Drive, jamais de nouveau dossier)")
+    return conf["dossier_sid_id"]
 
 
 def exporter_google(conf, etat, jour, drive, a_blanc):
@@ -1312,10 +1313,13 @@ def exporter_google(conf, etat, jour, drive, a_blanc):
             with open(fichier, encoding="utf-8-sig", newline="") as f: lignes = list(csv.reader(f, delimiter=";"))
             tampon = io.StringIO(); csv.writer(tampon).writerows(lignes)
             jg["feuille"] = drive.creer_feuille(racine, titre, tampon.getvalue())
+            if racine not in (drive.parents(jg["feuille"]) or []):   # vérifié tout de suite : jamais une feuille hors du dossier de Sid
+                raise ErreurAgent(f"« {titre} » créé hors du dossier de Sid : à déplacer à la main, état non enregistré")
             _formater_sans_bloquer(drive, jg["feuille"])
         etat_ecrire(etat)
-    journaliser("google", f"{jour} : tableur en place")
-    print(f"  Google : « {titre} » en place dans le dossier de Sid")
+    with open(fichier, encoding="utf-8-sig", newline="") as f: n = sum(1 for l in csv.reader(f, delimiter=";") if any(c.strip() for c in l)) - 1
+    journaliser("google", f"{jour} : tableur en place ({n} lignes)")
+    print(f"  Google : « {titre} » en place dans le dossier de Sid, {n} ligne(s)")
 
 
 def nettoyer_dossiers_drive(conf, etat, jour, drive, a_blanc):
@@ -1324,9 +1328,8 @@ def nettoyer_dossiers_drive(conf, etat, jour, drive, a_blanc):
     if not conf["envoi_automatique"] or a_blanc:
         print(f"  Google (nettoyage) : {'à blanc' if a_blanc else 'simulation (envoi_automatique=false)'} : rien n'est listé ni mis à la corbeille")
         return
-    racine = _racine(conf, etat, drive, creer=False)
-    if not racine: print("  Google (nettoyage) : aucun dossier racine pour l'instant"); return
-    date_de = lambda n: (re.fullmatch(r"(?:Appels )?(\d{4}-\d{2}-\d{2})", n) or [None, None])[1]
+    racine = _racine(conf, etat, drive)
+    date_de = lambda n: (re.fullmatch(r"(?:Appels (?:Sid )?)?(\d{4}-\d{2}-\d{2})", n) or [None, None])[1]
     vieux = [(i, n) for i, n in drive.lister_dossiers(racine) + drive.lister_feuilles(racine) if date_de(n) and _jours_ecoules(jour, date_de(n)) > JOURS_DOSSIER_MAX]
     for i, _ in vieux: drive.mettre_corbeille(i)
     if vieux: journaliser("nettoyage", f"{jour} : {len(vieux)} élément(s) mis à la corbeille ({', '.join(sorted(n for _, n in vieux))})")
@@ -1363,7 +1366,7 @@ def cmd_jour(conf, jour, a_blanc):
         else: liste = _etape("liste", lambda: _preparer(conf, etat, jour, a_blanc, drive, complet=False), conf, etat, jour, a_blanc) is not None
         if liste: _etape("google", lambda: exporter_google(conf, etat, jour, drive, a_blanc), conf, etat, jour, a_blanc)
         if RG.actif(jour):   # registre commun (17/11/2026) : seules les feuilles « Appels » déjà lues dans le registre vont à la corbeille ; aucun dossier touché
-            _etape("nettoyage", lambda: nettoyer_feuilles_lues(RG.SID, _racine(conf, etat, drive, creer=False) if drive else None, jour, drive, a_blanc, conf["envoi_automatique"]), conf, etat, jour, a_blanc)
+            _etape("nettoyage", lambda: nettoyer_feuilles_lues(RG.SID, _racine(conf, etat, drive) if drive else None, jour, drive, a_blanc, conf["envoi_automatique"]), conf, etat, jour, a_blanc)
             _etape("stock", lambda: verifier_stock(conf, cfg_liam(), etat, jour, "appels-sid", a_blanc), conf, etat, jour, a_blanc)
         else: _etape("nettoyage", lambda: nettoyer_dossiers_drive(conf, etat, jour, drive, a_blanc), conf, etat, jour, a_blanc)
         r = reserve(etat, jour=jour); detail = ", ".join(f"{NOMS[m]} {n}" for m, n in r["par"].items())

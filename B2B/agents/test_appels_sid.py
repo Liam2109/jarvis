@@ -48,7 +48,7 @@ LIENS = {"plombier-chauffagiste": "https://exemple-plombier.example/", "electric
 import google_sheets as GS
 class FauxDrive:
     """Même interface que google_sheets.Drive : dossiers, feuilles, partages gardés en mémoire."""
-    def __init__(s, compte="contact.lmsites@gmail.com"): s.dossiers, s.feuilles, s.partages, s.n, s.panne, s.appels, s.compte_reel, s.corbeille, s.mises_en_forme = {}, {}, [], 0, False, 0, compte, set(), []
+    def __init__(s, compte="contact.lmsites@gmail.com"): s.dossiers, s.feuilles, s.partages, s.n, s.panne, s.appels, s.compte_reel, s.corbeille, s.mises_en_forme = {"DSID": ("Sid", None)}, {}, [], 0, False, 0, compte, set(), []   # DSID : le dossier de Sid existe déjà (dossier_sid_id)
     def _nouveau(s, p): s.n += 1; return f"{p}{s.n}"
     def _controle(s):
         s.appels += 1
@@ -59,6 +59,7 @@ class FauxDrive:
     def trouver_feuille(s, dossier, titre): s._controle(); return next((i for i, (t, d, _) in s.feuilles.items() if t == titre and d == dossier and i not in s.corbeille), None)
     def lister_feuilles(s, parent): s._controle(); return [(i, t) for i, (t, d, _) in s.feuilles.items() if d == parent and i not in s.corbeille]
     def creer_feuille(s, dossier, titre, contenu): s._controle(); i = s._nouveau("F"); s.feuilles[i] = (titre, dossier, contenu); return i
+    def parents(s, id_): s._controle(); return [s.feuilles[id_][1]] if id_ in s.feuilles else []
     def partager(s, dossier, email): s._controle(); s.partages.append((dossier, email))
     def lister_dossiers(s, parent): s._controle(); return [(i, n) for i, (n, p) in s.dossiers.items() if p == parent and i not in s.corbeille]
     def mettre_corbeille(s, id_): s._controle(); s.corbeille.add(id_)
@@ -108,7 +109,7 @@ def monde(trouves=(), suivis=(), maps=(), listes=None, exclus_mails=(), exclus_c
         (tmp / "docs" / f"liste-appels-{jour}.md").write_text("\n".join(lignes) + "\n", encoding="utf-8")
     (tmp / "agents" / "exclus-emails.json").write_text(json.dumps(list(exclus_mails)), encoding="utf-8")
     if exclus_cles: P.ETAT.write_text(json.dumps({"appels": {"exclus": list(exclus_cles)}}), encoding="utf-8")
-    A.CONFIG.write_text(json.dumps(config or {}), encoding="utf-8")
+    A.CONFIG.write_text(json.dumps({"dossier_sid_id": "DSID", **(config or {})}), encoding="utf-8")
     A.PROSPECTION_CONFIG.write_text(json.dumps({"liste_appels_heure": "08:00", "appels_par_jour": 100, "decouverte_osm": True}), encoding="utf-8")
     DRIVE.__init__(); ALERTES.clear(); EXEC.clear(); SOMMEIL.clear()
 
@@ -623,7 +624,7 @@ monde(trouves=gros_monde(), config={"envoi_automatique": True})
 lancer("preparer", "--jour", JOUR); A.exporter_google(A.cfg(), A.etat_lire(), JOUR, DRIVE, False)
 racine = DRIVE.trouver_dossier("Sid")
 verifier(racine and DRIVE.dossiers[racine] == ("Sid", None) and len(DRIVE.dossiers) == 1, "dossier « Sid » à la racine du Drive, aucun sous-dossier par jour")
-fid = DRIVE.trouver_feuille(racine, f"Appels {JOUR}"); verifier(fid is not None and len(DRIVE.feuilles) == 1, "un seul tableur « Appels AAAA-MM-JJ », posé directement dans le dossier")
+fid = DRIVE.trouver_feuille(racine, f"Appels Sid {JOUR}"); verifier(fid is not None and len(DRIVE.feuilles) == 1, "un seul tableur « Appels AAAA-MM-JJ », posé directement dans le dossier")
 contenu = list(csv.reader(io.StringIO(DRIVE.feuilles[fid][2]))); verifier(contenu == lire_csv(JOUR), "la feuille a exactement le contenu du CSV")
 verifier(contenu[0] == COLONNES, "colonnes dans l'ordre : Créneau, Entreprise, Métier, Ville, Téléphone, Détail fiche, Résultat, Note")
 verifier(DRIVE.mises_en_forme == [(fid, tuple(A.LARGEURS_PX), (6, ["Pas de réponse", "À rappeler", "RDV pris", "Non catégorique", "Je dois réfléchir", "Trop cher", "Déjà un site", "Pas le temps"]))] and min(A.LARGEURS_PX) >= 120,
@@ -636,7 +637,7 @@ verifier((len(DRIVE.dossiers), len(DRIVE.feuilles)) == n_avant, "état perdu : l
 DRIVE.feuilles.pop(fid); etat = A.etat_lire(); etat["google"] = {}; A.etat_ecrire(etat); A.exporter_google(A.cfg(), A.etat_lire(), JOUR, DRIVE, False)
 verifier(len(DRIVE.dossiers) == n_avant[0] and len(DRIVE.feuilles) == 1, "tableur manquant : il est recréé, rien d'autre")
 lancer("preparer", "--jour", JOUR2); A.exporter_google(A.cfg(), A.etat_lire(), JOUR2, DRIVE, False)
-verifier(len(DRIVE.dossiers) == 1 and DRIVE.trouver_feuille(racine, f"Appels {JOUR2}"), "le lendemain : « Sid » réutilisé, nouveau tableur, toujours aucun sous-dossier")
+verifier(len(DRIVE.dossiers) == 1 and DRIVE.trouver_feuille(racine, f"Appels Sid {JOUR2}"), "le lendemain : « Sid » réutilisé, nouveau tableur, toujours aucun sous-dossier")
 DRIVE.__init__(); etat = A.etat_lire(); etat["google"] = {}; A.etat_ecrire(etat)
 A.exporter_google(A.cfg(), A.etat_lire(), JOUR, DRIVE, True)
 verifier(DRIVE.appels == 0, "--a-blanc : le Drive n'est pas contacté")
@@ -651,10 +652,21 @@ lancer("preparer", "--jour", JOUR2); A.exporter_google(A.cfg(), A.etat_lire(), J
 verifier(len(DRIVE.partages) == 1, "partage fait une seule fois")
 monde(trouves=gros_monde(), config={"envoi_automatique": False, "partager_avec": "sid@example.invalid"}); lancer("preparer", "--jour", JOUR); lancer("jour", "--jour", JOUR); verifier(DRIVE.partages == [] and DRIVE.appels == 0, "simulation : jamais de partage, même avec une adresse")
 monde(trouves=gros_monde(), config={"envoi_automatique": True, "partager_avec": "pas une adresse"}); lancer("preparer", "--jour", JOUR); A.exporter_google(A.cfg(), A.etat_lire(), JOUR, DRIVE, False)
-verifier(DRIVE.partages == [] and DRIVE.trouver_feuille(DRIVE.trouver_dossier("Sid"), f"Appels {JOUR}"), "adresse invalide : rien partagé, le tableur est quand même créé")
+verifier(DRIVE.partages == [] and DRIVE.trouver_feuille(DRIVE.trouver_dossier("Sid"), f"Appels Sid {JOUR}"), "adresse invalide : rien partagé, le tableur est quand même créé")
 monde(trouves=gros_monde(), config={"envoi_automatique": True}); DRIVE.compte_reel = "autre@example.invalid"; lancer("preparer", "--jour", JOUR)
 try: A.exporter_google(A.cfg(), A.etat_lire(), JOUR, DRIVE, False); verifier(False, "jeton d'un autre compte : refusé")
-except A.ErreurAgent as e: verifier("contact.lmsites@gmail.com" in str(e) and not DRIVE.dossiers, "jeton d'un autre compte : refusé avant toute création")
+except A.ErreurAgent as e: verifier("contact.lmsites@gmail.com" in str(e) and list(DRIVE.dossiers) == ["DSID"] and not DRIVE.feuilles, "jeton d'un autre compte : refusé avant toute création")
+
+print("15bis. Dossier de Sid imposé (décision de Liam, 16/11/2026) : jamais la racine, jamais un dossier créé, vérifié après création")
+monde(trouves=gros_monde(), config={"envoi_automatique": True}); lancer("preparer", "--jour", JOUR); A.exporter_google(A.cfg(), A.etat_lire(), JOUR, DRIVE, False)
+fid = DRIVE.trouver_feuille("DSID", f"Appels Sid {JOUR}"); verifier(fid and DRIVE.feuilles[fid][1] == "DSID" and list(DRIVE.dossiers) == ["DSID"], "tableur « Appels Sid AAAA-MM-JJ » dans dossier_sid_id, aucun dossier créé")
+monde(trouves=gros_monde(), config={"envoi_automatique": True, "dossier_sid_id": ""}); lancer("preparer", "--jour", JOUR)
+try: A.exporter_google(A.cfg(), A.etat_lire(), JOUR, DRIVE, False); verifier(False, "dossier_sid_id vide : refusé")
+except A.ErreurAgent as e: verifier("dossier_sid_id" in str(e) and list(DRIVE.dossiers) == ["DSID"] and not DRIVE.feuilles, "dossier_sid_id vide : refusé, rien créé (ni à la racine, ni dossier « Sid »)")
+monde(trouves=gros_monde(), config={"envoi_automatique": True}); lancer("preparer", "--jour", JOUR); DRIVE.parents = lambda id_: ["root"]
+try: A.exporter_google(A.cfg(), A.etat_lire(), JOUR, DRIVE, False); verifier(False, "feuille hors du dossier : signalée")
+except A.ErreurAgent as e: verifier("hors du dossier" in str(e) and not (A.etat_lire()["google"].get(JOUR) or {}).get("feuille"), "feuille créée hors du dossier : erreur, état non enregistré")
+del DRIVE.parents
 
 print("16. google_sheets : portée minimale, aucun jeton affiché")
 gsrc = (ICI / "google_sheets.py").read_text(encoding="utf-8")
@@ -758,11 +770,11 @@ verifier((A.SORTIE / f"liste-sid-{JOUR}.csv").exists() and code == 0, "sourcing 
 verifier(sum("sourcing" in a.lower() for a in ALERTES) == 1 and sum("google" in a.lower() for a in ALERTES) == 1, "une alerte pour le sourcing, une pour Google")
 verifier(not A.VERROU.exists(), "verrou libéré malgré les pannes")
 DRIVE.panne = False; FP.panne = False; code, _ = lancer("jour", "--jour", JOUR)
-verifier(code == 0 and DRIVE.trouver_feuille(DRIVE.trouver_dossier("Sid"), f"Appels {JOUR}"), "le passage suivant rattrape Google (la liste existante n'est ni refaite ni re-marquée)")
+verifier(code == 0 and DRIVE.trouver_feuille(DRIVE.trouver_dossier("Sid"), f"Appels Sid {JOUR}"), "le passage suivant rattrape Google (la liste existante n'est ni refaite ni re-marquée)")
 verifier(len(json.loads(A.ETAT.read_text(encoding="utf-8"))["sorties"]) == 100, "toujours 100 entreprises marquées (pas de seconde liste)")
 A.appel_reseau = reseau
 code, sortie = lancer("jour", "--jour", JOUR2, "--a-blanc"); verifier(code == 0 and "à blanc" in sortie.lower() and "sourcing" in sortie.lower() and "google" in sortie.lower(), "jour --a-blanc : décrit chaque étape, sans réseau")
-monde(trouves=gros_monde(), config={"envoi_automatique": True}); A.ARRET.write_text("stop", encoding="utf-8"); verifier(lancer("jour", "--jour", JOUR)[0] == 2 and not DRIVE.dossiers and not DRIVE.feuilles, "arrêt de secours : rien n'est fait")
+monde(trouves=gros_monde(), config={"envoi_automatique": True}); A.ARRET.write_text("stop", encoding="utf-8"); verifier(lancer("jour", "--jour", JOUR)[0] == 2 and list(DRIVE.dossiers) == ["DSID"] and not DRIVE.feuilles, "arrêt de secours : rien n'est fait")
 verifier(lancer("google-autoriser", "--a-blanc")[0] == 0, "google-autoriser --a-blanc : n'ouvre rien")
 
 print("20. Contrôle de bout en bout : 3 jours de suite, à blanc, sans réseau ni Google réel")
@@ -776,7 +788,7 @@ FE = FauxOverpass(); A.appel_reseau = FE; reserves, alertes_par_jour, listes = [
 def reserve_total(): return A.reserve(A.etat_lire())["total"]
 def marquer_appele_sur_sheet(jour):
     """Simule Sid qui remplit « Résultat » sur toute la liste du jour, DANS LA FEUILLE GOOGLE (pas le fichier local) : c'est elle que relit le bilan du lendemain quand envoi_automatique=true."""
-    racine = DRIVE.trouver_dossier("Sid"); fid = DRIVE.trouver_feuille(racine, f"Appels {jour}")
+    racine = DRIVE.trouver_dossier("Sid"); fid = DRIVE.trouver_feuille(racine, f"Appels Sid {jour}")
     titre, dossier, contenu = DRIVE.feuilles[fid]; lignes = list(csv.reader(io.StringIO(contenu)))
     for l in lignes[1:]:
         if len(l) > RES: l[RES] = "Non catégorique"
@@ -801,7 +813,7 @@ verifier({l[MET] for j in JOURS for l in listes[j]} <= {"Restaurant", "Coiffeur"
 racine = DRIVE.trouver_dossier("Sid")
 verifier(sum(1 for n, p in DRIVE.dossiers.values() if n == "Sid") == 1 and len(DRIVE.dossiers) == 1, "un seul dossier « Sid », aucun sous-dossier par jour")
 for jour in JOURS:
-    f = DRIVE.trouver_feuille(racine, f"Appels {jour}")
+    f = DRIVE.trouver_feuille(racine, f"Appels Sid {jour}")
     verifier(f is not None and [l[:RES] + l[RES + 1:] for l in list(csv.reader(io.StringIO(DRIVE.feuilles[f][2])))[1:]] == [l[:RES] + l[RES + 1:] for l in listes[jour]],
              f"{jour} : bon tableur, dans le dossier « Sid », même contenu que la liste du jour (hors Résultat, rempli depuis par le test)")
 verifier(len(DRIVE.feuilles) == 3 and DRIVE.partages == [(racine, "sid@example.invalid")], "3 tableurs « Appels », un par jour, dossier « Sid » partagé une seule fois")
@@ -855,17 +867,18 @@ avant = DRIVE.appels; A.nettoyer_dossiers_drive(A.cfg(), A.etat_lire(), JOUR, DR
 verifier(DRIVE.appels == avant, "--a-blanc : le Drive n'est pas contacté pour le nettoyage")
 A.nettoyer_dossiers_drive(A.cfg(), A.etat_lire(), JOUR, DRIVE, False)
 verifier(True, "pas encore de dossier « Sid » : rien ne casse")
-racine = DRIVE.creer_dossier("Sid")
+racine = "DSID"
 vieux = DRIVE.creer_dossier("2026-10-20", racine)      # 15 jours avant JOUR (2026-11-04)
 pile = DRIVE.creer_dossier("2026-10-28", racine)       # exactement 7 jours avant JOUR : gardé (pas « plus de » 7)
 recent = DRIVE.creer_dossier("2026-10-30", racine)     # 5 jours avant JOUR : gardé
 autre = DRIVE.creer_dossier("pas-une-date", racine)    # nom non daté : jamais touché
-f_vieux = DRIVE.creer_feuille(racine, "Appels 2026-10-20", "a\n"); f_pile = DRIVE.creer_feuille(racine, "Appels 2026-10-28", "a\n"); f_autre = DRIVE.creer_feuille(racine, "Guide d'appel", "a\n")
+f_vieux = DRIVE.creer_feuille(racine, "Appels 2026-10-20", "a\n"); f_pile = DRIVE.creer_feuille(racine, "Appels 2026-10-28", "a\n"); f_autre = DRIVE.creer_feuille(racine, "Guide d'appel", "a\n"); f_neuf = DRIVE.creer_feuille(racine, "Appels Sid 2026-10-20", "a\n")
 etat = A.etat_lire(); etat["google"]["racine"] = racine; A.etat_ecrire(etat)
 A.nettoyer_dossiers_drive(A.cfg(), A.etat_lire(), JOUR, DRIVE, False)
 verifier(vieux in DRIVE.corbeille and DRIVE.trouver_dossier("2026-10-20", racine) is None, "dossier de 15 jours : mis à la corbeille, plus retrouvé")
 verifier(pile not in DRIVE.corbeille and recent not in DRIVE.corbeille and autre not in DRIVE.corbeille, "7 jours exactement, 5 jours, et nom non daté : conservés")
 verifier(f_vieux in DRIVE.corbeille and f_pile not in DRIVE.corbeille and f_autre not in DRIVE.corbeille, "tableur « Appels » de 15 jours : corbeille ; 7 jours exactement et autre feuille : conservés")
+verifier(f_neuf in DRIVE.corbeille, "nouveau nom « Appels Sid AAAA-MM-JJ » de 15 jours : corbeille aussi")
 verifier("corbeille" in A.JOURNAL.read_text(encoding="utf-8").lower(), "le nettoyage est journalisé")
 n = len(ALERTES); A.nettoyer_dossiers_drive(A.cfg(), A.etat_lire(), JOUR, DRIVE, False)
 verifier(len(ALERTES) == n, "rien à nettoyer la seconde fois : pas d'erreur, pas d'alerte")
@@ -908,13 +921,13 @@ verifier(code == 0, f"preparer après mise à jour (historique absent, listes ex
 print("25. Google : un seul tableur par jour ; les lignes reprises (non appelées ou « À rappeler ») sont dedans, Détail fiche « Reprise de la liste du … »")
 monde(trouves=gros_monde(60), config={"envoi_automatique": True})
 lancer("preparer", "--jour", JOUR); A.exporter_google(A.cfg(), A.etat_lire(), JOUR, DRIVE, False)
-racine = DRIVE.trouver_dossier("Sid"); fid1 = DRIVE.trouver_feuille(racine, f"Appels {JOUR}")
+racine = DRIVE.trouver_dossier("Sid"); fid1 = DRIVE.trouver_feuille(racine, f"Appels Sid {JOUR}")
 titre, dossier, contenu = DRIVE.feuilles[fid1]; lignes = list(csv.reader(io.StringIO(contenu)))
 for k, l in enumerate(lignes[1:]): l[RES] = ("À rappeler" if k < 3 else "Trop cher" if k < 5 else "")
 lignes[1][NOTE] = "rappeler après 17 h"
 buf = io.StringIO(); csv.writer(buf).writerows(lignes); DRIVE.feuilles[fid1] = (titre, dossier, buf.getvalue())
 lancer("preparer", "--jour", JOUR2); A.exporter_google(A.cfg(), A.etat_lire(), JOUR2, DRIVE, False)
-fid2 = DRIVE.trouver_feuille(racine, f"Appels {JOUR2}")
+fid2 = DRIVE.trouver_feuille(racine, f"Appels Sid {JOUR2}")
 verifier(fid2 is not None and len(DRIVE.feuilles) == 2 and DRIVE.trouver_feuille(racine, f"A rappeler {JOUR2}") is None and len(DRIVE.dossiers) == 1, "lendemain : un seul nouveau tableur, aucune feuille « A rappeler », aucun sous-dossier")
 c2 = list(csv.reader(io.StringIO(DRIVE.feuilles[fid2][2])))
 reprises = {l[NOM] for l in c2[1:] if l[DET].startswith(f"Reprise de la liste du {JOUR}")}
