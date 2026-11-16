@@ -22,6 +22,7 @@
     "plafonds": {"type": "object", "required": ["messages_par_jour"], "properties": {"messages_par_jour": {"type": "integer", "minimum": 0}}},
     "peut_engager": {"const": false},
     "alerte_si_silence": {"type": ["string", "null"], "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"},
+    "alerte_si_pas_de_feuille": {"type": ["string", "null"], "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"},
     "tests": {"type": "array", "items": {"type": "string"}}
   }
 }

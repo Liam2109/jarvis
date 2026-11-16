@@ -99,5 +99,34 @@ class ActivationEtJoursOuvres(unittest.TestCase):
         self.assertEqual(self.PA.taches_serveur()["appels-liam"]["actif_le"], "2026-11-17")
 
 
+class AppelsSidFeuille(unittest.TestCase):
+    """Incident du 16/11/2026 : appels-sid resté en simulation (envoi_automatique local repassé à false le 13/11 au soir) sans que rien ne le dise avant le script de Liam le lundi matin —
+    l'agent avait bien tourné (pas de silence, pas d'erreur), donc le surveillant se taisait. Il doit maintenant dire « aucune feuille » dès alerte_si_pas_de_feuille si etat['google'][jour]
+    n'a pas de feuille, même si l'agent a bien tourné."""
+    CONTRAT = {"nom": "appels-sid", "statut": "simulation", "jours": [0, 1, 2, 3, 4], "alerte_si_silence": "07:45", "alerte_si_pas_de_feuille": "08:15"}
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp()); self.logs = self.tmp / "logs"; self.ancien_agents = SV.AGENTS; SV.AGENTS = self.tmp
+        (self.logs / "appels-sid").mkdir(parents=True)
+        (self.logs / "appels-sid" / "2026-11-16.jsonl").write_text(json.dumps({"heure": "2026-11-16T07:37:00", "decision": "jour", "resultat": "terminé", "ok": True}) + "\n", encoding="utf-8")
+
+    def tearDown(self): SV.AGENTS = self.ancien_agents
+
+    def test_aucune_feuille_apres_08h15(self):
+        n = datetime(2026, 11, 16, 8, 20)
+        self.assertEqual(SV.defauts(n, [self.CONTRAT], self.logs)[0],
+                          ['agent appels-sid : aucune feuille « Appels 2026-11-16 » dans le Drive de Sid (attendu avant 08:15) — vérifier envoi_automatique'])
+
+    def test_silence_avant_08h15(self):
+        self.assertEqual(SV.defauts(datetime(2026, 11, 16, 8, 0), [self.CONTRAT], self.logs)[0], [], "pas encore 08:15 : silence")
+
+    def test_silence_si_feuille_creee(self):
+        (self.tmp / "appels-sid-etat.json").write_text(json.dumps({"google": {"2026-11-16": {"feuille": "abc123"}}}), encoding="utf-8")
+        self.assertEqual(SV.defauts(datetime(2026, 11, 16, 8, 20), [self.CONTRAT], self.logs)[0], [], "feuille réellement créée : silence")
+
+    def test_silence_hors_jour_ouvre(self):
+        self.assertEqual(SV.defauts(datetime(2026, 11, 14, 8, 20), [self.CONTRAT], self.logs)[0], [], "samedi : agent hors jours, pas d'alerte")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)

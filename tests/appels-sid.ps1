@@ -26,6 +26,23 @@ Verifier (@($cfgAgent.jours_appel) -join ',' -eq 'lundi,mardi,mercredi,jeudi,ven
 # et ne doit jamais bloquer tests\tout.ps1 / maj-auto.ps1 sur une machine qui n'a pas vocation à être le serveur. Voir `python agents\appels-sid.py etat`.
 $tacheReelle = Get-ScheduledTask -TaskName 'Jarvis-AppelsSid' -ErrorAction SilentlyContinue
 Write-Host "  INFO  tâche planifiée Jarvis-AppelsSid : $(if ($tacheReelle) { 'installée sur cette machine' } else { 'non installée sur cette machine' })"
+# Garde réelle (incident du 16/11/2026 : envoi_automatique local resté à false après le 13/11, liste de Sid restée en simulation sans que rien ne le dise) :
+# sur la machine active B2B avec appels-sid dans agents_actifs, un jour ouvré après 8 h, l'agent ne doit pas être en simulation. Silence sur toute autre machine (b2b.local.json absent ou différent).
+$b2bLocalP = Join-Path $ag0 'b2b.local.json'
+$machineActive = $false
+if (Test-Path -LiteralPath $b2bLocalP) {
+    $b2bL = Get-Content -LiteralPath $b2bLocalP -Raw -Encoding UTF8 | ConvertFrom-Json
+    $machineActive = ($b2bL.machine_active -eq $env:COMPUTERNAME) -and ('appels-sid' -in @($b2bL.agents_actifs))
+}
+if ($machineActive) {
+    $maintenantParis = try { [TimeZoneInfo]::ConvertTime((Get-Date), [TimeZoneInfo]::FindSystemTimeZoneById('Romance Standard Time')) } catch { Get-Date }
+    $jourOuvre = $maintenantParis.DayOfWeek -in @([DayOfWeek]::Monday, [DayOfWeek]::Tuesday, [DayOfWeek]::Wednesday, [DayOfWeek]::Thursday, [DayOfWeek]::Friday)
+    if ($jourOuvre -and $maintenantParis.TimeOfDay -ge (New-TimeSpan -Hours 8)) {
+        $localCfgP = Join-Path $ag0 'appels-sid-config.local.json'
+        $envoiReel = if (Test-Path -LiteralPath $localCfgP) { (Get-Content -LiteralPath $localCfgP -Raw -Encoding UTF8 | ConvertFrom-Json).envoi_automatique } else { $null }
+        Verifier ($envoiReel -eq $true) "appels-sid-config.local.json : envoi_automatique = true sur la machine active un jour ouvré après 8 h (sinon la liste de Sid reste en simulation sans alerte, incident du 16/11/2026)"
+    }
+}
 $tout = Get-Content (Join-Path $Root 'tests\tout.ps1') -Raw -Encoding UTF8
 Verifier ($tout -match "f = 'appels-sid\.ps1'") 'tests\tout.ps1 lance ce test'
 

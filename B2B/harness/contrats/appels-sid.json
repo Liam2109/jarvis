@@ -48,6 +48,7 @@
  },
  "peut_engager": false,
  "alerte_si_silence": "07:45",
+ "alerte_si_pas_de_feuille": "08:15",
  "tests": [
   "B2B/agents/test_appels_sid.py",
   "tests/agents/test_appels_sid.py",

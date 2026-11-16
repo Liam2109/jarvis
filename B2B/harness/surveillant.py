@@ -47,6 +47,16 @@ def attendu(nom, jours_contrat, jour_date, taches):
     return jour_date.weekday() in jours_contrat and (not t.get("jours") or jour_date.weekday() in t["jours"])
 
 
+def _feuille_appels_sid_creee(jour):
+    """Vrai si l'état réel d'appels-sid montre une feuille Google effectivement créée pour ce jour (etat['google'][jour]['feuille']) ;
+    False aussi bien si rien n'a tourné que si l'agent est resté en simulation (envoi_automatique=false) : dans les deux cas, aucune feuille pour Sid."""
+    try:
+        g = json.loads((AGENTS / "appels-sid-etat.json").read_text(encoding="utf-8")).get("google") or {}
+        return bool((g.get(jour) or {}).get("feuille"))
+    except (OSError, ValueError):
+        return False
+
+
 def defauts(maintenant, cs=None, dossier=None, taches=None):
     """Lignes de défaut (une par agent) et nombre d'agents surveillés. Un agent pas encore actif (actif_le) ou hors de ses jours (week-end d'un agent des jours ouvrés) : silence."""
     jour = f"{maintenant:%Y-%m-%d}"; minutes = maintenant.hour * 60 + maintenant.minute; out = []; n = 0
@@ -62,6 +72,9 @@ def defauts(maintenant, cs=None, dossier=None, taches=None):
             e = erreurs[-1]; out.append(f"agent {c['nom']} : erreur ({str(e.get('erreur') or e.get('resultat'))[:120]}, {e.get('heure', '')[11:16]})")
         elif c.get("alerte_si_silence") and attendu(c["nom"], c["jours"], maintenant.date(), taches) and minutes >= _hm(c["alerte_si_silence"]) and not execs:
             out.append(f"agent {c['nom']} n'a pas tourné aujourd'hui (attendu avant {c['alerte_si_silence']})")
+        elif (c["nom"] == "appels-sid" and c.get("alerte_si_pas_de_feuille") and attendu(c["nom"], c["jours"], maintenant.date(), taches)
+              and minutes >= _hm(c["alerte_si_pas_de_feuille"]) and not _feuille_appels_sid_creee(jour)):
+            out.append(f"agent appels-sid : aucune feuille « Appels {jour} » dans le Drive de Sid (attendu avant {c['alerte_si_pas_de_feuille']}) — vérifier envoi_automatique")
     return out, n
 
 
