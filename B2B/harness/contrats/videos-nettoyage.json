@@ -1,0 +1,43 @@
+{
+ "nom": "videos-nettoyage",
+ "responsable": "Jarvis (CEO)",
+ "mission": "À 03:30, sans token : supprime dans Videos les .mp4 et intermédiaires de plus de nettoyage_jours jours (14, config), après une ligne dans journal-videos.csv ; skill, scripts et veille intacts.",
+ "statut": "actif",
+ "script": "Videos/agents/nettoyage.ps1",
+ "jours": [0, 1, 2, 3, 4, 5, 6],
+ "heures": {
+  "debut": "03:30",
+  "fin": "04:15"
+ },
+ "fichiers_lus": [
+  "Videos/videos-config.json (nettoyage_jours, nettoyage_extensions, videos_protegees)",
+  "Videos/a-valider",
+  "Videos/publiees",
+  "Videos/travail",
+  "Videos/outils/stickfigure-pipeline-v2/output"
+ ],
+ "fichiers_ecrits": [
+  "Videos/journal-videos.csv",
+  "Videos/videos-nettoyage-journal.log",
+  "suppressions dans Videos/a-valider, publiees, travail, outils/stickfigure-pipeline-v2/output"
+ ],
+ "canaux_discord": [],
+ "envoi_client": false,
+ "actions_interdites": [
+  "supprimer hors de Videos, ou dans agents, scripts, veille, node_modules",
+  "supprimer SKILL-VIDEOS.md, hooks, README, la config ou une vidéo de videos_protegees",
+  "supprimer sans avoir écrit la ligne de journal-videos.csv",
+  "lire ou utiliser un token",
+  "toucher à memoire/, .env, config.json, .obsidian/ ou un fichier *.local.json",
+  "envoyer au client, encaisser ou signer"
+ ],
+ "plafonds": {
+  "messages_par_jour": 0
+ },
+ "peut_engager": false,
+ "alerte_si_silence": "04:15",
+ "tests": [
+  "tests/agents/test_videos.py",
+  "B2B/agents/test_machine.py"
+ ]
+}

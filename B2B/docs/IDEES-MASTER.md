@@ -24,6 +24,8 @@ Chaque idée est notée à la date où Liam la dit. Une idée pas encore faite r
 - 14/11 — Signaux d'achat : entreprises nouvellement immatriculées dans la zone (API Sirene, gratuite).
 - 14/11 — Demander à Sid les phrases exactes qui ont fait dire non.
 - 15/11 — Onglet « relances » dans la feuille de Liam, avec l'historique des essais de chaque entreprise.
+- 16/11 — Vidéos TikTok gratuites en bonhomme bâton (Qwen local + stickfigure-pipeline-v2), 3 par jour : ligne A stickman explications → planning 15 min ; ligne B recrutement de call callers → lien en bio. Construit (Videos\, 6 agents dont marketing et nettoyage), publication en attente du « go publier » de chaque ligne.
+- 16/11 — Vidéos : voix Kokoro locale en secours si edge-tts échoue (demande relayée par une autre session, pas encore faite) ; sous-titres qui évitent les personnages.
 
 ## Agents
 - 27/10 — Chaîne automatique entre agents (prospection → réponse positive → rendez-vous → devis → Stripe → site → mise en ligne → maintenance), validation de Liam seulement aux points à risque.

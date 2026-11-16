@@ -29,6 +29,7 @@ function Register-TacheB2B($t) {
     $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $t.arguments -WorkingDirectory $t.racine
     $trigger = $(if ($t.heure) { New-ScheduledTaskTrigger -Daily -At $t.heure } else { New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(2) -RepetitionInterval (New-TimeSpan -Minutes $t.minutes) -RepetitionDuration (New-TimeSpan -Days 3650) })
     if ($t.PSObject.Properties['lundi'] -and $t.lundi) { $trigger = @($trigger, (New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday -At $t.lundi)) }   # harness : déclencheur du lundi en plus (surveillant 07:50)
+    if ($t.heure -and $t.PSObject.Properties['heures_en_plus']) { foreach ($h in @($t.heures_en_plus | Where-Object { $_ })) { $trigger = @($trigger) + (New-ScheduledTaskTrigger -Daily -At $h) } }   # vidéos (16/11/2026) : 06:00 + 14:00 + 22:00
     $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours 2) -StartWhenAvailable -MultipleInstances IgnoreNew
     Register-ScheduledTask -TaskName $t.nom -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Description "Agent B2B « $($t.agent) » sur le serveur (créée par maj-auto.ps1 ; un seul agent à la fois)" -Force | Out-Null
 }
@@ -66,7 +67,7 @@ function Get-B2BTaches([string]$racine) {
         $def = $table.PSObject.Properties[$a]
         if (-not $def) { $plan.avertissements += "agent inconnu ignoré : $a"; continue }
         $d = $def.Value
-        $liste += [pscustomobject]@{ nom = "$($script:PrefixeTacheB2B)$a"; agent = $a; minutes = $(if ($d.PSObject.Properties['toutes_minutes']) { [int]$d.toutes_minutes } else { 0 }); heure = $(if ($d.PSObject.Properties['heure']) { "$($d.heure)" } else { '' }); lundi = $(if ($d.PSObject.Properties['lundi']) { "$($d.lundi)" } else { '' }); racine = $racine
+        $liste += [pscustomobject]@{ nom = "$($script:PrefixeTacheB2B)$a"; agent = $a; minutes = $(if ($d.PSObject.Properties['toutes_minutes']) { [int]$d.toutes_minutes } else { 0 }); heure = $(if ($d.PSObject.Properties['heure']) { "$($d.heure)" } else { '' }); lundi = $(if ($d.PSObject.Properties['lundi']) { "$($d.lundi)" } else { '' }); heures_en_plus = $(if ($d.PSObject.Properties['heures_en_plus']) { @($d.heures_en_plus | ForEach-Object { "$_" }) } else { @() }); racine = $racine
             arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$lanceur`" -Agent $a" }
     }
     $plan.taches = $liste
@@ -80,7 +81,7 @@ function Sync-B2BTaches([string]$racine) {
         if ($plan.autreMachine) { foreach ($n in $existantes) { Unregister-TacheB2B $n; $dit += "B2B : tâche $n retirée ($($plan.raison))" } }
         elseif ((Get-B2BConfigLocale $racine).presente) { $dit += "B2B : aucune tâche ($($plan.raison))" }
     } else {
-        foreach ($t in $plan.taches) { Register-TacheB2B $t; $dit += "B2B : tâche $($t.nom) $(if ($t.heure) { "chaque jour à $($t.heure)$(if ($t.PSObject.Properties['lundi'] -and $t.lundi) { " et le lundi à $($t.lundi)" })" } else { "toutes les $($t.minutes) min" }) créée ou mise à jour$(if (Test-B2BSimulation) { ' (simulation)' })" }
+        foreach ($t in $plan.taches) { Register-TacheB2B $t; $dit += "B2B : tâche $($t.nom) $(if ($t.heure) { "chaque jour à $($t.heure)$(if ($t.PSObject.Properties['heures_en_plus'] -and @($t.heures_en_plus).Count) { ', ' + (@($t.heures_en_plus) -join ', ') })$(if ($t.PSObject.Properties['lundi'] -and $t.lundi) { " et le lundi à $($t.lundi)" })" } else { "toutes les $($t.minutes) min" }) créée ou mise à jour$(if (Test-B2BSimulation) { ' (simulation)' })" }
         $voulues = @($plan.taches | ForEach-Object { $_.nom })
         foreach ($n in $existantes) { if ($n -notin $voulues) { Unregister-TacheB2B $n; $dit += "B2B : tâche $n retirée (agent non actif)" } }
         foreach ($w in $plan.avertissements) { $dit += "B2B : $w" }

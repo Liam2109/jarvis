@@ -1,0 +1,18 @@
+# Outils vidéo tiers (clonés, avec leurs dépendances) : jamais versionnés
+outils/
+# Données d'exécution : vidéos, notes de veille, scripts du jour, états, journaux, verrous
+a-valider/
+publiees/
+travail/
+veille/
+scripts/
+*-etat.json
+*-journal.log
+*.verrou
+*.arret
+*.local.json
+__pycache__/
+# Bibliothèque d'accroches enrichie chaque jour (modèle versionné : hooks-base.md), journal CSV, kill-switch
+hooks.md
+journal-videos.csv
+STOP

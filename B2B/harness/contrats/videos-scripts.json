@@ -1,0 +1,52 @@
+{
+ "nom": "videos-scripts",
+ "responsable": "Jarvis (CEO)",
+ "mission": "Chaque jour, Qwen local (Ollama, gratuit) écrit les scripts et légendes des 3 passages (lignes A et B) ; garde-fous codés : aucun chiffre inventé, aucune promesse, aucun témoignage, jamais le même sujet.",
+ "statut": "actif",
+ "script": "Videos/agents/scripts.py",
+ "jours": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6
+ ],
+ "heures": {
+  "debut": "05:00",
+  "fin": "05:45"
+ },
+ "fichiers_lus": [
+  "Videos/veille",
+  "Videos/videos-config.json",
+  "B2B/docs/SCRIPT-APPEL-SID.md (lien du planning, lu seulement)",
+  "Videos/scripts/sujets.json"
+ ],
+ "fichiers_ecrits": [
+  "Videos/scripts/AAAA-MM-JJ-HHMM.json",
+  "Videos/scripts/sujets.json",
+  "Videos/videos-scripts-journal.log"
+ ],
+ "canaux_discord": [],
+ "envoi_client": false,
+ "actions_interdites": [
+  "écrire un chiffre, un gain, une promesse de résultat ou un témoignage inventé",
+  "reprendre un sujet déjà traité",
+  "recopier le lien du planning dans un fichier du dépôt",
+  "utiliser un modèle payant ou des tokens Claude",
+  "publier, liker, s'abonner, commenter ou envoyer un message sur TikTok",
+  "toucher à memoire/, .env, config.json, .obsidian/ ou un fichier *.local.json",
+  "afficher un secret (jeton, clé, adresse iCal)",
+  "envoyer au client, encaisser ou signer"
+ ],
+ "plafonds": {
+  "messages_par_jour": 0,
+  "scripts_par_jour": 3
+ },
+ "peut_engager": false,
+ "alerte_si_silence": "05:45",
+ "tests": [
+  "tests/agents/test_videos.py"
+ ]
+}

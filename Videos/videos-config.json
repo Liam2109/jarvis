@@ -1,0 +1,51 @@
+{
+  "outil": "stickfigure-pipeline-v2",
+  "voix": "fr-FR-RemyMultilingualNeural",
+  "modele": "qwen2.5:3b",
+  "passages": ["06:00", "14:00", "22:00"],
+  "series_par_passage": { "06:00": "A", "14:00": "B", "22:00": "A" },
+  "mots_min": 52,
+  "mots_max": 88,
+  "duree_min_s": 20,
+  "duree_max_s": 35,
+  "veille_jours_gardes": 30,
+  "veille_requetes": [
+    "tendances TikTok format vidéo",
+    "TikTok bonnes pratiques vidéo accroche",
+    "motion design vidéo courte TikTok",
+    "vidéo stickman animation réseaux sociaux",
+    "TikTok petites entreprises artisans visibilité"
+  ],
+  "lignes": {
+    "A": {
+      "nom": "stickman divertissement / explications",
+      "compte": "compte TikTok actuel de Liam",
+      "ton": "vivant, simple, à l'oral, vouvoiement : un bonhomme bâton explique une chose concrète du web à un artisan ou un commerçant",
+      "tutoiement": false,
+      "go_publier": false,
+      "profil_navigateur": "%LOCALAPPDATA%\\JarvisTikTok\\ligne-A",
+      "hashtags": "#stickman #artisan #commerce #siteweb"
+    },
+    "B": {
+      "nom": "recrutement de call callers (vente de sites web)",
+      "compte": "compte TikTok séparé, recrutement",
+      "ton": "direct, franc, tutoiement, « je te le dis cash »",
+      "tutoiement": true,
+      "go_publier": false,
+      "profil_navigateur": "%LOCALAPPDATA%\\JarvisTikTok\\ligne-B",
+      "hashtags": "#recrutement #teletravail #prospection #commission",
+      "taux_commission": "",
+      "message": "Liam cherche des call callers pour vendre des sites web. On appelle depuis chez soi, on décroche des rendez-vous, on touche une commission sur chaque vente, pas de salaire fixe, liste et script fournis, postuler via le lien en bio (formulaire Google).",
+      "brouillon_hook": "Tu sais parler au téléphone ? Je cherche des call callers pour vendre des sites web. Tu appelles de chez toi, tu décroches des rendez-vous, tu touches une commission sur chaque vente. Pas de salaire fixe, je te le dis cash. Liste et script fournis. Postule via le lien en bio.",
+      "lieux_interdits": ["normandie", "caen", "rouen", "le havre", "cherbourg", "évreux", "evreux", "lisieux", "bayeux", "alençon", "alencon", "dieppe", "france", "paris", "ville", "région", "region", "quartier"]
+    }
+  },
+  "lien_candidature": "",
+  "publications_max_par_jour": 3,
+  "navigateur": "msedge",
+  "navigateur_visible": true,
+  "nettoyage_jours": 14,
+  "nettoyage_extensions": [".mp4", ".mov", ".webm", ".mkv", ".mp3", ".wav", ".m4a", ".aac", ".srt", ".ass", ".png", ".jpg", ".log", ".tmp"],
+  "videos_protegees": ["2026-11-16-2200"],
+  "_aide": "Équipe Vidéos TikTok (16/11/2026), tout gratuit : Qwen local (Ollama), voix edge-tts, rendu stickfigure-pipeline-v2 (Videos\\outils, hors git). Règles : Videos\\SKILL-VIDEOS.md (relu par chaque agent). lignes : A = stickman divertissement / explications (compte actuel, fin = planning de 15 min de Liam, lien LU dans B2B\\docs\\SCRIPT-APPEL-SID.md) ; B = recrutement de call callers (compte séparé, fin = « postule via le lien en bio », aucune ville, aucun revenu chiffré). taux_commission vide = les vidéos disent seulement « à la commission » (Liam le renseigne, ex. « 15 % »). go_publier : false tant que Liam n'a pas dit « go publier » pour la première vidéo de la ligne ; à passer à true SEULEMENT dans videos-config.local.json (machine), avec videos-publication dans agents_actifs. profil_navigateur : profil persistant où Liam se connecte lui-même une fois (publication.py connexion --ligne X) ; l'agent ne tape jamais de mot de passe. nettoyage_jours : âge (jours) au-delà duquel nettoyage.ps1 supprime vidéos et intermédiaires ; videos_protegees : noms (sans extension) jamais supprimés. lien_candidature : lien du formulaire (pour la bio du compte B, jamais lu par les vidéos). Voir Videos\\README.md."
+}

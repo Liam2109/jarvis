@@ -1,0 +1,48 @@
+{
+ "nom": "videos-veille",
+ "responsable": "Jarvis (CEO)",
+ "mission": "Une fois par jour, recherche web gratuite (Google Actualités RSS, sans TikTok) des formats stickman / motion design en français ; note courte dans Videos/veille, gardée 14 jours.",
+ "statut": "actif",
+ "script": "Videos/agents/veille.py",
+ "jours": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6
+ ],
+ "heures": {
+  "debut": "04:30",
+  "fin": "05:00"
+ },
+ "fichiers_lus": [
+  "Videos/videos-config.json",
+  "flux RSS Google Actualités (lecture)"
+ ],
+ "fichiers_ecrits": [
+  "Videos/veille/AAAA-MM-JJ.md",
+  "Videos/videos-veille-journal.log"
+ ],
+ "canaux_discord": [],
+ "envoi_client": false,
+ "actions_interdites": [
+  "ouvrir ou lire une page de tiktok.com (aucun scraping de TikTok)",
+  "contourner un contrôle anti-robot d'un moteur de recherche",
+  "garder une note de plus de 14 jours",
+  "publier, liker, s'abonner, commenter ou envoyer un message sur TikTok",
+  "toucher à memoire/, .env, config.json, .obsidian/ ou un fichier *.local.json",
+  "afficher un secret (jeton, clé, adresse iCal)",
+  "envoyer au client, encaisser ou signer"
+ ],
+ "plafonds": {
+  "messages_par_jour": 0,
+  "notes_par_jour": 1
+ },
+ "peut_engager": false,
+ "alerte_si_silence": "05:00",
+ "tests": [
+  "tests/agents/test_videos.py"
+ ]
+}

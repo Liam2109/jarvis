@@ -1,0 +1,44 @@
+{
+ "nom": "videos-marketing",
+ "responsable": "Jarvis (CEO)",
+ "mission": "À 05:30, Qwen local propose 3 accroches par script, notées par la grille du skill : la meilleure est gardée (journal-videos.csv) ; rythme resserré, sous-titres de 2 à 4 mots préparés.",
+ "statut": "actif",
+ "script": "Videos/agents/marketing.py",
+ "jours": [0, 1, 2, 3, 4, 5, 6],
+ "heures": {
+  "debut": "05:30",
+  "fin": "06:15"
+ },
+ "fichiers_lus": [
+  "Videos/SKILL-VIDEOS.md",
+  "Videos/hooks.md",
+  "Videos/videos-config.json",
+  "Videos/scripts/AAAA-MM-JJ-HHMM.json",
+  "Videos/journal-videos.csv"
+ ],
+ "fichiers_ecrits": [
+  "Videos/scripts/AAAA-MM-JJ-HHMM.json (champs marketing, accroche, phrases, sous_titres)",
+  "Videos/journal-videos.csv",
+  "Videos/videos-marketing-journal.log"
+ ],
+ "canaux_discord": [],
+ "envoi_client": false,
+ "actions_interdites": [
+  "garder une accroche avec un chiffre, une promesse, un témoignage, une phrase molle ou un lieu (ligne B)",
+  "inventer un revenu ou un nombre de ventes",
+  "utiliser un modèle payant ou des tokens Claude",
+  "publier, liker, s'abonner, commenter ou envoyer un message sur TikTok",
+  "toucher à memoire/, .env, config.json, .obsidian/ ou un fichier *.local.json",
+  "afficher un secret (jeton, clé, adresse iCal)",
+  "envoyer au client, encaisser ou signer"
+ ],
+ "plafonds": {
+  "messages_par_jour": 0,
+  "scripts_par_jour": 3
+ },
+ "peut_engager": false,
+ "alerte_si_silence": "06:15",
+ "tests": [
+  "tests/agents/test_videos.py"
+ ]
+}

@@ -15,5 +15,11 @@
  "vente-relances": "🔁 Relances",
  "production": "🏭 Production",
  "nettoyage-fichiers": "🧹 Nettoyage fichiers",
- "instagram": null
+ "instagram": null,
+ "videos-veille": "🎞️ Veille vidéos",
+ "videos-scripts": "✍️ Scripts vidéos",
+ "videos-marketing": "📣 Marketing vidéos",
+ "videos-creation": "🎬 Création vidéos",
+ "videos-publication": "📤 Publication TikTok",
+ "videos-nettoyage": "🧽 Nettoyage vidéos"
 }

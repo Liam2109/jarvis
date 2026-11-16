@@ -1,0 +1,52 @@
+{
+ "nom": "videos-creation",
+ "responsable": "Jarvis (CEO)",
+ "mission": "À 06:00, 14:00 et 22:00, fabrique la vidéo du passage (stickfigure-pipeline-v2, voix edge-tts, 9:16, 20-35 s, sous-titres mot à mot, mention « Contenu généré par IA ») et la range dans Videos/a-valider.",
+ "statut": "actif",
+ "script": "Videos/agents/creation.py",
+ "jours": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6
+ ],
+ "heures": {
+  "debut": "06:00",
+  "fin": "23:00"
+ },
+ "fichiers_lus": [
+  "Videos/scripts",
+  "Videos/videos-config.json",
+  "Videos/outils/stickfigure-pipeline-v2 (hors git)"
+ ],
+ "fichiers_ecrits": [
+  "Videos/a-valider/AAAA-MM-JJ-HHMM.mp4 (+ .txt, .json)",
+  "Videos/travail (temporaire)",
+  "Videos/outils/stickfigure-pipeline-v2/output",
+  "Videos/videos-creation-journal.log"
+ ],
+ "canaux_discord": [],
+ "envoi_client": false,
+ "actions_interdites": [
+  "publier une vidéo",
+  "rendre deux vidéos en même temps",
+  "arrêter un processus qu'il n'a pas lancé",
+  "produire une vidéo sans la mention « Contenu généré par IA »",
+  "publier, liker, s'abonner, commenter ou envoyer un message sur TikTok",
+  "toucher à memoire/, .env, config.json, .obsidian/ ou un fichier *.local.json",
+  "afficher un secret (jeton, clé, adresse iCal)",
+  "envoyer au client, encaisser ou signer"
+ ],
+ "plafonds": {
+  "messages_par_jour": 0,
+  "videos_par_jour": 3
+ },
+ "peut_engager": false,
+ "alerte_si_silence": "06:45",
+ "tests": [
+  "tests/agents/test_videos.py"
+ ]
+}

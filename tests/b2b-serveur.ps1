@@ -76,7 +76,8 @@ if (-not $aGit) { Verifier $true '(git absent : contrôles de la liste blanche s
     $py = Get-Command python -ErrorAction SilentlyContinue
     if ($py) {
         # agents du serveur = ceux de serveur-taches.json (instagram retiré le 14/11/2026), plus machine.py
-        $agServ = @((Lire (Join-Path $AG 'serveur-taches.json') | ConvertFrom-Json).agents.PSObject.Properties | ForEach-Object { [IO.Path]::GetFileNameWithoutExtension($_.Value.script) })
+        # (16/11/2026) les agents Vidéos (script hors de B2B\agents, ex. ..\..\Videos\agents\veille.py) sont testés par tests\agents\test_videos.py
+        $agServ = @((Lire (Join-Path $AG 'serveur-taches.json') | ConvertFrom-Json).agents.PSObject.Properties | Where-Object { "$($_.Value.script)" -notmatch '[\\/]' } | ForEach-Object { [IO.Path]::GetFileNameWithoutExtension($_.Value.script) })
         $liste = (@($agServ) + 'machine' | ForEach-Object { "'$_'" }) -join ', '
         $code = "import importlib.util, sys; sys.dont_write_bytecode = True`nfrom pathlib import Path`nsys.path.insert(0, 'B2B/agents')`nfor n in ($liste,):`n    s = importlib.util.spec_from_file_location(n.replace('-', '_'), 'B2B/agents/' + n + '.py'); m = importlib.util.module_from_spec(s); s.loader.exec_module(m)`nprint('IMPORTS_OK')"
         $o = & { Push-Location $propre; try { & $py.Source -c $code 2>&1 | Out-String } finally { Pop-Location } }
@@ -110,7 +111,8 @@ $AGT = Join-Path $TR 'B2B\agents'; New-Item -ItemType Directory $AGT | Out-Null
 Copy-Item (Join-Path $AG 'serveur-b2b.ps1') $AGT
 $tableReelle = Lire (Join-Path $AG 'serveur-taches.json') | ConvertFrom-Json
 $nomsReels = @($tableReelle.agents.PSObject.Properties | ForEach-Object { $_.Name })
-Verifier ('instagram' -notin $nomsReels -and 'surveillant' -in $nomsReels -and 'appels-liam' -in $nomsReels -and $nomsReels.Count -eq 11) "serveur-taches.json : instagram retiré (décision du 14/11/2026), resume-sid/stripe-alerte/panne-alerte ajoutés (étape Argent, 15/11/2026), surveillant du harness, appels-liam et nettoyage-fichiers (15/11/2026), $($nomsReels.Count) agents"
+$nomsVideos = @($nomsReels | Where-Object { $_ -like 'videos-*' })   # équipe Vidéos TikTok (16/11/2026) : veille, scripts, marketing, création, publication, nettoyage
+Verifier ('instagram' -notin $nomsReels -and 'surveillant' -in $nomsReels -and 'appels-liam' -in $nomsReels -and ($nomsReels.Count - $nomsVideos.Count) -eq 11 -and $nomsVideos.Count -eq 6) "serveur-taches.json : instagram retiré (décision du 14/11/2026), resume-sid/stripe-alerte/panne-alerte ajoutés (étape Argent, 15/11/2026), surveillant du harness, appels-liam et nettoyage-fichiers (15/11/2026), $($nomsReels.Count - $nomsVideos.Count) agents B2B + $($nomsVideos.Count) agents vidéos (16/11/2026)"
 $al = $tableReelle.agents.'appels-liam'
 Verifier ($al.heure -eq '07:30' -and $al.actif_le -eq '2026-11-17' -and (@($al.jours) -join ',') -eq '0,1,2,3,4' -and (@($al.commandes | ForEach-Object { $_ -join ' ' }) -join ';') -eq 'jour') 'serveur-taches.json : appels-liam à 07:30, actif le 17/11/2026, lundi à vendredi seulement'
 Verifier ($tableReelle.agents.surveillant.heure -eq '19:45' -and $tableReelle.agents.surveillant.lundi -eq '07:50') 'serveur-taches.json : surveillant chaque jour à 19:45 et le lundi à 07:50'

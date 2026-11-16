@@ -112,7 +112,10 @@ assert not re.search(r"^\s*(import|from)\s+(selenium|playwright|pyppeteer)", src
 
 # ---------- 6) tâches du serveur (serveur-taches.json) : cohérence ----------
 T = json.loads((ICI / "serveur-taches.json").read_text(encoding="utf-8"))["agents"]
-assert set(T) == {"appels-sid", "appels-liam", "devis", "rendez-vous", "reponses", "prospection", "resume-sid", "stripe-alerte", "panne-alerte", "surveillant", "nettoyage-fichiers"}, sorted(T)   # instagram retiré du serveur le 14/11/2026 (archive) ; resume-sid/stripe-alerte/panne-alerte ajoutés (étape Argent, 15/11/2026) ; surveillant du harness (15/11/2026)
+assert set(T) == {"appels-sid", "appels-liam", "devis", "rendez-vous", "reponses", "prospection", "resume-sid", "stripe-alerte", "panne-alerte", "surveillant", "nettoyage-fichiers",
+                  "videos-veille", "videos-scripts", "videos-marketing", "videos-creation", "videos-publication", "videos-nettoyage"}, sorted(T)   # équipe Vidéos TikTok (16/11/2026), scripts dans Videos\agents
+assert T["videos-creation"]["heure"] == "06:00" and T["videos-creation"]["heures_en_plus"] == ["14:00", "22:00"] and T["videos-creation"]["commandes"] == [["passage"]]
+assert T["videos-publication"]["commandes"] == [["publier"]] and "actif_le" not in T["videos-publication"]   # désactivée : seulement après le « go publier » de Liam (agents_actifs)   # instagram retiré du serveur le 14/11/2026 (archive) ; resume-sid/stripe-alerte/panne-alerte ajoutés (étape Argent, 15/11/2026) ; surveillant du harness (15/11/2026)
 assert T["nettoyage-fichiers"]["heure"] == "03:00" and T["nettoyage-fichiers"]["commandes"] == [["nettoyer"]]   # nettoyage des traces et du journal de plus de 30 jours (15/11/2026)
 assert T["surveillant"]["heure"] == "19:45" and T["surveillant"]["lundi"] == "07:50" and T["surveillant"]["commandes"] == [["verifier"]]
 for nom, t in T.items():
@@ -131,13 +134,18 @@ if (ICI.parent / "sites" / "moteur").is_dir():
     (copie / "sites" / "moteur").mkdir(parents=True)
     for f in (ICI.parent / "sites" / "moteur").glob("*.py"): shutil.copy(f, copie / "sites" / "moteur" / f.name)
 ecrire(copie / "agents" / "b2b.local.json", {"machine_active": "UNE-AUTRE-MACHINE-QUI-N-EXISTE-PAS"})
+videos = copie.parent / "Videos"; (videos / "agents").mkdir(parents=True)   # équipe Vidéos (16/11/2026) : mêmes refus, journaux dans Videos\
+for f in [*(ICI.parent.parent / "Videos" / "agents").glob("*.py"), *(ICI.parent.parent / "Videos" / "agents").glob("*.ps1")]: shutil.copy(f, videos / "agents" / f.name)
+for f in ("videos-config.json", "SKILL-VIDEOS.md"): shutil.copy(ICI.parent.parent / "Videos" / f, videos / f)
 env = {**os.environ, "JARVIS_TEST": "1", "PYTHONIOENCODING": "utf-8", "PYTHONDONTWRITEBYTECODE": "1"}
 for agent, args in [(n, [] if n == "reponses" else T[n]["commandes"][0]) for n in T] + [("instagram", ["jour"])]:   # chaque agent du serveur (sa vraie commande, lue dans serveur-taches.json) + l'archive instagram (lancée à la main : refusée aussi)
-    p = subprocess.run([sys.executable, str(copie / "agents" / (agent + ".py"))] + args, capture_output=True, text=True, timeout=60, env=env, cwd=str(copie))
+    script = copie / "agents" / (T[agent]["script"] if agent in T else agent + ".py"); dossier = videos if agent.startswith("videos-") else copie / "agents"
+    lanceur = ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File"] if script.suffix == ".ps1" else [sys.executable]   # videos-nettoyage : agent PowerShell
+    p = subprocess.run(lanceur + [str(script)] + [x for x in args if x], capture_output=True, text=True, timeout=60, env=env, cwd=str(copie))
     assert p.returncode == 3, (agent, p.returncode, p.stdout[-300:], p.stderr[-300:])
-    jr = copie / "agents" / f"{agent}-journal.log"
+    jr = dossier / f"{agent}-journal.log"
     assert jr.is_file() and "refusé" in jr.read_text(encoding="utf-8") and "UNE-AUTRE-MACHINE" in jr.read_text(encoding="utf-8"), agent   # le journal le dit
-    assert not any((copie / "agents").glob(f"{agent}-etat.json")), f"{agent} : aucun état écrit"
+    assert not any(dossier.glob(f"{agent}-etat.json")), f"{agent} : aucun état écrit"
     assert "machine" in (p.stdout + p.stderr).lower()
 # --a-blanc et commandes de lecture ne sont pas refusés (rien n'est écrit ni envoyé)
 p = subprocess.run([sys.executable, str(copie / "agents" / "rendez-vous.py"), "etat"], capture_output=True, text=True, timeout=60, env=env, cwd=str(copie))

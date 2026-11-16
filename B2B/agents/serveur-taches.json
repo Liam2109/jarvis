@@ -103,6 +103,43 @@
         ]
       ],
       "heure": "03:00"
+    },
+    "videos-veille": {
+      "script": "..\\..\\Videos\\agents\\veille.py",
+      "commandes": [["jour"]],
+      "heure": "04:30",
+      "actif_le": "2026-11-17"
+    },
+    "videos-scripts": {
+      "script": "..\\..\\Videos\\agents\\scripts.py",
+      "commandes": [["jour"]],
+      "heure": "05:00",
+      "actif_le": "2026-11-17"
+    },
+    "videos-marketing": {
+      "script": "..\\..\\Videos\\agents\\marketing.py",
+      "commandes": [["jour"]],
+      "heure": "05:30",
+      "actif_le": "2026-11-17"
+    },
+    "videos-nettoyage": {
+      "script": "..\\..\\Videos\\agents\\nettoyage.ps1",
+      "commandes": [[]],
+      "heure": "03:30",
+      "actif_le": "2026-11-17"
+    },
+    "videos-creation": {
+      "script": "..\\..\\Videos\\agents\\creation.py",
+      "commandes": [["passage"]],
+      "heure": "06:00",
+      "heures_en_plus": ["14:00", "22:00"],
+      "actif_le": "2026-11-17"
+    },
+    "videos-publication": {
+      "script": "..\\..\\Videos\\agents\\publication.py",
+      "commandes": [["publier"]],
+      "heure": "06:20",
+      "heures_en_plus": ["14:20", "22:20"]
     }
   }
 }

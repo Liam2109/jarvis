@@ -43,12 +43,13 @@ if ($t.Value.PSObject.Properties['actif_le'] -and [string]::CompareOrdinal($auj.
 if ($t.Value.PSObject.Properties['jours'] -and ((([int]$auj.DayOfWeek) + 6) % 7) -notin @($t.Value.jours | ForEach-Object { [int]$_ })) { Log "jour hors planning pour « $Agent » : rien lancé"; exit 0 }
 $script = Join-Path $AG $t.Value.script
 $commandes = @($t.Value.commandes | ForEach-Object { , @($_) })
+$estPs1 = $script -match '\.ps1$'   # agent écrit en PowerShell : lancé par powershell.exe avec les mêmes garde-fous (verrou, priorité, délai, trace)
 # 3) python
 $py = $Python
 if (-not $py) { $c = @(Get-Command python -All -ErrorAction SilentlyContinue | Where-Object { $_.CommandType -eq 'Application' -and $_.Source -notmatch '(?i)[\\/]WindowsApps[\\/]' }) | Select-Object -First 1; if ($c) { $py = $c.Source } elseif ($Simulation) { $py = 'python' } }
 if (-not $py) { Log 'python introuvable (ni dans le PATH, ni hors WindowsApps) : rien lancé'; exit 7 }
 if ($Simulation) {
-    foreach ($c in $commandes) { Write-Host ("SIMULATION : python {0} {1}" -f (Split-Path $script -Leaf), ($c -join ' ')).TrimEnd() }
+    foreach ($c in $commandes) { Write-Host ("SIMULATION : {0} {1} {2}" -f $(if ($estPs1) { 'powershell' } else { 'python' }), (Split-Path $script -Leaf), ($c -join ' ')).TrimEnd() }
     Write-Host 'priorité : BelowNormal ; JARVIS_B2B_SERVEUR=1 (aucun navigateur) ; un seul agent à la fois (verrou global)'; exit 0
 }
 # 4) un seul agent à la fois
@@ -59,7 +60,8 @@ try {
     Log "début du cycle ($($commandes.Count) commande(s))"
     foreach ($c in $commandes) {
         $args2 = ('"{0}" {1}' -f $script, ($c -join ' ')).TrimEnd()
-        $psi = New-Object System.Diagnostics.ProcessStartInfo; $psi.FileName = $py; $psi.Arguments = $args2; $psi.UseShellExecute = $false; $psi.CreateNoWindow = $true; $psi.WorkingDirectory = $B2B
+        if ($estPs1) { $args2 = ('-NoProfile -ExecutionPolicy Bypass -File "{0}" {1}' -f $script, ($c -join ' ')).TrimEnd() }   # agent PowerShell (videos-nettoyage, 16/11/2026)
+        $psi = New-Object System.Diagnostics.ProcessStartInfo; $psi.FileName = $(if ($estPs1) { 'powershell.exe' } else { $py }); $psi.Arguments = $args2; $psi.UseShellExecute = $false; $psi.CreateNoWindow = $true; $psi.WorkingDirectory = $B2B
         $psi.EnvironmentVariables['JARVIS_B2B_SERVEUR'] = '1'; $psi.EnvironmentVariables['PYTHONIOENCODING'] = 'utf-8'; $psi.EnvironmentVariables['PYTHONDONTWRITEBYTECODE'] = '1'
         $p = [System.Diagnostics.Process]::Start($psi); $t0 = Get-Date; $dec = ($c -join ' ')
         try { $p.PriorityClass = [System.Diagnostics.ProcessPriorityClass]::BelowNormal; Log "$(Split-Path $script -Leaf) $($c -join ' ') : priorité BelowNormal appliquée (pid $($p.Id))" } catch { Log "priorité non appliquée : $($_.Exception.Message)" }

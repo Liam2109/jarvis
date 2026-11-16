@@ -1,0 +1,52 @@
+{
+ "nom": "videos-publication",
+ "responsable": "Jarvis (CEO)",
+ "mission": "Fermé par ligne jusqu'au « go publier » de Liam ; ensuite publie les vidéos de la ligne sur son compte TikTok (Playwright, profil persistant), étiquette IA, 3 par jour et par compte ; anomalie = arrêt.",
+ "statut": "inactif",
+ "script": "Videos/agents/publication.py",
+ "jours": [0, 1, 2, 3, 4, 5, 6],
+ "heures": {
+  "debut": "05:15",
+  "fin": "22:45"
+ },
+ "fichiers_lus": [
+  "Videos/a-valider",
+  "Videos/SKILL-VIDEOS.md",
+  "Videos/videos-config.json",
+  "Videos/videos-config.local.json (lignes.A / lignes.B : go_publier, écrit par Liam seulement)",
+  "profil du navigateur de chaque ligne (%LOCALAPPDATA%/JarvisTikTok/ligne-A, ligne-B), session ouverte par Liam"
+ ],
+ "fichiers_ecrits": [
+  "Videos/publiees",
+  "Videos/videos-publication-etat.json",
+  "Videos/videos-publication-journal.log",
+  "Videos/journal-videos.csv",
+  "Videos/publication.verrou"
+ ],
+ "canaux_discord": [
+  "salon des agents (une ligne par publication ou essai, alerte d'arrêt)"
+ ],
+ "envoi_client": false,
+ "actions_interdites": [
+  "taper un mot de passe, demander un code ou une clé, en stocker un",
+  "continuer ou contourner après un captcha, une demande de connexion ou de vérification, une interface inattendue ou un échec (arrêt + alerte, rien d'autre ce jour-là sur la ligne)",
+  "liker, s'abonner, commenter ou envoyer un message",
+  "publier sans l'étiquette « contenu généré par IA »",
+  "publier plus de 3 vidéos par jour et par compte, hors des heures prévues, ou deux à la fois",
+  "publier sur une ligne sans son « go publier » ni sans essai réussi",
+  "publier si Videos/STOP ou B2B/STOP existe",
+  "toucher à memoire/, .env, config.json, .obsidian/ ou écrire un fichier *.local.json",
+  "afficher un secret (jeton, clé, adresse iCal)",
+  "envoyer au client, encaisser ou signer"
+ ],
+ "plafonds": {
+  "messages_par_jour": 7,
+  "publications_par_jour": 6,
+  "publications_par_jour_et_par_compte": 3
+ },
+ "peut_engager": false,
+ "alerte_si_silence": null,
+ "tests": [
+  "tests/agents/test_videos.py"
+ ]
+}
