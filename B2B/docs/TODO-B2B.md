@@ -9,6 +9,7 @@ _Mise à jour : 16 nov. 2026, 0 h (le fait est supprimé ; l'historique est dans
 
 ## Avant le premier devis envoyé (ça coûte une vente)
 - [ ] Droit de rétractation (vente à distance), formulation d'arrêt, transfert du domaine (code chez le bureau d'enregistrement) : à faire relire
+- [ ] Clause de rétractation de 14 jours dans le devis, à faire relire
 - [ ] Prévoir comment livrer un site complet multi-pages avant d'en vendre un
 - [ ] Décider les commissions (≈10 % appelant, 10 % closer ?) et si c'est sur le premier paiement seulement ou aussi sur les 49 €/mois
 - [ ] Décider : petit acompte (environ 100 €) pour le client sans confiance ? Contredit « sans acompte » ; pas dans les scripts avant décision
@@ -18,7 +19,7 @@ _Mise à jour : 16 nov. 2026, 0 h (le fait est supprimé ; l'historique est dans
 - [ ] Valider la liste des idées supprimées d'IDEES-MASTER.md (sauvegarde dans B2B\donnees\sauvegardes\) et trancher la section « À trancher »
 - [ ] Lundi 16 : prendre les ~15 dernières lignes de la feuille de Sid (ta propre liste « Appels Liam » commence mardi 17)
 - [ ] Serveur : ajouter « nettoyage-fichiers » aux agents actifs (tâche chaque jour à 03:00)
-- [ ] Serveur, avant le 17/11 à 07 h 30 : lancer `python B2Bgentsegistre.py importer-anciens` (anciens lots dans le registre, environ 324 entreprises, sans doublon)
+- [ ] Serveur, avant le 17/11 à 07 h 30 : lancer `python B2B\agents\registre.py importer-anciens` (anciens lots dans le registre, environ 324 entreprises, sans doublon)
 - [ ] Serveur : accepter la mise à jour puis ajouter appels-liam aux agents actifs (et envoi_automatique à true dans la config locale d'appels-liam pour la feuille Google)
 - [ ] Envoyer SCRIPT-APPEL-SID.md à Sid (seulement celui-là ; closing et techniques restent à toi)
 - [ ] Serveur : `git -C <dossier Jarvis> config core.hooksPath .githooks`, ajouter « surveillant » aux agents actifs

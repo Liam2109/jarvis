@@ -51,3 +51,4 @@
 - 2026-11-15 (23 h 45) : journal réduit à une phrase par fait (35,5 Ko avant), to-do complétée (étape Vente, closing, jeu de rôle, appels de Sid), README racine laissé tel quel.
 - 2026-11-15 (minuit) : agent nettoyage-fichiers créé (03:00 sur le serveur, traces et journal de plus de 30 jours, sans token), avec contrat, garde, test, fiche et skill.
 - 2026-11-16 (0 h 30) : fichiers de prospects de la racine ignorés par git ; import des anciens lots dans le registre prêt (324 entreprises à blanc), à lancer sur le serveur.
+- 2026-11-16 : nettoyage-fichiers étendu à tout le dossier Jarvis (supprime seul les dossiers de test de %TEMP% de plus de 2 jours, les sauvegardes de plus de 30 jours et les __pycache__, liste le reste de vieux dans B2B\a-valider), test vert.
