@@ -164,7 +164,10 @@ function Get-Instantane {
     @{ config = (Get-FileHash (Join-Path $racine 'config.json')).Hash
        # arret.json, modejeu.flag, session-en-cours.jsonl : écrits par Jarvis lui-même quand Liam l'a lancé pendant la passe (faux rouge du 15/11/2026), jamais par un test
        memoire = (@(Get-ChildItem $mem -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -notin @('arret.json', 'modejeu.flag', 'session-en-cours.jsonl') } | Sort-Object Name | ForEach-Object { "$($_.Name):$($_.Length):$($_.LastWriteTimeUtc.Ticks)" }) -join '|')
-       env = (Get-FileHash (Join-Path $racine '.env') -ErrorAction SilentlyContinue).Hash }
+       env = (Get-FileHash (Join-Path $racine '.env') -ErrorAction SilentlyContinue).Hash
+       # panne du 13/11/2026 (envoi_automatique d'appels-sid repassé à false hors git) : AUCUN *.local.json réel (config d'une machine ou d'un agent, jamais versionné) ne doit bouger pendant les tests ;
+       # un test doit toujours travailler sur une copie temporaire, jamais sur le vrai fichier.
+       locaux = (@(Get-ChildItem $racine -Recurse -Filter '*.local.json' -File -ErrorAction SilentlyContinue | Sort-Object FullName | ForEach-Object { "$($_.FullName):$($_.Length):$($_.LastWriteTimeUtc.Ticks)" }) -join '|') }
 }
 function Get-ProcessusJarvis { @(Get-CimInstance Win32_Process | Where-Object { $_.ProcessId -ne $PID -and $_.CommandLine -match 'Jarvis\\jarvis\.ps1|jarvis\.ps1|ecoute\.py|reveil\.py|coffre-dialogue|jarvis-edge|JarvisOrb|ollama|pont-discord|faux-pont' -and $_.CommandLine -notmatch 'tests\\tout\.ps1' }) }
 
@@ -198,6 +201,7 @@ $ctl += [pscustomobject]@{ controle = 'config.json inchangé (les tests ont util
 if ($profilServeur) { $ctl += [pscustomobject]@{ controle = 'memoire\ non contrôlé en profil serveur (Jarvis tourne sur le serveur et y écrit sa mémoire)'; ok = $true } }
 else { $ctl += [pscustomobject]@{ controle = 'memoire\ inchangé (aucune écriture dans votre mémoire)'; ok = ($apres.memoire -eq $avant.memoire) } }
 $ctl += [pscustomobject]@{ controle = '.env inchangé'; ok = ($apres.env -eq $avant.env) }
+$ctl += [pscustomobject]@{ controle = 'aucun *.local.json réel modifié (un test doit écrire dans un dossier temporaire, jamais dans la vraie config locale d''une machine ou d''un agent)'; ok = ($apres.locaux -eq $avant.locaux) }
 $ctl += [pscustomobject]@{ controle = 'aucun processus Jarvis / orbe / écoute / Ollama créé ou resté'; ok = (@(Get-ProcessusJarvis).Count -le $procAvant) }
 $ctl += [pscustomobject]@{ controle = 'aucun fichier temporaire de test restant'; ok = (@(Get-ChildItem $env:TEMP -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name -like 'jarvis-test-*' -or $_.Name -like 'jarvis-config-test-*' }).Count -eq 0) }
 Write-Host ''
