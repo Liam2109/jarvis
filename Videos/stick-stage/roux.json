@@ -1,0 +1,119 @@
+{
+ "schemaVersion": 1,
+ "id": "roux",
+ "displayName": "Mme Roux",
+ "proportions": {
+  "height": 0.98,
+  "headRadius": 0.18,
+  "neck": 0.02,
+  "torso": 0.28,
+  "upperArm": 0.15,
+  "forearm": 0.14,
+  "thigh": 0.16,
+  "shin": 0.16
+ },
+ "style": {
+  "build": "toon",
+  "stroke": "#1b1b1f",
+  "strokeWidth": 12,
+  "headFill": "#ffffff",
+  "torso": {
+   "style": "bean",
+   "fill": "#6b7a3a",
+   "width": 0.16
+  },
+  "limbCurve": 0.3,
+  "hands": "nub",
+  "feet": "oval",
+  "footFill": "#4a3426",
+  "headShape": {
+   "sx": 1.04,
+   "sy": 1.0,
+   "dx": 0.03
+  }
+ },
+ "face": {
+  "eyes": "big-pupil",
+  "brows": true,
+  "mouthSet": "default",
+  "offsetX": 0.16,
+  "eyeSpacing": 0.46,
+  "eyeY": -0.02,
+  "mouthY": 0.46
+ },
+ "accessories": [],
+ "toon": {
+  "proportions": {
+   "height": 0.93,
+   "headRadius": 0.122,
+   "neck": 0.015,
+   "torso": 0.32,
+   "upperArm": 0.174,
+   "forearm": 0.162,
+   "thigh": 0.21,
+   "shin": 0.2
+  },
+  "skin": "#f5d2bb",
+  "skinShade": "#e2b398",
+  "body": {
+   "shoulders": 84,
+   "waist": 60,
+   "hips": 78,
+   "arm": 24,
+   "neck": 22
+  },
+  "eyes": {
+   "iris": "#3d6b4a",
+   "lashes": true
+  },
+  "brows": {
+   "color": "#a8461f",
+   "thickness": 6,
+   "gap": 0.5
+  },
+  "lip": "#b04a4a",
+  "nose": "button",
+  "cheeks": {
+   "color": "#e8737a",
+   "opacity": 0.22
+  },
+  "hair": {
+   "kind": "curly-mop",
+   "fill": "#c2582a",
+   "shade": "#9c4320"
+  },
+  "top": {
+   "kind": "turtleneck",
+   "fill": "#6b7a3a",
+   "shade": "#56622d"
+  },
+  "bottom": {
+   "kind": "skirt",
+   "fill": "#4a3a2a",
+   "shade": "#3a2d20",
+   "legs": "#2f2a28"
+  },
+  "shoes": {
+   "kind": "sneaker",
+   "fill": "#e8e2d4",
+   "shade": "#cfc8b8"
+  },
+  "details": [
+   {
+    "id": "pocket-pens"
+   },
+   {
+    "id": "freckles"
+   }
+  ],
+  "glasses": {
+   "kind": "cat-eye",
+   "fill": "#3a3a3a"
+  }
+ },
+ "energy": 0.5,
+ "personality": "Mme Roux, la comptable : chiffres en tête, phrases courtes.",
+ "voice": {
+  "say": "Thomas"
+ }
+}

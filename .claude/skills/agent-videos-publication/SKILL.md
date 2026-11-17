@@ -24,7 +24,7 @@ Publier sur TikTok les vidéos d'une ligne que Liam a ouverte par « go publier 
 2. Prend la plus ancienne vidéo complète de la ligne (mp4 + txt avec « Contenu généré par IA. » + json `contenu_ia: true`) ; la légende passe par la garde du harness.
 3. Verrou : jamais deux publications en même temps. Ouvre le profil persistant de la ligne, va sur la page de dépôt de TikTok Studio, délais aléatoires entre les gestes.
 4. Après chaque geste : page contrôlée ; captcha, connexion ou vérification demandée, interface inattendue, échec = ARRÊT de la ligne pour la journée, alerte Discord, ligne CSV.
-5. Dépose la vidéo, colle la légende, active l'étiquette « contenu généré par IA » (introuvable = rien publié), clique sur Publier (sauf essai), lit la confirmation.
+5. Dépose la vidéo, colle la légende, coche la case TikTok « contenu généré par IA » et la VÉRIFIE cochée juste avant de cliquer sur Publier (règle du 17/11/2026 : plus de texte IA à l'image) ; essai (dry-run) : s'arrête devant Publier et dit où se trouve la case (section, position à l'écran) ; sinon clique sur Publier et lit la confirmation.
 6. Déplace la vidéo vers `Videos\publiees`, une ligne dans `journal-videos.csv` (date, compte, hook, résultat), dans le journal et dans Discord.
 
 ## Entrées et sorties (place dans la chaîne)
@@ -41,7 +41,8 @@ Publier sur TikTok les vidéos d'une ligne que Liam a ouverte par « go publier 
 ## Cas d'erreur
 - Ligne sans go, essai jamais réussi, plafond atteint, hors horaire, `Videos\STOP` ou `B2B\STOP` : rien publié (aucune ouverture du navigateur).
 - Légende bloquée par la garde du harness : rien publié, code 4.
-- Captcha, connexion demandée, interface inattendue, étiquette IA introuvable : ARRÊT de la ligne pour la journée, alerte Discord, code 1, trace `ok: false`.
+- Captcha, connexion demandée, interface inattendue : ARRÊT de la ligne pour la journée, alerte Discord, code 1, trace `ok: false`.
+- Case « contenu généré par IA » introuvable ou non cochée (`EtiquetteIA`) : rien publié, ARRÊT de la ligne pour la journée, alerte Discord, vidéo mise à part dans `Videos/a-part` (+ `<vidéo>.motif.json`) ; en essai, la vidéo reste dans `a-valider`.
 - Machine non active ou `SKILL-VIDEOS.md` incomplet : refus code 3.
 - Toute erreur laisse une trace `ok: false`, lue par le surveillant si l'agent est dans `agents_actifs`.
 

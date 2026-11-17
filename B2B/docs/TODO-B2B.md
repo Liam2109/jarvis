@@ -37,7 +37,8 @@ _Mise à jour : 16 nov. 2026, 17 h 30 (le fait est supprimé ; l'historique est 
 - [ ] Facebook Normandie et Leboncoin : poster l'offre « page exemple à ton nom »
 
 ## Agents (ensuite, une étape à la fois)
-- [ ] Vidéos : regarder les 2 sketchs test de la ligne B (Videos\a-valider\2026-11-17-1400.mp4 = T03, 2026-11-18-1400.mp4 = L01) et relire Videos\sketches-base.json (30 sketches, à corriger librement) ; les anciennes vidéos B de narrateur (2026-11-15-1400, 2026-11-16-1400) ne servent plus
+- [ ] Vidéos : regarder les sketchs test de la ligne B (Videos-valider6-11-17-1400 T03, 2026-11-18-1400 L01, 2026-11-19-1400 série épisode 1 avec Nadia, 2026-11-20-1400 N01 avec M. Bernard) ; pour un nouveau lot de 20 sketches, le demander à Claude dans le chat (Codex absent du serveur) puis « python Videosgents\sketches.py lot Videos\idees-nouvelles\AAAA-MM-JJ.json »
+- [ ] Vidéos : faire un « publier --essai » sur chaque ligne avant le go publier, pour voir où TikTok place la case « contenu généré par IA » (le dry-run le dit)
 - [ ] Vidéos : avant le « go publier », faire relever l'adresse TikTok par l'agent publication (colonne url_tiktok de journal-videos.csv, vide pour l'instant)
 - [ ] Les tests laissent des dossiers dans %TEMP% : les faire se nettoyer eux-mêmes ; 6 mentions « Répondu / Refus » gardées exprès (anciennes feuilles de Sid)
 - [ ] Terminer l'étape Vente (réparer reponses.py, puis Réponses, Rendez-vous, Devis, Relances J+3 et J+7, lead chaud), chacun avec contrat + garde + test + fiche avant activation

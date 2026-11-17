@@ -1,7 +1,7 @@
 {
  "nom": "videos-creation",
  "responsable": "Jarvis (CEO)",
- "mission": "À 06:00, 14:00 et 22:00, fabrique la vidéo du passage (stick-stage toon, voix edge-tts ou Kokoro, 9:16, sous-titres, mention « Contenu généré par IA ») et la range dans Videos/a-valider ; ligne B : videos-monteur.",
+ "mission": "À 06:00, 14:00 et 22:00, fabrique la vidéo du passage (stick-stage toon, voix edge-tts ou Kokoro, 9:16, sous-titres, aucun texte IA à l'image) dans Videos/a-valider ; ligne B : videos-monteur.",
  "statut": "actif",
  "script": "Videos/agents/creation.py",
  "jours": [
@@ -37,7 +37,7 @@
   "publier une vidéo",
   "rendre deux vidéos en même temps",
   "arrêter un processus qu'il n'a pas lancé",
-  "produire une vidéo sans la mention « Contenu généré par IA »",
+  "incruster un texte « contenu généré par IA » à l'image (règle du 17/11/2026 : étiquette TikTok cochée par videos-publication)",
   "publier, liker, s'abonner, commenter ou envoyer un message sur TikTok",
   "toucher à memoire/, .env, config.json, .obsidian/ ou un fichier *.local.json",
   "afficher un secret (jeton, clé, adresse iCal)",

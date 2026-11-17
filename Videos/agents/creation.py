@@ -35,7 +35,6 @@ POLICE_ST_SOURCE = Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts" / "ari
 ACCENT_ASS = "&H00D7FF&"   # jaune (#FFD700, ordre BGR de l'ASS) : mot clé de chaque groupe
 # Zone sûre TikTok 1080x1920 : sous-titres entre x = 120 et x = 880 (boutons à droite au-delà de 900), bas du texte à y = 1250 (interface du bas sous 1500)
 ST_MARGE_G, ST_MARGE_D, ST_BAS, ST_TAILLE = 120, 200, 1250, 84
-IA_Y = 1380   # mention « Contenu généré par IA » : au-dessus de l'interface du bas (y < 1500)
 
 
 def fins(serie, conf):
@@ -86,15 +85,14 @@ def accroche_ecran(texte, maxi=92, mini=44):
 
 
 def filtre_final(serie, sans_sous_titres, conf=None, taille_accroche=92):
-    """filter_complex : [0] corps (sous-titres mot à mot + accroche 0-2,5 s + mention IA), [1] carte de fin (fond sombre, textes), concaténés avec leur son."""
+    """filter_complex : [0] corps (sous-titres mot à mot + accroche 0-2,5 s), [1] carte de fin (textes), concaténés avec leur son.
+    Aucun texte « contenu généré par IA » à l'image depuis le 17/11/2026 : l'étiquette TikTok est cochée et vérifiée par videos-publication."""
     dt = lambda f, taille, y, extra="", x="(w-text_w)/2": (f"drawtext=fontfile={POLICE}:textfile={f}:fontsize={taille}:fontcolor=white:x={x}:y={y}{extra}")
     corps = []
     if sans_sous_titres:
         corps.append("subtitles=sous-titres.ass:fontsdir=.")
     corps.append(dt("accroche.txt", taille_accroche, "h*0.16", ":line_spacing=14:box=1:boxcolor=black@0.65:boxborderw=28:enable='lt(t,2.5)'", x="(1020-text_w)/2"))   # centrée dans la zone sûre (x de 120 à 900)
-    corps.append(dt("ia.txt", 34, str(IA_Y), ":fontcolor=white@0.8:box=1:boxcolor=black@0.35:boxborderw=8"))
     fin = [dt(f"fin{i}.txt", 70 if i < 2 else 52, f"h*{0.36 + 0.11 * i:.2f}") for i in range(len(fins(serie, conf or C.cfg())))]
-    fin.append(dt("ia.txt", 34, str(IA_Y), ":fontcolor=white@0.8"))
     return (f"[0:v]{','.join(corps)},fps=30,format=yuv420p,setsar=1[v0];[1:v]{','.join(fin)},format=yuv420p,setsar=1[v1];"
             "[0:a]aresample=44100,aformat=channel_layouts=stereo[a0];[2:a]aformat=channel_layouts=stereo[a1];[v0][a0][v1][a1]concat=n=2:v=1:a=1[v][a]")
 
@@ -210,7 +208,7 @@ def fabriquer(conf, jour, heure, a_blanc=False):
         travail.mkdir(parents=True, exist_ok=True)
         # Voix d'abord (edge-tts, sinon Kokoro local) : l'outil reprend ces fichiers ; edge-tts est retiré de son PATH pour qu'il ne refasse pas la voix.
         sketch = doc.get("format") == "sketch"
-        voix_doc = [VX.voix_dialogue(conf, doc["interlocuteur"]["genre"])[q] for q in doc["qui"]] if sketch else VX.voix_ligne(conf, doc["serie"])
+        voix_doc = [VX.voix_sketch(conf, doc)[q] for q in doc["qui"]] if sketch else VX.voix_ligne(conf, doc["serie"])
         try: voix = VX.synthese(doc["scenes"], voix_doc, travail / "voix")
         except RuntimeError as e: C.journal(AGENT, "erreur", f"{nom} : {e}"); print(f"! Voix impossible : {e}"); return 1
         if voix["bascule"]: C.journal(AGENT, "bascule voix", f"{nom} : {voix['bascule']} -> Kokoro local"); print(f"  voix : {voix['bascule']}, bascule sur Kokoro local")
@@ -240,7 +238,7 @@ def fabriquer(conf, jour, heure, a_blanc=False):
         if POLICE_ST_SOURCE.exists(): shutil.copy2(POLICE_ST_SOURCE, travail / POLICE_ST_SOURCE.name)
         (travail / "sous-titres.ass").write_text(sous_titres_ass(doc, temps, police_st), encoding="utf-8")
         accroche, taille_accroche = accroche_ecran(doc["accroche"])
-        textes = {"accroche.txt": accroche, "ia.txt": "Contenu généré par IA"} | {f"fin{i}.txt": t for i, t in enumerate(fins(doc["serie"], conf))}
+        textes = {"accroche.txt": accroche} | {f"fin{i}.txt": t for i, t in enumerate(fins(doc["serie"], conf))}
         for f, t in textes.items(): (travail / f).write_text(echapper_texte(t), encoding="utf-8")
         sortie_mp4 = travail / "final.mp4"
         cmd = [C.executable("ffmpeg"), "-y", "-v", "error", "-i", "corps.mp4", "-f", "lavfi", "-i", f"color=c={FOND_FIN}:s=1080x1920:r=30:d={fin_s(doc['serie'])}",
@@ -274,7 +272,7 @@ def fabriquer(conf, jour, heure, a_blanc=False):
 def finir_sketch(conf, doc, nom, travail, voix, t0):
     """Vidéo d'un sketch montée par videos-monteur ; acceptée -> a-valider + journal + CSV ; refusée 3 fois -> déjà mise à part par le monteur (code 1)."""
     r = MT.monter(doc, conf, nom, travail, lancer, voix, POLICE_SOURCE, POLICE_ST_SOURCE, fins(doc["serie"], conf), accroche_ecran, temps_mots)
-    moteur = voix["moteur"]; noms_voix = VX.voix_dialogue(conf, doc["interlocuteur"]["genre"])
+    moteur = voix["moteur"]; noms_voix = VX.voix_sketch(conf, doc)
     voix_txt = " + ".join(noms_voix[k]["edge" if moteur == VX.MOTEUR_EDGE else "kokoro"] + (f" (hauteur {noms_voix[k].get('kokoro_hauteur', 1.0)})" if moteur != VX.MOTEUR_EDGE else "")
                           for k in ("G", "I"))
     if not r["ok"]:
@@ -285,7 +283,8 @@ def finir_sketch(conf, doc, nom, travail, voix, t0):
     C.A_VALIDER.mkdir(parents=True, exist_ok=True); shutil.move(str(r["mp4"]), C.A_VALIDER / f"{nom}.mp4")
     (C.A_VALIDER / f"{nom}.txt").write_text(doc["legende"] + "\n", encoding="utf-8")
     d = r["duree_s"]; rapport = r["rapport"]
-    meta = {k: doc.get(k) for k in ("jour", "passage", "serie", "format", "sketch", "titre", "theme", "categorie", "formule", "fin_variante", "valeurs", "interlocuteur", "variante")} | {
+    meta = {k: doc.get(k) for k in ("jour", "passage", "serie", "format", "sketch", "titre", "theme", "categorie", "formule", "fin_variante", "valeurs", "interlocuteur", "variante",
+                                    "serie_sketch")} | {"personnage": (doc.get("interlocuteur") or {}).get("personnage"), "decor_nom": doc.get("decor"), "texte_ia_a_l_image": False,
         "duree_s": d, "duree_ok": True, "contenu_ia": True, "etiquette_ia_tiktok": True, "outil": "stick-stage", "decor": RS.decor(doc.get("decor")), "histoire": doc["sketch"],
         "tts": moteur, "voix": voix_txt, "tts_bascule": voix["bascule"], "musique": rapport.get("musique"), "musique_licence": "CC0-1.0 (stick-stage, synthétisée par code)",
         "sonnerie": "générée par code (monteur.py)", "ecart_voix_musique_db": rapport.get("ecart_db"), "controle_qualite": rapport.get("controle"), "essais": r["essais"],

@@ -27,14 +27,14 @@ Fermé par ligne jusqu'au « go publier » de Liam ; ensuite publie les vidéos 
 2. Prend la plus ancienne vidéo complète de la ligne (mp4 + txt avec « Contenu généré par IA. » + json `contenu_ia: true`) ; la légende passe par la garde du harness.
 3. Verrou : jamais deux publications en même temps. Ouvre le profil persistant de la ligne, va sur la page de dépôt de TikTok Studio, délais aléatoires entre les gestes.
 4. Après chaque geste : page contrôlée ; captcha, connexion ou vérification demandée, interface inattendue, échec = ARRÊT de la ligne pour la journée, alerte Discord, ligne CSV.
-5. Dépose la vidéo, colle la légende, active l'étiquette « contenu généré par IA » (introuvable = rien publié), clique sur Publier (sauf essai), lit la confirmation.
+5. Dépose la vidéo, colle la légende, coche la case TikTok « contenu généré par IA » et la VÉRIFIE cochée juste avant de cliquer sur Publier (règle du 17/11/2026 : plus de texte IA à l'image) ; essai (dry-run) : s'arrête devant Publier et dit où se trouve la case (section, position à l'écran) ; sinon clique sur Publier et lit la confirmation.
 6. Déplace la vidéo vers `Videos\publiees`, une ligne dans `journal-videos.csv` (date, compte, hook, résultat), dans le journal et dans Discord.
 
 ### Ce qu'il n'a pas le droit de faire
 - taper un mot de passe, demander un code ou une clé, en stocker un
 - continuer ou contourner après un captcha, une demande de connexion ou de vérification, une interface inattendue ou un échec (arrêt + alerte, rien d'autre ce jour-là sur la ligne)
 - liker, s'abonner, commenter ou envoyer un message
-- publier sans l'étiquette « contenu généré par IA »
+- publier sans l'étiquette « contenu généré par IA » cochée et vérifiée juste avant de valider (échec = rien publié, alerte Discord, vidéo mise à part)
 - publier plus de 3 vidéos par jour et par compte, hors des heures prévues, ou deux à la fois
 - publier sur une ligne sans son « go publier » ni sans essai réussi
 - publier si Videos/STOP ou B2B/STOP existe

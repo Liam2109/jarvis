@@ -29,7 +29,7 @@ Monte chaque sketch de la ligne B (appelé par videos-creation) : plans de 3 s a
    sinon un zoom bref (punch-in) au milieu de chaque plan de plus de 3 s. Recompilation, 4 fois au plus. Le skit impose déjà un cadrage différent à chaque réplique (`rendu_stickstage.plan_de`).
 2. Rendu stick-stage (Gérard + interlocuteur, bouche synchronisée par Rhubarb, bruitages CC0 du catalogue dans le skit).
 3. `bande_son` : voix du rendu, musique CC0 (room / resolve / mystery selon la catégorie) en boucle, réglée à 18 dB sous la voix (LUFS mesurés par ffmpeg), sonneries (générées par code) dans le silence avant la réplique, normalisation finale -14 LUFS.
-4. Sous-titres `.ass` : 1 à 3 mots (16 caractères au plus), 104 px, contour 9 px, mot clé jaune, bas du texte à y = 1240, marges x 120-880 ; titre du sketch en haut 2,5 s ; « Contenu généré par IA » ; carte de fin bleu nuit 2 s.
+4. Sous-titres `.ass` : 1 à 3 mots (16 caractères au plus), 104 px, contour 9 px, mot clé jaune, bas du texte à y = 1240, marges x 120-880 ; titre du sketch (ou « série · épisode n/N ») en haut 2,5 s ; carte de fin bleu nuit 2 s ; aucun texte IA à l'image (étiquette TikTok à la publication).
 5. Contrôle qualité : durée 25-35 s, `blackdetect` sans image noire, `controle_sous_titres` (2 lignes au plus, zone sûre), écart voix / musique ≥ 12 dB, aucun plan > 3 s (timeline).
 6. Échec : nouvel essai (rythme changé si la durée est en cause), 3 essais au plus ; puis `Videos/a-part/<vidéo>.mp4` + `.json` (motifs, rapport), ligne de journal, trace du harness `ok: false`.
 
@@ -76,13 +76,14 @@ Monte chaque sketch de la ligne B (appelé par videos-creation) : plans de 3 s a
 **Derniers résultats de test (cette machine) :**
 - `tests/agents/test_videos.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** 2026-11-17 00:22 ok · **Dernière erreur :** 2026-11-17 00:11 monter 2026-11-17-1400 (durée 35.8 s (25 à 35 s attendues)) · **Dans agents_actifs (cette machine) :** non (Liam l'ajoute s'il veut le planifier)
+**Dernière trace :** 2026-11-17 02:01 ok · **Dernière erreur :** 2026-11-17 01:53 monter 2026-11-20-1400 (plan de 3.3 s à 0.0 s (3 s au plus)) · **Dans agents_actifs (cette machine) :** non (Liam l'ajoute s'il veut le planifier)
 
 ### Historique (5 dernières traces, sans données client)
+- 2026-11-17 02:01 | monter 2026-11-20-1400 | ok | 296.86 s
+- 2026-11-17 01:53 | monter 2026-11-20-1400 | ERREUR (plan de 3.3 s à 0.0 s (3 s au plus)) | 526.98 s
+- 2026-11-17 01:42 | monter 2026-11-20-1400 | ERREUR (plan de 3.3 s à 0.0 s (3 s au plus)) | 518.0 s
+- 2026-11-17 01:33 | monter 2026-11-19-1400 | ok | 313.05 s
 - 2026-11-17 00:22 | monter 2026-11-18-1400 | ok | 205.41 s
-- 2026-11-17 00:18 | monter 2026-11-17-1400 | ok | 301.63 s
-- 2026-11-17 00:11 | monter 2026-11-17-1400 | ERREUR (durée 35.8 s (25 à 35 s attendues)) | 669.24 s
-- 2026-11-16 23:58 | monter 2026-11-17-1400 | ERREUR (durée 43.9 s (25 à 35 s attendues); plan de 3.2 s à 0.0 s (3 s au plus)) | 777.96 s
 <!-- DYNAMIQUE:FIN -->
 
 ## Skill et règles

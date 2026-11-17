@@ -1,0 +1,52 @@
+{
+ "schemaVersion": 1,
+ "id": "jarvis-atelier",
+ "kit": "interior",
+ "palette": "autumn",
+ "description": "Un atelier d'artisan de jour : établi, armoire, étagère, fenêtre.",
+ "tags": [
+  "jarvis",
+  "day"
+ ],
+ "groundY": 1480,
+ "figureHeightPx": 720,
+ "layers": [
+  {
+   "part": "wall",
+   "pattern": "halftone"
+  },
+  {
+   "part": "floor"
+  },
+  {
+   "part": "window",
+   "x": 0.2,
+   "y": 0.18,
+   "size": 0.85,
+   "variant": "blinds"
+  },
+  {
+   "part": "shelf",
+   "x": 0.6,
+   "y": 0.28
+  },
+  {
+   "part": "cabinet",
+   "x": 0.92
+  },
+  {
+   "part": "floor-lamp",
+   "x": 0.06
+  },
+  {
+   "part": "counter",
+   "x": 0.5
+  }
+ ],
+ "foreground": [],
+ "marks": {
+  "left": 0.27,
+  "center": 0.5,
+  "right": 0.73
+ }
+}

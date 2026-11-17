@@ -234,10 +234,11 @@ class Creation(Base):
         self.assertEqual((e["format"], e["dark_mode"], e["title"]), ("portrait", True, "2026-11-16-2200")); self.assertTrue(e["voice"].startswith("fr-FR"))
         self.assertNotIn("reuse_audio_from", e); self.assertEqual(K.entree_outil(doc, self.conf(), self.r / "voix")["reuse_audio_from"], str(self.r / "voix"))
         f = K.filtre_final("A", True, self.conf())
-        for morceau in ("subtitles=sous-titres.ass", "accroche.txt", "lt(t,2.5)", "ia.txt", "fin0.txt", "concat=n=2"): self.assertIn(morceau, f)
+        for morceau in ("subtitles=sous-titres.ass", "accroche.txt", "lt(t,2.5)", "fin0.txt", "concat=n=2"): self.assertIn(morceau, f)
+        self.assertNotIn("ia.txt", f)   # aucun texte IA à l'image depuis le 17/11/2026 : étiquette TikTok cochée par la publication
         self.assertNotIn("subtitles=", K.filtre_final("B", False, self.conf()))
         self.assertEqual(K.passage_proche(datetime(2026, 11, 16, 6, 3)), "06:00"); self.assertEqual(K.passage_proche(datetime(2026, 11, 16, 21, 50)), "22:00")
-        self.assertLess(K.IA_Y, 1500)                                                # mention IA au-dessus de l'interface du bas de TikTok
+        self.assertFalse(hasattr(K, "IA_Y"))                                          # plus de mention IA à l'image (étiquette TikTok à la publication)
 
     def test_accroche_ecran_dans_la_zone_sure(self):
         for texte in ("Fermé ou ouvert ? Votre client hésite.", "Votre client vous cherche", "Tu sais parler au téléphone ?", "Court"):
@@ -386,19 +387,25 @@ class Sketches(Base):
     def sk(self, i): return json.loads(json.dumps(self.b["sketches"][i]))
 
     def test_base_valide_et_repartition(self):
-        self.assertEqual(SK.verifier_base(self.b, self.conf(), S), []); self.assertEqual(len(self.b["sketches"]), 30); self.assertEqual(len(self.b["fins"]), 3)
-        cats = [SK.categorie(s) for s in self.b["sketches"]]; self.assertEqual((cats.count("comedie"), cats.count("lecon"), cats.count("autre")), (12, 12, 6))
-        long = {c: max(SK.liste_de(self.b, c, "libre"), key=SK.mots) for c in SK.CHAMPS}
+        self.assertEqual(SK.verifier_base(self.b, self.conf(), S), []); self.assertEqual(len(self.b["sketches"]), 50); self.assertEqual(len(self.b["fins"]), 3)
+        cats = [SK.categorie(s) for s in self.b["sketches"]]; self.assertEqual((cats.count("comedie"), cats.count("lecon"), cats.count("autre")), (20, 20, 10))
+        tr = SK.troupe(); self.assertTrue(8 <= len(tr) - 1 <= 12); self.assertEqual(len({x["edge"] for x in tr.values()}), len(tr))   # une voix par personnage
+        for x in tr.values(): self.assertTrue((RS.PERSONNAGES / f"{x['id']}.json").is_file(), x["id"])
         for s in self.b["sketches"]:
-            self.assertTrue(6 <= len(s["repliques"]) <= 8, s["id"]); self.assertTrue(SK.champs_de(s), s["id"])
-            self.assertTrue(all(SK.mots(SK.remplir(x["texte"], long)) <= 10 for x in s["repliques"]), s["id"])
+            self.assertTrue(6 <= len(s["repliques"]) <= 8, s["id"]); self.assertTrue(SK.champs_de(s), s["id"]); self.assertTrue(SK.distribution(s, tr), s["id"])
         hist, seq = [], []
         for _ in range(40):
-            s, vals, genre, origine = SK.choisir(None, hist, self.b); hist.append({"serie": "B", "sketch": s["id"]}); seq.append(s["id"])
-            self.assertEqual(origine, "code"); self.assertTrue(SK.valeurs_valides(s, self.b, vals, genre))
-        self.assertTrue(all(len(set(seq[i:i + 20])) == 20 for i in range(21)))        # aucun sketch rejoué dans les 20 dernières vidéos
-        vingt = [SK.categorie(next(x for x in self.b["sketches"] if x["id"] == i)) for i in seq[:20]]
-        self.assertEqual((vingt.count("lecon"), vingt.count("comedie"), vingt.count("autre")), (8, 8, 4))   # 40 / 40 / 20 %
+            s, vals, p, d, origine = SK.choisir(None, hist, self.b)
+            self.assertNotIn((p, d), SK.couples_recents(hist))                                 # jamais le même couple personnage / décor dans les 10 dernières
+            self.assertFalse(any("{" in SK.remplir(x["texte"], vals) for x in s["repliques"]))
+            hist.append({"serie": "B", "sketch": s["id"], "personnage": p, "decor": d}); seq.append(s)
+        eps = [i for i, s in enumerate(seq) if s.get("serie")]
+        self.assertEqual([seq[i]["id"] for i in eps], ["PA1", "PA2", "PA3", "PA4"])           # la série d'abord, dans l'ordre
+        self.assertTrue(all(b - a >= 2 for a, b in zip(eps, eps[1:])))                          # une vidéo ordinaire entre deux épisodes
+        ordi = [s["id"] for s in seq if not s.get("serie")]
+        self.assertTrue(all(len(set(ordi[i:i + 20])) == len(ordi[i:i + 20]) for i in range(len(ordi))))   # aucun sketch rejoué dans les 20 dernières
+        vingt = [SK.categorie(s) for s in [s for s in seq if not s.get("serie")][:20]]
+        for c, n in (("lecon", 8), ("comedie", 8), ("autre", 4)): self.assertLessEqual(abs(vingt.count(c) - n), 2, (c, vingt))   # 40 / 40 / 20 %
         self.assertEqual({SK.fin_suivante([{"serie": "B", "sketch": "x"}] * n, self.b["fins"])[0] for n in range(3)}, {0, 1, 2})   # 3 fins tournantes
 
     def test_refus(self):
@@ -416,20 +423,44 @@ class Sketches(Base):
         self.assertTrue(any("public" in p for p in SK.verifier_fin(["Vous voulez être call caller, à la commission ?", "Bio ou DM."], c, S)))
 
     def test_qwen_limite_aux_listes(self):
-        s = SK.candidates([], self.b["sketches"])[0]; champs = SK.champs_de(s)
-        _, _, _, o = SK.choisir(FauxQwen([{"sketch": s["id"], "genre": "h", "valeurs": {x: "astronaute" for x in champs}}]), [], self.b)
+        hist = [{"serie": "B", "sketch": "PA1", "personnage": "nadia", "decor": "terrasse"}]   # dernier = épisode : vidéo ordinaire
+        a_champs = lambda h: [x for x in SK.candidates(h, self.b["sketches"])[:3] if [c for c in SK.champs_de(x) if c != "nom"]]
+        while not a_champs(hist):   # avance jusqu'à ce que Qwen ait un champ à remplir parmi les 3 sketches proposés
+            s, v, p, d, _ = SK.choisir(None, hist, self.b); hist.append({"serie": "B", "sketch": s["id"], "personnage": p, "decor": d})
+        s = a_champs(hist)[0]
+        champs = [c for c in SK.champs_de(s) if c != "nom"]
+        _, _, _, _, o = SK.choisir(FauxQwen([{"sketch": s["id"], "valeurs": {x: "astronaute" for x in champs}}]), hist, self.b)
         self.assertEqual(o, "code")                                                          # valeur hors des listes : refusée, choix du code
-        bon = {x: SK.liste_de(self.b, x, "h")[0] for x in champs}
-        s2, vals, genre, o = SK.choisir(FauxQwen([{"sketch": s["id"], "genre": "h", "valeurs": bon}]), [], self.b)
-        self.assertEqual((s2["id"], o, vals, genre), (s["id"], "qwen", bon, "h"))
+        bon = {x: SK.liste_de(self.b, x, "libre")[0] for x in champs}
+        s2, vals, p, d, o = SK.choisir(FauxQwen([{"sketch": s["id"], "valeurs": bon}]), hist, self.b)
+        self.assertEqual((s2["id"], o), (s["id"], "qwen")); self.assertEqual({k: vals[k] for k in champs}, bon)
+        if "nom" in SK.champs_de(s): self.assertEqual(vals["nom"], SK.troupe()[p]["appel"])   # {nom} = le personnage joué, jamais Qwen
+
+    def test_lot_hebdomadaire(self):
+        base_f = self.r / "base.json"; base_f.write_text(json.dumps({k: v for k, v in self.b.items()} | {"sketches": [s for s in self.b["sketches"] if not s.get("lot")]},
+                                                                      ensure_ascii=False), encoding="utf-8")
+        lot = json.loads((self.ancien["VIDEOS"] / "idees-nouvelles" / "2026-11-17.json").read_text(encoding="utf-8"))
+        mauvais = json.loads(json.dumps(lot)); mauvais["sketches"][5]["repliques"][1]["texte"] = "Avec moi, tu gagnes mille euros par mois."
+        f = self.r / "2026-11-24.json"; f.write_text(json.dumps(mauvais, ensure_ascii=False), encoding="utf-8")
+        ok, motifs = SK.ajouter_lot(f, self.conf(), S, base_f); self.assertFalse(ok)
+        self.assertTrue(any("nombre" in m or "interdit" in m or "formulation" in m for m in motifs)); self.assertTrue(f.with_suffix(".refus.txt").exists())
+        self.assertEqual(len(SK.lire(base_f)["sketches"]), 30)                                  # rien ajouté
+        court = dict(lot, sketches=lot["sketches"][:19]); f.write_text(json.dumps(court, ensure_ascii=False), encoding="utf-8")
+        self.assertTrue(any("20 attendus" in m for m in SK.ajouter_lot(f, self.conf(), S, base_f)[1]))
+        f.write_text(json.dumps(lot, ensure_ascii=False), encoding="utf-8")
+        self.assertEqual(SK.ajouter_lot(f, self.conf(), S, base_f), (True, 20)); self.assertFalse(f.with_suffix(".refus.txt").exists())
+        b = SK.lire(base_f); self.assertEqual(len(b["sketches"]), 50); self.assertEqual({s["lot"] for s in b["sketches"][30:]}, {"2026-11-24"})
+        self.assertTrue(any("déjà dans la banque" in m for m in SK.ajouter_lot(f, self.conf(), S, base_f)[1]))   # même lot une 2e fois : refusé
 
     def test_ecrit_le_script_b(self):
         with redirect_stdout(io.StringIO()): f = S.ecrire_script(self.conf(), "2026-11-17", "14:00", FauxQwen([{"rien": 1}]), [], False)
         doc = json.loads(f.read_text(encoding="utf-8"))
         self.assertEqual((doc["serie"], doc["format"], doc["variante"], doc["fin_variante"]), ("B", "sketch", "code", "FIN1"))
+        self.assertEqual((doc["sketch"], doc["serie_sketch"]["episode"], doc["interlocuteur"]["personnage"]), ("PA1", 1, "nadia"))   # la série en cours d'abord
+        self.assertIn("épisode 1/4", doc["titre"])
         self.assertEqual(len(doc["qui"]), len(doc["scenes"])); self.assertEqual(doc["qui"][-2:], ["G", "G"]); self.assertEqual(doc["scenes"][-2:], self.b["fins"][0])
         self.assertFalse(any("{" in x for x in doc["scenes"])); self.assertIn(C.MENTION_IA, doc["legende"])
-        self.assertEqual(json.loads(C.SUJETS.read_text(encoding="utf-8"))[0]["sketch"], doc["sketch"])
+        h = json.loads(C.SUJETS.read_text(encoding="utf-8"))[0]; self.assertEqual((h["sketch"], h["personnage"], h["decor"]), (doc["sketch"], "nadia", "terrasse"))
         with redirect_stdout(io.StringIO()): MK.traiter(self.conf(), "2026-11-17", ["14:00"], ollama_cls=lambda m: FauxQwen([]))
         d = json.loads(f.read_text(encoding="utf-8")); self.assertEqual(d["marketing"]["gardee"], d["scenes"][0])
         self.assertTrue(all(1 <= len(g["mots"]) <= 3 for st in d["sous_titres"] for g in st))   # sous-titres : 1 à 3 mots
@@ -438,8 +469,8 @@ class Sketches(Base):
 
 class Monteur(Base):
     def doc(self, i=0):
-        b = SK.lire(); s = b["sketches"][i]; vals, g = SK.valeurs_par_defaut(s, b, 1)
-        return SK.document(s, vals, g, 0, b["fins"][0], self.conf(), "2026-11-17", "14:00", "code")
+        b = SK.lire(); s = b["sketches"][i]; vals, p, d = SK.distribuer(s, [], SK.valeurs_par_defaut(s, b, 1))
+        return SK.document(s, vals, p, d, 0, b["fins"][0], self.conf(), "2026-11-17", "14:00", "code")
 
     def tl(self, total, coupes, punch=()):
         return {"fps": 30, "durationInFrames": total, "scenes": [{"from": 0, "timeline": {
@@ -458,6 +489,8 @@ class Monteur(Base):
         self.assertEqual(sk["beats"][0]["pauseBeforeMs"], RS.PAUSE_SONNERIE_MS)                # la sonnerie est mixée dans ce silence
         self.assertEqual(sk["beats"][d["punchline"]]["sfx"][0]["id"], "register"); self.assertNotIn("shot", sk["beats"][d["punchline"]])
         for i in d["fin_indices"]: self.assertEqual(sk["beats"][i]["actions"][0], {"who": "gerard", "do": "look", "to": "camera", "at": {"ms": 0}})
+        self.assertEqual(sk["characters"][1]["id"], d["interlocuteur"]["personnage"])         # l'interlocuteur = un personnage de la troupe
+        vs = VX.voix_sketch(self.conf(), d); self.assertEqual(vs["I"]["edge"], SK.troupe()[d["interlocuteur"]["personnage"]]["edge"])
         v = VX.voix_dialogue(self.conf(), "f"); self.assertNotEqual(v["G"]["edge"], v["I"]["edge"]); self.assertEqual(v["I"]["edge"], "fr-FR-DeniseNeural")
         self.assertNotEqual(v["G"].get("kokoro_hauteur", 1.0), v["I"].get("kokoro_hauteur", 1.0))   # Kokoro : une seule voix, deux hauteurs
         self.assertNotEqual(VX.voix_dialogue(self.conf(), "h")["I"]["edge"], v["G"]["edge"])
@@ -473,6 +506,14 @@ class Monteur(Base):
         self.assertTrue(MT.retoucher_plans(d)); self.assertEqual(json.loads((d / "skit.json").read_text(encoding="utf-8"))["style"], "snappy")
         self.assertTrue(MT.retoucher_plans(d)); self.assertEqual(json.loads((d / "skit.json").read_text(encoding="utf-8"))["style"], "argument")
         with self.assertRaises(MT.TropLong): MT.retoucher_plans(d)                            # même au rythme le plus serré : la voix sera accélérée avant le rendu
+        d2 = self.r / "skit2"; (d2 / "generated").mkdir(parents=True)   # réplique qui a déjà son zoom, commencée dans un plan trop long : recadrée à son début
+        (d2 / "skit.json").write_text(json.dumps({"beats": [{"id": "n0", "speaker": "gerard", "shot": {"framing": "two"}},
+                                                            {"id": "n1", "speaker": "inter", "shot": {"framing": "two", "punchIn": {"on": "inter", "at": {"fraction": 0.5}}}}]}), encoding="utf-8")
+        tl = self.tl(840, [0]); tl["scenes"][0]["timeline"]["beats"] = [{"id": "n0", "from": 0, "to": 50, "synthetic": False, "audioFrom": 0},
+                                                                      {"id": "n1", "from": 60, "to": 840, "synthetic": False, "audioFrom": 60}]
+        (d2 / "generated" / "timeline.json").write_text(json.dumps(tl), encoding="utf-8")
+        self.assertTrue(MT.retoucher_plans(d2)); self.assertEqual(json.loads((d2 / "skit.json").read_text(encoding="utf-8"))["beats"][1]["shot"]["framing"], "medium")
+        self.assertFalse(MT.retoucher_plans(d2))                                              # une seule fois par réplique
 
     def test_sous_titres_et_controle(self):
         d = self.doc(0); plan = [C.decouper_sous_titres(s, maxi=3, mini=1, car_max=16) for s in d["scenes"]]
@@ -507,7 +548,7 @@ class StickStageRendu(Base):
         doc = {"titre": "Essai", "scenes": ["Gérard attend.", "Le téléphone sonne !", "C'était son premier client."], "jeu": [["sad", "slump"], None, ["embarrassed", "facepalm"]],
                "punchline": 1, "style": "classic", "decor": "boutique"}
         sk = RS.skit(doc, doc["scenes"], RS.decor(doc["decor"]))
-        self.assertEqual((sk["meta"]["aspect"], sk["set"], sk["style"]), ("9:16", "bookshop-morning", "classic"))
+        self.assertEqual((sk["meta"]["aspect"], sk["set"], sk["style"]), ("9:16", "jarvis-boutique", "classic"))   # décor de jour de la troupe
         self.assertEqual(sk["characters"][0]["id"], "gerard"); self.assertEqual(sk["characters"][0]["style"]["build"], "toon")
         self.assertEqual([b["line"] for b in sk["beats"]], doc["scenes"]); self.assertTrue(sk["beats"][1].get("punchline"))
         self.assertEqual(sk["beats"][1]["actions"][0]["expression"], "shocked")              # sans indication : la ponctuation décide
@@ -549,6 +590,20 @@ class Publication(Base):
         try:
             with redirect_stdout(io.StringIO()): return P.cmd_publier(False, maintenant, ligne=ligne, essai=essai, publieur=publieur, alerter=self.alertes.append, garde=garde)
         finally: C.cfg = base
+
+    def test_etiquette_ia_absente_video_mise_a_part(self):
+        self.video("2026-11-16-x"); a_part = P.A_PART; P.A_PART = self.r / "a-part"
+        def sans_case(*a): raise P.EtiquetteIA("case « contenu généré par IA » introuvable : rien n'est publié sans l'étiquette")
+        try: code = self.lancer(datetime(2026, 11, 16, 6, 10), sans_case, go=("A",))
+        finally: P.A_PART, a_part = a_part, P.A_PART
+        self.assertEqual(code, 1); self.assertFalse((C.A_VALIDER / "2026-11-16-x.mp4").exists()); self.assertTrue((a_part / "2026-11-16-x.mp4").exists())
+        self.assertIn("introuvable", json.loads((a_part / "2026-11-16-x.motif.json").read_text(encoding="utf-8"))["motif"])
+        self.assertTrue(any("mise à part" in x and "Rien publié" in x for x in self.alertes)); self.assertFalse(C.PUBLIEES.exists() and list(C.PUBLIEES.glob("*.mp4")))
+        self.assertEqual(self.csv()[-1]["statut"], "mise à part (étiquette IA)")
+        self.video("2026-11-16-y")                                                                  # dry-run : la vidéo n'est jamais déplacée, l'emplacement est dit
+        ou = lambda *a: "essai : arrêté devant le bouton Publier, rien publié ; case « contenu généré par IA » présente et cochée : section « Paramètres », interrupteur à x=700 y=900 px"
+        self.assertEqual(self.lancer(datetime(2026, 11, 17, 6, 10), ou, go=("A",), essai=True), 0)   # lendemain : la ligne arrêtée la veille rouvre
+        self.assertTrue((C.A_VALIDER / "2026-11-16-y.mp4").exists()); self.assertTrue(any("x=700 y=900" in x for x in self.alertes))
 
     def test_fermee_sans_go_publier(self):
         self.assertFalse(any(l.get("go_publier") for l in json.loads(self.ancien["CONFIG"].read_text(encoding="utf-8"))["lignes"].values()))

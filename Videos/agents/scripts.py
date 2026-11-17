@@ -253,11 +253,11 @@ def ecrire_sketch(conf, jour, heure, ollama, historique, a_blanc, fichier):
     pb = K.verifier_base(base, conf, garde)
     if pb:
         C.journal(AGENT, "erreur", f"sketches-base.json refusé ({'; '.join(pb)[:200]})", a_blanc); print(f"  ! sketches-base.json refusé : {'; '.join(pb)[:300]}"); return None
-    s, valeurs, genre, origine = K.choisir(ollama, historique, base)
+    s, valeurs, personnage, decor, origine = K.choisir(ollama, historique, base)
     if not s:
         C.journal(AGENT, "erreur", f"{jour} {heure} : tous les sketches sont dans les {K.FENETRE} dernières vidéos", a_blanc); print("  ! aucun sketch libre"); return None
     i_fin, fin_ = K.fin_suivante(historique, base["fins"])
-    doc = K.document(s, valeurs, genre, i_fin, fin_, conf, jour, heure, origine) | {"cree_le": f"{datetime.now():%Y-%m-%d %H:%M}"}
+    doc = K.document(s, valeurs, personnage, decor, i_fin, fin_, conf, jour, heure, origine) | {"cree_le": f"{datetime.now():%Y-%m-%d %H:%M}"}
     raisons = [x for l in doc["scenes"][:-2] for x in K._garde(l, conf, garde)] + K.verifier_fin(fin_, conf, garde)
     raisons += [f"réplique de {K.mots(l)} mots" for l in doc["scenes"] if K.mots(l) > K.MOTS_MAX]
     if not raisons and K.trop_proche(" ".join(doc["scenes"][:-2]), K.textes_recents(C.SCRIPTS)): raisons = [f"trop proche d'une des {K.FENETRE} dernières vidéos"]
@@ -265,9 +265,10 @@ def ecrire_sketch(conf, jour, heure, ollama, historique, a_blanc, fichier):
         C.journal(AGENT, "erreur", f"{jour} {heure} : sketch {s['id']} refusé ({'; '.join(raisons)[:200]})", a_blanc); print(f"  ! sketch {s['id']} refusé : {'; '.join(raisons)}"); return None
     if a_blanc: print(f"[à blanc] {heure} (série B, sketch {s['id']}) : {json.dumps(doc, ensure_ascii=False, indent=1)}"); return fichier
     C.SCRIPTS.mkdir(parents=True, exist_ok=True); fichier.write_text(json.dumps(doc, ensure_ascii=False, indent=1), encoding="utf-8")
-    historique.append({"jour": jour, "passage": heure, "serie": "B", "sketch": s["id"], "histoire": s["id"], "sujet": s["titre"], "titre": s["titre"]}); sujets_ecrire(historique)
-    C.journal(AGENT, "script", f"{jour} {heure} : série B, sketch {s['id']} ({origine}, {doc['fin_variante']}, valeurs {valeurs}), {doc['mots']} mots")
-    print(f"  {heure} : série B, sketch {s['id']} « {s['titre']} » (choix {origine}, {doc['fin_variante']}, {valeurs}, {doc['mots']} mots)"); return fichier
+    historique.append({"jour": jour, "passage": heure, "serie": "B", "sketch": s["id"], "histoire": s["id"], "sujet": s["titre"], "titre": s["titre"],
+                       "personnage": personnage, "decor": decor, "serie_sketch": (s.get("serie") or {}).get("id", "")}); sujets_ecrire(historique)
+    C.journal(AGENT, "script", f"{jour} {heure} : série B, sketch {s['id']} ({origine}, {doc['fin_variante']}, {personnage} / {decor}, valeurs {valeurs}), {doc['mots']} mots")
+    print(f"  {heure} : série B, sketch {s['id']} « {doc['titre']} » (choix {origine}, {personnage} / {decor}, {doc['fin_variante']}, {valeurs}, {doc['mots']} mots)"); return fichier
 
 
 def cmd(conf, jour, heures, a_blanc):

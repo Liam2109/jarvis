@@ -7,7 +7,7 @@ Le moteur réellement utilisé est rendu à l'appelant (videos-creation l'écrit
 Ligne B en sketch à deux (17/11/2026) : une voix par personnage (voix_dialogue) ; Gérard = voix de la ligne B, l'interlocuteur = voix_interlocuteur selon son genre.
 Kokoro n'a qu'une voix française : en bascule, les deux personnages se distinguent par la hauteur (kokoro_hauteur, ffmpeg asetrate : plus grave sous 1) et la vitesse.
 Échec simulé (tests, vérification) : variable d'environnement JARVIS_VIDEOS_EDGE_ECHEC=1 -> edge-tts est considéré en panne, sans aucun appel réseau."""
-import asyncio, os, subprocess, sys, time, wave
+import asyncio, json, os, subprocess, sys, time, wave
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -36,6 +36,18 @@ def voix_dialogue(conf, genre):
     vi = dict(VOIX_INTERLOCUTEUR[g]); vi.update({k: x for k, x in (((conf.get("lignes") or {}).get("B", {}).get("voix_interlocuteur") or {}).get(g) or {}).items() if x not in (None, "")})
     # Kokoro (une seule voix française) : Gérard plus grave (hauteur 0,85) que l'interlocuteur
     return {"G": dict({"kokoro_hauteur": 0.85}, **voix_ligne(conf, "B"), edge_debit=DEBIT_SKETCH), "I": dict({"edge_debit": DEBIT_SKETCH}, **vi)}
+
+
+def voix_sketch(conf, doc):
+    """{"G": Gérard, "I": interlocuteur} d'un sketch : voix du personnage de la troupe (Videos\\troupe.json : edge, hauteur Kokoro de secours) ;
+    sans personnage (ancien script) : voix_dialogue selon le genre."""
+    p = (doc.get("interlocuteur") or {}).get("personnage")
+    try: tr = {x["id"]: x for x in json.loads((C.VIDEOS / "troupe.json").read_text(encoding="utf-8"))["personnages"]}
+    except (OSError, ValueError, KeyError): tr = {}
+    v = voix_dialogue(conf, (doc.get("interlocuteur") or {}).get("genre", "h"))
+    if p in tr:
+        x = tr[p]; v["I"] = {"edge": x["edge"], "kokoro": "ff_siwis", "kokoro_vitesse": 1.05, "kokoro_hauteur": x.get("kokoro_hauteur", 1.0), "edge_debit": DEBIT_SKETCH}
+    return v
 
 
 def fichier_phrase(dossier, i): return Path(dossier) / f"scene_{i + 1:03d}.mp3"

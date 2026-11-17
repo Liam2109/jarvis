@@ -1,0 +1,117 @@
+{
+ "schemaVersion": 1,
+ "id": "bernard",
+ "displayName": "M. Bernard",
+ "proportions": {
+  "height": 0.98,
+  "headRadius": 0.18,
+  "neck": 0.02,
+  "torso": 0.28,
+  "upperArm": 0.15,
+  "forearm": 0.14,
+  "thigh": 0.16,
+  "shin": 0.16
+ },
+ "style": {
+  "build": "toon",
+  "stroke": "#1b1b1f",
+  "strokeWidth": 12,
+  "headFill": "#ffffff",
+  "torso": {
+   "style": "bean",
+   "fill": "#c9b48a",
+   "width": 0.16
+  },
+  "limbCurve": 0.3,
+  "hands": "nub",
+  "feet": "oval",
+  "footFill": "#4a3426",
+  "headShape": {
+   "sx": 1.04,
+   "sy": 1.0,
+   "dx": 0.03
+  }
+ },
+ "face": {
+  "eyes": "big-pupil",
+  "brows": true,
+  "mouthSet": "default",
+  "offsetX": 0.16,
+  "eyeSpacing": 0.46,
+  "eyeY": -0.02,
+  "mouthY": 0.46
+ },
+ "accessories": [],
+ "toon": {
+  "proportions": {
+   "height": 0.95,
+   "headRadius": 0.13,
+   "neck": 0.015,
+   "torso": 0.32,
+   "upperArm": 0.174,
+   "forearm": 0.162,
+   "thigh": 0.21,
+   "shin": 0.2
+  },
+  "skin": "#efc3a3",
+  "skinShade": "#d7a585",
+  "body": {
+   "shoulders": 116,
+   "hips": 94,
+   "arm": 26,
+   "neck": 28
+  },
+  "eyes": {
+   "iris": "#5a6a7a",
+   "lashes": false
+  },
+  "brows": {
+   "color": "#e8e8ea",
+   "thickness": 11,
+   "gap": 0.38
+  },
+  "lip": "#97564a",
+  "nose": "hook",
+  "cheeks": {
+   "color": "#e8737a",
+   "opacity": 0.22
+  },
+  "hair": {
+   "kind": "curly-mop",
+   "fill": "#f2f2f2",
+   "shade": "#d6d6d8"
+  },
+  "top": {
+   "kind": "turtleneck",
+   "fill": "#c9b48a",
+   "shade": "#ad9970"
+  },
+  "bottom": {
+   "kind": "jeans",
+   "fill": "#5b4a3a",
+   "shade": "#48392c",
+   "cuff": "#73604c"
+  },
+  "shoes": {
+   "kind": "boot",
+   "fill": "#3b2a1e",
+   "shade": "#2a1d14"
+  },
+  "details": [],
+  "outer": {
+   "kind": "varsity",
+   "fill": "#6b4a2e",
+   "shade": "#553a24",
+   "cuffAt": 0.85,
+   "sleeve": {
+    "fill": "#6b4a2e"
+   },
+   "rib": "#6b4a2e"
+  }
+ },
+ "energy": 0.5,
+ "personality": "M. Bernard, le vieux client râleur : fidèle depuis toujours, content de rien.",
+ "voice": {
+  "say": "Thomas"
+ }
+}

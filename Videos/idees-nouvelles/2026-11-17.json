@@ -1,0 +1,218 @@
+{
+ "_aide": "Lot de sketches du 17/11/2026 (écrit à la main une fois). Même schéma que sketches-base.json ; interlocuteur = personnage de la troupe (Videos/troupe.json). Série « Le premier appel de Gérard » (4 épisodes) + 16 sketches. Ajout à la banque : python Videos\\agents\\sketches.py lot Videos\\idees-nouvelles\\2026-11-17.json",
+ "sketches": [
+  {"id": "PA1", "theme": "lecon", "titre": "Gérard se lance", "formule": "aveu", "decor": "terrasse", "interlocuteur": {"personnage": "nadia"}, "telephone": false, "retournement": 6,
+   "serie": {"id": "premier-appel", "titre": "Le premier appel de Gérard", "episode": 1, "episodes": 4},
+   "repliques": [
+    {"qui": "G", "texte": "{nom}, j'ai décidé. Je vais appeler des clients moi-même.", "jeu": "happy hands-on-hips"},
+    {"qui": "I", "texte": "Bonne idée. Tu as déjà passé un appel de vente ?", "jeu": "thinking think"},
+    {"qui": "G", "texte": "Jamais. Mais j'ai regardé beaucoup de vidéos.", "jeu": "smug thumbs-up"},
+    {"qui": "I", "texte": "Regarder un match ne fait pas de toi un joueur.", "jeu": "skeptical arms-crossed"},
+    {"qui": "G", "texte": "Alors je commence par quoi ?", "jeu": "confused shrug"},
+    {"qui": "I", "texte": "Par écrire tes premières phrases. Pas plus.", "jeu": "neutral hold-out"},
+    {"qui": "G", "texte": "C'est fait. « Bonjour, achetez-moi quelque chose. »", "jeu": "happy hold-up", "sfx": "rimshot"},
+    {"qui": "I", "texte": "On a du travail. Rendez-vous demain, même table.", "jeu": "deadpan facepalm"}
+   ]},
+  {"id": "PA2", "theme": "lecon", "titre": "La répétition", "formule": "situation", "decor": "atelier", "interlocuteur": {"personnage": "lucas"}, "telephone": false, "retournement": 4,
+   "serie": {"id": "premier-appel", "titre": "Le premier appel de Gérard", "episode": 2, "episodes": 4},
+   "repliques": [
+    {"qui": "G", "texte": "{nom}, tu fais le client. Moi, je t'appelle.", "jeu": "happy point"},
+    {"qui": "I", "texte": "D'accord. Je suis {metier}, et je suis très occupé.", "jeu": "annoyed arms-crossed"},
+    {"qui": "G", "texte": "Bonjour ! Je ne vous dérange pas longtemps, promis.", "jeu": "happy hold-phone", "sfx": "sonnerie"},
+    {"qui": "I", "texte": "Vous me dérangez déjà. C'est quoi, votre question ?", "jeu": "skeptical hands-on-hips"},
+    {"qui": "G", "texte": "Euh… j'avais une question. Je l'ai oubliée.", "jeu": "embarrassed think", "sfx": "crickets"},
+    {"qui": "I", "texte": "Gérard, c'est toi qui appelles. Pas moi.", "jeu": "deadpan point"},
+    {"qui": "G", "texte": "On recommence. Cette fois, je garde la feuille.", "jeu": "worried hold-up"}
+   ]},
+  {"id": "PA3", "theme": "telephone", "titre": "Le vrai premier appel", "formule": "situation", "decor": "boutique", "interlocuteur": {"personnage": "lefort"}, "telephone": true, "retournement": 6,
+   "serie": {"id": "premier-appel", "titre": "Le premier appel de Gérard", "episode": 3, "episodes": 4},
+   "repliques": [
+    {"qui": "I", "texte": "Boutique Lefort, j'écoute.", "jeu": "neutral hold-phone", "sfx": "sonnerie"},
+    {"qui": "G", "texte": "Bonjour {nom}. C'est Gérard, pour mon tout premier appel.", "jeu": "worried hold-phone"},
+    {"qui": "I", "texte": "Et vous me le dites ? C'est courageux.", "jeu": "skeptical arms-crossed"},
+    {"qui": "G", "texte": "Je voulais savoir si votre boutique a un site.", "jeu": "thinking think"},
+    {"qui": "I", "texte": "Elle en a un. Il est affreux.", "jeu": "annoyed hands-on-hips"},
+    {"qui": "G", "texte": "Ah. Alors… je raccroche ?", "jeu": "embarrassed shrug"},
+    {"qui": "I", "texte": "Non. Vous êtes le premier à me poser la question.", "jeu": "happy point", "sfx": "ding"},
+    {"qui": "G", "texte": "Je note ça. Premier appel : une question, pas de raccroché.", "jeu": "happy thumbs-up"}
+   ]},
+  {"id": "PA4", "theme": "telephone", "titre": "Le débrief", "formule": "question", "decor": "commerces", "interlocuteur": {"personnage": "nadia"}, "telephone": false, "retournement": 5,
+   "serie": {"id": "premier-appel", "titre": "Le premier appel de Gérard", "episode": 4, "episodes": 4},
+   "repliques": [
+    {"qui": "I", "texte": "Alors, ce premier appel ? Raconte.", "jeu": "happy point"},
+    {"qui": "G", "texte": "Elle n'a pas raccroché. Elle m'a posé des questions.", "jeu": "happy arms-up", "sfx": "pop"},
+    {"qui": "I", "texte": "C'est très bon signe, Gérard.", "jeu": "happy thumbs-up"},
+    {"qui": "G", "texte": "Et elle veut que je la rappelle jeudi.", "jeu": "smug hands-on-hips"},
+    {"qui": "I", "texte": "Tu vois ? Prochain appel après ton café {lieu}.", "jeu": "neutral hold-out"},
+    {"qui": "G", "texte": "Le prochain ? Il y en a d'autres ?", "jeu": "shocked recoil", "sfx": "record-scratch"},
+    {"qui": "I", "texte": "Toute une liste, Gérard. C'est le métier.", "jeu": "deadpan hands-on-hips"}
+   ]},
+  {"id": "N01", "theme": "telephone", "titre": "Prendre des nouvelles", "formule": "situation", "decor": "attente", "interlocuteur": {"personnage": "bernard"}, "telephone": true, "retournement": 5,
+   "repliques": [
+    {"qui": "I", "texte": "Allô ? C'est encore pour me vendre quelque chose ?", "jeu": "annoyed hold-phone", "sfx": "sonnerie"},
+    {"qui": "G", "texte": "Bonjour {nom}. Non, je prends juste de vos nouvelles.", "jeu": "happy hold-phone"},
+    {"qui": "I", "texte": "Mes nouvelles ? Mon genou, ma voisine, et ce temps.", "jeu": "skeptical arms-crossed"},
+    {"qui": "G", "texte": "Je vous écoute. Prenez votre temps.", "jeu": "neutral idle"},
+    {"qui": "I", "texte": "Le genou, d'abord. Ça a commencé lundi.", "jeu": "sad slump", "sfx": "clock-tick"},
+    {"qui": "I", "texte": "Vous êtes le seul qui m'écoute. Vous vendez quoi ?", "jeu": "thinking point", "sfx": "ding"},
+    {"qui": "G", "texte": "Des sites web. Mais finissez l'histoire du genou.", "jeu": "happy hold-out"}
+   ]},
+  {"id": "N02", "theme": "telephone", "titre": "En direct", "formule": "contre-pied", "decor": "commerces", "interlocuteur": {"personnage": "jade"}, "telephone": true, "retournement": 5,
+   "repliques": [
+    {"qui": "I", "texte": "Attends, je te mets en direct. Dis bonjour !", "jeu": "happy hold-phone", "sfx": "camera-shutter"},
+    {"qui": "G", "texte": "En direct ? Je voulais juste parler de votre site.", "jeu": "shocked recoil"},
+    {"qui": "I", "texte": "Mon site, c'est mon téléphone. Tout est ici.", "jeu": "smug hold-phone"},
+    {"qui": "G", "texte": "Et si quelqu'un cherche votre nom, {nom} ?", "jeu": "thinking think"},
+    {"qui": "I", "texte": "Il me trouve. Je suis partout.", "jeu": "happy arms-up"},
+    {"qui": "G", "texte": "Partout ? Alors pourquoi je vous ai cherchée une heure ?", "jeu": "skeptical point", "sfx": "record-scratch"},
+    {"qui": "I", "texte": "…Le direct est coupé. On reparle de ce site ?", "jeu": "embarrassed shrug"}
+   ]},
+  {"id": "N03", "theme": "telephone", "titre": "Appeler son banquier", "formule": "contre-pied", "decor": "agence", "interlocuteur": {"personnage": "vasseur"}, "telephone": true, "retournement": 4,
+   "repliques": [
+    {"qui": "G", "texte": "Bonjour {nom}, c'est Gérard. Vous avez une minute ?", "jeu": "happy hold-phone", "sfx": "sonnerie"},
+    {"qui": "I", "texte": "Pour vous, toujours. Vous voulez parler de votre compte ?", "jeu": "neutral hold-phone"},
+    {"qui": "G", "texte": "Non. Je voulais vous proposer un site pour l'agence.", "jeu": "smug point"},
+    {"qui": "I", "texte": "Vous appelez votre banquier… pour lui vendre quelque chose ?", "jeu": "shocked recoil"},
+    {"qui": "G", "texte": "Vous m'appelez bien pour me vendre des assurances.", "jeu": "deadpan arms-crossed", "sfx": "rimshot"},
+    {"qui": "I", "texte": "…Touché. Envoyez-moi votre proposition par écrit.", "jeu": "embarrassed hold-up"},
+    {"qui": "G", "texte": "Avec plaisir. Et pour les assurances, c'est non.", "jeu": "happy wave"}
+   ]},
+  {"id": "N04", "theme": "telephone", "titre": "Le prospect d'en face", "formule": "situation", "decor": "commerces", "interlocuteur": {"personnage": "dede"}, "telephone": false, "retournement": 5,
+   "repliques": [
+    {"qui": "I", "texte": "Gérard ! Tu fais quoi, au téléphone, dans la rue ?", "jeu": "confused shrug"},
+    {"qui": "G", "texte": "Chut, {nom}. J'appelle un {metier}. Ça sonne.", "jeu": "annoyed hold-phone", "sfx": "sonnerie"},
+    {"qui": "I", "texte": "Un {metier} ? Le mien est juste là, en face.", "jeu": "happy point"},
+    {"qui": "G", "texte": "Pas le temps. Je prospecte, c'est sérieux.", "jeu": "smug hold-up"},
+    {"qui": "I", "texte": "Il te fait coucou. Il tient son téléphone.", "jeu": "happy wave"},
+    {"qui": "G", "texte": "…C'est lui que j'appelle ?", "jeu": "shocked recoil", "sfx": "record-scratch"},
+    {"qui": "I", "texte": "Il décroche. Et il te regarde.", "jeu": "deadpan idle"},
+    {"qui": "G", "texte": "Bonjour ! Gérard, au téléphone. C'est plus professionnel.", "jeu": "embarrassed hold-phone"}
+   ]},
+  {"id": "N05", "theme": "telephone", "titre": "La comptable ne devine pas", "formule": "question", "decor": "attente", "interlocuteur": {"personnage": "roux"}, "telephone": true, "retournement": 7,
+   "repliques": [
+    {"qui": "G", "texte": "{nom}, c'est Gérard. Une question rapide ?", "jeu": "happy hold-phone", "sfx": "sonnerie"},
+    {"qui": "I", "texte": "Rapide. Allez.", "jeu": "deadpan hold-phone"},
+    {"qui": "G", "texte": "Si j'appelle plus de prospects, ça change quoi ?", "jeu": "thinking think"},
+    {"qui": "I", "texte": "Ça change vos journées.", "jeu": "neutral idle"},
+    {"qui": "G", "texte": "Et à la fin du mois ?", "jeu": "smug lean-in"},
+    {"qui": "I", "texte": "Je ne devine pas l'avenir par téléphone.", "jeu": "skeptical arms-crossed"},
+    {"qui": "G", "texte": "Vous êtes comptable ou voyante ?", "jeu": "confused shrug"},
+    {"qui": "I", "texte": "Comptable. C'est pour ça que je ne devine pas.", "jeu": "deadpan point", "sfx": "rimshot"}
+   ]},
+  {"id": "N06", "theme": "telephone", "titre": "La cliente pressée", "formule": "situation", "decor": "terrasse", "interlocuteur": {"personnage": "sophie"}, "telephone": true, "retournement": 7,
+   "repliques": [
+    {"qui": "G", "texte": "{nom} ? Gérard. Je m'entraîne à appeler. Tu joues le jeu ?", "jeu": "happy hold-phone", "sfx": "sonnerie"},
+    {"qui": "I", "texte": "D'accord. Je suis une cliente pressée, {lieu}.", "jeu": "happy hold-phone"},
+    {"qui": "G", "texte": "Bonjour madame ! Vous avez un instant ?", "jeu": "happy point"},
+    {"qui": "I", "texte": "Non. Je paie. Rappelez plus tard.", "jeu": "annoyed hold-up"},
+    {"qui": "G", "texte": "Parfait. Je vous rappelle quand ?", "jeu": "neutral think"},
+    {"qui": "I", "texte": "…Personne ne demande jamais ça. Demain matin ?", "jeu": "thinking think"},
+    {"qui": "G", "texte": "Noté. Sophie, tu fais une cliente très crédible.", "jeu": "smug thumbs-up"},
+    {"qui": "I", "texte": "Je ne jouais pas. Je suis vraiment {lieu}.", "jeu": "deadpan facepalm", "sfx": "register"}
+   ]},
+  {"id": "N07", "theme": "lecon", "titre": "Appeler debout", "formule": "ordre", "decor": "attente", "interlocuteur": {"personnage": "nadia"}, "telephone": false, "retournement": 7,
+   "repliques": [
+    {"qui": "I", "texte": "Gérard, lève-toi quand tu appelles.", "jeu": "neutral point"},
+    {"qui": "G", "texte": "Debout ? Je suis très bien assis.", "jeu": "skeptical arms-crossed"},
+    {"qui": "I", "texte": "Debout, ta voix a plus d'énergie. Essaie.", "jeu": "happy hold-out"},
+    {"qui": "G", "texte": "Bonjour ! Gérard à l'appareil !", "jeu": "happy arms-up", "sfx": "pop"},
+    {"qui": "I", "texte": "Tu entends ? Ça réveille.", "jeu": "smug hands-on-hips"},
+    {"qui": "G", "texte": "Ça réveille surtout mon dos, {nom}.", "jeu": "sad slump"},
+    {"qui": "I", "texte": "Alors marche un peu pendant l'appel.", "jeu": "neutral idle"},
+    {"qui": "G", "texte": "Je vais faire le tour de ma {objet}.", "jeu": "deadpan shrug", "sfx": "rimshot"}
+   ]},
+  {"id": "N08", "theme": "lecon", "titre": "Les questions ouvertes", "formule": "contre-pied", "decor": "atelier", "interlocuteur": {"personnage": "lucas"}, "telephone": false, "retournement": 7,
+   "repliques": [
+    {"qui": "I", "texte": "Gérard, tes questions finissent toutes par un non.", "jeu": "skeptical point"},
+    {"qui": "G", "texte": "Parce qu'ils disent non. C'est leur faute.", "jeu": "annoyed arms-crossed"},
+    {"qui": "I", "texte": "Tu demandes : « Vous voulez un site ? »", "jeu": "deadpan idle"},
+    {"qui": "G", "texte": "C'est clair, net, précis.", "jeu": "smug hands-on-hips"},
+    {"qui": "I", "texte": "Demande plutôt : comment vos clients vous trouvent-ils ?", "jeu": "thinking hold-out"},
+    {"qui": "G", "texte": "Et s'ils répondent « je ne sais pas » ?", "jeu": "confused shrug"},
+    {"qui": "I", "texte": "Alors tu viens de trouver ton sujet.", "jeu": "happy point", "sfx": "ding-idea"},
+    {"qui": "G", "texte": "{nom}, depuis quand le stagiaire m'apprend le métier ?", "jeu": "embarrassed facepalm"}
+   ]},
+  {"id": "N09", "theme": "lecon", "titre": "Reformuler", "formule": "objection", "decor": "boutique", "interlocuteur": {"personnage": "lefort"}, "telephone": true, "retournement": 5,
+   "repliques": [
+    {"qui": "I", "texte": "Je n'ai pas le temps de m'occuper d'un site.", "jeu": "annoyed hold-phone", "sfx": "sonnerie"},
+    {"qui": "G", "texte": "Si je comprends bien, le temps vous manque ?", "jeu": "thinking hold-phone"},
+    {"qui": "I", "texte": "Exactement. La boutique, les commandes, les livraisons…", "jeu": "worried hands-on-hips"},
+    {"qui": "G", "texte": "Et si quelqu'un s'occupait de tout, à votre place ?", "jeu": "smug point"},
+    {"qui": "I", "texte": "Là, vous m'intéressez. Pourquoi ne pas commencer par ça ?", "jeu": "happy point", "sfx": "ding"},
+    {"qui": "G", "texte": "Parce que je l'ai lu sur ma {objet}.", "jeu": "embarrassed hold-up"}
+   ]},
+  {"id": "N10", "theme": "lecon", "titre": "Une prochaine étape", "formule": "question", "decor": "terrasse", "interlocuteur": {"personnage": "claire"}, "telephone": false, "retournement": 7,
+   "repliques": [
+    {"qui": "I", "texte": "Ton appel s'est bien passé ?", "jeu": "happy point"},
+    {"qui": "G", "texte": "Très bien ! On a parlé de tout. Une heure.", "jeu": "happy arms-up"},
+    {"qui": "I", "texte": "Et la suite, c'est quoi ?", "jeu": "thinking think"},
+    {"qui": "G", "texte": "La suite ? On s'est dit au revoir.", "jeu": "confused shrug"},
+    {"qui": "I", "texte": "Un bon appel finit par une prochaine étape.", "jeu": "neutral hold-out"},
+    {"qui": "G", "texte": "Une prochaine étape… comme un autre café ?", "jeu": "happy hold-up"},
+    {"qui": "I", "texte": "Comme un rendez-vous, avec une date et une heure.", "jeu": "deadpan arms-crossed"},
+    {"qui": "G", "texte": "Je rappelle le {metier}. Il s'appelait comment, déjà ?", "jeu": "embarrassed think", "sfx": "rimshot"}
+   ]},
+  {"id": "N11", "theme": "lecon", "titre": "Le silence du banquier", "formule": "question", "decor": "agence", "interlocuteur": {"personnage": "vasseur"}, "telephone": false, "retournement": 7,
+   "repliques": [
+    {"qui": "G", "texte": "{nom}, comment vous faites pour rassurer tout le monde ?", "jeu": "thinking point"},
+    {"qui": "I", "texte": "Je parle lentement. Et je laisse des silences.", "jeu": "neutral idle"},
+    {"qui": "G", "texte": "Des silences ? Au téléphone, ça fait peur.", "jeu": "worried hold-chest"},
+    {"qui": "I", "texte": "Le silence laisse le client réfléchir. Et répondre.", "jeu": "neutral hold-out"},
+    {"qui": "G", "texte": "Et s'il ne répond pas ?", "jeu": "confused shrug"},
+    {"qui": "I", "texte": "Alors vous attendez. C'est lui qui doit parler.", "jeu": "deadpan arms-crossed"},
+    {"qui": "G", "texte": "Et pendant que j'attends, je fais quoi ?", "jeu": "worried think"},
+    {"qui": "I", "texte": "Rien. Vous voyez ? Vous venez de parler.", "jeu": "smug point", "sfx": "ding"}
+   ]},
+  {"id": "N12", "theme": "lecon", "titre": "Retenir le prénom", "formule": "question", "decor": "commerces", "interlocuteur": {"personnage": "dede"}, "telephone": false, "retournement": 5,
+   "repliques": [
+    {"qui": "I", "texte": "Tu retiens le prénom de tes prospects ?", "jeu": "thinking point"},
+    {"qui": "G", "texte": "Non. Je dis « monsieur » ou « madame ». C'est poli.", "jeu": "smug hands-on-hips"},
+    {"qui": "I", "texte": "Un prénom, ça montre que tu écoutes.", "jeu": "neutral hold-out"},
+    {"qui": "G", "texte": "Et si je l'oublie pendant l'appel ?", "jeu": "worried think"},
+    {"qui": "I", "texte": "Tu l'écris tout de suite. Sur un papier.", "jeu": "happy point"},
+    {"qui": "G", "texte": "Bonne idée. Au fait… tu t'appelles comment, déjà ?", "jeu": "confused shrug", "sfx": "record-scratch"},
+    {"qui": "I", "texte": "{nom}. Ton voisin. Depuis toujours.", "jeu": "deadpan facepalm"}
+   ]},
+  {"id": "N13", "theme": "entrepreneuriat", "titre": "Le compte pro", "formule": "situation", "decor": "agence", "interlocuteur": {"personnage": "vasseur"}, "telephone": false, "retournement": 7,
+   "repliques": [
+    {"qui": "G", "texte": "Bonjour {nom}. Je viens ouvrir un compte pro.", "jeu": "happy wave"},
+    {"qui": "I", "texte": "Très bien. Vous avez un site, une adresse en ligne ?", "jeu": "neutral idle"},
+    {"qui": "G", "texte": "Non. Mais j'ai une très belle {objet}.", "jeu": "smug hold-up"},
+    {"qui": "I", "texte": "Je ne peux pas l'ajouter au dossier.", "jeu": "deadpan arms-crossed"},
+    {"qui": "G", "texte": "Les gens du coin me connaissent, ça suffit.", "jeu": "smug hands-on-hips"},
+    {"qui": "I", "texte": "Et ceux qui ne vous connaissent pas encore ?", "jeu": "thinking think"},
+    {"qui": "G", "texte": "Ils me connaîtront quand ils m'auront trouvé.", "jeu": "happy point"},
+    {"qui": "I", "texte": "Trouvé où, exactement ?", "jeu": "skeptical lean-in", "sfx": "crickets"}
+   ]},
+  {"id": "N14", "theme": "entrepreneuriat", "titre": "La vitrine vide", "formule": "question", "decor": "commerces", "interlocuteur": {"personnage": "lucas"}, "telephone": false, "retournement": 4,
+   "repliques": [
+    {"qui": "I", "texte": "Gérard, pourquoi il n'y a rien sur la vitrine ?", "jeu": "confused point"},
+    {"qui": "G", "texte": "Parce que les gens savent ce que je fais.", "jeu": "smug arms-crossed"},
+    {"qui": "I", "texte": "Moi, je travaille ici et je ne sais pas.", "jeu": "thinking shrug"},
+    {"qui": "G", "texte": "{nom}, tu es stagiaire. Tu n'as pas besoin de savoir.", "jeu": "annoyed hold-up"},
+    {"qui": "I", "texte": "Les passants non plus, apparemment.", "jeu": "deadpan point", "sfx": "thud"},
+    {"qui": "G", "texte": "Bon. On écrit quoi, alors ?", "jeu": "embarrassed shrug"},
+    {"qui": "I", "texte": "Ce que tu fais. Et où te joindre.", "jeu": "happy hold-out"}
+   ]},
+  {"id": "N15", "theme": "quotidien", "titre": "Le café en photo", "formule": "situation", "decor": "terrasse", "interlocuteur": {"personnage": "jade"}, "telephone": false, "retournement": 5,
+   "repliques": [
+    {"qui": "I", "texte": "Gérard ! Ne bouge pas, je prends ton café en photo.", "jeu": "happy hold-phone", "sfx": "camera-shutter"},
+    {"qui": "G", "texte": "Pourquoi ? C'est un café normal.", "jeu": "confused shrug"},
+    {"qui": "I", "texte": "Rien n'est normal sur internet. Tout est un contenu.", "jeu": "smug hold-phone"},
+    {"qui": "G", "texte": "Alors photographie aussi ma {objet}. Elle le mérite.", "jeu": "happy point"},
+    {"qui": "I", "texte": "Tu as apporté ta {objet} au café ?", "jeu": "shocked recoil"},
+    {"qui": "G", "texte": "Je travaille partout. Comme toi, mais sans filtre.", "jeu": "deadpan arms-crossed", "sfx": "rimshot"},
+    {"qui": "I", "texte": "…Ça, c'est un bon titre. Je te le prends.", "jeu": "thinking hold-phone"}
+   ]},
+  {"id": "N16", "theme": "quotidien", "titre": "La salle d'attente", "formule": "situation", "decor": "attente", "interlocuteur": {"personnage": "bernard"}, "telephone": false, "retournement": 6,
+   "repliques": [
+    {"qui": "I", "texte": "Ça fait une heure que j'attends. C'est inadmissible.", "jeu": "angry hands-on-hips", "sfx": "clock-tick"},
+    {"qui": "G", "texte": "Moi aussi, {nom}. On est dans le même bateau.", "jeu": "neutral shrug"},
+    {"qui": "I", "texte": "Vous, vous avez l'air content d'attendre.", "jeu": "skeptical arms-crossed"},
+    {"qui": "G", "texte": "J'en profite pour passer mes appels. Je prospecte.", "jeu": "happy hold-phone"},
+    {"qui": "I", "texte": "Ici ? Et ça marche ?", "jeu": "confused think"},
+    {"qui": "G", "texte": "Vous êtes mon prochain prospect.", "jeu": "smug point"},
+    {"qui": "I", "texte": "Je suis déjà votre client, Gérard ! Depuis toujours !", "jeu": "angry arms-up", "sfx": "thud"}
+   ]}
+ ]
+}

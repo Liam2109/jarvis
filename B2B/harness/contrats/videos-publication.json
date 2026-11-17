@@ -31,7 +31,7 @@
   "taper un mot de passe, demander un code ou une clé, en stocker un",
   "continuer ou contourner après un captcha, une demande de connexion ou de vérification, une interface inattendue ou un échec (arrêt + alerte, rien d'autre ce jour-là sur la ligne)",
   "liker, s'abonner, commenter ou envoyer un message",
-  "publier sans l'étiquette « contenu généré par IA »",
+  "publier sans l'étiquette « contenu généré par IA » cochée et vérifiée juste avant de valider (échec = rien publié, alerte Discord, vidéo mise à part)",
   "publier plus de 3 vidéos par jour et par compte, hors des heures prévues, ou deux à la fois",
   "publier sur une ligne sans son « go publier » ni sans essai réussi",
   "publier si Videos/STOP ou B2B/STOP existe",

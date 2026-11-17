@@ -7,14 +7,25 @@ dans les listes écrites à la main ; le code refuse toute autre valeur et revie
 Le code vérifie le schéma (6 à 8 répliques, 10 mots au plus par réplique même avec la valeur la plus longue, retournement, champs connus, jeu et
 bruitages du catalogue), les interdits (revenus chiffrés, faux témoignages, statistiques, promesse de gains, chiffres, numéro privé…), et ne rejoue
 jamais un sketch des 20 dernières vidéos de la ligne B. Répartition : 40 % comédie de Gérard au téléphone, 40 % leçons de vente, 20 % entrepreneuriat
-et quotidien. Trois fins tournantes (on recrute des call callers à la commission, formulaire en bio ou DM)."""
-import json, re, sys, unicodedata
+et quotidien. Trois fins tournantes (on recrute des call callers à la commission, formulaire en bio ou DM).
+Troupe et décors (17/11/2026, Videos\\troupe.json) : l'interlocuteur est un personnage récurrent (nommé par le sketch, sinon choisi par le code selon le rôle
+et le genre) ; le code ne reprend jamais le même couple personnage / décor dans les 10 dernières vidéos de la ligne B.
+Mini-séries : un sketch peut porter « serie » {id, titre, episode, episodes} ; une seule série à la fois, une vidéo ordinaire entre deux épisodes, épisodes dans l'ordre.
+Lot hebdomadaire : python Videos\\agents\\sketches.py lot Videos\\idees-nouvelles\\AAAA-MM-JJ.json -> 20 sketches validés comme la banque, ajoutés à
+sketches-base.json ; lot invalide refusé avec le motif (fichier .refus.txt à côté du lot), rien n'est ajouté."""
+import argparse, json, re, sys, unicodedata
+from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import commun as C   # noqa: E402
 
 SKETCHES = C.VIDEOS / "sketches-base.json"
+TROUPE = C.VIDEOS / "troupe.json"
+IDEES = C.VIDEOS / "idees-nouvelles"
+FENETRE_COUPLE = 10       # aucun couple personnage / décor repris dans les 10 dernières vidéos de la ligne B
+LOT_TAILLE = 20
+SERIE_EPISODES = (3, 5)
 MOTS_MAX = 10
 REPLIQUES = (6, 8)
 MOTS_DIALOGUE = (34, 66)   # mots du dialogue (sans la fin) : 25 à 35 s avec la fin, les pauses et la carte de fin
@@ -27,7 +38,8 @@ SFX_MAISON = {"sonnerie"}   # généré par code (monteur.py)
 SFX_CATALOGUE = {"pop", "boing", "whoosh", "swish", "zip", "record-scratch", "boom", "ding", "buzzer", "crickets", "rimshot", "slide-up", "slide-down", "sad-trombone",
                  "thud", "laugh", "sparkle", "ding-idea", "zap", "hum", "blip", "clack", "coins", "register", "stamp", "drawer", "rustle", "clock-tick", "click",
                  "riser-hit", "door-knock", "applause", "camera-shutter"}   # stick-stage, src/data/sfx.json : tous CC0-1.0, synthétisés par code
-DECORS_OK = {"bureau", "cabinet", "boutique", "librairie", "cafe", "café", "cuisine", "salon", "rue", "parc", "reunion", "réunion", "chambre"}
+DECORS_OK = {"bureau", "cabinet", "boutique", "librairie", "cafe", "café", "cuisine", "salon", "rue", "parc", "reunion", "réunion", "chambre",
+             "atelier", "attente", "agence", "commerces", "terrasse"}   # les 6 derniers : décors de jour de la troupe (Videos/stick-stage/decors)
 
 # Garde-fous propres à la ligne B (en plus de ceux de scripts.py : chiffres, promesses, phrases molles, adresses, lieux)
 CTA_OK = [re.compile(r"\bcall callers?\b", re.I), re.compile(r"\bcommission\b", re.I), re.compile(r"\bbio\b", re.I), re.compile(r"\bDM\b")]
@@ -45,6 +57,44 @@ def lire(f=SKETCHES):
 def mots(t): return len(C.mots_de(t))
 
 
+def troupe(f=None):
+    """{id: personnage} de Videos\\troupe.json (Gérard compris)."""
+    try: return {x["id"]: x for x in json.loads(Path(f or TROUPE).read_text(encoding="utf-8"))["personnages"]}
+    except (OSError, ValueError, KeyError): return {}
+
+
+def decors_de(s): return list(s.get("decors") or [s["decor"]])
+
+
+def distribution(s, tr=None):
+    """Personnages qui peuvent jouer l'interlocuteur : celui que le sketch nomme, sinon ceux de la troupe qui tiennent son rôle (et son genre s'il est fixé)."""
+    tr = tr if tr is not None else troupe(); i = s.get("interlocuteur") or {}
+    if i.get("personnage"): return [i["personnage"]] if i["personnage"] in tr else []
+    g = i.get("genre", "libre")
+    return [p for p, x in tr.items() if p != "gerard" and i.get("role") in x.get("roles", []) and (g == "libre" or x["genre"] == g) and nom_tient(s, x["appel"])]
+
+
+def nom_tient(s, appel):
+    """Vrai si chaque réplique garde 10 mots au plus avec cet appel à la place de {nom} (« Madame Lefort » compte deux mots), les autres champs remplis avec
+    leur valeur la plus longue."""
+    try: listes = lire()["listes"]
+    except (OSError, ValueError, KeyError): listes = {}
+    long = {c: max(listes.get(c) or ["X X X"], key=mots) for c in ("metier", "objet", "lieu")} | {"nom": appel}
+    return all(mots(remplir(r["texte"], long)) <= MOTS_MAX for r in s["repliques"] if "{nom}" in r["texte"])
+
+
+def couples_recents(historique, n=FENETRE_COUPLE):
+    return {(h.get("personnage"), h.get("decor")) for h in [h for h in historique if h.get("serie") == "B" and h.get("personnage")][-n:]}
+
+
+def couples(s, historique, tr=None):
+    """(personnage, décor) possibles pour ce sketch, hors des couples des 10 dernières vidéos ; les moins vus récemment d'abord."""
+    vus = couples_recents(historique); b = [h for h in historique if h.get("serie") == "B"]
+    der = lambda k, v: max([i for i, h in enumerate(b) if h.get(k) == v], default=-1)
+    out = [(p, d) for p in distribution(s, tr) for d in decors_de(s) if (p, d) not in vus]
+    return sorted(out, key=lambda x: (der("personnage", x[0]), der("decor", x[1])))
+
+
 def categorie(s): return THEMES.get(s.get("theme"), "autre")
 
 
@@ -52,7 +102,7 @@ def liste_de(base, champ, genre):
     """Valeurs permises d'un champ ; {nom} suit le genre de l'interlocuteur (libre = les deux listes)."""
     l = base["listes"]
     if champ != "nom": return list(l.get(champ) or [])
-    return list(l.get("nom_f") or []) * (genre in ("f", "libre")) + list(l.get("nom_h") or []) * (genre in ("h", "libre"))
+    return list(l.get("nom_f") or []) * (genre in ("f", "libre")) + list(l.get("nom_h") or []) * (genre in ("h", "libre"))   # {nom} : appel du personnage (nom_tient)
 
 
 def champs_de(s): return sorted({c for r in s["repliques"] for c in CHAMP.findall(r["texte"])})
@@ -101,9 +151,20 @@ def verifier_sketch(s, base, conf, S, ids_vus=None):
         if sid in ids_vus: pb.append(f"{sid} : identifiant en double")
         ids_vus.add(sid)
     if s["theme"] not in THEMES: pb.append(f"{sid} : thème inconnu « {s['theme']} »")
-    if str(s["decor"]).lower() not in DECORS_OK: pb.append(f"{sid} : décor inconnu « {s['decor']} »")
-    genre = (s["interlocuteur"] or {}).get("genre")
-    if genre not in ("f", "h", "libre"): pb.append(f"{sid} : genre de l'interlocuteur attendu f, h ou libre")
+    for dd in decors_de(s):
+        if str(dd).lower() not in DECORS_OK: pb.append(f"{sid} : décor inconnu « {dd} »")
+    inter = s["interlocuteur"] or {}; tr = troupe()
+    if inter.get("personnage"):
+        if inter["personnage"] not in tr or inter["personnage"] == "gerard": pb.append(f"{sid} : personnage inconnu de la troupe « {inter['personnage']} »")
+        genre = tr.get(inter["personnage"], {}).get("genre", "libre")
+    else:
+        genre = inter.get("genre")
+        if genre not in ("f", "h", "libre"): pb.append(f"{sid} : genre de l'interlocuteur attendu f, h ou libre")
+        elif tr and not distribution(s, tr): pb.append(f"{sid} : aucun personnage de la troupe ne tient le rôle « {inter.get('role')} »")
+    se = s.get("serie")
+    if se is not None and not (isinstance(se, dict) and se.get("id") and se.get("titre") and isinstance(se.get("episode"), int)
+                               and isinstance(se.get("episodes"), int) and SERIE_EPISODES[0] <= se["episodes"] <= SERIE_EPISODES[1] and 1 <= se["episode"] <= se["episodes"]):
+        pb.append(f"{sid} : série mal décrite (id, titre, episode, episodes de 3 à 5)")
     rs = s["repliques"]
     if not REPLIQUES[0] <= len(rs) <= REPLIQUES[1]: pb.append(f"{sid} : {len(rs)} répliques ({REPLIQUES[0]} à {REPLIQUES[1]} attendues)")
     if {r.get("qui") for r in rs} != {"G", "I"}: pb.append(f"{sid} : Gérard (G) et l'interlocuteur (I) doivent parler tous les deux")
@@ -144,18 +205,53 @@ def verifier_base(base, conf, S):
     cats = [categorie(s) for s in base.get("sketches") or []]
     for c, part in PARTS.items():
         if cats and abs(cats.count(c) / len(cats) - part) > 0.1: pb.append(f"répartition : {cats.count(c)} sketch(es) « {c} » sur {len(cats)} (part visée {int(part * 100)} %)")
+    pb += verifier_series(base.get("sketches") or [])
     return pb
 
 
-def candidates(historique, sketches, fenetre=FENETRE):
-    """Sketches autorisés, dans l'ordre où les jouer : catégorie la plus en retard sur sa part (40/40/20) d'abord, puis jamais joué, puis joué il y a le plus longtemps.
-    Aucun des `fenetre` derniers sketches de la ligne B (liste vide si tous y sont)."""
+def verifier_series(sketches):
+    """Chaque série : de 3 à 5 épisodes numérotés de 1 à N, sans trou ni doublon, même titre."""
+    pb, series = [], {}
+    for s in sketches:
+        if s.get("serie"): series.setdefault(s["serie"]["id"], []).append(s["serie"])
+    for sid, eps in series.items():
+        n = eps[0].get("episodes")
+        if sorted(e.get("episode") for e in eps) != list(range(1, (n or 0) + 1)) or any(e.get("episodes") != n or e.get("titre") != eps[0].get("titre") for e in eps):
+            pb.append(f"série « {sid} » : épisodes attendus 1 à {n}, même titre")
+    return pb
+
+
+def episode_suivant(historique, sketches):
+    """Épisode à jouer maintenant, ou None : une seule série à la fois (la première pas finie, dans l'ordre de la banque), jamais deux épisodes de suite
+    (une vidéo ordinaire entre deux), épisodes dans l'ordre."""
+    b = [h for h in historique if h.get("serie") == "B" and h.get("sketch")]
+    joues = {h["sketch"] for h in b}; par_id = {s["id"]: s for s in sketches}
+    if b and par_id.get(b[-1]["sketch"], {}).get("serie"): return None   # le dernier était un épisode : une vidéo ordinaire d'abord
+    series = []
+    for s in sketches:
+        if s.get("serie") and s["serie"]["id"] not in series: series.append(s["serie"]["id"])
+    for sid in series:
+        eps = sorted((s for s in sketches if (s.get("serie") or {}).get("id") == sid), key=lambda s: s["serie"]["episode"])
+        reste = [s for s in eps if s["id"] not in joues]
+        if reste: return reste[0]
+    return None
+
+
+def candidates(historique, sketches, fenetre=FENETRE, tr=None):
+    """Sketches autorisés, dans l'ordre où les jouer. Épisode de série dû : lui seul (s'il a un couple personnage / décor libre).
+    Sinon les sketches ordinaires : catégorie la plus en retard sur sa part (40/40/20) d'abord, puis jamais joué (lot le plus récent d'abord), puis joué il y a
+    le plus longtemps. Aucun des `fenetre` derniers sketches de la ligne B, aucun sketch sans couple personnage / décor libre (liste vide si aucun)."""
+    ep = episode_suivant(historique, sketches)
+    if ep and couples(ep, historique, tr): return [ep]
+    sketches = [s for s in sketches if not s.get("serie")]
     faits = [h.get("sketch") for h in historique if h.get("serie") == "B" and h.get("sketch")]
     recents = set(faits[-fenetre:]); derniere = {x: i for i, x in enumerate(faits)}
     cat = {s["id"]: categorie(s) for s in sketches}
     vues = [cat.get(x, "autre") for x in faits[-fenetre:]]
     retard = {c: part - (vues.count(c) / len(vues) if vues else 0) for c, part in PARTS.items()}
-    return sorted((s for s in sketches if s["id"] not in recents), key=lambda s: (-retard[categorie(s)], derniere.get(s["id"], -1)))
+    lots = sorted({s.get("lot", "") for s in sketches}, reverse=True); rang = {l: i for i, l in enumerate(lots)}
+    return sorted((s for s in sketches if s["id"] not in recents and couples(s, historique, tr)),
+                  key=lambda s: (-retard[categorie(s)], derniere.get(s["id"], -1), rang[s.get("lot", "")]))
 
 
 def fin_suivante(historique, fins):
@@ -164,59 +260,64 @@ def fin_suivante(historique, fins):
     return i, fins[i]
 
 
-def valeurs_par_defaut(s, base, n):
-    """Choix sans Qwen : valeurs tournantes dans les listes (n = rang de la vidéo), genre libre alterné."""
-    g = s["interlocuteur"]["genre"]; genre = g if g in ("f", "h") else ("f" if n % 2 == 0 else "h")
-    return {c: (lambda l: l[(n * 3 + len(c)) % len(l)])(liste_de(base, c, genre)) for c in champs_de(s)}, genre
+def valeurs_par_defaut(s, base, n, genre="h"):
+    """Choix sans Qwen : valeurs tournantes dans les listes (n = rang de la vidéo) ; {nom} est rempli ensuite avec l'appel du personnage joué."""
+    return {c: (lambda l: l[(n * 3 + len(c)) % len(l)])(liste_de(base, c, genre)) for c in champs_de(s) if c != "nom"}
 
 
 def _norm(t): return unicodedata.normalize("NFC", str(t or "")).strip()
 
 
-def valeurs_valides(s, base, valeurs, genre):
-    """Vrai si Qwen a rempli chaque champ du sketch avec une valeur EXACTE des listes (le prénom suit le genre)."""
-    g0 = s["interlocuteur"]["genre"]
-    if genre not in ("f", "h") or (g0 in ("f", "h") and genre != g0): return False
-    return all(_norm(valeurs.get(c)) in map(_norm, liste_de(base, c, genre)) for c in champs_de(s))
+def valeurs_valides(s, base, valeurs):
+    """Vrai si Qwen a rempli chaque champ du sketch (sauf {nom}, donné par le personnage joué) avec une valeur EXACTE des listes."""
+    return all(_norm(valeurs.get(c)) in map(_norm, liste_de(base, c, "libre")) for c in champs_de(s) if c != "nom")
 
 
 SYSTEME = ("Tu choisis un sketch dans une liste et tu remplis ses champs avec des valeurs prises EXACTEMENT dans les listes données. "
            "Tu n'écris aucune phrase. Réponds uniquement avec un objet JSON valide.")
 
 
+def distribuer(s, historique, vals, tr=None):
+    """Couple personnage / décor du code (le moins vu récemment, jamais un des 10 derniers) ; {nom} = appel du personnage. -> (vals, personnage, décor)"""
+    tr = tr if tr is not None else troupe(); p, d = couples(s, historique, tr)[0]
+    if "nom" in champs_de(s): vals = dict(vals, nom=tr[p]["appel"])
+    return vals, p, d
+
+
 def choisir(ollama, historique, base, n=None):
-    """-> (sketch, valeurs, genre, origine « qwen » | « code »). Qwen choisit parmi les 3 premiers sketches autorisés ; réponse hors listes = choix du code."""
-    cands = candidates(historique, base["sketches"])[:3]
-    if not cands: return None, {}, "", ""
+    """-> (sketch, valeurs, personnage, décor, origine « qwen » | « code »). Qwen choisit parmi les 3 premiers sketches autorisés et remplit les champs
+    (sauf {nom}) ; réponse hors listes = choix du code. Le personnage et le décor sont toujours choisis par le code."""
+    tr = troupe(); cands = candidates(historique, base["sketches"], tr=tr)[:3]
+    if not cands: return None, {}, "", "", ""
     n = sum(1 for h in historique if h.get("serie") == "B") if n is None else n
-    if ollama is not None:
-        offre = [{"id": s["id"], "titre": s["titre"], "champs": champs_de(s), "genre_interlocuteur": s["interlocuteur"]["genre"]} for s in cands]
-        listes = {k: v for k, v in base["listes"].items()}
+    if ollama is not None and len(cands) > 1 or (ollama is not None and [c for c in champs_de(cands[0]) if c != "nom"]):
+        offre = [{"id": s["id"], "titre": s["titre"], "champs": [c for c in champs_de(s) if c != "nom"]} for s in cands]
+        listes = {k: v for k, v in base["listes"].items() if k in ("metier", "objet", "lieu")}
         demande = (f"Sketches possibles : {json.dumps(offre, ensure_ascii=False)}\nListes : {json.dumps(listes, ensure_ascii=False)}\n"
-                   "Choisis un sketch. Pour chacun de ses champs, prends une valeur dans la liste du même nom (pour « nom » : nom_f si genre f, nom_h si genre h). "
-                   "Si genre_interlocuteur vaut libre, choisis f ou h. "
-                   'Format : {"sketch": "T01", "genre": "f", "valeurs": {"metier": "...", "nom": "..."}}')
+                   "Choisis un sketch. Pour chacun de ses champs, prends une valeur dans la liste du même nom. "
+                   'Format : {"sketch": "T01", "valeurs": {"metier": "..."}}')
         try:
             r = json.loads(ollama.chat(SYSTEME, demande, temperature=0.8, num_predict=200))
             s = next((x for x in cands if x["id"] == str(r.get("sketch", "")).strip()), None)
-            vals = {k: _norm(v) for k, v in (r.get("valeurs") or {}).items() if k in CHAMPS}
-            genre = s["interlocuteur"]["genre"] if s and s["interlocuteur"]["genre"] in ("f", "h") else str(r.get("genre", "")).strip().lower()[:1]
-            if s and valeurs_valides(s, base, vals, genre): return s, {c: vals[c] for c in champs_de(s)}, genre, "qwen"
+            vals = {k: _norm(v) for k, v in (r.get("valeurs") or {}).items() if k in CHAMPS and k != "nom"}
+            if s and valeurs_valides(s, base, vals):
+                v, p, d = distribuer(s, historique, {c: vals[c] for c in champs_de(s) if c != "nom"}, tr); return s, v, p, d, "qwen"
         except Exception: pass
-    s = cands[0]; vals, genre = valeurs_par_defaut(s, base, n)
-    return s, vals, genre, "code"
+    s = cands[0]; v, p, d = distribuer(s, historique, valeurs_par_defaut(s, base, n), tr)
+    return s, v, p, d, "code"
 
 
-def document(s, valeurs, genre, i_fin, fin, conf, jour, heure, origine):
-    """Script de la vidéo : répliques (champs remplis) + fin de Gérard face caméra ; qui parle, jeu, bruitages, retournement, décor."""
+def document(s, valeurs, personnage, decor, i_fin, fin, conf, jour, heure, origine):
+    """Script de la vidéo : répliques (champs remplis) + fin de Gérard face caméra ; qui parle, jeu, bruitages, retournement, personnage, décor, série."""
     rs = s["repliques"]; lignes = [remplir(r["texte"], valeurs) for r in rs]
-    nom = valeurs.get("nom", "")
+    tr = troupe(); pers = tr.get(personnage, {}); genre = pers.get("genre", "h"); se = s.get("serie")
+    titre_ecran = f"{se['titre']} · épisode {se['episode']}/{se['episodes']}" if se else s["titre"]
     leg = (f"{s['titre']}\n\nUn sketch de Gérard. On recrute des call callers à la commission : formulaire en bio, ou envoie un DM.\n\n{C.MENTION_IA}\n\n"
            + (conf["lignes"]["B"].get("hashtags") or "#callcaller #humour #prospection"))
     return {"jour": jour, "passage": heure, "serie": "B", "format": "sketch", "sketch": s["id"], "histoire": s["id"], "theme": s["theme"], "categorie": categorie(s),
-            "formule": s["formule"], "decor": s["decor"], "variante": origine, "valeurs": valeurs,
-            "interlocuteur": {"role": s["interlocuteur"]["role"], "genre": genre, "nom": nom},
-            "telephone": bool(s.get("telephone")), "fin_variante": f"FIN{i_fin + 1}", "style": "classic", "sujet": s["titre"], "titre": s["titre"], "accroche": lignes[0],
+            "formule": s["formule"], "decor": decor, "variante": origine, "valeurs": valeurs, "titre_ecran": titre_ecran, "serie_sketch": se,
+            "interlocuteur": {"personnage": personnage, "role": pers.get("role", (s.get("interlocuteur") or {}).get("role", "")), "genre": genre, "nom": pers.get("appel", "")},
+            "telephone": bool(s.get("telephone")), "fin_variante": f"FIN{i_fin + 1}", "style": "classic", "sujet": s["titre"], "titre": titre_ecran, "accroche": lignes[0],
             "scenes": lignes + list(fin), "qui": [r["qui"] for r in rs] + ["G", "G"],
             "jeu": [r.get("jeu", "").split(" ") if r.get("jeu") else None for r in rs] + [["happy", "point"], ["happy", "wave"]],
             "sfx": [r.get("sfx") for r in rs] + ["pop", None], "punchline": s["retournement"], "fin_indices": [len(rs), len(rs) + 1], "legende": leg,
@@ -242,3 +343,58 @@ def textes_recents(dossier, n=FENETRE):
         except (OSError, ValueError): continue
         if isinstance(d, dict) and d.get("serie") == "B": docs.append(" ".join(d.get("scenes", [])[:-2]))
     return docs[-n:]
+
+
+# --- Lot hebdomadaire de sketches -------------------------------------------------------------------------------------------------
+def verifier_lot(lot, base, conf, S):
+    """Problèmes d'un lot (vide = accepté) : 20 sketches, mêmes validations que la banque, identifiants nouveaux, répartition 8 / 8 / 4 (à un près),
+    séries complètes et nouvelles (une série n'est jamais à cheval sur deux lots)."""
+    sk = lot.get("sketches") if isinstance(lot, dict) else None
+    if not isinstance(sk, list): return ["format : objet JSON {\"sketches\": [...]} attendu"]
+    pb = [] if len(sk) == LOT_TAILLE else [f"{len(sk)} sketches ({LOT_TAILLE} attendus)"]
+    banque, vus = {s["id"] for s in base["sketches"]}, set()
+    for s in sk:
+        if not isinstance(s, dict): pb.append("un sketch n'est pas un objet JSON"); continue
+        if s.get("id") in banque: pb.append(f"{s.get('id')} : identifiant déjà dans la banque")
+        pb += verifier_sketch(s, base, conf, S, vus)
+    if pb: return pb
+    cats = [categorie(s) for s in sk]
+    for c, part in PARTS.items():
+        if abs(cats.count(c) - part * len(sk)) > 1: pb.append(f"répartition : {cats.count(c)} sketch(es) « {c} » ({int(part * len(sk))} attendus, à un près)")
+    anciennes = {s["serie"]["id"] for s in base["sketches"] if s.get("serie")}
+    pb += [f"série « {s['serie']['id']} » déjà dans la banque" for s in sk if s.get("serie") and s["serie"]["id"] in anciennes]
+    return pb + verifier_series(sk)
+
+
+def ajouter_lot(fichier, conf, S, base_f=SKETCHES):
+    """Valide le lot et l'ajoute à la banque (chaque sketch marqué « lot » = date du fichier). -> (True, nombre) ou (False, motifs). Lot refusé : .refus.txt."""
+    fichier = Path(fichier); base = lire(base_f)
+    try: lot = json.loads(fichier.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e: motifs = [f"lot illisible ({type(e).__name__})"]
+    else: motifs = verifier_lot(lot, base, conf, S)
+    if motifs:
+        fichier.with_suffix(".refus.txt").write_text(f"Lot refusé le {datetime.now():%Y-%m-%d %H:%M} :\n" + "\n".join(f"- {m}" for m in motifs) + "\n", encoding="utf-8")
+        return False, motifs
+    for s in lot["sketches"]: base["sketches"].append(dict(s, lot=fichier.stem))
+    pb = verifier_base(base, conf, S)
+    if pb: return False, [f"banque refusée après ajout : {x}" for x in pb]
+    tmp = Path(base_f).with_suffix(".tmp"); tmp.write_text(json.dumps(base, ensure_ascii=False, indent=1) + "\n", encoding="utf-8"); tmp.replace(base_f)
+    fichier.with_suffix(".refus.txt").unlink(missing_ok=True)
+    C.journal("videos-scripts", "lot de sketches", f"{fichier.name} : {len(lot['sketches'])} sketches ajoutés à la banque")
+    return True, len(lot["sketches"])
+
+
+def main(argv=None):
+    a = argparse.ArgumentParser(prog="sketches"); sp = a.add_subparsers(dest="cmd", required=True)
+    sp.add_parser("lot").add_argument("fichier", help="Videos\\idees-nouvelles\\AAAA-MM-JJ.json")
+    sp.add_parser("verifier")
+    a = a.parse_args(argv)
+    import scripts as S
+    if a.cmd == "verifier":
+        pb = verifier_base(lire(), C.cfg(), S); print("Banque de sketches : " + ("valide" if not pb else "; ".join(pb))); return 1 if pb else 0
+    ok, r = ajouter_lot(a.fichier, C.cfg(), S)
+    print(f"Nouveau lot de sketches : {r} sketches ajoutés à la banque." if ok else "Lot refusé :\n" + "\n".join(f"- {m}" for m in r)); return 0 if ok else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

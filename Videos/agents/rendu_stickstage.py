@@ -20,6 +20,8 @@ TSX = OUTIL / "node_modules" / "tsx" / "dist" / "cli.mjs"
 DECORS = {"bureau": "office-1", "cabinet": "office-1", "boutique": "bookshop-morning", "librairie": "bookshop-morning", "cafe": "cafe-1", "café": "cafe-1",
           "cuisine": "kitchen-1", "salon": "living-1", "rue": "street-1", "parc": "park-1", "reunion": "meeting-1", "réunion": "meeting-1", "chambre": "bedroom-1",
           "salle": "classroom-1"}
+try: DECORS.update(json.loads((C.VIDEOS / "troupe.json").read_text(encoding="utf-8"))["decors"])   # décors de jour de la troupe (boutique, atelier, attente…)
+except (OSError, ValueError, KeyError): pass
 ASSIS = {"office-1"}   # décors avec un siège sous la marque de gauche : Gérard y est assis au départ
 EXPRESSIONS = set("neutral happy smug sarcastic annoyed angry shocked sad crying cringe confused deadpan skeptical worried embarrassed thinking laughing".split())
 POSES = set("idle point shrug facepalm arms-up arms-crossed think lean-in recoil slump hands-on-hips hold-phone hold-out hold-chest hold-up high-five shove faint wave thumbs-up".split())
@@ -76,24 +78,27 @@ PAUSE_SONNERIE_MS = 1400   # silence avant une réplique qui suit une sonnerie (
 PLAN_LONG_S = 2.8   # une réplique plus longue : plan moyen + zoom bref au milieu (jamais plus de 3 s sans changement d'image)
 
 
-def plan_de(i, qui, duree_s, n_fin, avant=None):
+def plan_de(i, qui, duree_s, n_fin, avant=None, pause_s=0):
     """Cadrage imposé d'une réplique : plan à deux pour la 1re, puis gros plan / plan moyen sur celui qui parle (plan à deux toutes les 4 répliques) ;
     jamais le même cadrage que la réplique précédente (`avant`), donc une coupe à chaque réplique ; réplique longue : zoom bref au milieu.
     (La chute n'en reçoit pas : le réalisateur y met le gros plan d'émotion puis la réaction.)"""
-    if i == 0: f = {"framing": "two"}
+    if i == 0: f = {"framing": "two"} if pause_s == 0 else {"framing": "medium", "on": qui}   # après une sonnerie : coupe sur celui qui parle (plan à deux pendant la sonnerie)
     elif i % 4 == 0 and i < n_fin: f = {"framing": "two"}
     else: f = {"framing": "close" if i % 2 else "medium", "on": qui}
-    if duree_s > PLAN_LONG_S and f["framing"] == "close": f = {"framing": "medium", "on": qui}
+    if duree_s + pause_s > PLAN_LONG_S and f["framing"] == "close": f = {"framing": "medium", "on": qui}
     if avant and (f["framing"], f.get("on")) == (avant.get("framing"), avant.get("on")):
         f = {"framing": "close" if f["framing"] != "close" else "medium", "on": qui}
-    if duree_s > PLAN_LONG_S: f["punchIn"] = {"on": qui, "at": {"fraction": 0.5}}
+    if duree_s + pause_s > PLAN_LONG_S:   # zoom au milieu du plan réel (silence de la sonnerie compris), jamais au tout début de la réplique
+        fr = max(0.15, min(0.5, ((pause_s + duree_s) / 2 - pause_s) / duree_s)) if duree_s else 0.5
+        f["punchIn"] = {"on": qui, "at": {"fraction": round(fr, 2)}}
     return f
 
 
 def skit_dialogue(doc, decor_id, durees=None):
     """Skit d'un sketch à deux : doc["qui"] (G / I par réplique), doc["jeu"] (expression, geste de celui qui parle), doc["sfx"] (bruitage au début de la réplique),
     doc["fin_indices"] (répliques de fin : Gérard regarde la caméra, gros plan), doc["telephone"] (les deux tiennent un téléphone)."""
-    assis = decor_id in ASSIS; inter = INTERLOCUTEURS.get((doc.get("interlocuteur") or {}).get("genre"), "karim")
+    i = doc.get("interlocuteur") or {}; assis = decor_id in ASSIS
+    inter = i["personnage"] if i.get("personnage") and (PERSONNAGES / f"{i['personnage']}.json").exists() else INTERLOCUTEURS.get(i.get("genre"), "karim")
     qui = {"G": "gerard", "I": "inter"}; jeu = doc.get("jeu") or []; sfx = doc.get("sfx") or []; fin = set(doc.get("fin_indices") or [])
     beats, avant = [], None
     for i, ligne in enumerate(doc["scenes"]):
@@ -108,8 +113,8 @@ def skit_dialogue(doc, decor_id, durees=None):
             actions.insert(0, {"who": "gerard", "do": "look", "to": "camera", "at": {"ms": 0}})
             b["reaction"] = False
         if doc.get("punchline") != i:
-            pause = PAUSE_SONNERIE_MS / 1000 if (sfx[i] if i < len(sfx) else None) == "sonnerie" else 0   # le plan court aussi pendant la sonnerie
-            b["shot"] = plan_de(i, who, (durees or [0] * len(doc["scenes"]))[i] + pause, min(fin) if fin else len(doc["scenes"]), avant)
+            pause = (PAUSE_SONNERIE_MS / 1000 + (0.3 if i == 0 else 0)) if (sfx[i] if i < len(sfx) else None) == "sonnerie" else 0   # le plan court aussi pendant la sonnerie (+ 0,3 s d'ouverture)
+            b["shot"] = plan_de(i, who, (durees or [0] * len(doc["scenes"]))[i], min(fin) if fin else len(doc["scenes"]), avant, pause)
         avant = b.get("shot") or {"framing": "extreme"}   # après la chute : le réalisateur finit sur un très gros plan de réaction
         if actions: b["actions"] = actions
         s = sfx[i] if i < len(sfx) else None
@@ -124,6 +129,15 @@ def skit_dialogue(doc, decor_id, durees=None):
          "set": decor_id, "cast": cast, "overlay": {"subtitles": False}, "beats": beats}
     if doc.get("style") in STYLES: s["style"] = doc["style"]
     return s
+
+
+def installer_decors():
+    """Décors de la troupe (Videos/stick-stage/decors) enregistrés dans stick-stage s'ils manquent (Videos/correctifs/stick-stage-decors.py, idempotent)."""
+    import importlib.util
+    s = importlib.util.spec_from_file_location("stick_stage_decors", C.VIDEOS / "correctifs" / "stick-stage-decors.py")
+    m = importlib.util.module_from_spec(s); s.loader.exec_module(m)
+    _, manquants = m.installer(OUTIL)
+    if manquants: raise RuntimeError(f"décors de la troupe non installés : {'; '.join(manquants)}")
 
 
 def _wav_duree(f):
@@ -162,6 +176,7 @@ def rendre(doc, phrases, dossier_voix, travail, lancer, nom, decor_nom="", retou
     skit_id = f"jarvis-{nom}"; decor_id = decor(decor_nom or doc.get("decor"))
     d = preparer(skit_id, doc, phrases, dossier_voix, decor_id)
     try:
+        installer_decors()
         node = C.executable("node")
         code, sortie = lancer([node, str(TSX), "scripts/prep.ts", skit_id], OUTIL, Path(travail) / "stickstage-prep.log")
         if code != 0: raise RuntimeError(f"préparation stick-stage en échec (code {code}) : {sortie[-300:]}")

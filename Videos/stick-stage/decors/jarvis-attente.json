@@ -1,0 +1,55 @@
+{
+ "schemaVersion": 1,
+ "id": "jarvis-attente",
+ "kit": "interior",
+ "palette": "coast",
+ "description": "Une salle d'attente de jour : canapé, horloge, cadres, porte.",
+ "tags": [
+  "jarvis",
+  "day"
+ ],
+ "groundY": 1480,
+ "figureHeightPx": 720,
+ "layers": [
+  {
+   "part": "wall",
+   "pattern": "stripes"
+  },
+  {
+   "part": "floor"
+  },
+  {
+   "part": "frame",
+   "x": 0.2,
+   "y": 0.22
+  },
+  {
+   "part": "clock",
+   "x": 0.5,
+   "y": 0.13
+  },
+  {
+   "part": "frame",
+   "x": 0.8,
+   "y": 0.22
+  },
+  {
+   "part": "couch",
+   "x": 0.5
+  },
+  {
+   "part": "plant",
+   "x": 0.05
+  },
+  {
+   "part": "door",
+   "x": 0.95
+  }
+ ],
+ "foreground": [],
+ "marks": {
+  "left": 0.27,
+  "center": 0.5,
+  "right": 0.73
+ }
+}

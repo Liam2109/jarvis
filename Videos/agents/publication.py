@@ -8,9 +8,12 @@ Règles codées ici, jamais contournées :
   - Videos\\STOP ou B2B\\STOP présent = aucune publication ;
   - 3 publications par jour et par compte au plus, une par passage, seulement près des heures prévues (+/- 45 min) ; jamais deux publications en même temps (verrou) ;
   - délais aléatoires entre les gestes ; il ne fait que poster (aucun like, abonnement, commentaire ni message) ;
-  - étiquette « contenu généré par IA » activée à chaque publication (introuvable = rien n'est publié) et mention dans la légende ;
+  - étiquette TikTok « contenu généré par IA » cochée à chaque publication et VÉRIFIÉE cochée juste avant de cliquer sur Publier (règle du 17/11/2026 :
+    plus aucun texte IA à l'image) ; case introuvable ou non cochée = rien n'est publié, alerte Discord, vidéo mise à part dans Videos\\a-part avec le motif ;
+    mention dans la légende conservée ;
   - anomalie (captcha, connexion ou vérification demandée, interface inattendue, échec) = ARRÊT de la ligne pour la journée, aucun contournement, journal + alerte Discord ;
-  - mode essai (--essai) : va jusqu'au bouton Publier sans cliquer ; un essai réussi est obligatoire avant le premier vrai envoi d'une ligne ;
+  - mode essai (--essai, le « dry-run ») : va jusqu'au bouton Publier sans cliquer, contrôle la présence de la case « contenu généré par IA », la coche et dit
+    où elle se trouve (section de la page, position à l'écran) ; un essai réussi est obligatoire avant le premier vrai envoi d'une ligne ;
   - chaque publication (et chaque arrêt) est consignée dans Videos\\journal-videos.csv (date, compte, hook, résultat) ; la vidéo passe de a-valider\\ à publiees\\.
 Seule exception au profil serveur « aucun navigateur » : cet agent, et seulement après le go de Liam. Avant le go, il ne fait rien (code 4).
   python Videos\\agents\\publication.py publier [--ligne A|B] [--essai] [--a-blanc]
@@ -41,6 +44,23 @@ ETAT_DEFAUT = {"publications": {}, "arrets": {}, "essais": {}}
 
 class Arret(Exception):
     """Arrêt immédiat demandé par une règle (blocage, connexion, interface inattendue, étiquette IA introuvable…) : aucune nouvelle tentative ce jour-là."""
+
+
+class EtiquetteIA(Arret):
+    """La case TikTok « contenu généré par IA » est introuvable ou n'est pas cochée : rien n'est publié et la vidéo est mise à part."""
+
+
+A_PART = C.VIDEOS / "a-part"
+
+
+def mettre_a_part(mp4, motif):
+    """Vidéo (+ .txt, .json) déplacée de a-valider vers a-part, motif dans <vidéo>.motif.json. -> dossier."""
+    A_PART.mkdir(parents=True, exist_ok=True)
+    for f in (mp4, mp4.with_suffix(".txt"), mp4.with_suffix(".json")):
+        if f.exists(): shutil.move(str(f), A_PART / f.name)
+    (A_PART / f"{mp4.stem}.motif.json").write_text(json.dumps({"video": mp4.name, "agent": AGENT, "motif": motif, "le": time.strftime("%Y-%m-%d %H:%M")},
+                                                              ensure_ascii=False, indent=1), encoding="utf-8")
+    return A_PART
 
 
 def blocage(texte, url=""):
@@ -172,15 +192,16 @@ def publier_tiktok(conf, ligne, mp4, legende, essai=False):   # pragma: no cover
         plus = page.get_by_text(re.compile(r"^(Afficher plus|Show more|Paramètres avancés|Advanced settings)$", re.I))
         if plus.count(): plus.first.click(); pause(page)
         ligne_ia = page.locator("div", has_text=re.compile(r"(contenu généré par (l')?IA|AI-generated content)", re.I)).last
-        if not ligne_ia.count(): raise Arret("option « contenu généré par IA » introuvable : rien n'est publié sans l'étiquette")
+        if not ligne_ia.count(): raise EtiquetteIA("case « contenu généré par IA » introuvable : rien n'est publié sans l'étiquette")
         inter = ligne_ia.locator("[role=switch], input[type=checkbox]").first
-        if not inter.count(): raise Arret("interrupteur « contenu généré par IA » introuvable : rien n'est publié sans l'étiquette")
+        if not inter.count(): raise EtiquetteIA("interrupteur « contenu généré par IA » introuvable : rien n'est publié sans l'étiquette")
         actif = lambda: (inter.get_attribute("aria-checked") or "").lower() == "true" or inter.is_checked()
+        emplacement = emplacement_case(page, ligne_ia, inter)
         if not actif():
             inter.click(); pause(page)
             confirmer = page.get_by_role("button", name=re.compile(r"^(Activer|Turn on|OK|Confirmer)$", re.I))
             if confirmer.count(): confirmer.first.click(); pause(page)
-        if not actif(): raise Arret("étiquette « contenu généré par IA » non activée : rien n'est publié")
+        if not actif(): raise EtiquetteIA(f"case « contenu généré par IA » trouvée ({emplacement}) mais non cochée : rien n'est publié")
         controler(page)
         bouton = page.get_by_role("button", name=re.compile(r"^(Publier|Post)$", re.I)).last
         try: bouton.wait_for(timeout=180000)
@@ -189,7 +210,8 @@ def publier_tiktok(conf, ligne, mp4, legende, essai=False):   # pragma: no cover
             if bouton.is_enabled(): break
             page.wait_for_timeout(1000); controler(page)
         else: raise Arret("téléversement non terminé après 3 minutes")
-        if essai: return "essai : arrêté devant le bouton Publier, rien publié"
+        if not actif(): raise EtiquetteIA(f"case « contenu généré par IA » décochée avant la validation ({emplacement}) : rien n'est publié")   # vérifiée juste avant
+        if essai: return f"essai : arrêté devant le bouton Publier, rien publié ; case « contenu généré par IA » présente et cochée : {emplacement}"
         pause(page); bouton.click(); page.wait_for_timeout(8000); controler(page)
         if not re.search(r"publi[ée]e?|posted|en cours de publication|being posted|manage your posts|gérer vos publications", _texte(page) + page.url, re.I):
             raise Arret("aucune confirmation de publication lue : vérifier à la main avant de relancer")
@@ -198,6 +220,17 @@ def publier_tiktok(conf, ligne, mp4, legende, essai=False):   # pragma: no cover
         try: ctx.close()
         except Exception: pass
         pw.stop()
+
+
+def emplacement_case(page, ligne_ia, inter):   # pragma: no cover (navigateur réel)
+    """Où se trouve la case : titre de la section qui la contient et position à l'écran (pixels), pour le compte rendu du dry-run."""
+    try:
+        bb = inter.bounding_box() or {}
+        section = ligne_ia.evaluate("e => { let n = e; for (let i = 0; i < 6 && n; i++) { const h = n.querySelector && n.querySelector('h1,h2,h3,[class*=title],[class*=Title]');"
+                                    " if (h && h.innerText) return h.innerText.trim().slice(0, 60); n = n.parentElement; } return ''; }")
+        texte = re.sub(r"\s+", " ", ligne_ia.inner_text())[:80]
+        return f"section « {section or '?'} », ligne « {texte} », interrupteur à x={int(bb.get('x', 0))} y={int(bb.get('y', 0))} px"
+    except Exception as e: return f"position non lue ({type(e).__name__})"
 
 
 def cmd_connexion(ligne):   # pragma: no cover (Liam seulement, devant l'écran)
@@ -232,6 +265,15 @@ def cmd_publier(a_blanc=False, maintenant=None, ligne=None, essai=False, publieu
     if not prendre_verrou(): print("Une autre publication est en cours : rien fait (jamais deux en même temps)."); C.journal(AGENT, "occupé", mp4.name); return 0
     try:
         try: url = publieur(conf, ligne, mp4, legende, essai)
+        except EtiquetteIA as e:   # rien publié ; vraie publication : la vidéo est mise à part (l'essai ne touche pas aux vidéos)
+            motif = str(e)[:200]
+            etat.setdefault("arrets", {})[ligne] = {"jour": jour, "motif": motif}; C.etat_ecrire(AGENT, etat)
+            if not essai: mettre_a_part(mp4, motif)
+            C.journal(AGENT, "ARRÊT étiquette IA", f"ligne {ligne} : {mp4.name} : {motif}")
+            C.csv_ligne(AGENT, mp4.stem, ligne, compte(conf, ligne), "mise à part (étiquette IA)" if not essai else "arrêt (essai, étiquette IA)", hook, motif)
+            alerter(f"🛑 TikTok (ligne {ligne}{', essai' if essai else ''}) : {motif}. Rien publié" + ("" if essai else f" ; {mp4.name} mise à part dans Videos\\a-part")
+                    + ". À vérifier par Liam.")
+            print(f"ARRÊT (étiquette IA) : {motif}"); return 1
         except Exception as e:
             motif = str(e)[:200] if isinstance(e, Arret) else f"erreur {type(e).__name__}"
             etat.setdefault("arrets", {})[ligne] = {"jour": jour, "motif": motif}; C.etat_ecrire(AGENT, etat)
@@ -243,8 +285,8 @@ def cmd_publier(a_blanc=False, maintenant=None, ligne=None, essai=False, publieu
             etat.setdefault("essais", {})[ligne] = f"{maintenant:%Y-%m-%d %H:%M}"; C.etat_ecrire(AGENT, etat)
             C.journal(AGENT, "essai", f"ligne {ligne} : {mp4.name} jusqu'au bouton Publier, rien publié")
             C.csv_ligne(AGENT, mp4.stem, ligne, compte(conf, ligne), "essai réussi (rien publié)", hook)
-            alerter(f"🧪 Essai TikTok réussi (ligne {ligne}) : {mp4.name} prêt jusqu'au bouton Publier, rien publié.")
-            print(f"Essai réussi : {mp4.name} (rien publié)."); return 0
+            alerter(f"🧪 Essai TikTok réussi (ligne {ligne}) : {mp4.name} prêt jusqu'au bouton Publier, rien publié. {url or ''}")
+            print(f"Essai réussi : {mp4.name} (rien publié). {url or ''}"); return 0
         C.PUBLIEES.mkdir(parents=True, exist_ok=True)
         for f in (mp4, mp4.with_suffix(".txt"), mp4.with_suffix(".json")): shutil.move(str(f), C.PUBLIEES / f.name)
         etat.setdefault("publications", {}).setdefault(jour, []).append({"ligne": ligne, "passage": passage, "video": mp4.name, "heure": f"{maintenant:%H:%M}"})

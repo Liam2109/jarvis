@@ -1,0 +1,117 @@
+{
+ "schemaVersion": 1,
+ "id": "vasseur",
+ "displayName": "M. Vasseur",
+ "proportions": {
+  "height": 0.98,
+  "headRadius": 0.18,
+  "neck": 0.02,
+  "torso": 0.28,
+  "upperArm": 0.15,
+  "forearm": 0.14,
+  "thigh": 0.16,
+  "shin": 0.16
+ },
+ "style": {
+  "build": "toon",
+  "stroke": "#1b1b1f",
+  "strokeWidth": 12,
+  "headFill": "#ffffff",
+  "torso": {
+   "style": "bean",
+   "fill": "#f4f4f2",
+   "width": 0.16
+  },
+  "limbCurve": 0.3,
+  "hands": "nub",
+  "feet": "oval",
+  "footFill": "#4a3426",
+  "headShape": {
+   "sx": 1.04,
+   "sy": 1.0,
+   "dx": 0.03
+  }
+ },
+ "face": {
+  "eyes": "big-pupil",
+  "brows": true,
+  "mouthSet": "default",
+  "offsetX": 0.16,
+  "eyeSpacing": 0.46,
+  "eyeY": -0.02,
+  "mouthY": 0.46
+ },
+ "accessories": [],
+ "toon": {
+  "proportions": {
+   "height": 1.04,
+   "headRadius": 0.124,
+   "neck": 0.015,
+   "torso": 0.32,
+   "upperArm": 0.174,
+   "forearm": 0.162,
+   "thigh": 0.21,
+   "shin": 0.2
+  },
+  "skin": "#e7bfa0",
+  "skinShade": "#cfa282",
+  "body": {
+   "shoulders": 116,
+   "hips": 94,
+   "arm": 26,
+   "neck": 28
+  },
+  "eyes": {
+   "iris": "#2f3e52",
+   "lashes": false
+  },
+  "brows": {
+   "color": "#3a3a40",
+   "thickness": 9,
+   "gap": 0.4
+  },
+  "lip": "#99594a",
+  "nose": "hook",
+  "cheeks": {
+   "color": "#e8737a",
+   "opacity": 0.22
+  },
+  "hair": {
+   "kind": "curly-mop",
+   "fill": "#4a4a50",
+   "shade": "#36363b"
+  },
+  "top": {
+   "kind": "tee",
+   "fill": "#f4f4f2",
+   "shade": "#d9d9d6"
+  },
+  "bottom": {
+   "kind": "jeans",
+   "fill": "#2b3346",
+   "shade": "#20273a",
+   "cuff": "#3b4560"
+  },
+  "shoes": {
+   "kind": "boot",
+   "fill": "#1f1f22",
+   "shade": "#141416"
+  },
+  "details": [],
+  "outer": {
+   "kind": "varsity",
+   "fill": "#1f3354",
+   "shade": "#172744",
+   "cuffAt": 0.85,
+   "sleeve": {
+    "fill": "#1f3354"
+   },
+   "rib": "#1f3354"
+  }
+ },
+ "energy": 0.5,
+ "personality": "M. Vasseur, le banquier : calme, courtois, tout passe par un dossier.",
+ "voice": {
+  "say": "Thomas"
+ }
+}

@@ -1,0 +1,113 @@
+{
+ "schemaVersion": 1,
+ "id": "nadia",
+ "displayName": "Nadia",
+ "proportions": {
+  "height": 0.98,
+  "headRadius": 0.18,
+  "neck": 0.02,
+  "torso": 0.28,
+  "upperArm": 0.15,
+  "forearm": 0.14,
+  "thigh": 0.16,
+  "shin": 0.16
+ },
+ "style": {
+  "build": "toon",
+  "stroke": "#1b1b1f",
+  "strokeWidth": 12,
+  "headFill": "#ffffff",
+  "torso": {
+   "style": "bean",
+   "fill": "#e0a526",
+   "width": 0.16
+  },
+  "limbCurve": 0.3,
+  "hands": "nub",
+  "feet": "oval",
+  "footFill": "#4a3426",
+  "headShape": {
+   "sx": 1.04,
+   "sy": 1.0,
+   "dx": 0.03
+  }
+ },
+ "face": {
+  "eyes": "big-pupil",
+  "brows": true,
+  "mouthSet": "default",
+  "offsetX": 0.16,
+  "eyeSpacing": 0.46,
+  "eyeY": -0.02,
+  "mouthY": 0.46
+ },
+ "accessories": [],
+ "toon": {
+  "proportions": {
+   "height": 0.98,
+   "headRadius": 0.12,
+   "neck": 0.015,
+   "torso": 0.32,
+   "upperArm": 0.174,
+   "forearm": 0.162,
+   "thigh": 0.21,
+   "shin": 0.2
+  },
+  "skin": "#c48a63",
+  "skinShade": "#a8714e",
+  "body": {
+   "shoulders": 84,
+   "waist": 60,
+   "hips": 78,
+   "arm": 24,
+   "neck": 22
+  },
+  "eyes": {
+   "iris": "#3a2a1a",
+   "lashes": true
+  },
+  "brows": {
+   "color": "#1a120c",
+   "thickness": 6,
+   "gap": 0.5
+  },
+  "lip": "#9a3c48",
+  "nose": "hook",
+  "cheeks": {
+   "color": "#e8737a",
+   "opacity": 0.22
+  },
+  "hair": {
+   "kind": "long-streak",
+   "fill": "#1a120e",
+   "shade": "#0e0a08",
+   "streak": "#5a3a28"
+  },
+  "top": {
+   "kind": "turtleneck",
+   "fill": "#e0a526",
+   "shade": "#c08a1a"
+  },
+  "bottom": {
+   "kind": "jeans",
+   "fill": "#2e3a50",
+   "shade": "#222c3e",
+   "cuff": "#46546e"
+  },
+  "shoes": {
+   "kind": "boot",
+   "fill": "#4a2e22",
+   "shade": "#36201a"
+  },
+  "details": [
+   {
+    "id": "headphones"
+   }
+  ]
+ },
+ "energy": 0.5,
+ "personality": "Nadia, la collègue qui appelle depuis des années : directe, bienveillante, impitoyable sur la méthode.",
+ "voice": {
+  "say": "Thomas"
+ }
+}

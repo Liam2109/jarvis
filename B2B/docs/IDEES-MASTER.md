@@ -30,8 +30,8 @@ Chaque idée est notée à la date où Liam la dit. Une idée pas encore faite r
 - 16/11 — Vidéos : Kokoro n'a qu'une voix française féminine ; si la bascule sert souvent, essayer Piper (déjà utilisé par Jarvis) pour garder une voix masculine en secours.
 - 17/11 — Vidéos : demander à l'auteur de theunfinishedco (HUSS41N, sans licence) l'autorisation d'utiliser son moteur : c'était le plus beau rendu des essais.
 - 17/11 — Vidéos : faire marcher Gérard d'un point à un autre et varier les décors par histoire (stick-stage le place à une marque fixe, les 2 vidéos test sont au bureau).
-- 17/11 — Vidéos : ajouter quelques décors de sketch hors bureau (les 2 tests sont au bureau) et une troisième tête d'interlocuteur pour varier.
 - 17/11 — Vidéos : raccourcir de quelques mots les sketches les plus longs (T03 a dû être accéléré de quelques % pour tenir en 35 s) ; le monteur le fait seul, mais une voix au débit naturel sonne mieux.
+- 17/11 — Vidéos : écrire la série suivante (3 à 5 épisodes) dans le prochain lot ; ajouter une pièce « voiture » à stick-stage si Liam veut ce décor (aucune n'existe).
 - 17/11 — Vidéos au niveau des agents B2B (contrat, garde du contenu, trace par exécution, test, skill détaillé, fiche en 4 rubriques, fiche Chaîne vidéo) : réalisée le 17/11. Suite possible : une alerte du surveillant si aucune vidéo n'arrive dans a-valider deux passages de suite.
 
 ## Agents

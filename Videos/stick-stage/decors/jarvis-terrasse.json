@@ -1,0 +1,44 @@
+{
+ "schemaVersion": 1,
+ "id": "jarvis-terrasse",
+ "kit": "street",
+ "palette": "coast",
+ "description": "Une terrasse en ville, de jour : vitrine de café, arbre, banc.",
+ "tags": [
+  "jarvis",
+  "day"
+ ],
+ "groundY": 1480,
+ "figureHeightPx": 720,
+ "layers": [
+  {
+   "part": "sky",
+   "variant": "sun"
+  },
+  {
+   "part": "buildings"
+  },
+  {
+   "part": "sidewalk"
+  },
+  {
+   "part": "tree",
+   "x": 0.1,
+   "y": 0.72
+  },
+  {
+   "part": "shopfront",
+   "x": 0.55
+  },
+  {
+   "part": "plant",
+   "x": 0.95
+  }
+ ],
+ "foreground": [],
+ "marks": {
+  "left": 0.27,
+  "center": 0.5,
+  "right": 0.73
+ }
+}

@@ -1,0 +1,43 @@
+{
+ "schemaVersion": 1,
+ "id": "jarvis-commerces",
+ "kit": "street",
+ "palette": "butter",
+ "description": "Une rue commerçante de jour : deux vitrines, un lampadaire.",
+ "tags": [
+  "jarvis",
+  "day"
+ ],
+ "groundY": 1480,
+ "figureHeightPx": 720,
+ "layers": [
+  {
+   "part": "sky",
+   "variant": "sun"
+  },
+  {
+   "part": "buildings"
+  },
+  {
+   "part": "sidewalk"
+  },
+  {
+   "part": "shopfront",
+   "x": 0.24
+  },
+  {
+   "part": "shopfront",
+   "x": 0.78
+  },
+  {
+   "part": "lamp",
+   "x": 0.04
+  }
+ ],
+ "foreground": [],
+ "marks": {
+  "left": 0.27,
+  "center": 0.5,
+  "right": 0.73
+ }
+}

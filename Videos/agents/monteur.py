@@ -7,7 +7,8 @@ Aucun token Claude, aucun réseau : code + ffmpeg + stick-stage (MIT, hors git).
      générée par code) environ 18 dB sous la voix, la sonnerie de téléphone (générée ici par code) dans le silence qui précède la réplique, volume final normalisé
      (-14 LUFS, crête -1,5 dB). Licences : Videos\\SKILL-VIDEOS.md.
   3. Image : sous-titres très grands, 1 à 3 mots, au centre vers le bas, contour épais, mot clé en couleur, hors des zones masquées par TikTok (bas et droite) ;
-     titre du sketch en haut pendant 2,5 s ; « Contenu généré par IA » tout du long ; carte de fin bleu nuit (jamais de fond noir plein).
+     titre du sketch (ou de la série et de l'épisode) en haut pendant 2,5 s ; carte de fin bleu nuit (jamais de fond noir plein). Aucun texte IA à l'image
+     depuis le 17/11/2026 : l'étiquette « contenu généré par IA » de TikTok est cochée et vérifiée par videos-publication.
   4. Contrôle qualité automatique : durée 25-35 s, aucune image noire, sous-titres dans la zone sûre, voix au moins 12 dB au-dessus de la musique, aucun plan de plus de 3 s.
      Échec : on refait (2 fois au plus, rythme ajusté si la durée est en cause), puis la vidéo est mise à part dans Videos\\a-part avec le motif (.json).
 Trace du harness à chaque montage (B2B\\logs\\agents\\videos-monteur). RIEN n'est publié ici.
@@ -37,7 +38,6 @@ ST_TAILLE, ST_CONTOUR, ST_MARGE_G, ST_MARGE_D, ST_BAS = 104, 9, 120, 200, 1240
 ST_LARGEUR = 1080 - ST_MARGE_G - ST_MARGE_D
 ST_CHASSE = 0.66                # largeur moyenne d'un caractère d'Arial Black, en fraction de la taille
 ACCENT_ASS = "&H00D7FF&"        # jaune (#FFD700) : mot clé de chaque groupe
-IA_Y = 1380
 FOND_FIN = "0x1F4E79"
 
 
@@ -89,6 +89,8 @@ def retoucher_plans(dossier_skit, fin_s=FIN_S):
     elif prevue < DUREE_S[0] + 0.5 and style != "sitcom": skit["style"] = "sitcom"
     if skit.get("style") != style:
         (d / "skit.json").write_text(json.dumps(skit, ensure_ascii=False, indent=1), encoding="utf-8"); return True
+    f_rec = d / "monteur-recadres.json"   # répliques déjà recadrées (le schéma du skit refuse tout champ inconnu)
+    recadres = set(json.loads(f_rec.read_text(encoding="utf-8"))) if f_rec.exists() else set()
     for a, b in plans_trop_longs(tl):
         m = (a + b) / 2 * fps
         # la réplique qui couvre le milieu du plan, sinon la suivante (le zoom tombe alors dans le silence qui la précède : ms négatif)
@@ -102,9 +104,17 @@ def retoucher_plans(dossier_skit, fin_s=FIN_S):
                 ms = int((m - debut) / fps * 1000)
                 cadre = next((s for s in reversed(sc["timeline"].get("shots", [])) if sc["from"] + s["frame"] <= f0), None)
                 shot = beat.get("shot") or {"framing": (cadre or {}).get("framing", "two")} | ({"on": cadre["on"]} if cadre and cadre.get("on") else {})
-                if "punchIn" in shot: continue
+                if "punchIn" in shot:   # déjà un zoom : on coupe au début de la réplique sur un autre cadrage (si elle commence dans le plan trop long)
+                    if sp["id"] in recadres: continue
+                    premier = sp is min((x for _, x in spans), key=lambda x: x["from"]) if spans else False   # 1re réplique : le réalisateur ouvre sur son cadrage dès 0 s
+                    if f0 / fps - a >= 0.4 and not premier:
+                        autre = "medium" if shot.get("framing") != "medium" else "close"
+                        beat["shot"] = dict(shot, framing=autre, on=qui)
+                    else: beat["shot"] = dict(shot, punchIn={"on": qui, "at": {"ms": ms}})   # zoom déplacé au milieu du plan trop long
+                    recadres.add(sp["id"]); change = True; continue
                 shot["punchIn"] = {"on": qui, "at": {"ms": ms}}; beat["shot"] = shot; change = True
-    if change: (d / "skit.json").write_text(json.dumps(skit, ensure_ascii=False, indent=1), encoding="utf-8")
+    if change:
+        (d / "skit.json").write_text(json.dumps(skit, ensure_ascii=False, indent=1), encoding="utf-8"); f_rec.write_text(json.dumps(sorted(recadres)), encoding="utf-8")
     return change
 
 
@@ -222,9 +232,8 @@ def filtre_video(taille_accroche, n_fins):
     """[0] corps -> sous-titres + titre du sketch (0-2,5 s) + mention IA ; [1] carte de fin bleu nuit ; concaténés (le son vient de la bande déjà mixée)."""
     dt = lambda f, t, y, extra="", x="(w-text_w)/2": f"drawtext=fontfile=police.ttf:textfile={f}:fontsize={t}:fontcolor=white:x={x}:y={y}{extra}"
     corps = ["subtitles=sous-titres.ass:fontsdir=.",
-             dt("accroche.txt", taille_accroche, "h*0.13", ":line_spacing=14:box=1:boxcolor=0x1F4E79@0.85:boxborderw=26:enable='lt(t,2.5)'", x="(1020-text_w)/2"),
-             dt("ia.txt", 34, str(IA_Y), ":fontcolor=white@0.85:box=1:boxcolor=black@0.35:boxborderw=8")]
-    fin = [dt(f"fin{i}.txt", 70 if i < 2 else 52, f"h*{0.36 + 0.11 * i:.2f}") for i in range(n_fins)] + [dt("ia.txt", 34, str(IA_Y), ":fontcolor=white@0.85")]
+             dt("accroche.txt", taille_accroche, "h*0.13", ":line_spacing=14:box=1:boxcolor=0x1F4E79@0.85:boxborderw=26:enable='lt(t,2.5)'", x="(1020-text_w)/2")]
+    fin = [dt(f"fin{i}.txt", 70 if i < 2 else 52, f"h*{0.36 + 0.11 * i:.2f}") for i in range(n_fins)]   # aucun texte IA à l'image : étiquette TikTok (publication)
     return f"[0:v]{','.join(corps)},fps=30,format=yuv420p,setsar=1[v0];[1:v]{','.join(fin)},format=yuv420p,setsar=1[v1];[v0][v1]concat=n=2:v=1:a=0[v]"
 
 
@@ -291,7 +300,7 @@ def monter(doc, conf, nom, travail, lancer, voix, police_src, police_st_src, fin
             shutil.copy2(police_src, travail / "police.ttf"); shutil.copy2(corps, travail / "corps.mp4")
             ass = sous_titres_ass(plan, temps, police); (travail / "sous-titres.ass").write_text(ass, encoding="utf-8")
             accroche, taille = accroche_ecran(d.get("titre") or d["scenes"][0])
-            textes = {"accroche.txt": accroche, "ia.txt": "Contenu généré par IA"} | {f"fin{i}.txt": t for i, t in enumerate(fins_texte)}
+            textes = {"accroche.txt": accroche} | {f"fin{i}.txt": t for i, t in enumerate(fins_texte)}
             for f, t in textes.items(): (travail / f).write_text(t.replace("%", "\\%"), encoding="utf-8")
             cmd = [C.executable("ffmpeg"), "-y", "-v", "error", "-i", "corps.mp4", "-f", "lavfi", "-i", f"color=c={FOND_FIN}:s=1080x1920:r=30:d={fin_s}", "-i", str(son),
                    "-filter_complex", filtre_video(taille, len(fins_texte)), "-map", "[v]", "-map", "2:a", "-c:v", "libx264", "-preset", "veryfast", "-crf", "21",

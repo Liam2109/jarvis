@@ -1,0 +1,124 @@
+{
+ "schemaVersion": 1,
+ "id": "jade",
+ "displayName": "Jade",
+ "proportions": {
+  "height": 0.98,
+  "headRadius": 0.18,
+  "neck": 0.02,
+  "torso": 0.28,
+  "upperArm": 0.15,
+  "forearm": 0.14,
+  "thigh": 0.16,
+  "shin": 0.16
+ },
+ "style": {
+  "build": "toon",
+  "stroke": "#1b1b1f",
+  "strokeWidth": 12,
+  "headFill": "#ffffff",
+  "torso": {
+   "style": "bean",
+   "fill": "#ffffff",
+   "width": 0.16
+  },
+  "limbCurve": 0.3,
+  "hands": "nub",
+  "feet": "oval",
+  "footFill": "#4a3426",
+  "headShape": {
+   "sx": 1.04,
+   "sy": 1.0,
+   "dx": 0.03
+  }
+ },
+ "face": {
+  "eyes": "big-pupil",
+  "brows": true,
+  "mouthSet": "default",
+  "offsetX": 0.16,
+  "eyeSpacing": 0.46,
+  "eyeY": -0.02,
+  "mouthY": 0.46
+ },
+ "accessories": [],
+ "toon": {
+  "proportions": {
+   "height": 0.97,
+   "headRadius": 0.118,
+   "neck": 0.015,
+   "torso": 0.32,
+   "upperArm": 0.174,
+   "forearm": 0.162,
+   "thigh": 0.21,
+   "shin": 0.2
+  },
+  "skin": "#f0c9a8",
+  "skinShade": "#dcac8b",
+  "body": {
+   "shoulders": 84,
+   "waist": 60,
+   "hips": 78,
+   "arm": 24,
+   "neck": 22
+  },
+  "eyes": {
+   "iris": "#7a4ab0",
+   "lashes": true
+  },
+  "brows": {
+   "color": "#3a2440",
+   "thickness": 5,
+   "gap": 0.55
+  },
+  "lip": "#d0457a",
+  "nose": "button",
+  "cheeks": {
+   "color": "#e8737a",
+   "opacity": 0.22
+  },
+  "hair": {
+   "kind": "long-streak",
+   "fill": "#3a2440",
+   "shade": "#28182c",
+   "streak": "#b07ae0"
+  },
+  "top": {
+   "kind": "tee",
+   "fill": "#ffffff",
+   "shade": "#e2e2e2"
+  },
+  "bottom": {
+   "kind": "skirt",
+   "fill": "#6a3fa0",
+   "shade": "#553280",
+   "legs": "#2a2030"
+  },
+  "shoes": {
+   "kind": "sneaker",
+   "fill": "#ffffff",
+   "shade": "#dddddd",
+   "accent": "#b07ae0"
+  },
+  "details": [
+   {
+    "id": "star-earring"
+   }
+  ],
+  "outer": {
+   "kind": "varsity",
+   "fill": "#e85a9c",
+   "shade": "#c9437f",
+   "cuffAt": 0.85,
+   "sleeve": {
+    "fill": "#ffffff"
+   },
+   "rib": "#6a3fa0"
+  }
+ },
+ "energy": 0.5,
+ "personality": "Jade, l'influenceuse : téléphone à la main, tout est un contenu.",
+ "voice": {
+  "say": "Thomas"
+ }
+}

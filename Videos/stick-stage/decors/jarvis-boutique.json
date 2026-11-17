@@ -1,0 +1,52 @@
+{
+ "schemaVersion": 1,
+ "id": "jarvis-boutique",
+ "kit": "interior",
+ "palette": "butter",
+ "description": "Une petite boutique de jour : étagères, comptoir, ardoise.",
+ "tags": [
+  "jarvis",
+  "day"
+ ],
+ "groundY": 1480,
+ "figureHeightPx": 720,
+ "layers": [
+  {
+   "part": "wall",
+   "pattern": "stripes"
+  },
+  {
+   "part": "floor"
+  },
+  {
+   "part": "shelf",
+   "x": 0.16,
+   "y": 0.3
+  },
+  {
+   "part": "shelf",
+   "x": 0.84,
+   "y": 0.3
+  },
+  {
+   "part": "board",
+   "x": 0.5,
+   "y": 0.12,
+   "variant": "menu"
+  },
+  {
+   "part": "counter",
+   "x": 0.5
+  },
+  {
+   "part": "plant",
+   "x": 0.95
+  }
+ ],
+ "foreground": [],
+ "marks": {
+  "left": 0.27,
+  "center": 0.5,
+  "right": 0.73
+ }
+}

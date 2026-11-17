@@ -1,0 +1,174 @@
+{
+ "_aide": "Troupe de la ligne B (17/11/2026) : personnages récurrents (fichier Videos/stick-stage/<id>.json, dessin toon), voix edge-tts propre à chacun, hauteur Kokoro de secours (une seule voix française chez Kokoro), « appel » = comment les autres l'appellent (remplit {nom}), rôles que le personnage peut tenir dans un sketch qui ne le nomme pas. Gérard est fixe (toujours à gauche).",
+ "personnages": [
+  {
+   "id": "gerard",
+   "appel": "Gérard",
+   "role": "l'indépendant (fixe)",
+   "genre": "h",
+   "edge": "fr-FR-HenriNeural",
+   "kokoro_hauteur": 0.85,
+   "roles": []
+  },
+  {
+   "id": "claire",
+   "appel": "Claire",
+   "role": "collègue",
+   "genre": "f",
+   "edge": "fr-FR-DeniseNeural",
+   "kokoro_hauteur": 1.0,
+   "roles": [
+    "collègue",
+    "prospect",
+    "voisin",
+    "ami",
+    "commerçant",
+    "stagiaire"
+   ]
+  },
+  {
+   "id": "karim",
+   "appel": "Karim",
+   "role": "collègue",
+   "genre": "h",
+   "edge": "fr-FR-RemyMultilingualNeural",
+   "kokoro_hauteur": 0.95,
+   "roles": [
+    "collègue",
+    "prospect",
+    "voisin",
+    "ami",
+    "commerçant"
+   ]
+  },
+  {
+   "id": "lefort",
+   "appel": "Madame Lefort",
+   "role": "cliente exigeante",
+   "genre": "f",
+   "edge": "fr-FR-VivienneMultilingualNeural",
+   "kokoro_hauteur": 0.97,
+   "roles": [
+    "prospect",
+    "patronne",
+    "client",
+    "commerçant"
+   ]
+  },
+  {
+   "id": "vasseur",
+   "appel": "Monsieur Vasseur",
+   "role": "banquier",
+   "genre": "h",
+   "edge": "fr-BE-GerardNeural",
+   "kokoro_hauteur": 0.9,
+   "roles": [
+    "banquier",
+    "prospect",
+    "client"
+   ]
+  },
+  {
+   "id": "roux",
+   "appel": "Madame Roux",
+   "role": "comptable",
+   "genre": "f",
+   "edge": "fr-CH-ArianeNeural",
+   "kokoro_hauteur": 1.03,
+   "roles": [
+    "comptable",
+    "prospect",
+    "collègue"
+   ]
+  },
+  {
+   "id": "dede",
+   "appel": "Dédé",
+   "role": "voisin",
+   "genre": "h",
+   "edge": "fr-CH-FabriceNeural",
+   "kokoro_hauteur": 0.88,
+   "roles": [
+    "voisin",
+    "ami",
+    "commerçant",
+    "prospect"
+   ]
+  },
+  {
+   "id": "sophie",
+   "appel": "Sophie",
+   "role": "amie",
+   "genre": "f",
+   "edge": "fr-CA-SylvieNeural",
+   "kokoro_hauteur": 1.06,
+   "roles": [
+    "ami",
+    "voisin",
+    "prospect",
+    "commerçant"
+   ]
+  },
+  {
+   "id": "lucas",
+   "appel": "Lucas",
+   "role": "stagiaire",
+   "genre": "h",
+   "edge": "fr-CA-AntoineNeural",
+   "kokoro_hauteur": 1.0,
+   "roles": [
+    "stagiaire",
+    "collègue",
+    "prospect"
+   ]
+  },
+  {
+   "id": "bernard",
+   "appel": "Monsieur Bernard",
+   "role": "vieux client râleur",
+   "genre": "h",
+   "edge": "fr-CA-JeanNeural",
+   "kokoro_hauteur": 0.82,
+   "roles": [
+    "client",
+    "prospect",
+    "voisin"
+   ]
+  },
+  {
+   "id": "jade",
+   "appel": "Jade",
+   "role": "influenceuse",
+   "genre": "f",
+   "edge": "fr-FR-EloiseNeural",
+   "kokoro_hauteur": 1.1,
+   "roles": [
+    "influenceur",
+    "prospect",
+    "ami",
+    "client"
+   ]
+  },
+  {
+   "id": "nadia",
+   "appel": "Nadia",
+   "role": "collègue qui appelle depuis des années",
+   "genre": "f",
+   "edge": "fr-BE-CharlineNeural",
+   "kokoro_hauteur": 0.94,
+   "roles": [
+    "collègue",
+    "mentor",
+    "prospect"
+   ]
+  }
+ ],
+ "decors": {
+  "boutique": "jarvis-boutique",
+  "atelier": "jarvis-atelier",
+  "attente": "jarvis-attente",
+  "agence": "jarvis-agence",
+  "commerces": "jarvis-commerces",
+  "terrasse": "jarvis-terrasse"
+ }
+}

@@ -1,0 +1,54 @@
+{
+ "schemaVersion": 1,
+ "id": "jarvis-agence",
+ "kit": "office",
+ "palette": "city",
+ "description": "Une agence bancaire de jour : bureau du conseiller à droite, armoire, fenêtre.",
+ "tags": [
+  "jarvis",
+  "day"
+ ],
+ "groundY": 1480,
+ "figureHeightPx": 720,
+ "layers": [
+  {
+   "part": "wall",
+   "pattern": "stripes"
+  },
+  {
+   "part": "floor"
+  },
+  {
+   "part": "window",
+   "x": 0.24,
+   "y": 0.18,
+   "size": 0.85,
+   "variant": "blinds"
+  },
+  {
+   "part": "frame",
+   "x": 0.6,
+   "y": 0.18
+  },
+  {
+   "part": "cabinet",
+   "x": 0.95
+  },
+  {
+   "part": "plant",
+   "x": 0.05
+  }
+ ],
+ "foreground": [
+  {
+   "part": "desk",
+   "mark": "right",
+   "dx": -0.12
+  }
+ ],
+ "marks": {
+  "left": 0.27,
+  "center": 0.5,
+  "right": 0.73
+ }
+}

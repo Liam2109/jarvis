@@ -21,20 +21,20 @@ tags: [agent-b2b]
 
 ## Rôle et limites
 ### Mission
-À 06:00, 14:00 et 22:00, fabrique la vidéo du passage (stick-stage toon, voix edge-tts ou Kokoro, 9:16, sous-titres, mention « Contenu généré par IA ») et la range dans Videos/a-valider ; ligne B : videos-monteur.
+À 06:00, 14:00 et 22:00, fabrique la vidéo du passage (stick-stage toon, voix edge-tts ou Kokoro, 9:16, sous-titres, aucun texte IA à l'image) dans Videos/a-valider ; ligne B : videos-monteur.
 
 ### Ce qu'il fait étape par étape
 1. `C.exiger("videos-creation", ...)` ; passage = l'heure prévue la plus proche (ou `--heure`) ; rien si la vidéo existe déjà ; code 2 si le script du passage manque.
 2. Verrou `Videos/creation.verrou` : un seul rendu à la fois.
 3. Voix d'abord (`Videos/agents/voix.py`) : voix fixe de la ligne (`lignes.<X>.voix` : `edge`, `kokoro`, `kokoro_vitesse`) ; edge-tts en principal, Kokoro local (`Videos/outils/kokoro`, hors git) si edge-tts échoue (erreur, pas d'internet, plus de 30 s pour toute la narration) ; jamais deux moteurs dans une vidéo. Entrée de l'outil : narration seule, portrait 1080×1920, fond sombre, `reuse_audio_from` = nos fichiers de voix (edge-tts retiré du PATH de l'outil pour qu'il ne refasse pas la voix) ; l'outil fait les dessins et le corps de la vidéo (priorité sous la normale, 25 min au plus, seul son propre arbre de processus est arrêté).
-4. ffmpeg ajoute : gros sous-titres (le fichier de sous-titres de l'outil), accroche à l'écran pendant les 2,5 premières secondes (une ou deux lignes, taille ajustée pour tenir entre x = 120 et x = 900), « Contenu généré par IA » pendant toute la vidéo, carte de fin française de 3 s (A : 15 minutes avec Liam ; B : candidature).
+4. ffmpeg ajoute : gros sous-titres (le fichier de sous-titres de l'outil), accroche à l'écran pendant les 2,5 premières secondes (une ou deux lignes, taille ajustée pour tenir entre x = 120 et x = 900), carte de fin (plus de texte « Contenu généré par IA » à l'image depuis le 17/11/2026 : l'étiquette TikTok est cochée par videos-publication ; la mention reste dans la légende) française de 3 s (A : 15 minutes avec Liam ; B : candidature).
 5. Range `Videos/a-valider/AAAA-MM-JJ-HHMM.mp4` + `.txt` (légende avec la mention IA) + `.json` (durée, `contenu_ia`, `etiquette_ia_tiktok`), une ligne de journal ; une ligne dans `Videos/journal-videos.csv` (colonne `tts` = moteur réellement utilisé) ; la durée hors 20-35 s est signalée. Sous-titres : temps des mots par edge-tts, recalés sur la durée réelle de chaque phrase (`scene_timings.json`), sinon répartis selon la longueur des mots.
 
 ### Ce qu'il n'a pas le droit de faire
 - publier une vidéo
 - rendre deux vidéos en même temps
 - arrêter un processus qu'il n'a pas lancé
-- produire une vidéo sans la mention « Contenu généré par IA »
+- incruster un texte « contenu généré par IA » à l'image (règle du 17/11/2026 : étiquette TikTok cochée par videos-publication)
 - publier, liker, s'abonner, commenter ou envoyer un message sur TikTok
 - toucher à memoire/, .env, config.json, .obsidian/ ou un fichier *.local.json
 - afficher un secret (jeton, clé, adresse iCal)

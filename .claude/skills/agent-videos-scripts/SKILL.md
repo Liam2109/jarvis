@@ -20,6 +20,8 @@ description: Fiche de rôle de l'agent Scripts vidéos (équipe Vidéos TikTok, 
 3. Qwen répond en JSON (sujet, titre, accroche, six phrases, légende) ; le code refuse et redemande (4 essais) si : chiffre ou nombre, promesse, gain, témoignage, superlatif, mot interdit, indication de mise en scène, phrase molle, lieu (ligne B), accroche trop longue, longueur hors 52-88 mots, sujet proche d'un sujet déjà traité.
 4. Les seuls chiffres (15 minutes, taux de commission de la config s'il est rempli) sont ajoutés par le code dans la phrase de fin et la légende ; la légende porte toujours « Contenu généré par IA. ».
 5. Écrit `Videos/scripts/AAAA-MM-JJ-HHMM.json`, ajoute le sujet à `Videos/scripts/sujets.json` (jamais deux fois le même), une ligne de journal.
+6. Ligne B (17/11/2026) : épisode de la mini-série en cours d'abord (une série à la fois, une vidéo ordinaire entre deux épisodes) ; personnage de la troupe (`Videos/troupe.json`) et décor choisis par le code, jamais le même couple personnage / décor dans les 10 dernières vidéos ({nom} = appel du personnage) ; `sujets.json` garde `personnage`, `decor`, `serie_sketch`.
+7. « Nouveau lot de sketches » (sur demande de Liam, pas planifié) : `python Videos\agents\sketches.py lot Videos\idees-nouvelles\AAAA-MM-JJ.json` valide 20 sketches (mêmes contrôles que la banque, 8/8/4 à un près) et les ajoute à `Videos/sketches-base.json` ; lot invalide = `<lot>.refus.txt` avec le motif, rien ajouté.
 
 ## Entrées et sorties (place dans la chaîne)
 - **Reçoit de :** **Veille** (`Videos/veille/AAAA-MM-JJ.md`, facultative) ; `Videos/sketches-base.json` (ligne B) ; `Videos/scripts/sujets.json` (sujets déjà traités).

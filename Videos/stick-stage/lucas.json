@@ -1,0 +1,111 @@
+{
+ "schemaVersion": 1,
+ "id": "lucas",
+ "displayName": "Lucas",
+ "proportions": {
+  "height": 0.98,
+  "headRadius": 0.18,
+  "neck": 0.02,
+  "torso": 0.28,
+  "upperArm": 0.15,
+  "forearm": 0.14,
+  "thigh": 0.16,
+  "shin": 0.16
+ },
+ "style": {
+  "build": "toon",
+  "stroke": "#1b1b1f",
+  "strokeWidth": 12,
+  "headFill": "#ffffff",
+  "torso": {
+   "style": "bean",
+   "fill": "#f2c230",
+   "width": 0.16
+  },
+  "limbCurve": 0.3,
+  "hands": "nub",
+  "feet": "oval",
+  "footFill": "#4a3426",
+  "headShape": {
+   "sx": 1.04,
+   "sy": 1.0,
+   "dx": 0.03
+  }
+ },
+ "face": {
+  "eyes": "big-pupil",
+  "brows": true,
+  "mouthSet": "default",
+  "offsetX": 0.16,
+  "eyeSpacing": 0.46,
+  "eyeY": -0.02,
+  "mouthY": 0.46
+ },
+ "accessories": [],
+ "toon": {
+  "proportions": {
+   "height": 0.9,
+   "headRadius": 0.126,
+   "neck": 0.015,
+   "torso": 0.32,
+   "upperArm": 0.174,
+   "forearm": 0.162,
+   "thigh": 0.21,
+   "shin": 0.2
+  },
+  "skin": "#8d5a3b",
+  "skinShade": "#734830",
+  "body": {
+   "shoulders": 98,
+   "hips": 84,
+   "arm": 23,
+   "neck": 22
+  },
+  "eyes": {
+   "iris": "#2a1a10",
+   "lashes": false
+  },
+  "brows": {
+   "color": "#120c08",
+   "thickness": 7,
+   "gap": 0.42
+  },
+  "lip": "#6e3a2c",
+  "nose": "button",
+  "cheeks": {
+   "color": "#e8737a",
+   "opacity": 0.22
+  },
+  "hair": {
+   "kind": "curly-mop",
+   "fill": "#140f0c",
+   "shade": "#0a0806"
+  },
+  "top": {
+   "kind": "tee",
+   "fill": "#f2c230",
+   "shade": "#d6a71f"
+  },
+  "bottom": {
+   "kind": "jeans",
+   "fill": "#3a4a6a",
+   "shade": "#2c3a56",
+   "cuff": "#56689a"
+  },
+  "shoes": {
+   "kind": "sneaker",
+   "fill": "#d23a3a",
+   "shade": "#b02c2c"
+  },
+  "details": [
+   {
+    "id": "headphones"
+   }
+  ]
+ },
+ "energy": 0.5,
+ "personality": "Lucas, le stagiaire : motivé, trop rapide, pose les vraies questions.",
+ "voice": {
+  "say": "Thomas"
+ }
+}
