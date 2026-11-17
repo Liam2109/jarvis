@@ -94,6 +94,8 @@ transfert-serveur/
 dashboard/node_modules/
 dashboard/agents.json
 dashboard/agents.js
+dashboard/ventes.json
+dashboard/ventes.js
 dashboard/*.tmp
 dashboard/docs.js
 # ---------- Harness B2B (15/11/2026) : contrats, garde, surveillant et docs versionnés ; traces, validations et kill-switch jamais ----------

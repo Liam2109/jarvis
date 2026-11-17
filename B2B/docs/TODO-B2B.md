@@ -46,7 +46,7 @@ _Mise à jour : 16 nov. 2026, 17 h 30 (le fait est supprimé ; l'historique est 
 - [ ] Faire passer la publication et le déploiement des pages exemples par la garde (non branchés)
 - [ ] CEO Jarvis autonome, pont Discord de Jarvis (connecte: false) : après la 1re vente
 - [ ] Production (design, code, publication) : après la 1re vente
-- [ ] Tableau de bord (maquette validée, voir IDEES-MASTER 14/11) : agents en ligne, courbes, closing, commissions, pipeline
+- [ ] Tableau de bord, suite : courbes de la semaine, taux de closing, commissions ; devis et Stripe lisibles depuis le gros PC (aujourd'hui « — »)
 - [ ] Fiche d'accueil client (photos, couleurs, logo, avis, spécificités)
 - [ ] Recruter d'autres appelants (15 %), un spécialiste restaurants, des closers (10 %)
 - [ ] Enrichir TECHNIQUES-CLOSING.md avec de bonnes phrases de vente

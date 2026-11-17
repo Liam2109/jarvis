@@ -68,6 +68,7 @@ Chaque idée est notée à la date où Liam la dit. Une idée pas encore faite r
 - 14/11 — Tableau de bord : courbes de la semaine, taux appel → RDV → devis → closing, carte de chaleur des créneaux, motifs de refus, commissions modifiables, pipeline, voyant par agent (heure de dernière exécution à ajouter dans agents-json.py).
 - 14/11 — Méthode Claude Code (vidéo) : boucles avec critère de fin, sous-agents, bon modèle par tâche, /compact après chaque tâche.
 - 15/11 — Obsidian en vue « espace » pour voir les agents (plus tard).
+- 17/11 — Tableau de bord : faire disparaître les « — » du gros PC (état des devis, clé Stripe en lecture seule, journaux du serveur) et régénérer les chiffres toutes les 5 min sans clic, sans fenêtre ni coût.
 
 ## À trancher (peut-être dépassées, à confirmer par Liam)
 - 24/10 — Page d'index privée des liens de maquettes pour Liam (le tableau de bord la remplace peut-être).

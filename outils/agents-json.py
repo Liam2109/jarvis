@@ -85,7 +85,7 @@ def journal(nom):
     return dernier, resultat, erreur, liste[-30:]
 
 
-POLES = {"prospection": "Trouver", "page-exemple": "Trouver", "appels-sid": "Vendre", "rendez-vous": "Vendre", "reponses": "Vendre", "devis": "Vendre",
+POLES = {"prospection": "Trouver", "page-exemple": "Trouver", "appels-sid": "Vendre", "appels-liam": "Vendre", "rendez-vous": "Vendre", "reponses": "Vendre", "devis": "Vendre",
          "stripe-alerte": "Encaisser", "resume-sid": "Communiquer"}     # tout nouvel agent : « Autres »
 
 
@@ -213,21 +213,71 @@ def construire(maintenant=None):
     }
 
 
+def _resume_sid():
+    """Module B2B/agents/resume-sid.py (nom à tiret) : on réutilise ses lectures (feuilles « Appels Sid », Stripe) au lieu de les réécrire."""
+    import importlib.util
+    if str(AGENTS) not in sys.path: sys.path.insert(0, str(AGENTS))
+    spec = importlib.util.spec_from_file_location("resume_sid", AGENTS / "resume-sid.py")
+    m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+    return m
+
+
+def ventes(maintenant=None, rs=None):
+    """Bloc « Aujourd'hui » (dashboard/ventes.json) : chiffres de vente du jour, COMPTES seulement (jamais un nom d'entreprise, un e-mail ni un téléphone).
+    Appels, leads chauds et RDV : feuilles « Appels Sid » modifiées aujourd'hui (resume-sid.stats_appels, API Google gratuite) ; paiements : Stripe en lecture seule
+    (resume-sid.stripe_jour) ; devis envoyés : devis-etat.json. Aucun token Claude. Indisponible = valeur None + raison, jamais estimé. JARVIS_TEST=1 : aucun réseau."""
+    maintenant = maintenant or datetime.now(); j = maintenant.date().isoformat()
+    ko = lambda raison: {"valeur": None, "raison": raison}
+    if rs is None and os.environ.get("JARVIS_TEST") == "1": rs, err = None, "mode test : aucune lecture Google ni Stripe"
+    elif rs is None:
+        try: rs, err = _resume_sid(), ""
+        except Exception as e: rs, err = None, f"resume-sid.py illisible ({type(e).__name__})"
+    else: err = ""
+    try: dispo, d = rs.stats_appels(rs.cfg(), j) if rs else (False, err)
+    except Exception as e: dispo, d = False, f"feuilles de Sid illisibles ({type(e).__name__})"
+    if dispo:
+        r = d.get("resultats")
+        n = len(d.get("feuilles") or []) if d.get("multi") else 1
+        appels = {"valeur": d.get("Appelé", 0), "detail": f"{n} feuille{'s' if n > 1 else ''} « Appels Sid » modifiée{'s' if n > 1 else ''} aujourd'hui"}
+        if r is not None:
+            chauds = {"valeur": r.get("À rappeler", 0) + r.get("Je dois réfléchir", 0), "detail": f"{r.get('À rappeler', 0)} à rappeler · {r.get('Je dois réfléchir', 0)} je dois réfléchir"}
+            rdv = {"valeur": r.get("RDV pris", 0), "detail": "notés « RDV pris » par Sid"}
+        else:
+            chauds = ko("ancienne feuille sans colonne Résultat"); rdv = {"valeur": d.get("Rendez-vous pris", 0), "detail": "case « Rendez-vous pris »"}
+    else: appels = chauds = rdv = ko(str(d))
+    dv = lire_json(AGENTS / "devis-etat.json")
+    devis = ko("devis-etat.json absent sur ce PC (l'état des devis est sur la machine active)") if dv is None else \
+        {"valeur": sum(1 for v in (dv.get("devis") or {}).values() if (v.get("historique") or {}).get("envoyé") == j), "detail": "marqués « envoyé » aujourd'hui"}
+    try: dispo, s = rs.stripe_jour(j) if rs else (False, err)
+    except Exception as e: dispo, s = False, f"Stripe illisible ({type(e).__name__})"
+    paiements = {"valeur": s["paiements"], "detail": ("au moins " if s.get("partiel") else "") + rs._montants_texte(s["montants"]) + " encaissés"} if dispo else ko(str(s))
+    items = [["appels", "Appels notés par Sid", appels], ["chauds", "Leads chauds", chauds], ["rdv", "Rendez-vous pris", rdv],
+             ["devis", "Devis envoyés", devis], ["paiements", "Paiements reçus", paiements]]
+    if (AGENTS / "alerte-candidatures.py").exists():      # agent pas encore construit (17/11/2026) : ligne masquée tant qu'il n'existe pas
+        items.append(["candidatures", "Candidatures call callers", ko("agent alerte-candidatures présent, compteur pas encore branché")])
+    return {"jour": j, "genere_le": maintenant.strftime("%Y-%m-%d %H:%M:%S"),
+            "chiffres": [dict(cle=c, libelle=l, **v) for c, l, v in items]}
+
+
 def masquer(t):
     """Aucune adresse e-mail ni téléphone dans ce qui sort (même si une doc en contient)."""
     t = re.sub(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+", "[e-mail masqué]", t)
     return re.sub(r"(?<!\d)(?:\+33\s?|0)[1-9](?:[ .-]?\d\d){4}(?!\d)", "[téléphone masqué]", t)
 
 
-def ecrire(donnees):
+def ecrire(donnees, chiffres_ventes=None):
     SORTIE.mkdir(exist_ok=True)
     texte = masquer(json.dumps(donnees, ensure_ascii=False, indent=1)); docs = masquer(json.dumps(documents(), ensure_ascii=False))
-    for nom, contenu in (("agents.json", texte), ("agents.js", "window.JARVIS_AGENTS = " + texte + ";\n"), ("docs.js", "window.JARVIS_DOCS = " + docs + ";\n")):
+    fichiers = [("agents.json", texte), ("agents.js", "window.JARVIS_AGENTS = " + texte + ";\n"), ("docs.js", "window.JARVIS_DOCS = " + docs + ";\n")]
+    if chiffres_ventes is not None:      # ventes.js : même contenu que ventes.json, lu par la page même en file://
+        v = masquer(json.dumps(chiffres_ventes, ensure_ascii=False, indent=1))
+        fichiers += [("ventes.json", v), ("ventes.js", "window.JARVIS_VENTES = " + v + ";\n")]
+    for nom, contenu in fichiers:
         tmp = SORTIE / (nom + ".tmp"); tmp.write_text(contenu, encoding="utf-8"); os.replace(tmp, SORTIE / nom)
 
 
 def main():
-    ecrire(construire())
+    ecrire(construire(), ventes())
     if "--ouvrir" in sys.argv[1:] and os.name == "nt": os.startfile(str(SORTIE / "index.html"))
 
 
