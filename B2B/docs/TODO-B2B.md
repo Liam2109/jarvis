@@ -48,7 +48,8 @@ _Mise à jour : 16 nov. 2026, 17 h 30 (le fait est supprimé ; l'historique est 
 - [ ] Production (design, code, publication) : après la 1re vente
 - [ ] Tableau de bord, suite : courbes de la semaine, taux de closing, commissions ; devis et Stripe lisibles depuis le gros PC (aujourd'hui « — »)
 - [ ] Fiche d'accueil client (photos, couleurs, logo, avis, spécificités)
-- [ ] Recruter d'autres appelants (15 %), un spécialiste restaurants, des closers (10 %)
+- [ ] Recruter d'autres call callers (15 %, jamais de closers), dont un spécialiste restaurants
+- [ ] Alerte candidatures : lier le formulaire à une feuille (Réponses > Lier à Sheets), lancer `alerte-candidatures.py google-autoriser`, puis écrire « go alerte »
 - [ ] Enrichir TECHNIQUES-CLOSING.md avec de bonnes phrases de vente
 - [ ] Liam s'entraîne au jeu de rôle des objections (« Je dois réfléchir », « C'est trop cher »)
 - [ ] Sid doit faire plus d'appels par jour

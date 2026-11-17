@@ -1,0 +1,43 @@
+{
+ "nom": "alerte-candidatures",
+ "responsable": "Jarvis (CEO)",
+ "mission": "Alerter Liam sur Discord à chaque candidature de call caller (brouillon de réponse joint, une relance à 2 h si non contacté) ; fermé jusqu'au « go alerte ».",
+ "statut": "inactif",
+ "script": "B2B/agents/alerte-candidatures.py",
+ "jours": [0, 1, 2, 3, 4, 5, 6],
+ "heures": {
+  "debut": "00:00",
+  "fin": "24:00"
+ },
+ "fichiers_lus": [
+  "feuille de réponses Google du formulaire « Postuler comme call caller » (API Sheets, jeton google-candidatures-token.json)",
+  "B2B/agents/alerte-candidatures-config.json",
+  "fichier local de réglages (go_alerte, feuille_id : écrits par Liam seulement)"
+ ],
+ "fichiers_ecrits": [
+  "B2B/agents/alerte-candidatures-etat.json",
+  "B2B/agents/alerte-candidatures-journal.log",
+  "en-tête « Contacté » de la feuille de réponses (seulement s'il manque)"
+ ],
+ "canaux_discord": [
+  "alertes"
+ ],
+ "envoi_client": false,
+ "actions_interdites": [
+  "envoyer un message, un e-mail ou un SMS à un candidat ou à un prospect",
+  "inventer une information sur un candidat (un champ absent est omis)",
+  "écrire dans la feuille autre chose que l'en-tête « Contacté » quand il manque",
+  "promettre un revenu ou un montant au candidat",
+  "tourner avant le « go alerte » de Liam",
+  "afficher un secret (jeton, clé, adresse iCal)",
+  "encaisser, publier ou signer"
+ ],
+ "plafonds": {
+  "messages_par_jour": 40
+ },
+ "peut_engager": false,
+ "alerte_si_silence": null,
+ "tests": [
+  "tests/agents/test_alerte_candidatures.py"
+ ]
+}

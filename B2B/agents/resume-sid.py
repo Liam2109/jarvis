@@ -212,7 +212,19 @@ def _montants_texte(montants):
     return " et ".join(parts) if parts else "0 euro"
 
 
-def message_resume(jour, dispo_a, appels, dispo_c, ca):
+CANDIDATURES_ETAT = ICI / "alerte-candidatures-etat.json"   # état de l'agent alerte-candidatures (17/11/2026), lu en lecture seule
+
+
+def candidatures_jour(jour):
+    """(candidatures alertées ce jour, dont non contactées) d'après l'état d'alerte-candidatures ; None tant que l'agent n'a jamais tourné (verrou « go alerte ») ou si l'état est illisible."""
+    try: e = json.loads(CANDIDATURES_ETAT.read_text(encoding="utf-8")) if CANDIDATURES_ETAT.exists() else {}
+    except (OSError, ValueError): return None
+    if not isinstance(e, dict) or not e.get("initialise"): return None
+    du_jour = [c for c in (e.get("candidats") or {}).values() if isinstance(c, dict) and c.get("jour") == jour]
+    return len(du_jour), sum(1 for c in du_jour if not c.get("contacte"))
+
+
+def message_resume(jour, dispo_a, appels, dispo_c, ca, candidatures=None):
     l = [f"Résumé du {jour} :"]
     if dispo_a and appels.get("multi"):
         fs = appels["feuilles"]; detail = ", ".join(f"{v} {n}" for v, n in appels["resultats"].items() if n) + (f", autre valeur {appels['autres']}" if appels.get("autres") else "")
@@ -239,6 +251,8 @@ def message_resume(jour, dispo_a, appels, dispo_c, ca):
         l.append(f"Chiffre d'affaires Stripe du jour : {au}{_montants_texte(ca['montants'])} ({ca['paiements']} paiement(s) réussi(s)).")
     else:
         l.append(f"Chiffre d'affaires Stripe — pas de chiffre : {ca}.")
+    if candidatures is not None:
+        l.append(f"Candidatures call callers du jour : {candidatures[0]}, dont {candidatures[1]} non contactée(s).")
     return "\n".join(l)
 
 
@@ -264,7 +278,7 @@ def cmd_resume(conf, jour, a_blanc, drive=None):
         print(f"Résumé du {jour} déjà envoyé (ou simulé) aujourd'hui : rien de plus."); return 0
     dispo_a, appels = stats_appels(conf, jour, drive)
     dispo_c, ca = stripe_jour(jour)
-    texte = message_resume(jour, dispo_a, appels, dispo_c, ca)
+    texte = message_resume(jour, dispo_a, appels, dispo_c, ca, candidatures_jour(jour))
     if a_blanc:
         print("[à blanc] serait " + ("envoyé" if conf["envoi_automatique"] else "affiché seulement") + " :\n" + texte); return 0
     if conf["envoi_automatique"]:

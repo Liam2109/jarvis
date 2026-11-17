@@ -1,0 +1,10 @@
+{
+  "go_alerte": false,
+  "envoi_automatique": false,
+  "intervalle_minutes": 5,
+  "relance_minutes": 120,
+  "feuille_id": "",
+  "onglet": "",
+  "colonne_contacte": "Contacté",
+  "_aide": "VERROU : go_alerte reste false ici ; il passe à true seulement dans alerte-candidatures-config.local.json (hors git), après le « go alerte » écrit par Liam. envoi_automatique : false = SIMULATION (activation réelle dans le fichier local). feuille_id : identifiant de la feuille de réponses liée au formulaire « Postuler comme call caller » (dans son adresse, entre /d/ et /edit), à mettre dans le fichier local. onglet : vide = premier onglet. compte_google (défaut dans le code : contact.lmsites@gmail.com) : compte qui possède la feuille, autorisé une fois par `python agents\\alerte-candidatures.py google-autoriser` (jeton google-candidatures-token.json, hors git). relance_minutes : une seule relance si la colonne Contacté est vide après ce délai. Voir .claude\\skills\\agent-alerte-candidatures\\SKILL.md."
+}

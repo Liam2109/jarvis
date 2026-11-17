@@ -76,6 +76,15 @@
       ],
       "toutes_minutes": 5
     },
+    "alerte-candidatures": {
+      "script": "alerte-candidatures.py",
+      "commandes": [
+        [
+          "verifier"
+        ]
+      ],
+      "toutes_minutes": 5
+    },
     "panne-alerte": {
       "script": "panne-alerte.py",
       "commandes": [

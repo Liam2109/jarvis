@@ -59,6 +59,8 @@ Chaque idée est notée à la date où Liam la dit. Une idée pas encore faite r
 - 08/11 — Recruter d'autres appelants : Codeur.com en plus de Malt et des 2 groupes Facebook.
 - 03/11 — Appelants : lien Google Meet automatique dans le planning de rendez-vous ; contact par WhatsApp (numéro à donner par Liam).
 - 14/11 — Connecteur d'écoute de réunion (nom à donner par Liam) : vérifier gratuité et accord des participants.
+- 17/11 — Candidats venus par message privé : leur répondre avec le lien du formulaire pour qu'ils passent par l'alerte candidatures (un seul circuit, rien d'oublié).
+- 17/11 — Brouillon de réponse aux candidats : y ajouter le lien d'agenda du rendez-vous de 15 min en visio, quand Liam en aura un dédié au recrutement.
 
 ## Jarvis, Discord et outils
 - 29/10 — Discord : salons important, journal, erreurs ; catégories Autres projets (saas-ciel, quiz-artisans, tri-mail), Carrière, Contenu (idées-vidéos, scripts-cold-call, résultats).
