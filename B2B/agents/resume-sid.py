@@ -9,8 +9,10 @@ aucune écriture dans la feuille Google (lecture seule) ; même modèle que les 
 
 Appels : nombre de lignes par valeur de la colonne Résultat (8 valeurs, tableur du 14/11/2026 ; anciennes feuilles : « Appelé » / « Répondu » / « Rendez-vous pris » / « Refus » coché) sur la feuille Google du jour créée par appels-sid.py (agents\\appels-sid-etat.json ›
 google › <jour> › feuille, lue en lecture seule). Aucune feuille ce jour-là (simulation, jour hors planning, pas encore sourcé) : annoncé sans chiffre inventé.
+Depuis le 17/11/2026 (Sid avait noté ses appels dans la feuille de la veille) : TOUTES les feuilles « Appels Sid AAAA-MM-JJ » du dossier de Sid (dossier_sid_id d'appels-sid) modifiées ce
+jour-là sont comptées, avec la liste des « À rappeler » (nom de l'entreprise et Note) et un avertissement si la feuille du jour est vide alors qu'une ancienne a été remplie.
 Chiffre d'affaires : paiements Stripe réussis depuis minuit (Europe/Paris) ce jour-là, clé restreinte lue dans Jarvis\\.env (STRIPE_RESTRICTED_KEY), jamais affichée ;
-clé absente ou refusée : annoncé sans chiffre inventé. Aucune donnée personnelle (nom, e-mail, numéro) dans le message Discord."""
+clé absente ou refusée : annoncé sans chiffre inventé. Jamais de numéro ni d'e-mail dans le message Discord (seuls le nom des entreprises « À rappeler » et leur Note, demande de Liam du 17/11/2026)."""
 import argparse, csv, io, json, os, re, subprocess, sys, urllib.error, urllib.request
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -89,8 +91,59 @@ def journaliser(action, detail="", a_blanc=False):
 
 
 # --- source 1 : les cases cochées par Sid sur la feuille Google du jour --------------------------------------------
+APPELS_SID_CONFIG = ICI / "appels-sid-config.json"   # dossier_sid_id : dossier Drive où sont les feuilles « Appels Sid AAAA-MM-JJ »
+TITRE_SID = re.compile(r"Appels (?:Sid )?(\d{4}-\d{2}-\d{2})")
+
+
+def _jour_paris(iso):
+    """Date (AAAA-MM-JJ) à Paris d'un horodatage Drive « 2026-11-17T17:37:27.472Z »."""
+    try: t = datetime.fromisoformat(str(iso).replace("Z", "+00:00"))
+    except ValueError: return ""
+    try:
+        from zoneinfo import ZoneInfo
+        return t.astimezone(ZoneInfo("Europe/Paris")).date().isoformat()
+    except Exception: return (t + timedelta(hours=2 if 3 <= t.month <= 10 else 1)).date().isoformat()
+
+
+def stats_feuilles_modifiees(drive, racine, jour):
+    """(dispo, détail) : résultats de TOUTES les feuilles « Appels Sid » du dossier de Sid modifiées le `jour` (heure de Paris), pas seulement celle du jour (17/11/2026 : Sid avait
+    noté ses appels dans la feuille de la veille). Détail : résultats par valeur, À rappeler avec leur Note, et par feuille le nombre de lignes et de résultats. Lecture seule."""
+    feuilles = sorted((m.group(1), i, nom) for i, nom, mod in drive.lister_feuilles_modifiees(racine) if (m := TITRE_SID.fullmatch(nom or "")) and _jour_paris(mod) == jour)
+    res = {v: 0 for v in RESULTATS}; autres = 0; a_rappeler = []; par = []
+    for j, i, nom in feuilles:
+        lignes = list(csv.reader(io.StringIO(drive.lire_feuille_csv(i))))
+        if not lignes or "Résultat" not in lignes[0]: par.append({"jour": j, "nom": nom, "total": max(0, len(lignes) - 1), "avec": 0}); continue
+        e = lignes[0]; ir = e.index("Résultat"); ie = e.index("Entreprise") if "Entreprise" in e else None; inote = e.index("Note") if "Note" in e else None
+        v = lambda l, k: l[k].strip() if k is not None and k < len(l) else ""
+        avec = 0
+        for l in lignes[1:]:
+            r = v(l, ir)
+            if not r: continue
+            avec += 1
+            if r in res: res[r] += 1
+            else: autres += 1
+            if r == "À rappeler": a_rappeler.append({"entreprise": v(l, ie), "note": v(l, inote), "jour": j})
+        par.append({"jour": j, "nom": nom, "total": len(lignes) - 1, "avec": avec})
+    du_jour = next((p for p in par if p["jour"] == jour), None)
+    return True, {"multi": True, "feuilles": par, "resultats": res, "autres": autres, "a_rappeler": a_rappeler, "Appelé": sum(p["avec"] for p in par),
+                  "total": du_jour["total"] if du_jour else 0, "du_jour_vide": (du_jour is None or du_jour["avec"] == 0) and any(p["avec"] for p in par if p["jour"] != jour)}
+
+
 def stats_appels(conf, jour, drive=None):
-    """(dispo, détail) : nombre d'entreprises Appelé / Répondu / Rendez-vous pris / Refus sur la feuille du jour (créée par appels-sid.py), ou (False, raison) sans chiffre inventé."""
+    """(dispo, détail) : résultats des feuilles « Appels Sid » modifiées ce jour (stats_feuilles_modifiees) quand le dossier de Sid est connu ; sinon (ancien comportement) la seule feuille du
+    jour créée par appels-sid.py ; ou (False, raison) sans chiffre inventé."""
+    try:
+        racine = str(M.lire_fusionnee(APPELS_SID_CONFIG).get("dossier_sid_id") or "").strip()
+    except Exception: racine = ""
+    if racine:
+        try:
+            d = drive or ouvrir_drive(conf["compte_google"])
+            if hasattr(d, "lister_feuilles_modifiees"):
+                if (d.compte() or "").lower() != conf["compte_google"].lower(): return False, "jeton Google d'un autre compte : relancez appels-sid.py google-autoriser"
+                return stats_feuilles_modifiees(d, racine, jour)
+            drive = d
+        except Exception as ex:
+            return False, f"feuilles de Sid illisibles ({type(ex).__name__})"
     try:
         e = json.loads(APPELS_SID_ETAT.read_text(encoding="utf-8")) if APPELS_SID_ETAT.exists() else {}
     except (OSError, ValueError):
@@ -161,7 +214,18 @@ def _montants_texte(montants):
 
 def message_resume(jour, dispo_a, appels, dispo_c, ca):
     l = [f"Résumé du {jour} :"]
-    if dispo_a and "resultats" in appels:
+    if dispo_a and appels.get("multi"):
+        fs = appels["feuilles"]; detail = ", ".join(f"{v} {n}" for v, n in appels["resultats"].items() if n) + (f", autre valeur {appels['autres']}" if appels.get("autres") else "")
+        if not fs: l.append(f"Appels Sid — aucune feuille « Appels Sid » modifiée aujourd'hui : 0 appel noté.")
+        else:
+            l.append(f"Appels Sid — {appels['Appelé']} appel(s) noté(s) dans {len(fs)} feuille(s) modifiée(s) aujourd'hui ("
+                     + ", ".join(f"{p['nom']} : {p['avec']} résultat(s) sur {p['total']} ligne(s)" for p in fs) + ")" + (f". {detail}." if detail else "."))
+        if appels.get("du_jour_vide"):
+            autres = ", ".join(p["nom"] for p in fs if p["jour"] != jour and p["avec"])
+            l.append(f"Attention : la feuille du jour (Appels Sid {jour}) est vide, mais Sid a noté des résultats dans {autres}. Les lignes de ces feuilles sont relues demain à 7 h 30.")
+        for r in appels.get("a_rappeler", []): l.append(f"À rappeler : {r['entreprise']} (feuille du {r['jour']}) — note : {r['note'] or '(vide)'}")
+        if appels["resultats"].get("RDV pris"): l.append(f"RDV pris : {appels['resultats']['RDV pris']} — à voir dans les feuilles de Sid.")
+    elif dispo_a and "resultats" in appels:
         detail = ", ".join(f"{v} {n}" for v, n in appels["resultats"].items()) + (f", autre valeur {appels['autres']}" if appels.get("autres") else "")
         l.append(f"Appels Sid — {appels['total']} entreprise(s) sur la liste : {appels['Appelé']} avec un résultat, {appels['total'] - appels['Appelé']} sans résultat. {detail}.")
         if appels["resultats"].get("RDV pris"): l.append(f"RDV pris : {appels['resultats']['RDV pris']} — à voir dans le tableur du jour (ces entreprises sortent de la liste d'appels).")

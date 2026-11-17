@@ -150,14 +150,18 @@ class Listes(unittest.TestCase):
         reg = RG.charger(); self.assertIn(f"{RG.SID}|2026-11-17", reg["feuilles_lues"], "Résultat de la veille lus AVANT la génération")
         self.assertEqual(l18[1][NOM], vide, "ligne sans Résultat : en tête de la liste suivante"); self.assertIn("sans résultat", l18[1][DET])
         n18 = {l[NOM] for l in l18[1:]}
-        self.assertIn(rap_sans, n18, "À rappeler sans date lisible : jour ouvré suivant")
+        self.assertNotIn(rap_sans, n18, "À rappeler : lead chaud, plus jamais chez Sid (17/11/2026)")
         self.assertFalse({pdr, rap20, refl} & n18); self.assertFalse(finals & n18)
         self.m.remplir(A.chemin("2026-11-18")); muet(self.m.liam, "2026-11-18"); muet(self.m.sid, "2026-11-19"); muet(self.m.liam, "2026-11-19")
+        self.assertIn(rap_sans, {l[NOM] for l in self.m.lire(A.chemin_liam("2026-11-18"))[1:]}, "À rappeler sans date lisible : liste de Liam du jour ouvré suivant")
         self.m.remplir(A.chemin("2026-11-19")); muet(self.m.sid, "2026-11-20"); muet(self.m.liam, "2026-11-20")
-        l20 = {l[NOM]: l for l in self.m.lire(A.chemin("2026-11-20"))[1:]}; liam20 = self.m.lire(A.chemin_liam("2026-11-20"))
-        self.assertIn(rap20, l20, "À rappeler : le jour écrit dans Note (20/11)"); self.assertIn("note : rappeler le 20/11", l20[rap20][DET])
+        l20 = {l[NOM]: l for l in self.m.lire(A.chemin("2026-11-20"))[1:]}; liam20 = self.m.lire(A.chemin_liam("2026-11-20")); lm20 = {l[NOM]: l for l in liam20[1:]}
+        self.assertNotIn(rap20, l20, "À rappeler : jamais chez Sid"); self.assertIn(rap20, lm20, "À rappeler : liste de Liam le jour écrit dans Note (20/11)")
+        self.assertIn("note : rappeler le 20/11", lm20[rap20][DET])
         self.assertIn(pdr, l20, "Pas de réponse le 17 : de retour 3 jours ouvrés plus tard (le 20)")
-        self.assertEqual(liam20[1][NOM], refl, "Je dois réfléchir : relance en tête de la liste de Liam 3 jours plus tard"); self.assertIn("Relance « Je dois réfléchir »", liam20[1][DET])
+        tete20 = [l for l in liam20[1:] if l[NOM] in (refl, rap20, rap_sans)]
+        self.assertEqual(liam20[1:len(tete20) + 1], tete20, "leads chauds (Je dois réfléchir, À rappeler) en tête de la liste de Liam")
+        self.assertIn("Relance « Je dois réfléchir »", lm20[refl][DET], "Je dois réfléchir : relance de Liam 3 jours plus tard")
         self.assertNotIn(refl, l20, "jamais dans la liste de Sid")
         for j in ("2026-11-23", "2026-11-24"): muet(self.m.sid, j); muet(self.m.liam, j)
         tous = set()
@@ -217,6 +221,63 @@ class Corbeille(unittest.TestCase):
     def test_aucun_dossier_cree(self):
         src = (C.AGENTS / "appels-liam.py").read_text(encoding="utf-8") + (C.AGENTS / "registre.py").read_text(encoding="utf-8")
         self.assertNotIn("creer_dossier", src); self.assertNotIn(".delete(", src)
+
+
+class DriveSid:
+    """Faux dossier de Sid : feuilles « Appels Sid AAAA-MM-JJ » modifiables après coup, lecture seule pour l'agent."""
+    def __init__(self): self.f = {}
+    def poser(self, jour, texte): self.f[f"F{jour}"] = (f"Appels Sid {jour}", texte)
+    def lister_feuilles(self, parent): return [(i, n) for i, (n, _) in self.f.items()] + [("X", "Budget 2026-11-16")]
+    def lire_feuille_csv(self, i): return self.f[i][1]
+
+
+class Relecture(unittest.TestCase):
+    """Cas réel du 17/11/2026 : Sid note ses appels du jour dans la feuille de la VEILLE, déjà lue à 7 h 30 (cases vides à ce moment-là)."""
+    def setUp(self):
+        self.m = Monde(par=1); self.alertes = []; self.av = A.alerter_discord
+        A.alerter_discord = lambda t: self.alertes.append(t) or True
+    def tearDown(self): A.alerter_discord = self.av
+
+    def csv_drive(self, f, resultats):
+        lignes = self.m.lire(f)
+        for l in lignes[1:]:
+            if l[NOM] in resultats: l[RES], l[NOTE] = resultats[l[NOM]]
+        return "\n".join(",".join('"' + c.replace('"', '""') + '"' for c in l) for l in lignes)
+
+    def sid(self, jour, drive, envoi=True):
+        conf = A.cfg(); conf["envoi_automatique"] = envoi; conf["dossier_sid_id"] = "DSID"; etat = A.etat_lire()
+        return muet(A.preparer_registre, RG.SID, conf, etat, jour, False, drive, hors_ligne=True)
+
+    def test_feuille_de_la_veille_relue(self):
+        d = DriveSid(); muet(self.m.sid, "2026-11-17"); f17 = A.chemin("2026-11-17"); corps = self.m.lire(f17)[1:]
+        chaud, refl, non, rdv, pdr = (corps[i][NOM] for i in range(5))
+        d.poser("2026-11-17", self.csv_drive(f17, {}))
+        self.sid("2026-11-18", d)                     # 18/11 7 h 30 : feuille du 17 lue, tout est vide -> tout revient en tête
+        f18 = A.chemin("2026-11-18"); self.assertTrue({chaud, non} <= {l[NOM] for l in self.m.lire(f18)[1:]}, "situation du 17/11 reproduite")
+        d.poser("2026-11-18", self.csv_drive(f18, {}))
+        d.poser("2026-11-17", self.csv_drive(f17, {chaud: ("À rappeler", "intéressée, rappeler quand dispo"), refl: ("Je dois réfléchir", "voir associé"),
+                                                   non: ("Non catégorique", "a déjà ses clients"), rdv: ("RDV pris", "jeudi"), pdr: ("Pas de réponse", "")}))
+        self.sid("2026-11-19", d)                     # 19/11 : relecture des 3 dernières feuilles, dont celle du 17 déjà lue
+        n19 = {l[NOM] for l in self.m.lire(A.chemin("2026-11-19"))[1:]}
+        self.assertFalse({chaud, refl, non, rdv} & n19, "Non catégorique, RDV pris, À rappeler, Je dois réfléchir : retirés de la liste de Sid")
+        self.assertEqual(len(self.alertes), 2, "une alerte Discord par lead chaud")
+        self.assertTrue(any(chaud in t and "À rappeler" in t and "rappeler quand dispo" in t for t in self.alertes), "entreprise et Note dans l'alerte")
+        x = {v["nom"]: v for v in RG.charger()["entreprises"].values()}
+        self.assertEqual(x[pdr]["essais"], 1); self.assertEqual(x[non]["statut"], "terminée"); self.assertEqual(x[chaud]["pour"], RG.LIAM)
+        d.poser("2026-11-19", self.csv_drive(A.chemin("2026-11-19"), {}))
+        self.sid("2026-11-20", d)
+        self.assertEqual(len(self.alertes), 2, "jamais deux fois la même alerte")
+        x = {v["nom"]: v for v in RG.charger()["entreprises"].values()}
+        self.assertEqual(x[pdr]["essais"], 1, "Pas de réponse relu plusieurs fois : compté une seule fois")
+        self.assertNotIn(non, {l[NOM] for l in self.m.lire(A.chemin("2026-11-20"))[1:]}, "case vide d'une feuille plus récente : Non catégorique ne revient jamais")
+
+    def test_simulation_rien_envoye(self):
+        d = DriveSid(); muet(self.m.sid, "2026-11-17"); f17 = A.chemin("2026-11-17"); chaud = self.m.lire(f17)[1][NOM]
+        d.poser("2026-11-17", self.csv_drive(f17, {chaud: ("À rappeler", "")}))
+        self.sid("2026-11-18", d, envoi=False)
+        self.assertEqual(self.alertes, [], "simulation : aucun Discord")
+        self.assertFalse(any(v.get("alerte_lead") for v in RG.charger()["entreprises"].values()), "rien marqué : l'alerte partira une fois l'envoi activé")
+        self.assertNotIn(chaud, (A.JOURNAL.read_text(encoding="utf-8") if A.JOURNAL.exists() else ""), "jamais de nom d'entreprise dans le journal")
 
 
 class Fin(unittest.TestCase):

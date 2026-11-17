@@ -7,8 +7,9 @@ Pour chaque entreprise : département, métier, date donnée, à qui (Sid, Liam,
 Reprises (lues dans la colonne Résultat des feuilles « Appels » de Sid et « Appels Liam ») :
   case vide en fin de journée -> en tête de la liste suivante de la même personne ;
   Pas de réponse             -> retour après 3 jours ouvrés, 3 essais au plus (au 3e, plus jamais redonnée) ;
-  À rappeler                 -> retour le jour écrit dans Note (17/11, 2026-11-20, mardi, demain…), sinon le jour ouvré suivant ;
-  Je dois réfléchir          -> relance dans la liste de Liam 3 jours plus tard ;
+  À rappeler                 -> lead chaud : liste de LIAM le jour écrit dans Note (17/11, 2026-11-20, mardi, demain…), sinon le jour ouvré suivant ; plus jamais chez Sid ;
+  Je dois réfléchir          -> lead chaud : relance dans la liste de Liam 3 jours plus tard ;
+  (leads chauds : alerte Discord pour Liam une seule fois par lead, voir appels-sid.alerter_leads ; décision du 17/11/2026)
   RDV pris, Non catégorique, Trop cher, Déjà un site, Pas le temps -> jamais redonnée.
 Aucun réseau, aucun envoi : ce module ne fait que lire et écrire le fichier du registre (écriture atomique, verrou)."""
 import json, os, re, time, unicodedata, contextlib
@@ -23,6 +24,7 @@ DEBUT = "2026-11-17"            # premier jour des nouvelles règles (la liste d
 LECTURE_DEPUIS = "2026-11-16"   # feuilles dont le Résultat est lu dans le registre (celle du 16/11 est lue le 17/11)
 SID, LIAM, LOT = "Sid", "Liam", "lot e-mail"
 FINAUX = ("RDV pris", "Non catégorique", "Trop cher", "Déjà un site", "Pas le temps")
+CHAUDS = ("À rappeler", "Je dois réfléchir")   # leads chauds : retirés de la liste de Sid, donnés à Liam, alerte Discord une seule fois par lead (décision de Liam du 17/11/2026)
 ESSAIS_MAX = 3                  # Pas de réponse : 3 essais au plus
 JOURS_OUVRES_SANS_REPONSE = 3   # Pas de réponse : retour après 3 jours ouvrés
 JOURS_REFLECHIR = 3             # Je dois réfléchir : relance de Liam 3 jours plus tard
@@ -156,7 +158,11 @@ def date_dans_note(note, jour):
 
 def noter(reg, k, resultat, note, jour_feuille, qui):
     """Applique le Résultat d'une ligne de la feuille de `qui` du `jour_feuille` (règles du module). -> la décision, en clair."""
-    x = reg["entreprises"][k]; v = (resultat or "").strip(); x["note"] = (note or "").strip()[:300]
+    x = reg["entreprises"][k]; v = (resultat or "").strip()
+    x.setdefault("lus", {})[f"{qui}|{jour_feuille}"] = v   # ce qui a été appliqué pour cette feuille : une ligne relue plus tard (relire) n'est jamais comptée deux fois
+    if not v and (x.get("statut") == "terminée" or (x.get("pour") == LIAM and x.get("dernier_resultat") in CHAUDS)):
+        return "sans résultat, mais déjà terminée ou lead chaud : rien ne change"   # une case vide ne fait jamais revenir un « Non catégorique » ni un lead chaud chez Sid (17/11/2026)
+    x["note"] = (note or "").strip()[:300]
     if not v:
         x.update(retour=jour_ouvre(jour_feuille, 1), pour=qui, statut="à reprendre", tete=True); return "sans résultat : en tête de la liste suivante"
     x["essais"] = int(x.get("essais", 0)) + 1; x["dernier_resultat"] = v; x["tete"] = False; x["resultat_le"] = jour_feuille
@@ -165,11 +171,34 @@ def noter(reg, k, resultat, note, jour_feuille, qui):
         x.update(retour=jour_ouvre(jour_feuille, JOURS_OUVRES_SANS_REPONSE), pour=qui, statut="à reprendre"); return f"pas de réponse : retour après {JOURS_OUVRES_SANS_REPONSE} jours ouvrés"
     if v == "À rappeler":
         d = date_dans_note(note, jour_feuille)
-        x.update(retour=d or jour_ouvre(jour_feuille, 1), pour=qui, statut="à reprendre"); return "à rappeler : " + ("le jour écrit dans Note" if d else "aucun jour lisible dans Note, jour ouvré suivant")
+        x.update(retour=d or jour_ouvre(jour_feuille, 1), pour=LIAM, statut="à reprendre")   # lead chaud : pour Liam, jamais rendu à Sid (décision du 17/11/2026)
+        return "à rappeler : liste de Liam, " + ("le jour écrit dans Note" if d else "aucun jour lisible dans Note, jour ouvré suivant")
     if v == "Je dois réfléchir":
         x.update(retour=(date.fromisoformat(jour_feuille) + timedelta(days=JOURS_REFLECHIR)).isoformat(), pour=LIAM, statut="à reprendre"); return f"je dois réfléchir : relance de Liam dans {JOURS_REFLECHIR} jours"
     x.update(retour="", pour="", statut="terminée")
     return "jamais redonnée" if v in FINAUX else f"valeur inconnue « {v[:30]} » : jamais redonnée"
+
+
+def relire(reg, qui, jour_feuille, lignes):
+    """Résultats notés APRÈS la première lecture d'une feuille (17/11/2026 : Sid a noté ses appels dans la feuille de la veille, déjà lue à 7 h 30). Chaque ligne n'est appliquée
+    qu'une fois (x['lus'], ou même résultat déjà enregistré pour ce jour) ; un Résultat final l'emporte toujours ; un autre n'écrase ni une entreprise terminée ni un résultat
+    plus récent. Pas de réponse : règles de noter (essais) inchangées. lignes : [{nom, ville, tel, resultat, note}]. -> nombre de lignes appliquées."""
+    n = 0; f = f"{qui}|{jour_feuille}"
+    for l in lignes:
+        v = (l.get("resultat") or "").strip(); k = trouver(reg, l.get("nom", ""), l.get("ville", ""), l.get("tel", "")) if v else None
+        if not k: continue
+        x = reg["entreprises"][k]; lus = x.setdefault("lus", {})
+        deja = lus.get(f) == v or (f not in lus and x.get("resultat_le") == jour_feuille and x.get("dernier_resultat") == v)
+        perime = v not in FINAUX and (x.get("statut") == "terminée" or x.get("resultat_le", "") > jour_feuille)
+        if deja or perime: lus[f] = v; continue
+        noter(reg, k, v, l.get("note", ""), jour_feuille, qui); n += 1
+    return n
+
+
+def leads_chauds(reg, depuis=LECTURE_DEPUIS):
+    """Leads chauds (À rappeler, Je dois réfléchir) notés par Sid depuis `depuis` et pas encore signalés à Liam (alerte_lead). -> [(clé, entrée)]."""
+    return sorted(((k, x) for k, x in reg["entreprises"].items() if x.get("dernier_resultat") in CHAUDS and x.get("resultat_le", "") >= depuis and not x.get("alerte_lead")
+                   and any(c.startswith(f"{SID}|") and v == x["dernier_resultat"] for c, v in (x.get("lus") or {}).items())), key=lambda kx: (kx[1]["resultat_le"], kx[0]))
 
 
 def dues(reg, jour, qui):

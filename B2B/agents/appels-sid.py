@@ -863,6 +863,47 @@ def lire_resultats(reg, jour, sources, drive, avertir=print):
     return lues, lignes, echecs
 
 
+RELIRE_FEUILLES = 3   # feuilles « Appels Sid AAAA-MM-JJ » relues avant chaque liste de Sid, même déjà lues (décision de Liam du 17/11/2026)
+
+
+def relire_feuilles_sid(reg, jour, drive, racine, avertir=print):
+    """Relit la colonne Résultat des RELIRE_FEUILLES dernières feuilles « Appels Sid AAAA-MM-JJ » (antérieures à `jour`, trouvées par leur titre dans le dossier de Sid), même déjà
+    lues : Sid peut noter ses appels dans la feuille de la veille (17/11/2026). Règles dans registre.relire (une ligne n'est jamais comptée deux fois). Lecture seule.
+    -> (feuilles relues, lignes appliquées)."""
+    if drive is None or not racine: return 0, 0
+    try: fs = drive.lister_feuilles(racine)
+    except Exception as e: avertir(f"  ! relecture des feuilles de Sid impossible ({type(e).__name__}) : réessayée au prochain passage"); return 0, 0
+    datees = []
+    for i, nom in fs:
+        m = re.fullmatch(r"Appels Sid (\d{4}-\d{2}-\d{2})", nom or "")
+        if m and m.group(1) < jour: datees.append((m.group(1), i))
+    lues = n = 0
+    for j, i in sorted(datees)[-RELIRE_FEUILLES:]:
+        try: lignes = _parser_liste(drive.lire_feuille_csv(i))
+        except Exception as e: avertir(f"  ! « Appels Sid {j} » illisible ({type(e).__name__}) : relue au prochain passage"); continue
+        n += RG.relire(reg, RG.SID, j, lignes); lues += 1
+    return lues, n
+
+
+def _tel_lisible(t): return " ".join(t[k:k + 2] for k in range(0, len(t), 2)) if len(t or "") == 10 else (t or "")
+
+
+def alerter_leads(reg, jour, conf, a_blanc=False):
+    """Une alerte Discord pour Liam par lead chaud (À rappeler, Je dois réfléchir) noté par Sid : entreprise, téléphone, Note ; une seule fois par lead (alerte_lead dans le registre,
+    posé seulement si Discord a bien reçu le message). À blanc et simulation : affiché, rien envoyé, rien marqué. Le journal ne contient ni nom ni numéro. -> textes des alertes."""
+    textes = []
+    for k, x in RG.leads_chauds(reg):
+        t = (f"Lead chaud ({x['dernier_resultat']}, feuille de Sid du {x['resultat_le']}) : {x['nom']} ({x.get('commune', '')}), {_tel_lisible(x.get('tel', ''))}. "
+             f"Note de Sid : {x.get('note') or '(vide)'}. Retiré de la liste de Sid : à rappeler par Liam.")
+        textes.append(t)
+        if a_blanc: print("  [à blanc] alerte lead chaud qui serait envoyée : " + t); continue
+        if not conf.get("envoi_automatique"): print("  [simulation] alerte lead chaud : " + t); continue
+        if alerter_discord(t): x["alerte_lead"] = jour
+        else: print("  ! alerte lead chaud non envoyée : réessayée au prochain passage")
+    if textes and not a_blanc: journaliser("lead", f"{jour} : {len(textes)} lead(s) chaud(s) signalé(s) à Liam")
+    return textes
+
+
 def neuves_registre(conf, etat, jour, reg, n, historique, qui, a_blanc=False, sites_trouves=None, hors_ligne=False, deja=None):
     """Jusqu'à n entreprises jamais données (candidats() moins le registre), réparties à tour de rôle sur les départements (76, 27, 14, 50, 61) et, dans chaque département,
     sur les métiers (rotation) ; dans un métier, ordre mélangé (jamais trié par ville ni par proximité). Site officiel trouvé : écartée (historique), comme choisir()."""
@@ -921,7 +962,7 @@ def _reprise_vers_ligne(k, x, qui):
     constat = debut + (f" ; note : {x['note']}" if x.get("note") else "")
     metier = x.get("metier") if x.get("metier") in NOMS else (cle_metier_sid(x.get("metier", "")) or "")
     return {"cle": S.cle({"nom": x["nom"], "ville": x["commune"]}), "rkey": k, "nom": x["nom"], "ville": x["commune"], "tel": telephone_valide(x["tel"]), "metier": metier,
-            "brut": LABELS.get(metier, ""), "constat": constat, "dept": x.get("departement", ""), "prox": -1, "tete": bool(x.get("tete")), "relance": x.get("dernier_resultat") == "Je dois réfléchir",
+            "brut": LABELS.get(metier, ""), "constat": constat, "dept": x.get("departement", ""), "prox": -1, "tete": bool(x.get("tete")), "relance": x.get("dernier_resultat") in RG.CHAUDS,
             "eviter": x.get("creneau", "") if x.get("dernier_resultat") == "Pas de réponse" else ""}
 
 
@@ -940,9 +981,13 @@ def preparer_registre(qui, conf, etat, jour, a_blanc, drive=None, hors_ligne=Fal
         if migrees and qui != RG.SID and not a_blanc: etat_ecrire(sid[2])   # reprises de l'ancien système vidées dans l'état de Sid (elles sont dans le registre)
         lues, nlig, echecs = lire_resultats(reg, jour, sources, drive)
         print(f"  Registre : {lues} feuille(s) relue(s) ({nlig} ligne(s))" + (f", {migrees} entreprise(s) reprise(s) des anciennes listes" if migrees else "") + (f", {len(echecs)} feuille(s) à relire plus tard" if echecs else ""))
+        if qui == RG.SID:   # 17/11/2026 : résultats notés plus tard dans une feuille déjà lue (feuille de la veille), puis une alerte par lead chaud
+            rl, ra = relire_feuilles_sid(reg, jour, drive, conf.get("dossier_sid_id"))
+            if rl: print(f"  Relecture : {rl} feuille(s) « Appels Sid » récente(s), {ra} résultat(s) noté(s) après coup")
+            alerter_leads(reg, jour, conf, a_blanc)
         historique = historique_lire(); stop = _tels_stop(); reprises = []
         dues = RG.dues(reg, jour, qui)
-        if qui == RG.LIAM: dues.sort(key=lambda kx: kx[1].get("dernier_resultat") != "Je dois réfléchir")   # Liam : les relances « Je dois réfléchir » d'abord (tri stable)
+        if qui == RG.LIAM: dues.sort(key=lambda kx: kx[1].get("dernier_resultat") not in RG.CHAUDS)   # Liam : les leads chauds (Je dois réfléchir, À rappeler de Sid) d'abord (tri stable)
         for k, x in dues:
             l = _reprise_vers_ligne(k, x, qui)
             if not l["tel"] or l["tel"] in stop or l["metier"] not in NOMS: x.update(statut="terminée", retour="", pour=""); continue   # STOP ou hors des métiers : ne revient plus

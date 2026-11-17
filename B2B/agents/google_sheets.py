@@ -111,6 +111,12 @@ class Drive:
         r = _appel(self.svc.files().list(q=q, fields="files(id,name)", spaces="drive", pageSize=1000))
         return [(f["id"], f["name"]) for f in r.get("files", [])]
 
+    def lister_feuilles_modifiees(self, parent):
+        """(id, nom, modifiedTime ISO UTC) des feuilles Google directement dans un dossier, hors corbeille (résumé du soir : feuilles modifiées aujourd'hui). Lecture seule."""
+        q = f"mimeType = '{FEUILLE_MIME}' and trashed = false and '{_q(parent)}' in parents"
+        r = _appel(self.svc.files().list(q=q, fields="files(id,name,modifiedTime)", spaces="drive", pageSize=1000))
+        return [(f["id"], f["name"], f.get("modifiedTime", "")) for f in r.get("files", [])]
+
     def formater_feuille(self, id_, largeurs_px, liste=None):
         """Mise en forme lisible d'une feuille convertie depuis un CSV (un seul onglet, le premier) : ligne 1 figée, largeur de chaque colonne (`largeurs_px`, en pixels, dans l'ordre des
         colonnes), texte renvoyé à la ligne partout ; `liste` = (indice de colonne, [valeurs]) : liste déroulante sous l'en-tête. Aucune cellule fusionnée.

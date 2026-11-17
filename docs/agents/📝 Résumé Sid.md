@@ -45,7 +45,7 @@ Poster à 19:30 (jours ouvrés) le résumé du soir : appels de Sid par valeur d
 
 ## Entrées et sorties
 **Lit :**
-- Google Sheets : Appels AAAA-MM-JJ (lecture)
+- Google Sheets : toutes les feuilles Appels Sid AAAA-MM-JJ modifiées le jour (lecture)
 - Stripe charges (lecture)
 
 **Écrit :**

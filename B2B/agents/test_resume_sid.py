@@ -221,6 +221,38 @@ verifier(code == 0 and len(EXEC) == 1 and "19:30" in EXEC[0] and "Jarvis-ResumeS
 code, sortie = lancer("retirer-tache", "--oui")
 verifier(code == 0 and len(EXEC) == 2 and "Unregister-ScheduledTask" in EXEC[1] and "Jarvis-ResumeSid" in EXEC[1], "retirer-tache --oui : désinstalle la bonne tâche")
 
+print("11. Toutes les feuilles « Appels Sid » modifiées aujourd'hui (17/11/2026 : Sid avait noté ses appels dans la feuille de la veille)")
+class DriveSid(FauxDrive):
+    """Dossier de Sid : (id, nom, modifiedTime UTC) + contenu ; lecture seule."""
+    def __init__(s, feuilles): super().__init__(); s.liste = feuilles
+    def lister_feuilles_modifiees(s, parent): return [(i, n, m) for i, (n, m, _) in s.liste.items()] if parent == "DSID" else []
+    def lire_feuille_csv(s, i): return s.liste[i][2]
+COL = ["Créneau", "Entreprise", "Métier", "Ville", "Téléphone", "Détail fiche", "Résultat", "Note"]
+def feuille(*res):
+    t = io.StringIO(); w = csv.writer(t); w.writerow(COL)
+    for i, (r, n) in enumerate(res): w.writerow(["9 h", f"Entreprise {i}", "Coiffeur", "Caen", "02 31 00 00 0%d" % i, "", r, n])
+    return t.getvalue()
+cfg_sid = Path(tempfile.mkdtemp(prefix="resume-sid-cfg-")) / "appels-sid-config.json"; cfg_sid.write_text(json.dumps({"dossier_sid_id": "DSID"}), encoding="utf-8")
+av_cfg = A.APPELS_SID_CONFIG; A.APPELS_SID_CONFIG = cfg_sid
+try:
+    J = "2026-11-17"
+    d = DriveSid({"a": ("Appels Sid 2026-11-16", "2026-11-17T17:37:27.472Z", feuille(("À rappeler", "intéressée, rappeler quand dispo"), ("Non catégorique", ""), ("Pas de réponse", ""), ("", ""))),
+                  "b": ("Appels Sid 2026-11-17", "2026-11-17T06:38:59.418Z", feuille(("", ""), ("", ""))),
+                  "c": ("Appels Sid 2026-11-13", "2026-11-14T08:00:00Z", feuille(("RDV pris", ""))),            # modifiée un autre jour : pas comptée
+                  "d": ("Appels Sid 2026-11-12", "2026-11-16T23:30:00Z", feuille(("RDV pris", ""))),            # 23 h 30 UTC = 00 h 30 le 17 à Paris : comptée
+                  "e": ("Budget", "2026-11-17T10:00:00Z", feuille(("RDV pris", "")))})                        # autre fichier : jamais lu
+    dispo, det = A.stats_appels(A.cfg(), J, d)
+    verifier(dispo and det["Appelé"] == 4 and det["resultats"]["À rappeler"] == 1 and det["resultats"]["RDV pris"] == 1 and det["resultats"]["Non catégorique"] == 1,
+             "résultats de toutes les feuilles modifiées aujourd'hui (heure de Paris), pas seulement celle du jour ; autres jours et autres fichiers ignorés")
+    msg = A.message_resume(J, dispo, det, False, "test")
+    verifier("Attention : la feuille du jour (Appels Sid 2026-11-17) est vide" in msg and "Appels Sid 2026-11-16" in msg, "feuille du jour vide mais ancienne remplie : écrit clairement")
+    verifier("À rappeler : Entreprise 0" in msg and "rappeler quand dispo" in msg, "les À rappeler sont listés avec leur Note")
+    verifier("02 31" not in msg, "jamais de numéro dans le résumé")
+    d2 = DriveSid({"b": ("Appels Sid 2026-11-17", "2026-11-17T18:00:00Z", feuille(("Pas de réponse", ""), ("", "")))})
+    dispo, det = A.stats_appels(A.cfg(), J, d2); msg = A.message_resume(J, dispo, det, False, "test")
+    verifier(det["Appelé"] == 1 and "Attention" not in msg, "feuille du jour remplie : aucun avertissement")
+finally: A.APPELS_SID_CONFIG = av_cfg
+
 print()
 if echecs: print(f"{echecs} ÉCHEC(S)"); sys.exit(1)
 print("OK : tous les tests de l'agent resume-sid passent")
