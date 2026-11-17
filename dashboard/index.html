@@ -10,9 +10,9 @@
   :root {
     /* Trois gammes seulement : bleus (ciel, carte vedette, pastilles, voyants), blancs / gris bleutés (verre, texte bleu nuit), ocre foncé (paiements). Pas de vert, pas de violet, pas de rouge. */
     --ciel-haut: #E8EFFA; --ciel-bas: #F7FAFE;
-    --verre: rgba(255,255,255,.55); --verre-fort: rgba(255,255,255,.86); --bord-verre: rgba(255,255,255,.7);
+    --verre: rgba(255,255,255,.45); --verre-fort: rgba(255,255,255,.8); --bord-verre: rgba(255,255,255,.7);
     --ligne: rgba(23,36,67,.08); --ligne-forte: rgba(23,36,67,.16);
-    --texte: #172443; --doux: #3F4E6B; --faible: #5B6984;
+    --texte: #172443; --doux: #33425E; --faible: #46546F;
     --nuit: #172443; --bleu: #2F64A8; --bleu-moyen: #2C5C9C; --bleu-clair: #9DC0EE; --bleu-pale: #DCE7F6;
     --ocre: #9A6623;
     --ombre: 0 1px 2px rgba(47,100,168,.05), 0 12px 32px rgba(47,100,168,.08);
@@ -20,15 +20,14 @@
     --mono: "Cascadia Mono", "Cascadia Code", Consolas, ui-monospace, monospace;
   }
   * { box-sizing: border-box; }
-  html { background: var(--ciel-bas); }
-  body { margin: 0; min-height: 100vh; color: var(--texte); font: 14px/20px "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased;
-    background: linear-gradient(180deg, var(--ciel-haut) 0%, var(--ciel-bas) 60%) fixed; }
+  html { background: linear-gradient(180deg, var(--ciel-haut) 0%, var(--ciel-bas) 60%) fixed var(--ciel-bas); }
+  body { margin: 0; min-height: 100vh; color: var(--texte); font: 14px/20px "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased; background: transparent; }
   /* Trois grandes formes floues, fixes, en CSS pur (dégradés radiaux, aucun filtre ni animation) */
-  .formes { position: fixed; inset: 0; z-index: -1; pointer-events: none;
-    background:
-      radial-gradient(600px 480px at 10% 4%, rgba(143,179,227,.6), rgba(143,179,227,0) 70%),
-      radial-gradient(720px 560px at 98% 30%, rgba(166,197,238,.55), rgba(166,197,238,0) 70%),
-      radial-gradient(640px 500px at 44% 108%, rgba(184,208,242,.6), rgba(184,208,242,0) 70%); }
+  .formes { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+  .formes i { position: absolute; border-radius: 50%; filter: blur(80px); }
+  .formes i:nth-child(1) { width: 560px; height: 560px; top: -120px; right: 4%; background: #5B8FD6; opacity: .6; }      /* bleu moyen, en haut à droite */
+  .formes i:nth-child(2) { width: 480px; height: 480px; top: 38%; left: -80px; background: #86BDF2; opacity: .65; }   /* bleu ciel, au milieu à gauche */
+  .formes i:nth-child(3) { width: 520px; height: 520px; bottom: -140px; right: 14%; background: #9ADBF0; opacity: .55; } /* bleu-cyan clair, en bas à droite */
   a { color: var(--bleu); }
   button, input { font: inherit; color: inherit; }
   :focus-visible { outline: 2px solid var(--bleu); outline-offset: 2px; border-radius: 8px; }
@@ -36,21 +35,21 @@
   h1, h2, h3 { margin: 0; font-weight: 600; }
   .meta, .num { font-family: var(--mono); font-size: 12px; line-height: 16px; color: var(--faible); font-variant-numeric: tabular-nums; }
   .vide { color: var(--faible); }
-  .verre { background: var(--verre); -webkit-backdrop-filter: blur(20px) saturate(1.15); backdrop-filter: blur(20px) saturate(1.15); border: 1px solid var(--bord-verre); border-radius: 24px; box-shadow: var(--ombre); }
+  .verre { background: var(--verre); -webkit-backdrop-filter: blur(24px) saturate(1.2); backdrop-filter: blur(24px) saturate(1.2); border: 1px solid var(--bord-verre); border-radius: 24px; box-shadow: var(--ombre); }
   .carte { transition: transform .2s var(--courbe), box-shadow .2s var(--courbe); }
   .carte:hover { transform: translateY(-4px); box-shadow: 0 1px 2px rgba(47,100,168,.05), 0 16px 40px rgba(47,100,168,.12); }
 
   /* Coquille : barre latérale en verre, étroite, flottante */
-  .cote { position: fixed; top: 16px; left: 16px; bottom: 16px; width: 200px; z-index: 5; display: flex; flex-direction: column; padding: 24px 12px 20px; }
+  .cote { position: fixed; top: 16px; left: 16px; width: 200px; z-index: 5; display: flex; flex-direction: column; padding: 24px 12px 20px; }
   .marque { padding: 0 12px 28px; } .marque b { display: block; font-size: 16px; line-height: 24px; font-weight: 600; } .marque span { color: var(--faible); }
   .cote nav { display: flex; flex-direction: column; gap: 4px; }
   .cote nav button { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 14px; border: 0; border-radius: 20px; background: none; color: var(--doux); cursor: pointer; text-align: left; transition: background-color .2s var(--courbe), color .2s var(--courbe); }
   .cote nav button svg { flex: none; }
   .cote nav button:hover { background: rgba(255,255,255,.7); color: var(--texte); }
   .cote nav button[aria-current="page"] { background: var(--bleu); color: #fff; font-weight: 500; }
-  .cote .pied { margin-top: auto; padding: 0 12px; }
+  .cote .pied { margin: 32px 0 0; padding: 0 12px; }
 
-  main { margin-left: 232px; max-width: 1280px; padding: 40px 32px 96px 24px; min-width: 0; animation: entree .4s var(--courbe) both; }
+  main { margin-left: 216px; padding: 40px 32px 96px 32px; min-width: 0; animation: entree .4s var(--courbe) both; }
   @keyframes entree { from { opacity: 0; transform: translateY(6px); } }
   .tete { display: flex; align-items: baseline; gap: 12px 16px; flex-wrap: wrap; margin-bottom: 24px; }
   .tete h1 { font-size: 30px; line-height: 38px; letter-spacing: -.01em; }
@@ -61,12 +60,17 @@
 
   /* Carte vedette : appels notés par Sid aujourd'hui */
   .vedette { position: relative; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; min-height: 232px; padding: 28px 32px; border-radius: 24px; color: #fff; overflow: hidden;
-    background: linear-gradient(135deg, var(--nuit) 0%, #1F3A6A 55%, var(--bleu-moyen) 100%); box-shadow: 0 16px 40px rgba(23,36,67,.18); }
+    background: linear-gradient(135deg, var(--nuit) 0%, #1F3A6A 55%, var(--bleu-moyen) 100%); box-shadow: 0 16px 40px rgba(23,36,67,.18); isolation: isolate; }
+  .vedette::after { content: ""; position: absolute; z-index: -1; right: -80px; top: -60px; width: 560px; height: 380px; border-radius: 50%; background: #8FC1F2; opacity: .45; filter: blur(70px); }
+  .vedette .droite-v { display: flex; flex-direction: column; align-items: flex-end; gap: 16px; }
+  .repartition { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; max-width: 520px; margin: 0; padding: 0; list-style: none; }
+  .repartition li { display: inline-flex; align-items: baseline; gap: 8px; padding: 6px 12px; border-radius: 16px; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.24); font-size: 14px; line-height: 20px; }
+  .repartition b { font-size: 14px; line-height: 20px; margin: 0; letter-spacing: 0; }
   .vedette .haut { position: absolute; top: 28px; left: 32px; right: 32px; display: flex; justify-content: space-between; gap: 16px; color: rgba(255,255,255,.78); }
-  .vedette .lib { display: block; color: rgba(255,255,255,.86); font-size: 15px; line-height: 22px; }
-  .vedette b { display: block; font-size: 64px; line-height: 72px; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; margin: 4px 0 4px; }
+  .vedette .lib { display: block; color: rgba(255,255,255,.9); font-size: 16px; line-height: 24px; }
+  .vedette b { display: block; font-size: 80px; line-height: 88px; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; margin: 4px 0 4px; }
   .vedette b.manque { font-weight: 400; color: rgba(255,255,255,.7); }
-  .vedette .det { color: rgba(255,255,255,.72); font-size: 13px; line-height: 18px; }
+  .vedette .det { color: rgba(255,255,255,.82); font-size: 15px; line-height: 22px; }
   .vedette svg { flex: none; }
   .vedette .meta { color: rgba(255,255,255,.72); }
 
@@ -74,10 +78,10 @@
   .chiffres { display: grid; grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr)); gap: 24px; margin: 24px 0 0; padding: 0; list-style: none; }
   .chiffre { display: flex; flex-direction: column; min-height: 200px; padding: 24px; }
   .pastille { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--bleu-pale); color: var(--bleu); }
-  .chiffre b { font-size: 40px; line-height: 48px; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; margin: 20px 0 4px; }
+  .chiffre b { font-size: 44px; line-height: 52px; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; margin: 20px 0 4px; }
   .chiffre b.manque { color: var(--faible); font-weight: 400; }
-  .chiffre .lib { color: var(--faible); font-size: 13px; line-height: 18px; }
-  .chiffre .det { margin-top: auto; padding-top: 12px; color: var(--faible); font-size: 12px; line-height: 16px; }
+  .chiffre .lib { color: var(--doux); font-size: 15px; line-height: 22px; }
+  .chiffre .det { margin-top: auto; padding-top: 12px; color: var(--faible); font-size: 14px; line-height: 20px; }
   .chiffre.cle b:not(.manque) { color: var(--ocre); }
   .chiffre.cle .pastille { background: #F3E6D3; color: var(--ocre); }
   .accueil-vide { padding: 32px; max-width: 720px; } .accueil-vide p { margin: 8px 0 0; color: var(--doux); }
@@ -85,21 +89,22 @@
   /* Agents : une grande carte, une colonne par pôle */
   .bloc { padding: 24px; margin-top: 24px; }
   .bloc .tete { margin-bottom: 16px; }
-  .colonnes { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px 24px; }
-  .colonne h3 { display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; line-height: 20px; font-weight: 600; padding: 8px 8px 8px; border-bottom: 1px solid var(--ligne); margin-bottom: 4px; }
+  .colonnes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; align-items: start; }
+  .colonne { padding: 12px 8px 8px; border-radius: 16px; background: rgba(255,255,255,.5); border: 1px solid var(--bord-verre); }
+  .colonne h3 { display: flex; justify-content: space-between; align-items: baseline; font-size: 15px; line-height: 22px; font-weight: 600; padding: 4px 8px 10px; border-bottom: 1px solid var(--ligne); margin-bottom: 4px; }
   .lien { border: 0; background: none; padding: 0; color: var(--bleu); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 
   /* Voyants : bleu plein = passé aujourd'hui, anneau bleu = passé avant, gris bleuté = aucun passage visible, losange bleu nuit = erreur */
-  .pt { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex: none; background: rgba(23,36,67,.2); }
+  .pt { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex: none; background: rgba(23,36,67,.28); }
   .pt.ok { background: var(--bleu); }
-  .pt.ancien { background: none; box-shadow: inset 0 0 0 1.5px var(--bleu); }
-  .pt.erreur { background: var(--texte); border-radius: 1px; transform: rotate(45deg); }
+  .pt.ancien { background: none; box-shadow: inset 0 0 0 2px var(--bleu); }
+  .pt.erreur { width: 9px; height: 9px; background: var(--texte); border-radius: 1px; transform: rotate(45deg); }
   .legende { display: flex; gap: 8px 20px; flex-wrap: wrap; margin: 20px 0 0; padding-top: 16px; border-top: 1px solid var(--ligne); } .legende span { display: inline-flex; align-items: center; gap: 8px; }
 
   .poles { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; align-items: start; }
   .pole { padding: 20px 16px 16px; }
   .pole h2 { display: flex; justify-content: space-between; align-items: baseline; font-size: 16px; line-height: 24px; padding: 0 8px 8px; }
-  .agent { display: grid; grid-template-columns: 16px 1fr auto; align-items: center; column-gap: 8px; width: 100%; min-height: 36px; padding: 8px; border: 0; border-radius: 12px; background: none; text-align: left; cursor: pointer; transition: background-color .2s var(--courbe); }
+  .agent { display: grid; grid-template-columns: 16px 1fr auto; align-items: center; column-gap: 10px; width: 100%; min-height: 44px; font-size: 15px; padding: 8px; border: 0; border-radius: 12px; background: none; text-align: left; cursor: pointer; transition: background-color .2s var(--courbe); }
   .agent .pt { justify-self: center; }
   .agent:hover, .agent[aria-pressed="true"] { background: rgba(255,255,255,.8); }
   .agent .nom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -121,6 +126,7 @@
   .corps { color: var(--doux); padding: 4px 8px 16px 26px; white-space: pre-wrap; word-break: break-word; font-size: 13px; }
   code { font-family: var(--mono); background: var(--bleu-pale); padding: 1px 4px; border-radius: 4px; font-size: 12px; }
   .pipeline { padding: 24px; max-width: 960px; }
+  .source-l { display: grid; grid-template-columns: 220px 48px 1fr; gap: 16px; align-items: baseline; padding: 12px 0; border-bottom: 1px solid var(--ligne); } .source-l span:last-child { color: var(--doux); overflow-wrap: anywhere; }
   .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; padding-bottom: 24px; margin-bottom: 16px; border-bottom: 1px solid var(--ligne); }
   .stats span { display: block; color: var(--faible); font-size: 13px; line-height: 18px; } .stats b { display: block; margin-top: 4px; font-size: 28px; line-height: 36px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .etape { display: grid; grid-template-columns: 168px 1fr 40px; align-items: center; gap: 16px; min-height: 36px; }
@@ -148,6 +154,8 @@
     /* La barre latérale devient une barre du bas */
     .cote { top: auto; left: 12px; right: 12px; bottom: 12px; width: auto; padding: 6px; flex-direction: row; }
     .marque, .cote .pied { display: none; }
+    .cote.verre { background: rgba(255,255,255,.88); }
+    .vedette::after { width: 280px; height: 220px; right: -60px; top: -40px; opacity: .3; filter: blur(60px); }
     .cote nav { flex-direction: row; width: 100%; }
     .cote nav button { flex: 1; flex-direction: column; justify-content: center; gap: 2px; height: 52px; padding: 0 4px; font-size: 12px; line-height: 16px; border-radius: 18px; }
     main { margin-left: 0; padding: 24px 16px 112px; }
@@ -155,7 +163,7 @@
     .tete .droite { margin-left: 0; width: 100%; } input[type=search] { width: 100%; }
     .vedette { flex-direction: column; align-items: flex-start; min-height: 0; padding: 24px 20px; }
     .vedette .haut { position: static; margin-bottom: 24px; flex-direction: column; gap: 4px; }
-    .vedette b { font-size: 52px; line-height: 60px; }
+    .vedette b { font-size: 64px; line-height: 72px; } .vedette .droite-v { align-items: flex-start; } .repartition { justify-content: flex-start; }
     .chiffres { gap: 16px; margin-top: 16px; }
     .chiffre { min-height: 0; padding: 20px 16px; }
     .chiffre b { font-size: 36px; line-height: 44px; margin-top: 16px; }
@@ -164,6 +172,7 @@
     .pipeline { padding: 20px 16px; }
     .etape { grid-template-columns: 136px 1fr 32px; gap: 8px; }
     .poles { grid-template-columns: 1fr; gap: 16px; }
+    .source-l { grid-template-columns: 1fr 40px; } .source-l span:last-child { grid-column: 1 / 3; }
     #panneau { bottom: 88px; }
   }
   @media (hover: none) { .carte:hover { transform: none; } }
@@ -171,7 +180,7 @@
 </style>
 </head>
 <body>
-<div class="formes" aria-hidden="true"></div>
+<div class="formes" aria-hidden="true"><i></i><i></i><i></i></div>
 <aside class="cote verre">
   <div class="marque"><b>Jarvis</b><span>Mon entreprise</span></div>
   <nav id="nav" aria-label="Sections"></nav>
@@ -197,7 +206,7 @@
     candidatures: '<circle cx="8" cy="5" r="2.5"/><path d="M3 14a5 5 0 0 1 10 0"/>'
   };
   var VUES = [["jour", "Aujourd'hui"], ["agents", "Agents"], ["docs", "Documents"]];
-  var DOCS = [["pipeline", "Pipeline"], ["a_faire", "À faire"], ["journal", "Journal"], ["decisions", "Décisions"], ["idees", "Idées"]];
+  var DOCS = [["pipeline", "Pipeline"], ["sources", "Sources des chiffres"], ["a_faire", "À faire"], ["journal", "Journal"], ["decisions", "Décisions"], ["idees", "Idées"]];
   var JOURS = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"], MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
   var VEDETTE = "appels", CLE = "paiements";   // la carte du haut, et le chiffre qui garde l'ocre
   var A = null, V = null, D = null, vue = "jour", doc = "a_faire", choisi = null, recherche = "";
@@ -239,6 +248,13 @@
       '<polyline points="' + pts.join(" ") + '" fill="none" stroke="var(--bleu-clair)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="' + der[0] + '" cy="' + der[1] + '" r="3" fill="#fff"/></svg>';
   }
 
+  // Dans les cartes : une phrase simple ; le détail technique reste dans l'infobulle et dans Documents > Sources des chiffres
+  function simple(raison) { return /pas encore/i.test(raison || "") ? "Pas encore branché" : "Non disponible sur ce PC"; }
+  function repartition(x) {   // seulement si ventes.json donne la vraie répartition des résultats de Sid ({"RDV pris": 1, ...})
+    var r = x.repartition; if (!r || typeof r !== "object") return "";
+    var k = Object.keys(r).filter(function (n) { return typeof r[n] === "number"; }); if (!k.length) return "";
+    return '<ul class="repartition" aria-label="Résultats notés par Sid">' + k.map(function (n) { return "<li>" + esc(n) + "<b>" + r[n] + "</b></li>"; }).join("") + "</ul>";
+  }
   function vueJour() {
     var c = V && V.chiffres || [], ved = c.filter(function (x) { return x.cle === VEDETTE; })[0], autres = c.filter(function (x) { return x.cle !== VEDETTE; });
     var h = '<div class="tete"><h1>Aujourd\'hui</h1></div>';
@@ -247,12 +263,13 @@
       if (ved) {
         var m = ved.valeur == null;
         h += '<section class="vedette" aria-label="' + esc(ved.libelle) + '"><div class="haut"><span>' + esc(dateLongue(aujourdhui())) + "</span>" + (V.genere_le ? '<span class="meta">calculé à ' + esc(V.genere_le.slice(11, 16)) + "</span>" : "") + "</div>" +
-          '<div><span class="lib">' + esc(ved.libelle) + " aujourd'hui</span><b" + (m ? ' class="manque"' : "") + ">" + esc(val(ved.valeur)) + '</b><span class="det">' + esc(m ? ved.raison : ved.detail || "") + "</span></div>" + (m ? "" : courbe(ved.serie)) + "</section>";
+          '<div><span class="lib">' + esc(ved.libelle) + " aujourd'hui</span><b" + (m ? ' class="manque"' : "") + ">" + esc(val(ved.valeur)) + '</b><span class="det"' + (m ? ' title="' + esc(ved.raison) + '">' + simple(ved.raison) : ">" + esc(ved.detail || "")) + "</span></div>" +
+          (m ? "" : '<div class="droite-v">' + repartition(ved) + courbe(ved.serie) + "</div>") + "</section>";
       }
       h += '<ol class="chiffres" style="--n:' + autres.length + '">' + autres.map(function (x) {
         var manque = x.valeur == null;
         return '<li class="chiffre carte verre' + (x.cle === CLE ? " cle" : "") + '"><span class="pastille">' + svg(x.cle, 18) + "</span><b" + (manque ? ' class="manque"' : "") + ">" + esc(val(x.valeur)) +
-          '</b><span class="lib">' + esc(x.libelle) + '</span><span class="det">' + esc(manque ? x.raison : x.detail || "") + "</span></li>";
+          '</b><span class="lib">' + esc(x.libelle) + '</span><span class="det"' + (manque ? ' title="' + esc(x.raison) + '">' + simple(x.raison) : ">" + esc(x.detail || "")) + "</span></li>";
       }).join("") + "</ol>";
     }
     return h + carteAgents();
@@ -297,10 +314,17 @@
       p.map(function (x) { return '<div class="etape"><span>' + esc(x[0]) + '</span><div class="piste"><div class="rempli" style="width:' + (x[1] ? Math.max(2, 100 * x[1] / max) : 0) + '%"></div></div><b>' + esc(val(x[1])) + "</b></div>"; }).join("") +
       '<p class="meta" style="margin:16px 0 0">Comptes seulement · « — » : pas de donnée sur ce PC</p></section>';
   }
+  function vueSources() {   // d'où vient chaque chiffre du jour, avec la raison technique quand il manque
+    var c = V && V.chiffres || [];
+    if (!c.length) return '<p class="vide">ventes.js absent : double-cliquez sur l\'icône « Jarvis - Mon entreprise » du bureau.</p>';
+    return '<section class="pipeline verre">' + c.map(function (x) { return '<div class="source-l"><b>' + esc(x.libelle) + '</b><span class="num">' + esc(val(x.valeur)) + "</span><span>" + esc(x.valeur == null ? x.raison : x.detail || "") + "</span></div>"; }).join("") +
+      '<p class="meta" style="margin:16px 0 0">Calculé le ' + esc(V.genere_le) + " par outils\\agents-json.py</p></section>";
+  }
   function vueDocs() {
     var h = '<div class="tete"><h1>Documents</h1>' + (doc === "pipeline" ? "" : '<span class="droite"><input type="search" id="recherche" placeholder="Rechercher" aria-label="Rechercher dans les documents" value="' + esc(recherche) + '"></span>') + "</div>" +
       '<div class="sous" role="tablist">' + DOCS.map(function (d) { return '<button role="tab" data-doc="' + d[0] + '" aria-selected="' + (d[0] === doc) + '">' + d[1] + "</button>"; }).join("") + "</div>";
     if (doc === "pipeline") return h + vuePipeline();
+    if (doc === "sources") return h + vueSources();
     if (!D) return h + '<p class="vide">docs.js absent : double-cliquez sur l\'icône « Jarvis - Mon entreprise » du bureau.</p>';
     var r = recherche.toLowerCase(), l = (D[doc] || []).filter(function (s) { return !r || (s.titre + " " + s.texte).toLowerCase().indexOf(r) >= 0; });
     return h + '<div class="docs verre">' + (l.length ? l.map(function (s) { return "<details><summary>" + md(s.titre) + '</summary><div class="corps">' + (md(s.texte) || '<span class="vide">(vide)</span>') + "</div></details>"; }).join("") : '<p class="vide" style="padding:8px">Rien ne correspond</p>') +
