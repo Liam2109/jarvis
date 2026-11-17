@@ -19,10 +19,11 @@ tags: [agent-b2b]
 **Horaire :** à la demande (aucune tâche serveur), plage tous les jours 06:00-23:00
 **Script :** `Videos/agents/monteur.py` · **Contrat :** `B2B/harness/contrats/videos-monteur.json`
 
-## Mission
+## Rôle et limites
+### Mission
 Monte chaque sketch de la ligne B (appelé par videos-creation) : plans de 3 s au plus, son CC0, sous-titres en zone sûre, contrôle qualité ; sinon mise à part.
 
-## Ce qu'il fait étape par étape
+### Ce qu'il fait étape par étape
 1. `RS.rendre(..., retoucher=retoucher_plans)` : après chaque compilation du skit (avant le rendu de 2 à 3 min), `retoucher_plans` lit `generated/timeline.json` :
    durée prévue (corps + carte de fin de 2 s) hors 25-35 s -> rythme « snappy » (ou « argument ») si trop long, « sitcom » si trop court ;
    sinon un zoom bref (punch-in) au milieu de chaque plan de plus de 3 s. Recompilation, 4 fois au plus. Le skit impose déjà un cadrage différent à chaque réplique (`rendu_stickstage.plan_de`).
@@ -32,7 +33,23 @@ Monte chaque sketch de la ligne B (appelé par videos-creation) : plans de 3 s a
 5. Contrôle qualité : durée 25-35 s, `blackdetect` sans image noire, `controle_sous_titres` (2 lignes au plus, zone sûre), écart voix / musique ≥ 12 dB, aucun plan > 3 s (timeline).
 6. Échec : nouvel essai (rythme changé si la durée est en cause), 3 essais au plus ; puis `Videos/a-part/<vidéo>.mp4` + `.json` (motifs, rapport), ligne de journal, trace du harness `ok: false`.
 
+### Ce qu'il n'a pas le droit de faire
+- publier une vidéo
+- rendre deux vidéos en même temps
+- utiliser une musique ou un son sans licence CC0 notée dans Videos/SKILL-VIDEOS.md
+- laisser un fond noir plein
+- produire une vidéo sans la mention « Contenu généré par IA »
+- appeler Claude ou un service payant
+- toucher à memoire/, .env, config.json, .obsidian/ ou un fichier *.local.json
+- envoyer au client, encaisser ou signer
+- Engager Liam (envoyer au client, encaisser, publier, signer) : `peut_engager: false`, tout passe par `B2B/a-valider/`.
+
 ## Entrées et sorties
+**Chaîne vidéo :** Veille → Scripts → Marketing → Création → **Monteur (ligne B)** → Ton OK de Liam (« go publier », une fois par ligne) → Publication (verrouillée) → Nettoyage (fiche « ⛓️ Chaîne vidéo »)
+- **Reçoit de :** Création : vidéo rendue (ligne A : directement dans Videos/a-valider)
+- **Produit :** sketch monté et contrôlé, rangé dans Videos/a-valider (sinon Videos/a-part)
+- **Passe à :** Ton OK de Liam (« go publier », une fois par ligne)
+
 **Lit :**
 - Videos/travail/<vidéo> (voix, rendu)
 - Videos/outils/stick-stage (hors git : skit, timeline, musique et bruitages CC0)
@@ -45,20 +62,11 @@ Monte chaque sketch de la ligne B (appelé par videos-creation) : plans de 3 s a
 
 **Discord :** aucun · **Plafond :** 0 messages par jour · **Envoi au client :** non
 
-## Ce qu'il n'a pas le droit de faire
-- publier une vidéo
-- rendre deux vidéos en même temps
-- utiliser une musique ou un son sans licence CC0 notée dans Videos/SKILL-VIDEOS.md
-- laisser un fond noir plein
-- produire une vidéo sans la mention « Contenu généré par IA »
-- appeler Claude ou un service payant
-- toucher à memoire/, .env, config.json, .obsidian/ ou un fichier *.local.json
-- envoyer au client, encaisser ou signer
-- Engager Liam (envoyer au client, encaisser, publier, signer) : `peut_engager: false`, tout passe par `B2B/a-valider/`.
-
-## Harness
+## Horaire et état
+- **Horaire :** à la demande (aucune tâche serveur), plage tous les jours 06:00-23:00
+- **Tâche serveur :** aucune (appelé par un autre agent ou lancé à la main)
 - **Contrat :** valide (`python B2B\harness\valider.py`)
-- **Garde branchée :** non
+- **Garde branchée :** sans objet : le texte du sketch est gardé par videos-creation avant l'appel (aucun envoi)
 - Bloque : kill-switch `B2B\STOP`, lien Stripe non autorisé, phrase interdite (OFFRE-REFERENCE.json), secret dans le texte.
 - Avertit : machine non active, envoi_automatique = false (simulation), hors horaires du contrat (06:00-23:00), plafond de 0 messages par jour.
 - **Tests :** `tests/agents/test_videos.py`
@@ -68,7 +76,7 @@ Monte chaque sketch de la ligne B (appelé par videos-creation) : plans de 3 s a
 **Derniers résultats de test (cette machine) :**
 - `tests/agents/test_videos.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** 2026-11-17 00:22 ok
+**Dernière trace :** 2026-11-17 00:22 ok · **Dernière erreur :** 2026-11-17 00:11 monter 2026-11-17-1400 (durée 35.8 s (25 à 35 s attendues)) · **Dans agents_actifs (cette machine) :** non (Liam l'ajoute s'il veut le planifier)
 
 ### Historique (5 dernières traces, sans données client)
 - 2026-11-17 00:22 | monter 2026-11-18-1400 | ok | 205.41 s
@@ -77,8 +85,10 @@ Monte chaque sketch de la ligne B (appelé par videos-creation) : plans de 3 s a
 - 2026-11-16 23:58 | monter 2026-11-17-1400 | ERREUR (durée 43.9 s (25 à 35 s attendues); plan de 3.2 s à 0.0 s (3 s au plus)) | 777.96 s
 <!-- DYNAMIQUE:FIN -->
 
-## Skill
+## Skill et règles
 - `.claude/skills/agent-videos-monteur/SKILL.md` (copie : `docs/agents/skills/agent-videos-monteur.md`)
+- Règles : Videos/SKILL-VIDEOS.md (règles communes de l'équipe Vidéos, relues avant chaque exécution ; absentes ou incomplètes = refus, code 3)
+- Pas de preuve = pas de fait : « il a tourné » = une trace du jour `ok: true` ci-dessus ; « c'est corrigé » = ses tests puis `tests\b2b-rapide.ps1` en vert.
 <!-- GENERE:FIN -->
 
 ## Liens et décisions

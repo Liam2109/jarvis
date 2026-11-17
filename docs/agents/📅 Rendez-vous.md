@@ -20,10 +20,11 @@ tags: [agent-b2b]
 **Horaire :** toutes les 5 min, plage tous les jours 00:00-24:00
 **Script :** `B2B/agents/rendez-vous.py` · **Contrat :** `B2B/harness/contrats/rendez-vous.json`
 
-## Mission
+## Rôle et limites
+### Mission
 Annoncer sur Discord chaque rendez-vous de 15 minutes nouveau, déplacé, annulé ou proche, lu dans l'agenda iCal.
 
-## Ce qu'il fait étape par étape
+### Ce qu'il fait étape par étape
 1. Machine active obligatoire (`M.exiger`). Agent suspendu après une erreur : ne fait rien tant que `reprendre` n'est pas lancé.
 2. Lit l'adresse iCal dans ses réglages (fichier hors git) ; seules les adresses `https://calendar.google.com/` sont acceptées.
 3. Télécharge l'agenda, garde les événements dont le titre commence par « Rendez-vous de 15 minutes ».
@@ -32,6 +33,16 @@ Annoncer sur Discord chaque rendez-vous de 15 minutes nouveau, déplacé, annul�
 6. Rappel une seule fois par horaire, `rappel_minutes` (30) avant le début.
 7. Message : prénom, entreprise, e-mail, remarque, jour et heure (Paris), lien Meet ; posté dans le salon « rdv » (mode réel) ou seulement journalisé « serait posté » (simulation).
 8. Oublie les rendez-vous passés depuis plus de 2 jours, écrit l'état.
+
+### Ce qu'il n'a pas le droit de faire
+- envoyer au client sans accord de Liam
+- encaisser ou rembourser
+- publier
+- signer ou promettre un résultat
+- afficher un secret (jeton, clé, adresse iCal)
+- répondre au prospect
+- modifier l'agenda
+- Engager Liam (envoyer au client, encaisser, publier, signer) : `peut_engager: false`, tout passe par `B2B/a-valider/`.
 
 ## Entrées et sorties
 **Lit :**
@@ -43,17 +54,9 @@ Annoncer sur Discord chaque rendez-vous de 15 minutes nouveau, déplacé, annul�
 
 **Discord :** rdv · **Plafond :** 40 messages par jour · **Envoi au client :** non
 
-## Ce qu'il n'a pas le droit de faire
-- envoyer au client sans accord de Liam
-- encaisser ou rembourser
-- publier
-- signer ou promettre un résultat
-- afficher un secret (jeton, clé, adresse iCal)
-- répondre au prospect
-- modifier l'agenda
-- Engager Liam (envoyer au client, encaisser, publier, signer) : `peut_engager: false`, tout passe par `B2B/a-valider/`.
-
-## Harness
+## Horaire et état
+- **Horaire :** toutes les 5 min, plage tous les jours 00:00-24:00
+- **Tâche serveur :** entrée dans `B2B/agents/serveur-taches.json` ; tourne seulement si l'agent est dans `agents_actifs` (choix de Liam)
 - **Contrat :** valide (`python B2B\harness\valider.py`)
 - **Garde branchée :** oui
 - Bloque : kill-switch `B2B\STOP`, lien Stripe non autorisé, phrase interdite (OFFRE-REFERENCE.json), secret dans le texte.
@@ -63,17 +66,22 @@ Annoncer sur Discord chaque rendez-vous de 15 minutes nouveau, déplacé, annul�
 
 <!-- DYNAMIQUE:DEBUT -->
 **Derniers résultats de test (cette machine) :**
-- `B2B/agents/test_rendez_vous.py` : réussi le 2026-11-15 19:35
-- `tests/agents/test_rendez_vous.py` : réussi le 2026-11-15 19:35
+- `B2B/agents/test_rendez_vous.py` : pas encore lancé par `generer-fiches.py --tests`
+- `tests/agents/test_rendez_vous.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** aucune
+**Dernière trace :** 2026-11-17 01:23 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
 
 ### Historique (5 dernières traces, sans données client)
-- aucune trace sur cette machine
+- 2026-11-17 01:23 | jour | ok | 0.59 s
+- 2026-11-17 01:18 | jour | ok | 0.86 s
+- 2026-11-17 01:13 | jour | ok | 0.42 s
+- 2026-11-17 01:08 | jour | ok | 0.45 s
+- 2026-11-17 01:03 | jour | ok | 0.53 s
 <!-- DYNAMIQUE:FIN -->
 
-## Skill
+## Skill et règles
 - `.claude/skills/agent-rendez-vous/SKILL.md` (copie : `docs/agents/skills/agent-rendez-vous.md`)
+- Pas de preuve = pas de fait : « il a tourné » = une trace du jour `ok: true` ci-dessus ; « c'est corrigé » = ses tests puis `tests\b2b-rapide.ps1` en vert.
 <!-- GENERE:FIN -->
 
 ## Liens et décisions

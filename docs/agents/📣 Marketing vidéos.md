@@ -19,10 +19,11 @@ tags: [agent-b2b]
 **Horaire :** chaque jour à 05:30, plage tous les jours 05:30-06:15
 **Script :** `Videos/agents/marketing.py` · **Contrat :** `B2B/harness/contrats/videos-marketing.json`
 
-## Mission
+## Rôle et limites
+### Mission
 À 05:30, Qwen local propose 3 accroches par script, notées par la grille du skill : la meilleure est gardée (journal-videos.csv) ; rythme resserré, sous-titres de 2 à 4 mots préparés.
 
-## Ce qu'il fait étape par étape
+### Ce qu'il fait étape par étape
 1. `C.exiger` (machine active) puis `C.exiger_regles` (skill présent et complet, sinon refus code 3).
 2. Pour chaque script du jour sans champ `marketing` : Qwen choisit 3 formules de la ligne dans `Videos/hooks.md` (`- A01 | …`, `- B01 | …`) et remplit leurs trous (1 à 4 mots) ; il n'invente aucune phrase. Formule inconnue ou trou invalide = rejeté, complété par des formules sans trou (jamais inventées). Ligne B : la première phrase du brouillon de Liam concourt aussi (si elle est différente).
 3. `noter_accroche` : note sur 10 (forme qui accroche +3, courte +3, adresse directe +2, concrète +1, neuve +1, ouverture molle −3) ; éliminée (0) si chiffre, promesse, mot interdit, phrase molle, mauvais public (A : vouvoyer l'artisan, jamais son client ; B : tutoyer le futur call caller), adresse épelée ou lieu (ligne B). L'accroche écran = l'accroche gardée (7 mots au plus). La meilleure remplace la première phrase ; égalité = la plus courte.
@@ -30,7 +31,22 @@ tags: [agent-b2b]
 5. Sous-titres : groupes de 2 à 4 mots, mot clé (le plus long mot plein) en couleur d'accent ; utilisés par l'agent Création.
 6. Une ligne dans `Videos/journal-videos.csv` (accroche gardée, sa note et celle des autres) et une dans le journal de l'agent.
 
+### Ce qu'il n'a pas le droit de faire
+- garder une accroche avec un chiffre, une promesse, un témoignage, une phrase molle ou un lieu (ligne B)
+- inventer un revenu ou un nombre de ventes
+- utiliser un modèle payant ou des tokens Claude
+- publier, liker, s'abonner, commenter ou envoyer un message sur TikTok
+- toucher à memoire/, .env, config.json, .obsidian/ ou un fichier *.local.json
+- afficher un secret (jeton, clé, adresse iCal)
+- envoyer au client, encaisser ou signer
+- Engager Liam (envoyer au client, encaisser, publier, signer) : `peut_engager: false`, tout passe par `B2B/a-valider/`.
+
 ## Entrées et sorties
+**Chaîne vidéo :** Veille → Scripts → **Marketing** → Création → Monteur (ligne B) → Ton OK de Liam (« go publier », une fois par ligne) → Publication (verrouillée) → Nettoyage (fiche « ⛓️ Chaîne vidéo »)
+- **Reçoit de :** Scripts : script + légende (Videos/scripts/AAAA-MM-JJ-HHMM.json)
+- **Produit :** script enrichi : accroche gardée, rythme, sous-titres
+- **Passe à :** Création
+
 **Lit :**
 - Videos/SKILL-VIDEOS.md
 - Videos/hooks.md
@@ -45,17 +61,9 @@ tags: [agent-b2b]
 
 **Discord :** aucun · **Plafond :** 0 messages par jour · **Envoi au client :** non
 
-## Ce qu'il n'a pas le droit de faire
-- garder une accroche avec un chiffre, une promesse, un témoignage, une phrase molle ou un lieu (ligne B)
-- inventer un revenu ou un nombre de ventes
-- utiliser un modèle payant ou des tokens Claude
-- publier, liker, s'abonner, commenter ou envoyer un message sur TikTok
-- toucher à memoire/, .env, config.json, .obsidian/ ou un fichier *.local.json
-- afficher un secret (jeton, clé, adresse iCal)
-- envoyer au client, encaisser ou signer
-- Engager Liam (envoyer au client, encaisser, publier, signer) : `peut_engager: false`, tout passe par `B2B/a-valider/`.
-
-## Harness
+## Horaire et état
+- **Horaire :** chaque jour à 05:30, plage tous les jours 05:30-06:15
+- **Tâche serveur :** entrée dans `B2B/agents/serveur-taches.json`, active à partir du 2026-11-17 ; tourne seulement si l'agent est dans `agents_actifs` (choix de Liam)
 - **Contrat :** valide (`python B2B\harness\valider.py`)
 - **Garde branchée :** non
 - Bloque : kill-switch `B2B\STOP`, lien Stripe non autorisé, phrase interdite (OFFRE-REFERENCE.json), secret dans le texte.
@@ -67,14 +75,16 @@ tags: [agent-b2b]
 **Derniers résultats de test (cette machine) :**
 - `tests/agents/test_videos.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** aucune
+**Dernière trace :** aucune · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** non (Liam l'ajoute s'il veut le planifier)
 
 ### Historique (5 dernières traces, sans données client)
 - aucune trace sur cette machine
 <!-- DYNAMIQUE:FIN -->
 
-## Skill
+## Skill et règles
 - `.claude/skills/agent-videos-marketing/SKILL.md` (copie : `docs/agents/skills/agent-videos-marketing.md`)
+- Règles : Videos/SKILL-VIDEOS.md (règles communes de l'équipe Vidéos, relues avant chaque exécution ; absentes ou incomplètes = refus, code 3)
+- Pas de preuve = pas de fait : « il a tourné » = une trace du jour `ok: true` ci-dessus ; « c'est corrigé » = ses tests puis `tests\b2b-rapide.ps1` en vert.
 <!-- GENERE:FIN -->
 
 ## Liens et décisions

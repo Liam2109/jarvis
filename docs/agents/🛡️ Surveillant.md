@@ -19,10 +19,11 @@ tags: [agent-b2b]
 **Horaire :** chaque jour à 19:45 + lundi 07:50, plage tous les jours 07:00-20:30
 **Script :** `B2B/harness/surveillant.py` · **Contrat :** `B2B/harness/contrats/surveillant.json`
 
-## Mission
+## Rôle et limites
+### Mission
 Lire contrats et traces et signaler sur Discord chaque agent en défaut ; une ligne « harness OK » le lundi.
 
-## Ce qu'il fait étape par étape
+### Ce qu'il fait étape par étape
 1. Hors `--simulation` : machine active obligatoire (`M.exiger`).
 2. Lit tous les contrats `B2B/harness/contrats/*.json` ; agents d'une tâche serveur : seulement ceux de `agents_actifs` (b2b.local.json).
 3. Ne surveille que les statuts `actif` et `simulation` (pas lui-même).
@@ -30,6 +31,14 @@ Lire contrats et traces et signaler sur Discord chaque agent en défaut ; une li
 5. Défaut = une trace `ok:false` (« erreur ») ou, un jour prévu du contrat, aucune exécution passé `alerte_si_silence` (« n'a pas tourné »).
 6. Message : une ligne par agent en défaut ; rien si tout va bien, sauf le lundi avant midi « harness OK, N agents ».
 7. Poste avec la fonction Discord existante si `envoi_automatique` (surveillant-config.json, false par défaut), sinon affiche ; écrit sa propre trace.
+
+### Ce qu'il n'a pas le droit de faire
+- envoyer au client sans accord de Liam
+- encaisser ou rembourser
+- publier
+- signer ou promettre un résultat
+- afficher un secret (jeton, clé, adresse iCal)
+- Engager Liam (envoyer au client, encaisser, publier, signer) : `peut_engager: false`, tout passe par `B2B/a-valider/`.
 
 ## Entrées et sorties
 **Lit :**
@@ -41,15 +50,9 @@ Lire contrats et traces et signaler sur Discord chaque agent en défaut ; une li
 
 **Discord :** alertes · **Plafond :** 20 messages par jour · **Envoi au client :** non
 
-## Ce qu'il n'a pas le droit de faire
-- envoyer au client sans accord de Liam
-- encaisser ou rembourser
-- publier
-- signer ou promettre un résultat
-- afficher un secret (jeton, clé, adresse iCal)
-- Engager Liam (envoyer au client, encaisser, publier, signer) : `peut_engager: false`, tout passe par `B2B/a-valider/`.
-
-## Harness
+## Horaire et état
+- **Horaire :** chaque jour à 19:45 + lundi 07:50, plage tous les jours 07:00-20:30
+- **Tâche serveur :** entrée dans `B2B/agents/serveur-taches.json` ; tourne seulement si l'agent est dans `agents_actifs` (choix de Liam)
 - **Contrat :** valide (`python B2B\harness\valider.py`)
 - **Garde branchée :** oui
 - Bloque : kill-switch `B2B\STOP`, lien Stripe non autorisé, phrase interdite (OFFRE-REFERENCE.json), secret dans le texte.
@@ -59,16 +62,17 @@ Lire contrats et traces et signaler sur Discord chaque agent en défaut ; une li
 
 <!-- DYNAMIQUE:DEBUT -->
 **Derniers résultats de test (cette machine) :**
-- `tests/agents/test_panne_alerte.py` : réussi le 2026-11-15 19:35
+- `tests/agents/test_panne_alerte.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** aucune
+**Dernière trace :** aucune · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
 
 ### Historique (5 dernières traces, sans données client)
 - aucune trace sur cette machine
 <!-- DYNAMIQUE:FIN -->
 
-## Skill
+## Skill et règles
 - `.claude/skills/agent-surveillant/SKILL.md` (copie : `docs/agents/skills/agent-surveillant.md`)
+- Pas de preuve = pas de fait : « il a tourné » = une trace du jour `ok: true` ci-dessus ; « c'est corrigé » = ses tests puis `tests\b2b-rapide.ps1` en vert.
 <!-- GENERE:FIN -->
 
 ## Liens et décisions

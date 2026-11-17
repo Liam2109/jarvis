@@ -20,10 +20,11 @@ tags: [agent-b2b]
 **Horaire :** chaque jour à 07:30, plage lundi-vendredi 07:00-19:00
 **Script :** `B2B/agents/appels-sid.py` · **Contrat :** `B2B/harness/contrats/appels-sid.json`
 
-## Mission
+## Rôle et limites
+### Mission
 Créer chaque jour ouvré à 07:30 le tableur « Appels Sid AAAA-MM-JJ » de Sid, trié par créneau de 08:00 à 19:00.
 
-## Ce qu'il fait étape par étape
+### Ce qu'il fait étape par étape
 - **Quand :** du lundi au vendredi (`jours_appel`), à 7 h 30, il prépare **une** liste de 100 entreprises. Il en met au moins 100 et au plus 130.
 - **Quelles entreprises :**
   - environ 20 métiers locaux, au plus 20 entreprises par métier ;
@@ -47,6 +48,19 @@ Créer chaque jour ouvré à 07:30 le tableur « Appels Sid AAAA-MM-JJ » de Sid
 - **Le stock :** sous 3 jours de listes (Sid et Liam) d'entreprises neuves, une trace en erreur que le surveillant signale ; silence sinon.
 - **La réserve :** il garnit sa réserve de numéros avec la commande `sourcer` (OpenStreetMap et SIRENE, gratuits).
 
+### Ce qu'il n'a pas le droit de faire
+- envoyer au client sans accord de Liam
+- encaisser ou rembourser
+- publier
+- signer ou promettre un résultat
+- afficher un secret (jeton, clé, adresse iCal)
+- appeler un prospect
+- remettre un STOP dans la liste
+- redonner une entreprise déjà donnée à Liam ou dans un lot
+- supprimer définitivement un fichier Drive
+- créer un dossier Drive
+- Engager Liam (envoyer au client, encaisser, publier, signer) : `peut_engager: false`, tout passe par `B2B/a-valider/`.
+
 ## Entrées et sorties
 **Lit :**
 - B2B/prospects_maps.csv
@@ -62,20 +76,9 @@ Créer chaque jour ouvré à 07:30 le tableur « Appels Sid AAAA-MM-JJ » de Sid
 
 **Discord :** alertes · **Plafond :** 5 messages par jour · **Envoi au client :** non
 
-## Ce qu'il n'a pas le droit de faire
-- envoyer au client sans accord de Liam
-- encaisser ou rembourser
-- publier
-- signer ou promettre un résultat
-- afficher un secret (jeton, clé, adresse iCal)
-- appeler un prospect
-- remettre un STOP dans la liste
-- redonner une entreprise déjà donnée à Liam ou dans un lot
-- supprimer définitivement un fichier Drive
-- créer un dossier Drive
-- Engager Liam (envoyer au client, encaisser, publier, signer) : `peut_engager: false`, tout passe par `B2B/a-valider/`.
-
-## Harness
+## Horaire et état
+- **Horaire :** chaque jour à 07:30, plage lundi-vendredi 07:00-19:00
+- **Tâche serveur :** entrée dans `B2B/agents/serveur-taches.json` ; tourne seulement si l'agent est dans `agents_actifs` (choix de Liam)
 - **Contrat :** valide (`python B2B\harness\valider.py`)
 - **Garde branchée :** oui
 - Bloque : kill-switch `B2B\STOP`, lien Stripe non autorisé, phrase interdite (OFFRE-REFERENCE.json), secret dans le texte.
@@ -85,18 +88,19 @@ Créer chaque jour ouvré à 07:30 le tableur « Appels Sid AAAA-MM-JJ » de Sid
 
 <!-- DYNAMIQUE:DEBUT -->
 **Derniers résultats de test (cette machine) :**
-- `B2B/agents/test_appels_sid.py` : réussi le 2026-11-15 19:34
-- `tests/agents/test_appels_sid.py` : réussi le 2026-11-15 19:35
+- `B2B/agents/test_appels_sid.py` : pas encore lancé par `generer-fiches.py --tests`
+- `tests/agents/test_appels_sid.py` : pas encore lancé par `generer-fiches.py --tests`
 - `tests/agents/test_appels_registre.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** aucune
+**Dernière trace :** 2026-11-16 07:37 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
 
 ### Historique (5 dernières traces, sans données client)
-- aucune trace sur cette machine
+- 2026-11-16 07:37 | jour | ok | 461.46 s
 <!-- DYNAMIQUE:FIN -->
 
-## Skill
+## Skill et règles
 - `.claude/skills/agent-appels-sid/SKILL.md` (copie : `docs/agents/skills/agent-appels-sid.md`)
+- Pas de preuve = pas de fait : « il a tourné » = une trace du jour `ok: true` ci-dessus ; « c'est corrigé » = ses tests puis `tests\b2b-rapide.ps1` en vert.
 <!-- GENERE:FIN -->
 
 ## Liens et décisions

@@ -20,10 +20,11 @@ tags: [agent-b2b]
 **Horaire :** toutes les 15 min, plage tous les jours 00:00-24:00
 **Script :** `B2B/agents/reponses.py` · **Contrat :** `B2B/harness/contrats/reponses.json`
 
-## Mission
+## Rôle et limites
+### Mission
 Lire les réponses des prospects, les classer et prévenir Liam sur Discord avec deux créneaux proposés ; aucun envoi au prospect.
 
-## Ce qu'il fait étape par étape
+### Ce qu'il fait étape par étape
 1. Machine active obligatoire. Hors `--a-blanc`, vérifie salon, identifiant Discord de Liam et jeton du bot ; s'il en manque : « À COMPLÉTER … », arrêt.
 2. Lit l'agenda iCal (adresse dans `B2B\.env`) pour calculer 2 créneaux de 15 minutes libres, jamais réservés.
 3. Lit la boîte Gmail en lecture seule : API OAuth si « api » est actif dans `reponses-config.json`, sinon les 2 boîtes en IMAP.
@@ -33,6 +34,15 @@ Lire les réponses des prospects, les classer et prévenir Liam sur Discord avec
 7. Positive : message « 🚨 PRIORITÉ » salon important (avec les 2 créneaux) ; autres : résumé salon réponses.
 8. Mémorise l'identifiant du message dans `reponses-traitees.json` seulement si Discord l'a pris.
 9. Note rebonds et plaintes dans `prospection-retours.json`, ajoute les adresses rebondies à `exclus-emails.json`.
+
+### Ce qu'il n'a pas le droit de faire
+- envoyer au client sans accord de Liam
+- encaisser ou rembourser
+- publier
+- signer ou promettre un résultat
+- afficher un secret (jeton, clé, adresse iCal)
+- répondre au prospect
+- Engager Liam (envoyer au client, encaisser, publier, signer) : `peut_engager: false`, tout passe par `B2B/a-valider/`.
 
 ## Entrées et sorties
 **Lit :**
@@ -47,16 +57,9 @@ Lire les réponses des prospects, les classer et prévenir Liam sur Discord avec
 
 **Discord :** reponses · **Plafond :** 40 messages par jour · **Envoi au client :** non
 
-## Ce qu'il n'a pas le droit de faire
-- envoyer au client sans accord de Liam
-- encaisser ou rembourser
-- publier
-- signer ou promettre un résultat
-- afficher un secret (jeton, clé, adresse iCal)
-- répondre au prospect
-- Engager Liam (envoyer au client, encaisser, publier, signer) : `peut_engager: false`, tout passe par `B2B/a-valider/`.
-
-## Harness
+## Horaire et état
+- **Horaire :** toutes les 15 min, plage tous les jours 00:00-24:00
+- **Tâche serveur :** entrée dans `B2B/agents/serveur-taches.json` ; tourne seulement si l'agent est dans `agents_actifs` (choix de Liam)
 - **Contrat :** valide (`python B2B\harness\valider.py`)
 - **Garde branchée :** oui
 - Bloque : kill-switch `B2B\STOP`, lien Stripe non autorisé, phrase interdite (OFFRE-REFERENCE.json), secret dans le texte.
@@ -66,16 +69,21 @@ Lire les réponses des prospects, les classer et prévenir Liam sur Discord avec
 
 <!-- DYNAMIQUE:DEBUT -->
 **Derniers résultats de test (cette machine) :**
-- `B2B/agents/test_reponses.py` : réussi le 2026-11-15 19:35
+- `B2B/agents/test_reponses.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** aucune
+**Dernière trace :** 2026-11-17 01:13 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
 
 ### Historique (5 dernières traces, sans données client)
-- aucune trace sur cette machine
+- 2026-11-17 01:13 | --jours 14 | ok | 11.29 s
+- 2026-11-17 00:58 | --jours 14 | ok | 11.55 s
+- 2026-11-17 00:43 | --jours 14 | ok | 13.09 s
+- 2026-11-17 00:28 | --jours 14 | ok | 11.68 s
+- 2026-11-17 00:19 | --jours 14 | ok | 11.92 s
 <!-- DYNAMIQUE:FIN -->
 
-## Skill
+## Skill et règles
 - `.claude/skills/agent-reponses/SKILL.md` (copie : `docs/agents/skills/agent-reponses.md`)
+- Pas de preuve = pas de fait : « il a tourné » = une trace du jour `ok: true` ci-dessus ; « c'est corrigé » = ses tests puis `tests\b2b-rapide.ps1` en vert.
 <!-- GENERE:FIN -->
 
 ## Liens et décisions

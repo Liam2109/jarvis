@@ -15,6 +15,22 @@ $journal = Join-Path $V "$AGENT-journal.log"
 $csv = Join-Path $V 'journal-videos.csv'
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 function Log([string]$t) { if (-not $Simulation) { [IO.File]::AppendAllText($journal, ("{0:yyyy-MM-dd HH:mm:ss} | {1}`n" -f (Get-Date), $t), $utf8) }; Write-Host $t }
+# Trace harness (17/11/2026) : une ligne JSON par exécution dans B2B\logsgentsideos-nettoyage\AAAA-MM-JJ.jsonl (JARVIS_HARNESS_LOGS s'il est posé ;
+# sous JARVIS_TEST=1 un dossier temporaire), comme B2B\harness	races.py ; jamais en -Simulation.
+$t0 = Get-Date
+function Fin([int]$code, [string]$resultat) {
+    if (-not $Simulation) {
+        try {
+            $d = $(if ($env:JARVIS_HARNESS_LOGS) { $env:JARVIS_HARNESS_LOGS } elseif ($env:JARVIS_TEST -eq '1') { Join-Path ([IO.Path]::GetTempPath()) 'jarvis-harness-test-logs' } else { Join-Path $JARVIS 'B2B\logsgents' })
+            $d = Join-Path $d $AGENT; New-Item -ItemType Directory -Force -Path $d | Out-Null
+            $n = Get-Date; $l = [ordered]@{ heure = $n.ToString('yyyy-MM-ddTHH:mm:ss'); decision = 'nettoyer'; resultat = "$resultat".Substring(0, [Math]::Min(300, "$resultat".Length)); duree_s = [Math]::Round(($n - $t0).TotalSeconds, 2); ok = ($code -eq 0) }
+            if ($code -ne 0) { $l.erreur = "code de sortie $code" }
+            [IO.File]::AppendAllText((Join-Path $d ("{0:yyyy-MM-dd}.jsonl" -f $n)), (($l | ConvertTo-Json -Compress) + "`n"), $utf8)
+        } catch { }   # une trace qui échoue ne casse jamais l'agent
+    }
+    exit $code
+}
+trap { Log "erreur : $($_.Exception.GetType().Name)"; Fin 1 "erreur inattendue" }
 function Csv-Champ([string]$s) { $s = ("$s" -replace '\s+', ' ').Trim(); if ($s -match '[;"]') { '"' + ($s -replace '"', '""') + '"' } else { $s } }
 function Csv-Ligne([string]$video, [string]$statut, [string]$hook, [string]$detail, [string]$ligne = '') {
     if ($Simulation) { return }
@@ -28,8 +44,8 @@ function Csv-Ligne([string]$video, [string]$statut, [string]$hook, [string]$deta
 if (-not $Simulation) {
     $fl = Join-Path $JARVIS 'B2B\agents\b2b.local.json'; $active = ''
     if (Test-Path -LiteralPath $fl) { try { $active = "$((Get-Content -LiteralPath $fl -Raw -Encoding UTF8 | ConvertFrom-Json).machine_active)".Trim() } catch { $active = '' } }
-    if (-not $active) { Log "refusé : machine_active absent de b2b.local.json (aucune machine active choisie)"; exit 3 }
-    if ($active -ne $NomMachine.Trim()) { Log "refusé : cette machine est « $NomMachine », la machine active est « $active »"; exit 3 }
+    if (-not $active) { Log "refusé : machine_active absent de b2b.local.json (aucune machine active choisie)"; Fin 3 "refusé : aucune machine active" }
+    if ($active -ne $NomMachine.Trim()) { Log "refusé : cette machine est « $NomMachine », la machine active est « $active »"; Fin 3 "refusé : machine non active" }
 }
 
 # 2) réglages (jamais dans le code : videos-config.json puis videos-config.local.json)
@@ -37,12 +53,12 @@ $jours = 14; $ext = @('.mp4'); $proteges = @()
 foreach ($n in 'videos-config.json', 'videos-config.local.json') {
     $p = Join-Path $V $n
     if (-not (Test-Path -LiteralPath $p)) { continue }
-    try { $c = Get-Content -LiteralPath $p -Raw -Encoding UTF8 | ConvertFrom-Json } catch { Log "réglages illisibles ($n) : rien supprimé"; exit 2 }
+    try { $c = Get-Content -LiteralPath $p -Raw -Encoding UTF8 | ConvertFrom-Json } catch { Log "réglages illisibles ($n) : rien supprimé"; Fin 2 "réglages illisibles" }
     if ($c.PSObject.Properties['nettoyage_jours']) { $jours = [int]$c.nettoyage_jours }
     if ($c.PSObject.Properties['nettoyage_extensions']) { $ext = @($c.nettoyage_extensions | ForEach-Object { "$_".ToLower() }) }
     if ($c.PSObject.Properties['videos_protegees']) { $proteges = @($c.videos_protegees | ForEach-Object { "$_" }) }
 }
-if ($jours -lt 1) { Log "nettoyage_jours = $jours : refusé (1 jour au moins), rien supprimé"; exit 2 }
+if ($jours -lt 1) { Log "nettoyage_jours = $jours : refusé (1 jour au moins), rien supprimé"; Fin 2 "nettoyage_jours invalide" }
 $ext = @($ext | Where-Object { $_ -match '^\.[a-z0-9]+$' -and $_ -notin '.md', '.py', '.ps1', '.json', '.txt', '.csv' })   # jamais un document, un script ou un réglage
 $auj = $(if ($Maintenant) { [datetime]::ParseExact($Maintenant, 'yyyy-MM-dd', $null) } else { Get-Date })
 $limite = $auj.AddDays(-$jours)
@@ -83,4 +99,4 @@ foreach ($d in $dossiers) {
 $t = Join-Path $V 'travail'
 if (-not $Simulation -and (Test-Path -LiteralPath $t)) { Get-ChildItem -LiteralPath $t -Directory -Recurse | Sort-Object { $_.FullName.Length } -Descending | Where-Object { -not (Get-ChildItem -LiteralPath $_.FullName -Force) } | ForEach-Object { Remove-Item -LiteralPath $_.FullName -Force } }
 Log ("{0} : {1} fichier(s) {2}, {3:N1} Mo (plus de {4} jours ; protégées : {5})" -f $(if ($Simulation) { 'simulation' } else { 'nettoyage' }), $sup, $(if ($Simulation) { 'à supprimer' } else { 'supprimé(s)' }), ($octets / 1MB), $jours, $(if ($proteges.Count) { $proteges -join ', ' } else { 'aucune' }))
-exit 0
+Fin 0 ("{0} fichier(s) supprimé(s), {1:N1} Mo" -f $sup, ($octets / 1MB))

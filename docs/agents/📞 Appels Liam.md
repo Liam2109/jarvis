@@ -19,10 +19,11 @@ tags: [agent-b2b]
 **Horaire :** chaque jour à 07:30, plage lundi-vendredi 07:00-19:00
 **Script :** `B2B/agents/appels-liam.py` · **Contrat :** `B2B/harness/contrats/appels-liam.json`
 
-## Mission
+## Rôle et limites
+### Mission
 Créer chaque jour ouvré à 07:30 le tableur « Appels Liam AAAA-MM-JJ » : relances « Je dois réfléchir » dues, puis entreprises neuves jamais données (registre commun).
 
-## Ce qu'il fait étape par étape
+### Ce qu'il fait étape par étape
 - **Quand :** du lundi au vendredi (`jours_appel`), à 7 h 30, à partir du mardi 17/11/2026.
 - **Avant la liste :** il lit la colonne Résultat des feuilles précédentes (Sid et Liam) et met le registre à jour. Ensuite seulement, il génère.
 - **La liste :** 15 lignes (`par_liste`, plage 10 à 20 du contrat).
@@ -34,6 +35,19 @@ Créer chaque jour ouvré à 07:30 le tableur « Appels Liam AAAA-MM-JJ » : rel
 - **Le tableur :** « Appels Liam AAAA-MM-JJ », même format que celui de Sid : Créneau (08 h à 19 h), Entreprise, Métier, Ville, Téléphone, Détail fiche, Résultat (8 valeurs), Note.
   - Il est posé à la racine du Drive du compte Google des agents, ou dans `dossier_liam_id`. Aucun dossier n'est créé.
 - **Le ménage :** les feuilles « Appels Liam » de plus de 7 jours vont à la **corbeille**, seulement si elles ont déjà été lues dans le registre.
+
+### Ce qu'il n'a pas le droit de faire
+- envoyer au client sans accord de Liam
+- encaisser ou rembourser
+- publier
+- signer ou promettre un résultat
+- afficher un secret (jeton, clé, adresse iCal)
+- appeler un prospect
+- remettre un STOP dans la liste
+- redonner une entreprise déjà donnée à Sid ou dans un lot
+- supprimer définitivement un fichier Drive
+- créer un dossier Drive
+- Engager Liam (envoyer au client, encaisser, publier, signer) : `peut_engager: false`, tout passe par `B2B/a-valider/`.
 
 ## Entrées et sorties
 **Lit :**
@@ -49,20 +63,9 @@ Créer chaque jour ouvré à 07:30 le tableur « Appels Liam AAAA-MM-JJ » : rel
 
 **Discord :** alertes · **Plafond :** 5 messages par jour · **Envoi au client :** non
 
-## Ce qu'il n'a pas le droit de faire
-- envoyer au client sans accord de Liam
-- encaisser ou rembourser
-- publier
-- signer ou promettre un résultat
-- afficher un secret (jeton, clé, adresse iCal)
-- appeler un prospect
-- remettre un STOP dans la liste
-- redonner une entreprise déjà donnée à Sid ou dans un lot
-- supprimer définitivement un fichier Drive
-- créer un dossier Drive
-- Engager Liam (envoyer au client, encaisser, publier, signer) : `peut_engager: false`, tout passe par `B2B/a-valider/`.
-
-## Harness
+## Horaire et état
+- **Horaire :** chaque jour à 07:30, plage lundi-vendredi 07:00-19:00
+- **Tâche serveur :** entrée dans `B2B/agents/serveur-taches.json`, active à partir du 2026-11-17 ; tourne seulement si l'agent est dans `agents_actifs` (choix de Liam)
 - **Contrat :** valide (`python B2B\harness\valider.py`)
 - **Garde branchée :** oui
 - Bloque : kill-switch `B2B\STOP`, lien Stripe non autorisé, phrase interdite (OFFRE-REFERENCE.json), secret dans le texte.
@@ -74,14 +77,15 @@ Créer chaque jour ouvré à 07:30 le tableur « Appels Liam AAAA-MM-JJ » : rel
 **Derniers résultats de test (cette machine) :**
 - `tests/agents/test_appels_registre.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** aucune
+**Dernière trace :** aucune · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
 
 ### Historique (5 dernières traces, sans données client)
 - aucune trace sur cette machine
 <!-- DYNAMIQUE:FIN -->
 
-## Skill
+## Skill et règles
 - `.claude/skills/agent-appels-liam/SKILL.md` (copie : `docs/agents/skills/agent-appels-liam.md`)
+- Pas de preuve = pas de fait : « il a tourné » = une trace du jour `ok: true` ci-dessus ; « c'est corrigé » = ses tests puis `tests\b2b-rapide.ps1` en vert.
 <!-- GENERE:FIN -->
 
 ## Liens et décisions

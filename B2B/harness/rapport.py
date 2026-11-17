@@ -16,7 +16,9 @@ from valider import valider   # noqa: E402
 GARDES = ("garde_harness", "garde.avant_envoi", "P.discord(", "PR.discord(")
 NON_BRANCHE = {"instagram": "partielle : alertes Discord gardées, publication Instagram non gardée (agent retiré)",
                "page-exemple": "partielle : alertes Discord gardées, déploiement de page non gardé (Vercel, accord de Liam)",
-               "jarvis-ceo": "sans objet : pas de script (sorties validées par jarvis_sortie.py)"}
+               "jarvis-ceo": "sans objet : pas de script (sorties validées par jarvis_sortie.py)",
+               "videos-monteur": "sans objet : le texte du sketch est gardé par videos-creation avant l'appel (aucun envoi)",
+               "videos-nettoyage": "sans objet : ne produit aucun texte, n'envoie rien (garde de chemins codée : seulement les dossiers listés de Videos)"}
 
 
 def garde(c):

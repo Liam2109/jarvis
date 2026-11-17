@@ -20,10 +20,11 @@ tags: [agent-b2b]
 **Horaire :** toutes les 10 min, plage lundi-vendredi 08:00-19:00
 **Script :** `B2B/agents/prospection.py` · **Contrat :** `B2B/harness/contrats/prospection.json`
 
-## Mission
+## Rôle et limites
+### Mission
 Trouver des entreprises locales, préparer les lots d'e-mails, les soumettre à Liam et n'envoyer que les lots approuvés.
 
-## Ce qu'il fait étape par étape
+### Ce qu'il fait étape par étape
 **Selon le skill `agent-recherche` :**
 - Cherche des entreprises (bâtiment d'abord, puis commerces), en Normandie par vagues de départements.
 - Sources : annuaire officiel (SIRENE), OpenStreetMap, Google Places si `decouverte_places` est vrai.
@@ -36,6 +37,16 @@ Trouver des entreprises locales, préparer les lots d'e-mails, les soumettre à 
 - **Relancer** : prépare **une** relance à J+2, depuis la même boîte que le premier message.
 - **Faire valider** : poste le lot sur Discord, puis lit l'accord de **Liam seul** (« ok lot » ou ✅).
 - **Envoyer** : envoie seulement les blocs « validé » **et** approuvés, avec une pause aléatoire entre deux envois et un palier de montée en charge.
+
+### Ce qu'il n'a pas le droit de faire
+- envoyer au client sans accord de Liam
+- encaisser ou rembourser
+- publier
+- signer ou promettre un résultat
+- afficher un secret (jeton, clé, adresse iCal)
+- écrire à un STOP ou un exclu
+- dépasser par_boite_par_jour
+- Engager Liam (envoyer au client, encaisser, publier, signer) : `peut_engager: false`, tout passe par `B2B/a-valider/`.
 
 ## Entrées et sorties
 **Lit :**
@@ -51,17 +62,9 @@ Trouver des entreprises locales, préparer les lots d'e-mails, les soumettre à 
 
 **Discord :** lots, alertes · **Plafond :** 40 messages par jour · **Envoi au client :** oui, seulement après accord de Liam
 
-## Ce qu'il n'a pas le droit de faire
-- envoyer au client sans accord de Liam
-- encaisser ou rembourser
-- publier
-- signer ou promettre un résultat
-- afficher un secret (jeton, clé, adresse iCal)
-- écrire à un STOP ou un exclu
-- dépasser par_boite_par_jour
-- Engager Liam (envoyer au client, encaisser, publier, signer) : `peut_engager: false`, tout passe par `B2B/a-valider/`.
-
-## Harness
+## Horaire et état
+- **Horaire :** toutes les 10 min, plage lundi-vendredi 08:00-19:00
+- **Tâche serveur :** entrée dans `B2B/agents/serveur-taches.json` ; tourne seulement si l'agent est dans `agents_actifs` (choix de Liam)
 - **Contrat :** valide (`python B2B\harness\valider.py`)
 - **Garde branchée :** oui
 - Bloque : kill-switch `B2B\STOP`, lien Stripe non autorisé, phrase interdite (OFFRE-REFERENCE.json), secret dans le texte, envoi client hors lundi-vendredi 08:00-19:00.
@@ -71,17 +74,22 @@ Trouver des entreprises locales, préparer les lots d'e-mails, les soumettre à 
 
 <!-- DYNAMIQUE:DEBUT -->
 **Derniers résultats de test (cette machine) :**
-- `B2B/agents/test_prospection.py` : réussi le 2026-11-15 19:35
+- `B2B/agents/test_prospection.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** aucune
+**Dernière trace :** 2026-11-17 01:23 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
 
 ### Historique (5 dernières traces, sans données client)
-- aucune trace sur cette machine
+- 2026-11-17 01:23 | jour | ok | 16.51 s
+- 2026-11-17 01:13 | jour | ok | 15.57 s
+- 2026-11-17 01:03 | jour | ok | 19.05 s
+- 2026-11-17 00:53 | jour | ok | 17 s
+- 2026-11-17 00:43 | jour | ok | 16.84 s
 <!-- DYNAMIQUE:FIN -->
 
-## Skill
+## Skill et règles
 - `.claude/skills/agent-recherche/SKILL.md` (copie : `docs/agents/skills/agent-recherche.md`)
 - `.claude/skills/agent-lots-emails/SKILL.md` (copie : `docs/agents/skills/agent-lots-emails.md`)
+- Pas de preuve = pas de fait : « il a tourné » = une trace du jour `ok: true` ci-dessus ; « c'est corrigé » = ses tests puis `tests\b2b-rapide.ps1` en vert.
 <!-- GENERE:FIN -->
 
 ## Liens et décisions

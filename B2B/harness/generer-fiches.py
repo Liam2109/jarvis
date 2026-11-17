@@ -59,7 +59,7 @@ def horaire(c, t):
     if c["statut"] == "prevu": return AC
     plage = f"{jours_txt(c['jours'])} {c['heures']['debut']}-{c['heures']['fin']}"
     if not t: return f"à la demande (aucune tâche serveur), plage {plage}"
-    q = f"chaque jour à {t['heure']}" if t.get("heure") else f"toutes les {t.get('toutes_minutes')} min"
+    q = f"chaque jour à {', '.join([t['heure']] + list(t.get('heures_en_plus') or []))}" if t.get("heure") else f"toutes les {t.get('toutes_minutes')} min"
     return q + (f" + lundi {t['lundi']}" if t.get("lundi") else "") + f", plage {plage}"
 
 
@@ -84,6 +84,65 @@ def etapes(c):
 
 
 def puces(xs, vide=AC): return "\n".join(f"- {x}" for x in xs) if xs else f"- {vide}"
+
+
+# Chaîne vidéo (17/11/2026) : ordre d'un passage, de bout en bout. (agent ou None pour l'étape de Liam, libellé, ce qui passe à l'étape suivante)
+CHAINE_VIDEO = [("videos-veille", "Veille", "note du jour (Videos/veille) + formules d'accroche (hooks.md)"),
+                ("videos-scripts", "Scripts", "script + légende (Videos/scripts/AAAA-MM-JJ-HHMM.json)"),
+                ("videos-marketing", "Marketing", "script enrichi : accroche gardée, rythme, sous-titres"),
+                ("videos-creation", "Création", "vidéo rendue (ligne A : directement dans Videos/a-valider)"),
+                ("videos-monteur", "Monteur (ligne B)", "sketch monté et contrôlé, rangé dans Videos/a-valider (sinon Videos/a-part)"),
+                (None, "Ton OK de Liam (« go publier », une fois par ligne)", "ligne ouverte : go_publier = true dans la config locale"),
+                ("videos-publication", "Publication (verrouillée)", "vidéo publiée, déplacée dans Videos/publiees"),
+                ("videos-nettoyage", "Nettoyage", "vieux fichiers supprimés après une ligne de journal-videos.csv")]
+NOTE_CHAINE = "⛓️ Chaîne vidéo"
+REGLES_VIDEO = "Videos/SKILL-VIDEOS.md (règles communes de l'équipe Vidéos, relues avant chaque exécution ; absentes ou incomplètes = refus, code 3)"
+
+
+def chaine_txt(nom):
+    """Place d'un agent vidéo dans la chaîne (texte simple, sans lien) ; vide pour les autres agents."""
+    ids = [a for a, _, _ in CHAINE_VIDEO]
+    if nom not in ids: return ""
+    i = ids.index(nom); lib = lambda j: CHAINE_VIDEO[j][1]
+    amont = f"{lib(i - 1)} : {CHAINE_VIDEO[i - 1][2]}" if i > 0 else "aucun (premier maillon)"
+    aval = lib(i + 1) if i + 1 < len(CHAINE_VIDEO) else "aucun (dernier maillon)"
+    sens = " → ".join(("**" + l + "**") if a == nom else l for a, l, _ in CHAINE_VIDEO)
+    return (f"**Chaîne vidéo :** {sens} (fiche « {NOTE_CHAINE} »)\n- **Reçoit de :** {amont}\n- **Produit :** {CHAINE_VIDEO[i][2]}\n- **Passe à :** {aval}\n\n")
+
+
+def regles_txt(nom): return f"- Règles : {REGLES_VIDEO}\n" if nom.startswith("videos-") else ""
+
+
+def tache_txt(nom, t):
+    if not t: return "aucune (appelé par un autre agent ou lancé à la main)" if nom == "videos-monteur" else "aucune dans serveur-taches.json"
+    return (f"entrée dans `B2B/agents/serveur-taches.json`" + (f", active à partir du {t['actif_le']}" if t.get("actif_le") else "") +
+            " ; tourne seulement si l'agent est dans `agents_actifs` (choix de Liam)")
+
+
+def note_chaine(cs, ts, ancien):
+    """Note « ⛓️ Chaîne vidéo » : sens des flèches de bout en bout (Mermaid) et tableau des maillons ; aucun lien [[...]] (reliée par la note de Jarvis (CEO))."""
+    par = {c["nom"]: c for c in cs}; n = noms()
+    m = ["```mermaid", "flowchart LR", '  ceo["Jarvis (CEO)"] -.-> veille']
+    ids = []
+    for a, l, _ in CHAINE_VIDEO:
+        i = (a or "ton_ok").replace("videos-", "").replace("-", "_"); ids.append(i)
+        st = f" ({STATUT[par[a]['statut']]})" if a in par else ""
+        m.append(f'  {i}["{(n.get(a) or l) if a else "✅ " + l}{st}"]')
+    m += [f'  {ids[k]} -->|"{CHAINE_VIDEO[k][2].split(" (")[0]}"| {ids[k + 1]}' for k in range(len(ids) - 1)] + ["```"]
+    lignes = ["| Étape | Agent | Horaire | Statut | Produit |", "|---|---|---|---|---|"]
+    for k, (a, l, prod) in enumerate(CHAINE_VIDEO, 1):
+        if a in par: lignes.append(f"| {k} | {n.get(a) or a} (`{a}`) | {horaire(par[a], ts.get(a))} | {STATUT[par[a]['statut']]} | {prod} |")
+        else: lignes.append(f"| {k} | {l} | quand Liam a vu la première vidéo de la ligne | décision de Liam | {prod} |")
+    corps = (f"# {NOTE_CHAINE}\n\nSens d'un passage, de bout en bout (06:00, 14:00, 22:00). Rattachée à Jarvis (CEO). Généré depuis les contrats `B2B/harness/contrats/videos-*.json` et `B2B/agents/serveur-taches.json`.\n\n"
+             + "\n".join(m) + "\n\n" + "\n".join(lignes) + "\n\n"
+             "- Le Monteur est appelé par la Création pour chaque sketch de la ligne B (aucune tâche à lui) ; la ligne A passe directement de la Création au ton OK.\n"
+             "- Rien n'est publié avant le « go publier » de Liam pour la ligne ; la Publication reste verrouillée (contrat `inactif`).\n"
+             "- Aucun agent vidéo ne tourne tant que Liam ne l'a pas ajouté à `agents_actifs` (`B2B/agents/b2b.local.json`).\n"
+             f"- Règles communes : {REGLES_VIDEO}.\n"
+             "- Pas de preuve = pas de fait : l'état de chaque maillon se lit dans sa fiche (rubrique « Horaire et état ») et dans `B2B/logs/agents/<agent>/`.\n")
+    fm, reste = decouper(ancien)
+    entete = "---\n" + "\n".join(fm or ["aliases: [⛓️ Chaîne vidéo]", "tags: [chaine-video]"]) + "\n---\n"
+    return entete + DEBUT + "\n" + sans_liens(corps) + FIN + "\n" + "\n" + zone_conservee(reste)
 
 
 def garde_mode(c):
@@ -122,12 +181,30 @@ def traces_recentes(nom, n=5):
     return out
 
 
+def derniere_erreur(nom):
+    """Dernière trace ok:false (heure, commande, erreur nettoyée), sur 30 jours au plus ; « aucune » sinon."""
+    d = T.dossier_logs() / nom
+    for f in (sorted(d.glob("*.jsonl"), reverse=True)[:30] if d.is_dir() else []):
+        for l in reversed(f.read_text(encoding="utf-8").splitlines()):
+            try: x = json.loads(l)
+            except ValueError: continue
+            if not x.get("ok"): return f"{str(x.get('heure', ''))[:16].replace('T', ' ')} {T.nettoyer(x.get('decision'))[:40]} ({T.nettoyer(x.get('erreur'))[:80]})"
+    return "aucune"
+
+
+def actif_ici(nom):
+    try:
+        sys.path.insert(0, str(RACINE / "B2B" / "agents")); import machine as M
+        return "oui" if nom in M.agents_actifs() else "non (Liam l'ajoute s'il veut le planifier)"
+    except Exception: return "inconnu"
+
+
 def dynamique(c):
     res = resultats_tests()
     lt = [f"- `{t}` : " + (f"{'réussi' if res[t]['ok'] else 'ÉCHEC'} le {res[t]['date']}" if t in res else "pas encore lancé par `generer-fiches.py --tests`") for t in c["tests"]]
     h = traces_recentes(c["nom"])
     return (f"{DYN_D}\n**Derniers résultats de test (cette machine) :**\n" + ("\n".join(lt) or "- aucun test") +
-            f"\n\n**Dernière trace :** {R.derniere_trace(c['nom'])}\n\n### Historique (5 dernières traces, sans données client)\n" + ("\n".join(f"- {x}" for x in h) or "- aucune trace sur cette machine") + f"\n{DYN_F}")
+            f"\n\n**Dernière trace :** {R.derniere_trace(c['nom'])} · **Dernière erreur :** {derniere_erreur(c['nom'])} · **Dans agents_actifs (cette machine) :** {actif_ici(c['nom'])}\n\n### Historique (5 dernières traces, sans données client)\n" + ("\n".join(f"- {x}" for x in h) or "- aucune trace sur cette machine") + f"\n{DYN_F}")
 
 
 def entete(c, t, titre, ancien_fm):
@@ -175,14 +252,19 @@ def fiche(c, schema, t, titre, cs, n):
 **Horaire :** {horaire(c, t)}
 **Script :** {f"`{c['script']}`" if c.get('script') else AC + ' (aucun script)'} · **Contrat :** `B2B/harness/contrats/{nom}.json`
 
-## Mission
+## Rôle et limites
+### Mission
 {c['mission']}
 
-## Ce qu'il fait étape par étape
+### Ce qu'il fait étape par étape
 {etapes(c)}
 
+### Ce qu'il n'a pas le droit de faire
+{puces(c['actions_interdites'])}
+- Engager Liam (envoyer au client, encaisser, publier, signer) : `peut_engager: false`, tout passe par `B2B/a-valider/`.
+
 ## Entrées et sorties
-**Lit :**
+{chaine_txt(nom)}**Lit :**
 {puces(c['fichiers_lus'])}
 
 **Écrit :**
@@ -190,11 +272,9 @@ def fiche(c, schema, t, titre, cs, n):
 
 **Discord :** {', '.join(c['canaux_discord']) or 'aucun'} · **Plafond :** {c['plafonds']['messages_par_jour']} messages par jour · **Envoi au client :** {'oui, seulement après accord de Liam' if c['envoi_client'] else 'non'}
 
-## Ce qu'il n'a pas le droit de faire
-{puces(c['actions_interdites'])}
-- Engager Liam (envoyer au client, encaisser, publier, signer) : `peut_engager: false`, tout passe par `B2B/a-valider/`.
-
-## Harness
+## Horaire et état
+- **Horaire :** {horaire(c, t)}
+- **Tâche serveur :** {tache_txt(nom, t)}
 - **Contrat :** {'valide' if not valider(c, schema) else 'INVALIDE'} (`python B2B\\harness\\valider.py`)
 - **Garde branchée :** {R.garde(c)}
 {garde_mode(c)}
@@ -203,8 +283,9 @@ def fiche(c, schema, t, titre, cs, n):
 
 {dynamique(c)}
 
-## Skill
+## Skill et règles
 {puces(sk)}
+{regles_txt(nom)}- Pas de preuve = pas de fait : « il a tourné » = une trace du jour `ok: true` ci-dessus ; « c'est corrigé » = ses tests puis `tests\\b2b-rapide.ps1` en vert.
 """
     if nom == "jarvis-ceo": corps += "\n" + responsables(cs, n) + "\n\n" + organigramme(cs, n) + "\n"
     return DEBUT + "\n" + sans_liens(corps) + FIN + "\n"
@@ -253,6 +334,8 @@ def verifier(cs):
         if FIN not in a or sans_dynamique(a.split(FIN, 1)[0]) != sans_dynamique(t.split(FIN, 1)[0]): pb.append(f"bloc GENERE pas à jour : {p.relative_to(RACINE)}")
     for p, t in copies.items():
         if lire(p) != t: pb.append(f"copie de skill absente ou pas à jour : {p.relative_to(RACINE)}")
+    pc = SORTIE / f"{NOTE_CHAINE}.md"; a = lire(pc)
+    if a is None or FIN not in a or a.split(FIN, 1)[0] != note_chaine(cs, ts, a).split(FIN, 1)[0]: pb.append(f"note de la chaîne vidéo absente ou pas à jour : {pc.relative_to(RACINE)}")
     for c in cs:
         if c["statut"] in ("actif", "simulation"):
             pb += [f"agent actif sans skill : {c['nom']} (.claude/skills/{s}/SKILL.md)" for s in skills_de(c["nom"]) if not (SKILLS / s / "SKILL.md").is_file()]
@@ -275,6 +358,7 @@ def main(argv=None):
     if a.tests: lancer_tests(cs)
     schema = json.loads((ICI / "contrat.schema.json").read_text(encoding="utf-8")); ts = taches(); n, cb = cibles(cs); copies = copies_skills()
     for c, p in cb: ecrire(p, note(c, schema, ts.get(c["nom"]), p.stem, lire(p), cs, n))   # relue juste avant d'être écrite (Obsidian peut être ouvert)
+    pc = SORTIE / f"{NOTE_CHAINE}.md"; ecrire(pc, note_chaine(cs, ts, lire(pc)))
     for p in (COPIES.glob("*.md") if COPIES.is_dir() else []):
         if p not in copies: p.unlink()   # dossier entièrement généré : une copie sans source est retirée
     for p, t in copies.items(): ecrire(p, t)

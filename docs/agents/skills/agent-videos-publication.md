@@ -16,6 +16,9 @@ description: Fiche de rôle de l'agent Publication TikTok (équipe Vidéos TikTo
 4. `python Videos\agents\publication.py publier --essai --ligne A` : va jusqu'au bouton Publier sans cliquer (obligatoire avant le premier envoi).
 5. Dans la config locale de `Videos` (machine) : `"lignes": {"A": {"go_publier": true}}` ; `videos-publication` dans `agents_actifs` ; statut du contrat à `actif`.
 
+## Rôle
+Publier sur TikTok les vidéos d'une ligne que Liam a ouverte par « go publier », 3 par jour et par compte, étiquette IA activée. Limites : VERROUILLÉ (contrat `inactif`) tant que Liam n'a pas donné son go et ajouté l'agent à `agents_actifs` ; aucun mot de passe, aucun contournement.
+
 ## Ordres pas à pas (lus dans le script)
 1. Refus avant toute ouverture : `Videos\STOP` ou `B2B\STOP`, ligne arrêtée aujourd'hui, `go_publier` pas à true, aucun essai réussi, 3 publications déjà faites sur le compte, hors des heures prévues (+/- 45 min), passage déjà publié.
 2. Prend la plus ancienne vidéo complète de la ligne (mp4 + txt avec « Contenu généré par IA. » + json `contenu_ia: true`) ; la légende passe par la garde du harness.
@@ -24,10 +27,29 @@ description: Fiche de rôle de l'agent Publication TikTok (équipe Vidéos TikTo
 5. Dépose la vidéo, colle la légende, active l'étiquette « contenu généré par IA » (introuvable = rien publié), clique sur Publier (sauf essai), lit la confirmation.
 6. Déplace la vidéo vers `Videos\publiees`, une ligne dans `journal-videos.csv` (date, compte, hook, résultat), dans le journal et dans Discord.
 
+## Entrées et sorties (place dans la chaîne)
+- **Reçoit de :** **Création** / **Monteur** (`Videos/a-valider/*.mp4` + `.txt` + `.json` avec `contenu_ia: true`) et le **ton OK de Liam** (`lignes.<X>.go_publier: true`, écrit par Liam seulement).
+- **Produit :** la vidéo publiée puis déplacée dans `Videos/publiees` ; une ligne dans `journal-videos.csv` ; alerte Discord en cas d'anomalie.
+- **Passe à :** **Nettoyage** (03:30) supprime plus tard les vidéos publiées trop vieilles.
+- Chaîne vidéo : Veille → Scripts → Marketing → Création (→ Monteur, ligne B) → ton OK de Liam (« go publier », une fois par ligne) → Publication → Nettoyage. Fiche : `docs/agents/⛓️ Chaîne vidéo.md`.
+
 ## Ce qu'il ne fait jamais
 - Taper ou stocker un mot de passe, un code ou une clé ; contourner un captcha ou réessayer après une anomalie.
 - Liker, s'abonner, commenter, envoyer un message ; publier sans étiquette IA, plus de 3 fois par jour et par compte, ou sur une ligne sans go.
 - Écrire le go à la place de Liam.
+
+## Cas d'erreur
+- Ligne sans go, essai jamais réussi, plafond atteint, hors horaire, `Videos\STOP` ou `B2B\STOP` : rien publié (aucune ouverture du navigateur).
+- Légende bloquée par la garde du harness : rien publié, code 4.
+- Captcha, connexion demandée, interface inattendue, étiquette IA introuvable : ARRÊT de la ligne pour la journée, alerte Discord, code 1, trace `ok: false`.
+- Machine non active ou `SKILL-VIDEOS.md` incomplet : refus code 3.
+- Toute erreur laisse une trace `ok: false`, lue par le surveillant si l'agent est dans `agents_actifs`.
+
+## Règles qu'il suit
+- Il relit `Videos/SKILL-VIDEOS.md` avant chaque exécution (`C.exiger_regles` : absent ou incomplet = refus, code 3), sections « Publication : un seul « go publier » par ligne ».
+- Harness : contrat `B2B/harness/contrats/videos-publication.json` (`peut_engager: false`) ; garde complète du harness sur la légende (`garde_harness` : STOP, secret, phrase interdite) ; une trace par exécution (`C.lancer` : commande, durée, ok, erreur ; rien pour `etat` ni `--a-blanc`) dans `B2B/logs/agents/videos-publication/AAAA-MM-JJ.jsonl`.
+- Ce qui engage Liam (publier, envoyer, encaisser, signer) n'est jamais fait sans son accord ; la publication reste verrouillée par ligne jusqu'à son « go publier ».
+- Règle d'or : pas de preuve = pas de fait. « Il a tourné » se prouve par la trace du jour (`ok: true`) et le fichier produit ; « c'est corrigé » par `python tests\agents\test_videos.py` puis `tests\b2b-rapide.ps1` en vert, sortie montrée.
 
 ## Vérifier
 - `python Videos\agents\publication.py etat` ; `python Videos\agents\publication.py publier --a-blanc` (rien n'est ouvert).

@@ -1,7 +1,7 @@
 {
  "nom": "videos-creation",
  "responsable": "Jarvis (CEO)",
- "mission": "À 06:00, 14:00 et 22:00, fabrique la vidéo du passage (stickfigure-pipeline-v2, voix edge-tts, 9:16, 20-35 s, sous-titres mot à mot, mention « Contenu généré par IA ») et la range dans Videos/a-valider.",
+ "mission": "À 06:00, 14:00 et 22:00, fabrique la vidéo du passage (stick-stage toon, voix edge-tts ou Kokoro, 9:16, sous-titres, mention « Contenu généré par IA ») et la range dans Videos/a-valider ; ligne B : videos-monteur.",
  "statut": "actif",
  "script": "Videos/agents/creation.py",
  "jours": [
@@ -20,13 +20,16 @@
  "fichiers_lus": [
   "Videos/scripts",
   "Videos/videos-config.json",
-  "Videos/outils/stickfigure-pipeline-v2 (hors git)"
+  "Videos/SKILL-VIDEOS.md",
+  "Videos/outils/stick-stage (hors git)"
  ],
  "fichiers_ecrits": [
   "Videos/a-valider/AAAA-MM-JJ-HHMM.mp4 (+ .txt, .json)",
+  "Videos/a-part (vidéo refusée par le monteur)",
   "Videos/travail (temporaire)",
-  "Videos/outils/stickfigure-pipeline-v2/output",
-  "Videos/videos-creation-journal.log"
+  "Videos/journal-videos.csv",
+  "Videos/videos-creation-journal.log",
+  "B2B/logs/agents/videos-creation (trace)"
  ],
  "canaux_discord": [],
  "envoi_client": false,

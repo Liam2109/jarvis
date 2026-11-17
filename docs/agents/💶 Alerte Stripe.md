@@ -20,10 +20,11 @@ tags: [agent-b2b]
 **Horaire :** toutes les 5 min, plage tous les jours 00:00-24:00
 **Script :** `B2B/agents/stripe-alerte.py` · **Contrat :** `B2B/harness/contrats/stripe-alerte.json`
 
-## Mission
+## Rôle et limites
+### Mission
 Alerter Liam sur Discord à chaque nouveau paiement Stripe réussi, en lecture seule.
 
-## Ce qu'il fait étape par étape
+### Ce qu'il fait étape par étape
 1. `M.exiger("stripe-alerte", ...)` : refuse de tourner si cette machine n'est pas la machine active (sauf `--a-blanc`).
 2. Lit les réglages `stripe-alerte-config.json` (+ `.local.json`) : `envoi_automatique` (false par défaut = simulation), `intervalle_minutes` (5).
 3. Lit la clé `STRIPE_RESTRICTED_KEY` dans `Jarvis\.env` (jamais affichée). Clé absente : « rien à vérifier », journalisé, code 0.
@@ -32,6 +33,16 @@ Alerter Liam sur Discord à chaque nouveau paiement Stripe réussi, en lecture s
 6. Pour chacun : message « Nouveau paiement Stripe : 595 euros (description) » ; posté sur Discord si `envoi_automatique`, sinon affiché « [simulation] ».
 7. Mémorise les identifiants vus (300 au plus, garde les 200 plus récents) et le dernier horodatage dans `stripe-alerte-etat.json`.
 8. Écrit une trace du harness (`B2B/logs/agents/stripe-alerte/AAAA-MM-JJ.jsonl`) à chaque `verifier` réel.
+
+### Ce qu'il n'a pas le droit de faire
+- envoyer au client sans accord de Liam
+- encaisser ou rembourser
+- publier
+- signer ou promettre un résultat
+- afficher un secret (jeton, clé, adresse iCal)
+- écrire sur Stripe
+- créer un lien de paiement
+- Engager Liam (envoyer au client, encaisser, publier, signer) : `peut_engager: false`, tout passe par `B2B/a-valider/`.
 
 ## Entrées et sorties
 **Lit :**
@@ -43,17 +54,9 @@ Alerter Liam sur Discord à chaque nouveau paiement Stripe réussi, en lecture s
 
 **Discord :** alertes · **Plafond :** 30 messages par jour · **Envoi au client :** non
 
-## Ce qu'il n'a pas le droit de faire
-- envoyer au client sans accord de Liam
-- encaisser ou rembourser
-- publier
-- signer ou promettre un résultat
-- afficher un secret (jeton, clé, adresse iCal)
-- écrire sur Stripe
-- créer un lien de paiement
-- Engager Liam (envoyer au client, encaisser, publier, signer) : `peut_engager: false`, tout passe par `B2B/a-valider/`.
-
-## Harness
+## Horaire et état
+- **Horaire :** toutes les 5 min, plage tous les jours 00:00-24:00
+- **Tâche serveur :** entrée dans `B2B/agents/serveur-taches.json` ; tourne seulement si l'agent est dans `agents_actifs` (choix de Liam)
 - **Contrat :** valide (`python B2B\harness\valider.py`)
 - **Garde branchée :** oui
 - Bloque : kill-switch `B2B\STOP`, lien Stripe non autorisé, phrase interdite (OFFRE-REFERENCE.json), secret dans le texte.
@@ -63,17 +66,22 @@ Alerter Liam sur Discord à chaque nouveau paiement Stripe réussi, en lecture s
 
 <!-- DYNAMIQUE:DEBUT -->
 **Derniers résultats de test (cette machine) :**
-- `B2B/agents/test_stripe_alerte.py` : réussi le 2026-11-15 19:35
-- `tests/agents/test_stripe_alerte.py` : réussi le 2026-11-15 19:35
+- `B2B/agents/test_stripe_alerte.py` : pas encore lancé par `generer-fiches.py --tests`
+- `tests/agents/test_stripe_alerte.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** aucune
+**Dernière trace :** 2026-11-17 01:23 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
 
 ### Historique (5 dernières traces, sans données client)
-- aucune trace sur cette machine
+- 2026-11-17 01:23 | verifier | ok | 0.65 s
+- 2026-11-17 01:23 | verifier | ok | 0.31 s
+- 2026-11-17 01:18 | verifier | ok | 0.6 s
+- 2026-11-17 01:18 | verifier | ok | 0.28 s
+- 2026-11-17 01:13 | verifier | ok | 0.63 s
 <!-- DYNAMIQUE:FIN -->
 
-## Skill
+## Skill et règles
 - `.claude/skills/agent-stripe-alerte/SKILL.md` (copie : `docs/agents/skills/agent-stripe-alerte.md`)
+- Pas de preuve = pas de fait : « il a tourné » = une trace du jour `ok: true` ci-dessus ; « c'est corrigé » = ses tests puis `tests\b2b-rapide.ps1` en vert.
 <!-- GENERE:FIN -->
 
 ## Liens et décisions

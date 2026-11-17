@@ -19,10 +19,11 @@ tags: [agent-b2b]
 **Horaire :** toutes les 5 min, plage tous les jours 00:00-24:00
 **Script :** `B2B/agents/panne-alerte.py` · **Contrat :** `B2B/harness/contrats/panne-alerte.json`
 
-## Mission
+## Rôle et limites
+### Mission
 Alerter Liam sur Discord quand un agent planifié à heure fixe n'a pas tourné après son délai de grâce, une seule fois par jour.
 
-## Ce qu'il fait étape par étape
+### Ce qu'il fait étape par étape
 1. `M.exiger("panne-alerte", ...)` : machine active obligatoire (sauf `--a-blanc`).
 2. Réglages `panne-alerte-config.json` (+ `.local.json`) : `envoi_automatique` (false = simulation), `intervalle_minutes` (5), `grace_minutes` (15, borné 0-240).
 3. Construit la liste des agents avec `outils\agents-json.py` (`construire()["agents"]`) : nom, planifié, horaire, dernier passage.
@@ -30,6 +31,15 @@ Alerter Liam sur Discord quand un agent planifié à heure fixe n'a pas tourné 
 5. Panne = heure prévue + délai de grâce dépassée et aucun passage aujourd'hui.
 6. Pour chaque panne pas encore alertée aujourd'hui : « ⚠️ Panne : <agent> — aucune exécution aujourd'hui (prévue HH:MM) », postée (mode réel) ou affichée (simulation), journalisée.
 7. Mémorise les alertes du jour dans `panne-alerte-etat.json` (30 jours gardés).
+
+### Ce qu'il n'a pas le droit de faire
+- envoyer au client sans accord de Liam
+- encaisser ou rembourser
+- publier
+- signer ou promettre un résultat
+- afficher un secret (jeton, clé, adresse iCal)
+- relancer un agent
+- Engager Liam (envoyer au client, encaisser, publier, signer) : `peut_engager: false`, tout passe par `B2B/a-valider/`.
 
 ## Entrées et sorties
 **Lit :**
@@ -43,16 +53,9 @@ Alerter Liam sur Discord quand un agent planifié à heure fixe n'a pas tourné 
 
 **Discord :** alertes · **Plafond :** 10 messages par jour · **Envoi au client :** non
 
-## Ce qu'il n'a pas le droit de faire
-- envoyer au client sans accord de Liam
-- encaisser ou rembourser
-- publier
-- signer ou promettre un résultat
-- afficher un secret (jeton, clé, adresse iCal)
-- relancer un agent
-- Engager Liam (envoyer au client, encaisser, publier, signer) : `peut_engager: false`, tout passe par `B2B/a-valider/`.
-
-## Harness
+## Horaire et état
+- **Horaire :** toutes les 5 min, plage tous les jours 00:00-24:00
+- **Tâche serveur :** entrée dans `B2B/agents/serveur-taches.json` ; tourne seulement si l'agent est dans `agents_actifs` (choix de Liam)
 - **Contrat :** valide (`python B2B\harness\valider.py`)
 - **Garde branchée :** oui
 - Bloque : kill-switch `B2B\STOP`, lien Stripe non autorisé, phrase interdite (OFFRE-REFERENCE.json), secret dans le texte.
@@ -62,16 +65,21 @@ Alerter Liam sur Discord quand un agent planifié à heure fixe n'a pas tourné 
 
 <!-- DYNAMIQUE:DEBUT -->
 **Derniers résultats de test (cette machine) :**
-- `tests/agents/test_panne_alerte.py` : réussi le 2026-11-15 19:35
+- `tests/agents/test_panne_alerte.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** aucune
+**Dernière trace :** 2026-11-17 01:23 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
 
 ### Historique (5 dernières traces, sans données client)
-- aucune trace sur cette machine
+- 2026-11-17 01:23 | verifier | ok | 1.85 s
+- 2026-11-17 01:18 | verifier | ok | 2.11 s
+- 2026-11-17 01:13 | verifier | ok | 1.73 s
+- 2026-11-17 01:08 | verifier | ok | 1.91 s
+- 2026-11-17 01:03 | verifier | ok | 2.1 s
 <!-- DYNAMIQUE:FIN -->
 
-## Skill
+## Skill et règles
 - `.claude/skills/agent-panne-alerte/SKILL.md` (copie : `docs/agents/skills/agent-panne-alerte.md`)
+- Pas de preuve = pas de fait : « il a tourné » = une trace du jour `ok: true` ci-dessus ; « c'est corrigé » = ses tests puis `tests\b2b-rapide.ps1` en vert.
 <!-- GENERE:FIN -->
 
 ## Liens et décisions

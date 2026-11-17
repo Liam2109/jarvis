@@ -19,10 +19,11 @@ tags: [agent-b2b]
 **Horaire :** chaque jour à 03:00, plage tous les jours 03:00-04:00
 **Script :** `B2B/agents/nettoyage-fichiers.py` · **Contrat :** `B2B/harness/contrats/nettoyage-fichiers.json`
 
-## Mission
+## Rôle et limites
+### Mission
 Chaque nuit, supprimer traces et journal B2B (30 j), tests de %TEMP% (2 j), sauvegardes (30 j), __pycache__ ; lister le reste (60 j, hors INDEX.md) dans B2B/a-valider.
 
-## Ce qu'il fait étape par étape
+### Ce qu'il fait étape par étape
 1. `M.exiger("nettoyage-fichiers", ...)` : machine active obligatoire (sauf `--a-blanc`) ; `B2B\STOP` présent = rien supprimé.
 2. Limite = aujourd'hui moins 30 jours (`--jours`, borné 1-3650) ; une date égale à la limite est gardée.
 3. Traces : dans `B2B/logs/agents/<agent>/`, supprime les fichiers `AAAA-MM-JJ.jsonl` (ou `.json`, compteurs de la garde) datés avant la limite.
@@ -33,6 +34,18 @@ Chaque nuit, supprimer traces et journal B2B (30 j), tests de %TEMP% (2 j), sauv
 8. Rapport : les autres fichiers de plus de 60 jours sans lien dans `INDEX.md` (chemin ou nom), hors code, skills, docs, médias, `.canvas` et fichiers protégés, sont listés dans `B2B/a-valider/nettoyage-AAAA-MM-JJ.md` ; rien n'est supprimé, et pas de fichier s'il n'y a rien.
 9. Garde avant chaque suppression : seulement ces cibles, jamais un lien ni un fichier protégé ; un fichier verrouillé est passé sans bloquer le reste.
 10. Une ligne de trace du harness et une ligne dans `nettoyage-fichiers-journal.log` par passage (nombres supprimés, refus de la garde).
+
+### Ce qu'il n'a pas le droit de faire
+- toucher au code, aux skills, aux docs, aux médias (instagram/) ou aux fichiers .canvas
+- toucher à B2B/donnees/registre-entreprises.json
+- toucher à memoire/
+- toucher à .env, config.json ou un fichier *.local.json
+- supprimer un fichier hors des cibles : traces B2B/logs/agents, JOURNAL-B2B.md, dossiers de test de %TEMP%, B2B/donnees/sauvegardes, __pycache__
+- supprimer une trace, une entrée ou une sauvegarde de 30 jours ou moins, ou un dossier temporaire de 2 jours ou moins
+- supprimer un fichier listé dans le rapport (Liam décide)
+- envoyer au client, encaisser, publier ou signer
+- afficher un secret (jeton, clé, adresse iCal)
+- Engager Liam (envoyer au client, encaisser, publier, signer) : `peut_engager: false`, tout passe par `B2B/a-valider/`.
 
 ## Entrées et sorties
 **Lit :**
@@ -54,19 +67,9 @@ Chaque nuit, supprimer traces et journal B2B (30 j), tests de %TEMP% (2 j), sauv
 
 **Discord :** aucun · **Plafond :** 0 messages par jour · **Envoi au client :** non
 
-## Ce qu'il n'a pas le droit de faire
-- toucher au code, aux skills, aux docs, aux médias (instagram/) ou aux fichiers .canvas
-- toucher à B2B/donnees/registre-entreprises.json
-- toucher à memoire/
-- toucher à .env, config.json ou un fichier *.local.json
-- supprimer un fichier hors des cibles : traces B2B/logs/agents, JOURNAL-B2B.md, dossiers de test de %TEMP%, B2B/donnees/sauvegardes, __pycache__
-- supprimer une trace, une entrée ou une sauvegarde de 30 jours ou moins, ou un dossier temporaire de 2 jours ou moins
-- supprimer un fichier listé dans le rapport (Liam décide)
-- envoyer au client, encaisser, publier ou signer
-- afficher un secret (jeton, clé, adresse iCal)
-- Engager Liam (envoyer au client, encaisser, publier, signer) : `peut_engager: false`, tout passe par `B2B/a-valider/`.
-
-## Harness
+## Horaire et état
+- **Horaire :** chaque jour à 03:00, plage tous les jours 03:00-04:00
+- **Tâche serveur :** entrée dans `B2B/agents/serveur-taches.json` ; tourne seulement si l'agent est dans `agents_actifs` (choix de Liam)
 - **Contrat :** valide (`python B2B\harness\valider.py`)
 - **Garde branchée :** non
 - Bloque : kill-switch `B2B\STOP`, lien Stripe non autorisé, phrase interdite (OFFRE-REFERENCE.json), secret dans le texte.
@@ -78,14 +81,15 @@ Chaque nuit, supprimer traces et journal B2B (30 j), tests de %TEMP% (2 j), sauv
 **Derniers résultats de test (cette machine) :**
 - `tests/agents/test_nettoyage_fichiers.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** aucune
+**Dernière trace :** aucune · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
 
 ### Historique (5 dernières traces, sans données client)
 - aucune trace sur cette machine
 <!-- DYNAMIQUE:FIN -->
 
-## Skill
+## Skill et règles
 - `.claude/skills/agent-nettoyage-fichiers/SKILL.md` (copie : `docs/agents/skills/agent-nettoyage-fichiers.md`)
+- Pas de preuve = pas de fait : « il a tourné » = une trace du jour `ok: true` ci-dessus ; « c'est corrigé » = ses tests puis `tests\b2b-rapide.ps1` en vert.
 <!-- GENERE:FIN -->
 
 ## Liens et décisions
