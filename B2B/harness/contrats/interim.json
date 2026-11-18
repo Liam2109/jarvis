@@ -1,0 +1,43 @@
+{
+ "nom": "interim",
+ "responsable": "Liam",
+ "mission": "Intérim de nuit / 3x8 autour de Rouen : résumé Discord du matin des alertes d'agences reçues, rappel du lundi par agence ; rien envoyé, aucun compte, aucun document.",
+ "statut": "inactif",
+ "script": "B2B/agents/interim.py",
+ "jours": [0, 1, 2, 3, 4, 5, 6],
+ "heures": {
+  "debut": "07:00",
+  "fin": "12:00"
+ },
+ "fichiers_lus": [
+  "boîte emoliam255@gmail.com en lecture seule (gmail.readonly, jeton gmail-lecture-*.json hors git), mails des domaines listés seulement, pièces jointes jamais lues",
+  "B2B/agents/interim-config.json (liste de départ des agences, sources)",
+  "B2B/agents/interim-suivi.csv (suivi, hors git)"
+ ],
+ "fichiers_ecrits": [
+  "B2B/agents/interim-suivi.csv",
+  "B2B/agents/interim-etat.json",
+  "B2B/agents/interim-journal.log"
+ ],
+ "canaux_discord": [
+  "alertes"
+ ],
+ "envoi_client": false,
+ "actions_interdites": [
+  "se connecter à un site d'agence ou à un compte candidat",
+  "gérer, demander ou stocker un mot de passe, un identifiant ou un code",
+  "lire, copier, stocker ou téléverser une pièce d'identité, un RIB, une carte vitale, une mutuelle ou un justificatif",
+  "envoyer, accepter ou publier quoi que ce soit (mail, candidature, CV) sans l'accord de Liam",
+  "inventer une offre, une adresse ou un horaire",
+  "utiliser un outil payant ou une IA",
+  "afficher un secret (jeton, clé)"
+ ],
+ "plafonds": {
+  "messages_par_jour": 3
+ },
+ "peut_engager": false,
+ "alerte_si_silence": null,
+ "tests": [
+  "tests/agents/test_interim.py"
+ ]
+}

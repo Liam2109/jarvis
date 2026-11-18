@@ -87,10 +87,11 @@ def journal(nom):
 
 
 POLES = {"prospection": "Trouver", "page-exemple": "Trouver", "appels-sid": "Vendre", "appels-liam": "Vendre", "rendez-vous": "Vendre", "reponses": "Vendre", "devis": "Vendre",
-         "stripe-alerte": "Encaisser", "resume-sid": "Communiquer", "vente-relances": "Vendre", "relances": "Vendre", "facebook": "Trouver"}     # tout nouvel agent : « Autres »
+         "stripe-alerte": "Encaisser", "resume-sid": "Communiquer", "vente-relances": "Vendre", "relances": "Vendre", "interim": "Autres", "facebook": "Trouver"}     # tout nouvel agent : « Autres »
 # Page Agents (18/11/2026) : état « à construire » décidé ici (raison affichée) ; « désactivé » vient de serveur-taches.json › desactive ; sinon « en place ».
 A_CONSTRUIRE = {"devis": "l'état des devis est sur le serveur, pas encore relié à ce tableau de bord",
                 "alerte-candidatures": "formulaire de candidature pas encore relié (fermé jusqu'au « go alerte »)",
+                "interim": "boîte emoliam255 pas encore autorisée en lecture (fermé jusqu'au « go interim »)",
                 "vente-relances": "contrat écrit, script pas encore construit", "facebook": "pas encore construit"}
 SANS_SCRIPT = {"vente-relances": "Relancer à J+3 et J+7 les prospects qui ont reçu un devis (brouillons pour Liam, aucun envoi).",
                "facebook": "Publier sur Facebook (prévu, rien n'est publié)."}

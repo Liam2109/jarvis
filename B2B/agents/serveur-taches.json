@@ -87,6 +87,16 @@
       "heure": "08:30",
       "jours": [0, 1, 2, 3, 4]
     },
+    "interim": {
+      "script": "interim.py",
+      "commandes": [
+        [
+          "passage"
+        ]
+      ],
+      "heure": "07:30",
+      "lundi": "09:00"
+    },
     "alerte-candidatures": {
       "script": "alerte-candidatures.py",
       "commandes": [

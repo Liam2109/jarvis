@@ -56,6 +56,10 @@ Chaque idée est notée à la date où Liam la dit. Une idée pas encore faite r
 - 04/11 — Le Velours (restaurant) : ajouter une vidéo en tête de page.
 - 11/11 — Skill « site-premium-cinematique » à écrire après validation de luxe2 par Liam.
 
+## Intérim (revenu d'appoint)
+- 18/11 — Agent interim : alertes des agences lues sur emoliam255, résumé chaque matin, rappel du lundi, suivi des agences. Construit le 18/11, fermé jusqu'au « go interim ».
+- 18/11 — Plus tard : lire aussi les offres France Travail par leur flux public (gratuit) si les alertes des agences ne suffisent pas.
+
 ## Équipe
 - 08/11 — Recruter d'autres appelants : Codeur.com en plus de Malt et des 2 groupes Facebook.
 - 03/11 — Appelants : lien Google Meet automatique dans le planning de rendez-vous ; contact par WhatsApp (numéro à donner par Liam).

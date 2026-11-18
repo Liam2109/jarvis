@@ -49,6 +49,7 @@ _Mise à jour : 16 nov. 2026, 17 h 30 (le fait est supprimé ; l'historique est 
 - [ ] Tableau de bord, suite : courbes de la semaine, taux de closing, commissions ; devis et Stripe lisibles depuis le gros PC (aujourd'hui « — »)
 - [ ] Fiche d'accueil client (photos, couleurs, logo, avis, spécificités)
 - [ ] Recruter d'autres call callers (15 %, jamais de closers), dont un spécialiste restaurants
+- [ ] Intérim : créer les alertes sur l'espace candidat des agences, lancer `interim.py gmail-autoriser`, dire « go interim », répondre aux 4 questions du CV, déposer les 7 documents Samsic (toi-même)
 - [ ] Alerte candidatures : lier le formulaire à une feuille (Réponses > Lier à Sheets), lancer `alerte-candidatures.py google-autoriser`, puis écrire « go alerte »
 - [ ] Enrichir TECHNIQUES-CLOSING.md avec de bonnes phrases de vente
 - [ ] Liam s'entraîne au jeu de rôle des objections (« Je dois réfléchir », « C'est trop cher »)
