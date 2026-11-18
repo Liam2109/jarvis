@@ -112,15 +112,19 @@ Copy-Item (Join-Path $AG 'serveur-b2b.ps1') $AGT
 $tableReelle = Lire (Join-Path $AG 'serveur-taches.json') | ConvertFrom-Json
 $nomsReels = @($tableReelle.agents.PSObject.Properties | ForEach-Object { $_.Name })
 $nomsVideos = @($nomsReels | Where-Object { $_ -like 'videos-*' })   # équipe Vidéos TikTok (16/11/2026) : veille, scripts, marketing, création, publication, nettoyage
-Verifier ('instagram' -notin $nomsReels -and 'surveillant' -in $nomsReels -and 'appels-liam' -in $nomsReels -and ($nomsReels.Count - $nomsVideos.Count) -eq 11 -and $nomsVideos.Count -eq 6) "serveur-taches.json : instagram retiré (décision du 14/11/2026), resume-sid/stripe-alerte/panne-alerte ajoutés (étape Argent, 15/11/2026), surveillant du harness, appels-liam et nettoyage-fichiers (15/11/2026), $($nomsReels.Count - $nomsVideos.Count) agents B2B + $($nomsVideos.Count) agents vidéos (16/11/2026)"
+Verifier ('instagram' -notin $nomsReels -and 'surveillant' -in $nomsReels -and 'appels-liam' -in $nomsReels -and ($nomsReels.Count - $nomsVideos.Count) -eq 12 -and $nomsVideos.Count -eq 6) "serveur-taches.json : instagram retiré (décision du 14/11/2026), resume-sid/stripe-alerte/panne-alerte ajoutés (étape Argent, 15/11/2026), surveillant du harness, appels-liam et nettoyage-fichiers (15/11/2026), $($nomsReels.Count - $nomsVideos.Count) agents B2B + $($nomsVideos.Count) agents vidéos (16/11/2026)"
 $al = $tableReelle.agents.'appels-liam'
 Verifier ($al.heure -eq '07:30' -and $al.actif_le -eq '2026-11-17' -and (@($al.jours) -join ',') -eq '0,1,2,3,4' -and (@($al.commandes | ForEach-Object { $_ -join ' ' }) -join ';') -eq 'jour') 'serveur-taches.json : appels-liam à 07:30, actif le 17/11/2026, lundi à vendredi seulement'
 Verifier ($tableReelle.agents.surveillant.heure -eq '19:45' -and $tableReelle.agents.surveillant.lundi -eq '07:50') 'serveur-taches.json : surveillant chaque jour à 19:45 et le lundi à 07:50'
 Verifier (@($tableReelle.agents.PSObject.Properties | Where-Object { ($_.Value.commandes | ForEach-Object { $_ -join ' ' }) -match 'continu|visuels' }).Count -eq 0) 'serveur-taches.json : aucune commande « continu » ni « visuels » (Edge)'
 # agent FICTIF à deux commandes, seulement dans la copie temporaire : vérifie l'ordre des commandes et l'arrêt du cycle sur échec
 $tableReelle.agents | Add-Member -NotePropertyName 'deux-etapes' -NotePropertyValue ([pscustomobject]@{ script = 'deux-etapes.py'; commandes = (@('jour'), @('valider')); toutes_minutes = 5 })
+# appels-liam est désactivé (clé « desactive », 18/11/2026) : la copie temporaire retire la clé pour tester les dates et jours ; agent FICTIF « en-pause » pour tester la clé elle-même
+Verifier ([bool]$tableReelle.agents.'appels-liam'.desactive) 'serveur-taches.json : appels-liam désactivé (clé desactive, 18/11/2026)'
+$tableReelle.agents.'appels-liam'.PSObject.Properties.Remove('desactive')
+$tableReelle.agents | Add-Member -NotePropertyName 'en-pause' -NotePropertyValue ([pscustomobject]@{ script = 'en-pause.py'; commandes = (, @('jour')); heure = '07:30'; desactive = '2026-11-18 : test' })
 [IO.File]::WriteAllText("$AGT\serveur-taches.json", ($tableReelle | ConvertTo-Json -Depth 6), [Text.UTF8Encoding]::new($false))
-foreach ($n in @($nomsReels) + 'deux-etapes') { '# stub' | Set-Content "$AGT\$n.py" -Encoding ASCII }
+foreach ($n in @($nomsReels) + 'deux-etapes' + 'en-pause') { '# stub' | Set-Content "$AGT\$n.py" -Encoding ASCII }
 $LOCAL = Join-Path $AGT 'b2b.local.json'
 function Local([object]$o) { [IO.File]::WriteAllText($LOCAL, ($o | ConvertTo-Json -Depth 4), [Text.UTF8Encoding]::new($false)) }
 function Lance([string]$agent, [string[]]$plus = @()) { $o = & powershell -NoProfile -ExecutionPolicy Bypass -File "$AGT\serveur-b2b.ps1" -Agent $agent -NomMachine 'PC-SERVEUR' -NomMutex ("JarvisB2BTest" + $script:mx) @plus 2>&1 | Out-String; @{ sortie = $o; code = $LASTEXITCODE } }
@@ -145,6 +149,8 @@ Local @{ machine_active = 'PC-SERVEUR'; agents_actifs = @('appels-liam') }
 $vus = @{}
 foreach ($j in '2026-11-15', '2026-11-16', '2026-11-17', '2026-11-21') { $env:JARVIS_B2B_AUJOURDHUI = $j; $vus[$j] = Lance 'appels-liam' '-Simulation' }
 Remove-Item Env:\JARVIS_B2B_AUJOURDHUI -ErrorAction SilentlyContinue
+Local @{ machine_active = 'PC-SERVEUR'; agents_actifs = @('en-pause') }
+$r = Lance 'en-pause' '-Simulation'; Verifier ($r.code -eq 0 -and $r.sortie -match 'désactivé' -and $r.sortie -notmatch 'en-pause\.py jour') 'agent désactivé (clé desactive) : rien lancé même s''il est dans agents_actifs (code 0)'
 Verifier ($vus['2026-11-15'].code -eq 0 -and $vus['2026-11-15'].sortie -match 'pas encore actif' -and $vus['2026-11-15'].sortie -notmatch 'SIMULATION' -and $vus['2026-11-16'].sortie -match 'pas encore actif') 'appels-liam dimanche 15 et lundi 16/11 : pas encore actif, rien lancé (code 0)'
 Verifier ($vus['2026-11-17'].code -eq 0 -and $vus['2026-11-17'].sortie -match 'appels-liam\.py jour') 'appels-liam mardi 17/11 : commande « jour » lancée'
 Verifier ($vus['2026-11-21'].code -eq 0 -and $vus['2026-11-21'].sortie -match 'hors planning' -and $vus['2026-11-21'].sortie -notmatch 'SIMULATION') 'appels-liam samedi 21/11 : jour hors planning, rien lancé'

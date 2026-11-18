@@ -19,7 +19,8 @@
       ],
       "heure": "07:30",
       "actif_le": "2026-11-17",
-      "jours": [0, 1, 2, 3, 4]
+      "jours": [0, 1, 2, 3, 4],
+      "desactive": "2026-11-18 : fausses alertes Panne, désactivé par Liam (fichiers gardés ; retirer cette clé pour le relancer)"
     },
     "devis": {
       "script": "devis.py",

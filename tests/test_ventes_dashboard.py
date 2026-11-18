@@ -34,7 +34,7 @@ verifier(c["chauds"]["valeur"] == 5, "leads chauds = À rappeler + Je dois réfl
 verifier(c["rdv"]["valeur"] == 1, "rendez-vous pris")
 verifier(c["paiements"]["valeur"] == 1 and "595 euros" in c["paiements"]["detail"], "paiements Stripe du jour")
 verifier("Boulangerie Secrète" not in json.dumps(v, ensure_ascii=False), "aucun nom d'entreprise dans ventes.json")
-verifier("candidatures" not in c, "candidatures masquées tant que l'agent n'existe pas")
+verifier(("candidatures" in c) == (AJ.AGENTS / "alerte-candidatures.py").exists() and c.get("candidatures", {"valeur": None})["valeur"] is None, "candidatures : ligne seulement si l'agent existe, jamais un chiffre inventé")
 
 v = AJ.ventes(QUAND, Doublure((False, "jeton Google d'un autre compte"), (False, "clé Stripe absente")))
 c = {x["cle"]: x for x in v["chiffres"]}

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Tableau de bord « Jarvis - Mon entreprise » : écrit dashboard/agents.json, agents.js (même contenu, lu par la page même en file://) et docs.js (onglets À faire, Journal, Décisions, Idées).
+Aussi ventes.json/js (chiffres du jour + Potentiel) et data/historique.json/js (une entrée par jour depuis le 16/11/2026). Lancé toutes les 15 min par la tâche Jarvis-Tableau-PC (outils/tache-dashboard-pc.ps1).
 
 Lecture seule, sans réseau ni token Claude. Sources : B2B/agents/*.py (un agent = un script qui appelle M.exiger), leur .md, docs/agents/agent-<nom>.md,
 B2B/agents/b2b.local.json, B2B/agents/serveur-taches.json, les fichiers *-etat.json et *-journal.log, les tâches planifiées Windows Jarvis-B2B-* de CE PC.
@@ -11,8 +12,8 @@ jamais la 3e qui peut contenir un nom d'entreprise) et des COMPTES (nombres). Au
   python outils/agents-json.py          écrit les deux fichiers (écriture atomique)
   python outils/agents-json.py --ouvrir écrit puis ouvre dashboard/index.html dans le navigateur par défaut (icône du bureau)
 """
-import json, os, re, socket, subprocess, sys
-from datetime import datetime, date
+import csv, io, json, os, re, socket, subprocess, sys
+from datetime import datetime, date, timedelta
 from pathlib import Path
 from urllib.parse import quote
 
@@ -86,7 +87,13 @@ def journal(nom):
 
 
 POLES = {"prospection": "Trouver", "page-exemple": "Trouver", "appels-sid": "Vendre", "appels-liam": "Vendre", "rendez-vous": "Vendre", "reponses": "Vendre", "devis": "Vendre",
-         "stripe-alerte": "Encaisser", "resume-sid": "Communiquer"}     # tout nouvel agent : « Autres »
+         "stripe-alerte": "Encaisser", "resume-sid": "Communiquer", "vente-relances": "Vendre", "facebook": "Trouver"}     # tout nouvel agent : « Autres »
+# Page Agents (18/11/2026) : état « à construire » décidé ici (raison affichée) ; « désactivé » vient de serveur-taches.json › desactive ; sinon « en place ».
+A_CONSTRUIRE = {"devis": "l'état des devis est sur le serveur, pas encore relié à ce tableau de bord",
+                "alerte-candidatures": "formulaire de candidature pas encore relié (fermé jusqu'au « go alerte »)",
+                "vente-relances": "contrat écrit, script pas encore construit", "facebook": "pas encore construit"}
+SANS_SCRIPT = {"vente-relances": "Relancer à J+3 et J+7 les prospects qui ont reçu un devis (brouillons pour Liam, aucun envoi).",
+               "facebook": "Publier sur Facebook (prévu, rien n'est publié)."}
 
 
 def lignes_du_jour(nom, jour):
@@ -195,6 +202,15 @@ def construire(maintenant=None):
             "note": str(note.relative_to(RACINE)).replace("\\", "/") if note.exists() else None,
             "note_obsidian": ("obsidian://open?path=" + quote(str(note), safe="")) if note.exists() else None,
         })
+    for nom, phrase in SANS_SCRIPT.items():      # agents prévus sans script : une ligne « à construire » sur la page Agents (jamais planifiés)
+        if not any(a["nom"] == nom for a in agents):
+            agents.append({"nom": nom, "role": phrase, "machine": "aucune", "planifie": False, "horaire": "non planifié", "planifie_sur_ce_pc": False, "tourne_sur_ce_pc": False,
+                           "statut": "inactif", "suspendu": False, "dernier_passage": None, "dernier_resultat": None, "derniere_erreur": None, "pole": POLES.get(nom, "Autres"),
+                           "journal": [], "responsable": None, "note": None, "note_obsidian": None, "sans_script": True})
+    for a in agents:
+        d = (serveur.get(a["nom"]) or {}).get("desactive")
+        a["etat_liste"], a["raison_etat"] = (("désactivé", str(d)) if d else ("à construire", A_CONSTRUIRE[a["nom"]]) if a["nom"] in A_CONSTRUIRE else ("en place", ""))
+        a["phrase"] = (re.split(r"(?<=[.;])\s|\s—\s", a["role"] or "", maxsplit=1)[0].rstrip(".;") + ".")[:160] if a["role"] else ""
     c = chiffres_du_jour(maintenant.date()); j = maintenant.date().isoformat()
     du_jour = {"prospection": ("prospects trouvés", c["prospects_trouves_aujourdhui"]), "appels-sid": ("appels Sid", c["appels_sid_aujourdhui"]),
                "rendez-vous": ("rendez-vous", c["rendez_vous_aujourdhui"]), "devis": ("devis préparés", c["devis_prepares_aujourdhui"])}
@@ -240,6 +256,7 @@ def ventes(maintenant=None, rs=None):
         n = len(d.get("feuilles") or []) if d.get("multi") else 1
         appels = {"valeur": d.get("Appelé", 0), "detail": f"{n} feuille{'s' if n > 1 else ''} « Appels Sid » modifiée{'s' if n > 1 else ''} aujourd'hui"}
         if r is not None:
+            appels["repartition"] = {v: int(r.get(v, 0) or 0) for v in RESULTATS}     # historique (data/historique.json) ; la carte vedette n'affiche que les valeurs non nulles
             chauds = {"valeur": r.get("À rappeler", 0) + r.get("Je dois réfléchir", 0), "detail": f"{r.get('À rappeler', 0)} à rappeler · {r.get('Je dois réfléchir', 0)} je dois réfléchir"}
             rdv = {"valeur": r.get("RDV pris", 0), "detail": "notés « RDV pris » par Sid"}
         else:
@@ -259,14 +276,109 @@ def ventes(maintenant=None, rs=None):
             "chiffres": [dict(cle=c, libelle=l, **v) for c, l, v in items]}
 
 
+# --- historique (dashboard/data/historique.json, 18/11/2026) : une entrée par jour depuis le 16/11/2026, comptes seulement ---------------------------------
+HISTO = SORTIE / "data" / "historique.json"
+DEBUT_HISTO = "2026-11-16"
+RESULTATS = ["Pas de réponse", "À rappeler", "RDV pris", "Non catégorique", "Je dois réfléchir", "Trop cher", "Déjà un site", "Pas le temps"]   # = resume-sid.RESULTATS
+CHAUDS = ("À rappeler", "Je dois réfléchir")
+OFFRE = RACINE / "B2B" / "docs" / "OFFRE-REFERENCE.json"
+
+
+def prix_pack():
+    """Prix du pack lu dans la référence de l'offre (jamais codé en dur ici) ; None si illisible."""
+    try: return int((lire_json(OFFRE) or {})["offres"]["pack"]["prix_unique_eur"])
+    except (KeyError, TypeError, ValueError): return None
+
+
+def feuilles_sid(rs):
+    """(dispo, [{modifiee, resultats, avec}] | raison) : chaque feuille « Appels Sid AAAA-MM-JJ » du dossier de Sid, jour de dernière modification (Paris) et comptes par Résultat.
+    Lecture seule, une lecture par feuille ; aucun nom d'entreprise ne sort d'ici."""
+    if rs is None: return False, "mode test : aucune lecture Google"
+    try:
+        conf = rs.cfg(); racine = str(rs.M.lire_fusionnee(rs.APPELS_SID_CONFIG).get("dossier_sid_id") or "").strip()
+        if not racine: return False, "dossier Drive de Sid inconnu (appels-sid-config)"
+        d = rs.ouvrir_drive(conf["compte_google"])
+        if (d.compte() or "").lower() != conf["compte_google"].lower(): return False, "jeton Google d'un autre compte"
+        out = []
+        for i, nom, mod in d.lister_feuilles_modifiees(racine):
+            if not rs.TITRE_SID.fullmatch(nom or ""): continue
+            lignes = list(csv.reader(io.StringIO(d.lire_feuille_csv(i))))
+            if not lignes or "Résultat" not in lignes[0]: continue
+            k = lignes[0].index("Résultat"); vals = [l[k].strip() for l in lignes[1:] if k < len(l) and l[k].strip()]
+            out.append({"modifiee": rs._jour_paris(mod), "resultats": {v: vals.count(v) for v in RESULTATS}, "avec": len(vals)})
+        return True, out
+    except Exception as e: return False, f"feuilles de Sid illisibles ({type(e).__name__})"
+
+
+def devis_envoyes(jour):
+    """Devis marqués « envoyé » ce jour-là (devis-etat.json) ; None si l'état n'est pas sur ce PC (jamais 0 par défaut)."""
+    dv = lire_json(AGENTS / "devis-etat.json")
+    return None if dv is None else sum(1 for v in (dv.get("devis") or {}).values() if (v.get("historique") or {}).get("envoyé") == jour)
+
+
+def entree(jour, appels, resultats, devis=None, paiements=None, source=""):
+    r = {v: int(resultats.get(v, 0) or 0) for v in RESULTATS}
+    return {"date": jour, "appels": appels, "resultats": r, "leads_chauds": sum(r[v] for v in CHAUDS), "rdv": r["RDV pris"], "devis": devis, "paiements": paiements, "source": source}
+
+
+def fusionner(jours, e, auj):
+    """Une seule entrée par date. Un jour passé (complet) n'est remplacé que par un compte d'appels au moins égal ; une valeur inconnue (None) n'efface jamais une valeur connue."""
+    old = jours.get(e["date"])
+    if old:
+        for k in ("devis", "paiements"):
+            if e.get(k) is None and old.get(k) is not None: e[k] = old[k]
+        if old.get("complet") and (old.get("appels") or 0) > (e["appels"] or 0):
+            for k in ("devis", "paiements"):
+                if old.get(k) is None: old[k] = e[k]
+            return
+    e["complet"] = e["date"] < auj
+    jours[e["date"]] = e
+
+
+def historique(maintenant=None, v=None, feuilles=None):
+    """Lit, complète et renvoie l'historique : jours passés manquants depuis DEBUT_HISTO reconstruits depuis les feuilles (jour de dernière modification, comme le résumé
+    du soir ; paiements passés inconnus = None), puis le jour courant depuis ventes(). Relancer ne crée jamais de doublon."""
+    maintenant = maintenant or datetime.now(); auj = maintenant.date().isoformat()
+    h = lire_json(HISTO, {}) or {}
+    jours = {e["date"]: e for e in h.get("jours", []) if isinstance(e, dict) and e.get("date")}
+    for e in jours.values(): e["complet"] = e["date"] < auj
+    if feuilles is not None:
+        d = date.fromisoformat(DEBUT_HISTO)
+        while d.isoformat() < auj:
+            j = d.isoformat()
+            if j not in jours:
+                fs = [f for f in feuilles if f["modifiee"] == j]
+                fusionner(jours, entree(j, sum(f["avec"] for f in fs), {r: sum(f["resultats"].get(r, 0) for f in fs) for r in RESULTATS}, devis_envoyes(j), None, "reconstruit"), auj)
+            d += timedelta(days=1)
+    c = {x["cle"]: x for x in (v or {}).get("chiffres", [])}
+    a = c.get("appels") or {}
+    if a.get("valeur") is not None and isinstance(a.get("repartition"), dict):
+        fusionner(jours, entree(auj, a["valeur"], a["repartition"], (c.get("devis") or {}).get("valeur"), (c.get("paiements") or {}).get("valeur"), "du jour"), auj)
+    return {"_aide": "Écrit par outils/agents-json.py : une entrée par jour (comptes seulement). null = inconnu sur ce PC, jamais 0.", "maj": maintenant.strftime("%Y-%m-%d %H:%M:%S"),
+            "resultats": RESULTATS, "jours": [jours[k] for k in sorted(jours)]}
+
+
+def potentiel(feuilles_dispo, feuilles):
+    """Leads chauds en cours (lignes « À rappeler » ou « Je dois réfléchir » dans toutes les feuilles de Sid) × prix du pack. Indicatif, aucun taux de conversion."""
+    prix = prix_pack()
+    if prix is None: return {"valeur": None, "raison": "prix du pack illisible (B2B/docs/OFFRE-REFERENCE.json)"}
+    if not feuilles_dispo: return {"valeur": None, "raison": str(feuilles)}
+    n = sum(f["resultats"].get(r, 0) for f in feuilles for r in CHAUDS)
+    return {"valeur": n * prix, "unite": "€", "leads": n, "prix": prix, "detail": f"{n} leads chauds en cours × {prix} € · indicatif, pas une prévision"}
+
+
 def masquer(t):
     """Aucune adresse e-mail ni téléphone dans ce qui sort (même si une doc en contient)."""
     t = re.sub(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+", "[e-mail masqué]", t)
     return re.sub(r"(?<!\d)(?:\+33\s?|0)[1-9](?:[ .-]?\d\d){4}(?!\d)", "[téléphone masqué]", t)
 
 
-def ecrire(donnees, chiffres_ventes=None):
+def ecrire(donnees, chiffres_ventes=None, histo=None):
     SORTIE.mkdir(exist_ok=True)
+    if histo is not None:      # data/historique.json (gardé d'un lancement à l'autre) + data/historique.js (même contenu, lu par la page en file://)
+        HISTO.parent.mkdir(exist_ok=True); t = masquer(json.dumps(histo, ensure_ascii=False, indent=1))
+        for p, contenu in ((HISTO, t), (HISTO.with_suffix(".js"), "window.JARVIS_HISTO = " + t + ";\n")):
+            tmp = p.with_name(p.name + ".tmp"); tmp.write_text(contenu, encoding="utf-8"); os.replace(tmp, p)
     texte = masquer(json.dumps(donnees, ensure_ascii=False, indent=1)); docs = masquer(json.dumps(documents(), ensure_ascii=False))
     fichiers = [("agents.json", texte), ("agents.js", "window.JARVIS_AGENTS = " + texte + ";\n"), ("docs.js", "window.JARVIS_DOCS = " + docs + ";\n")]
     if chiffres_ventes is not None:      # ventes.js : même contenu que ventes.json, lu par la page même en file://
@@ -277,7 +389,14 @@ def ecrire(donnees, chiffres_ventes=None):
 
 
 def main():
-    ecrire(construire(), ventes())
+    maintenant = datetime.now(); rs = None
+    if os.environ.get("JARVIS_TEST") != "1":
+        try: rs = _resume_sid()
+        except Exception: rs = None      # ventes() redit la raison
+    v = ventes(maintenant, rs)
+    dispo, fs = feuilles_sid(rs)
+    v["chiffres"].append(dict(cle="potentiel", libelle="Potentiel", **potentiel(dispo, fs)))
+    ecrire(construire(maintenant), v, historique(maintenant, v, fs if dispo else None))
     if "--ouvrir" in sys.argv[1:] and os.name == "nt": os.startfile(str(SORTIE / "index.html"))
 
 

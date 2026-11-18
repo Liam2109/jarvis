@@ -67,6 +67,7 @@ function Get-B2BTaches([string]$racine) {
         $def = $table.PSObject.Properties[$a]
         if (-not $def) { $plan.avertissements += "agent inconnu ignoré : $a"; continue }
         $d = $def.Value
+        if ($d.PSObject.Properties['desactive']) { $plan.avertissements += "agent désactivé ignoré (serveur-taches.json) : $a"; continue }   # 18/11/2026 : comme s'il était retiré de agents_actifs, sa tâche est retirée
         $liste += [pscustomobject]@{ nom = "$($script:PrefixeTacheB2B)$a"; agent = $a; minutes = $(if ($d.PSObject.Properties['toutes_minutes']) { [int]$d.toutes_minutes } else { 0 }); heure = $(if ($d.PSObject.Properties['heure']) { "$($d.heure)" } else { '' }); lundi = $(if ($d.PSObject.Properties['lundi']) { "$($d.lundi)" } else { '' }); heures_en_plus = $(if ($d.PSObject.Properties['heures_en_plus']) { @($d.heures_en_plus | ForEach-Object { "$_" }) } else { @() }); racine = $racine
             arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$lanceur`" -Agent $a" }
     }

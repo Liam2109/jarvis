@@ -70,7 +70,10 @@ Chaque idée est notée à la date où Liam la dit. Une idée pas encore faite r
 - 14/11 — Tableau de bord : courbes de la semaine, taux appel → RDV → devis → closing, carte de chaleur des créneaux, motifs de refus, commissions modifiables, pipeline, voyant par agent (heure de dernière exécution à ajouter dans agents-json.py).
 - 14/11 — Méthode Claude Code (vidéo) : boucles avec critère de fin, sous-agents, bon modèle par tâche, /compact après chaque tâche.
 - 15/11 — Obsidian en vue « espace » pour voir les agents (plus tard).
-- 17/11 — Tableau de bord : faire disparaître les « — » du gros PC (état des devis, clé Stripe en lecture seule, journaux du serveur) et régénérer les chiffres toutes les 5 min sans clic, sans fenêtre ni coût.
+- 17/11 — Tableau de bord : faire disparaître les « — » du gros PC (état des devis, clé Stripe en lecture seule, journaux du serveur) ; la mise à jour sans clic est faite (tâche Jarvis-Tableau-PC, 15 min, 18/11).
+- 18/11 — Statistiques : dater chaque Résultat dans la feuille de Sid (colonne « Noté le ») pour un historique exact au jour près, au lieu du jour de dernière modification de la feuille.
+- 18/11 — Statistiques : taux RDV par créneau horaire et par métier pour choisir quand et qui Sid appelle (ce qui rapproche le plus d'une vente).
+- 18/11 — Potentiel : compter un lead chaud une seule fois même s'il est rappelé plusieurs jours (registre commun), et le retirer quand il passe en « RDV pris » ou refus.
 
 ## À trancher (peut-être dépassées, à confirmer par Liam)
 - 24/10 — Page d'index privée des liens de maquettes pour Liam (le tableau de bord la remplace peut-être).

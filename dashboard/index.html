@@ -149,7 +149,43 @@
   .journal-agent { margin-top: 24px; font-size: 13px; }
   .journal-agent div { display: grid; grid-template-columns: 136px 1fr; gap: 16px; padding: 8px 0; border-bottom: 1px solid var(--ligne); }
 
-  @media (max-width: 1180px) { .chiffres { grid-template-columns: repeat(2, minmax(0, 1fr)); } .chiffre:last-child:nth-child(odd) { grid-column: span 2; } }
+  .chiffre .indic { color: var(--faible); font-size: 12px; line-height: 16px; margin-top: 4px; }
+
+  /* Statistiques (18/11) : un graphique principal (barres), puis trois blocs plus petits ; grille discrète, libellés mono, un accent par graphique, ocre seulement pour les paiements */
+  .choix { display: inline-flex; gap: 4px; padding: 4px; border-radius: 20px; background: var(--verre-fort); border: 1px solid var(--bord-verre); }
+  .choix button { height: 32px; padding: 0 14px; border: 0; border-radius: 16px; background: none; color: var(--doux); cursor: pointer; transition: background-color .2s var(--courbe), color .2s var(--courbe); }
+  .choix button[aria-pressed="true"] { background: var(--bleu); color: #fff; font-weight: 500; }
+  .stat-ligne { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; margin: 0; padding: 0; list-style: none; }
+  .stat-ligne li { padding: 20px 24px; display: flex; flex-direction: column; }
+  .stat-ligne span { color: var(--doux); } .stat-ligne b { font-size: 36px; line-height: 44px; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; margin: 8px 0 0; }
+  .stat-ligne b.manque { color: var(--faible); font-weight: 400; } .stat-ligne small { color: var(--faible); font-size: 12px; line-height: 16px; margin-top: 4px; }
+  .principal { padding: 24px; margin-top: 24px; }
+  .principal h2, .petit h2 { font-size: 16px; line-height: 24px; } .principal .tete, .petit .tete { margin-bottom: 12px; }
+  .trois { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin-top: 24px; align-items: start; }
+  .petit { padding: 24px; min-width: 0; }
+  .graphe { width: 100%; min-height: 40px; } .graphe svg { display: block; overflow: visible; }
+  .graphe text { font-family: var(--mono); font-size: 11px; fill: var(--faible); }
+  .graphe [data-bulle] { cursor: default; } .graphe [data-bulle]:focus { outline: none; } .graphe [data-bulle]:focus-visible { stroke: var(--texte); stroke-width: 1.5; }
+  .part { display: grid; grid-template-columns: 136px minmax(0, 1fr) 48px; gap: 12px; align-items: center; min-height: 32px; }
+  .part span { color: var(--doux); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .part b { text-align: right; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .part svg { display: block; }
+  .taux { padding: 0 0 0 4px; margin: 0 0 2px; color: var(--faible); font-family: var(--mono); font-size: 12px; line-height: 16px; }
+  .phrase-histo { color: var(--doux); margin: -8px 0 24px; max-width: 90ch; }
+  #bulle { position: fixed; z-index: 20; pointer-events: none; padding: 6px 10px; border-radius: 10px; background: var(--nuit); color: #fff; font-size: 13px; line-height: 18px; white-space: nowrap; box-shadow: 0 8px 24px rgba(23,36,67,.2); opacity: 0; transition: opacity .12s var(--courbe); }
+  #bulle.vu { opacity: 1; }
+
+  /* Agents : une ligne par agent (ce qu'il fait, heure prévue, dernier passage, état) */
+  .table-ag { padding: 8px 16px 12px; margin-bottom: 24px; }
+  .table-ag h2 { display: flex; justify-content: space-between; align-items: baseline; font-size: 16px; line-height: 24px; padding: 12px 8px 8px; }
+  .rang { display: grid; grid-template-columns: 16px minmax(0, 1fr) 168px 120px 112px; column-gap: 16px; align-items: center; width: 100%; min-height: 56px; padding: 10px 8px; border: 0; border-top: 1px solid var(--ligne); border-radius: 0; background: none; text-align: left; cursor: pointer; transition: background-color .2s var(--courbe); }
+  .rang:hover, .rang[aria-pressed="true"] { background: rgba(255,255,255,.7); }
+  .rang.entete { min-height: 32px; cursor: default; padding-top: 4px; padding-bottom: 4px; border-top: 0; } .rang.entete:hover { background: none; }
+  .rang .pt { justify-self: center; }
+  .rang .qui b { display: block; font-weight: 500; } .rang .qui span { display: block; color: var(--faible); font-size: 13px; line-height: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .etat { font-size: 13px; } .etat.place { color: var(--bleu); font-weight: 500; } .etat.desactive { color: var(--faible); } .etat.construire { color: var(--doux); text-decoration: underline dotted; text-underline-offset: 3px; }
+  .lien-fichier { display: inline-flex; margin: 0 0 16px; }
+
+  @media (max-width: 1180px) { .chiffres { grid-template-columns: repeat(2, minmax(0, 1fr)); } .chiffre:last-child:nth-child(odd) { grid-column: span 2; } .trois { grid-template-columns: 1fr 1fr; } .stat-ligne { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   @media (max-width: 760px) {
     /* La barre latérale devient une barre du bas */
     .cote { top: auto; left: 12px; right: 12px; bottom: 12px; width: auto; padding: 6px; flex-direction: row; }
@@ -174,6 +210,12 @@
     .poles { grid-template-columns: 1fr; gap: 16px; }
     .source-l { grid-template-columns: 1fr 40px; } .source-l span:last-child { grid-column: 1 / 3; }
     #panneau { bottom: 88px; }
+    .trois { grid-template-columns: 1fr; gap: 16px; margin-top: 16px; } .principal, .petit { padding: 20px 16px; } .principal { margin-top: 16px; }
+    .stat-ligne { gap: 16px; } .stat-ligne li { padding: 16px; } .stat-ligne b { font-size: 28px; line-height: 36px; }
+    .part { grid-template-columns: 112px minmax(0, 1fr) 44px; gap: 8px; }
+    .table-ag { padding: 4px 8px 8px; }
+    .rang { grid-template-columns: 16px minmax(0, 1fr) auto; row-gap: 2px; } .rang.entete { display: none; }
+    .rang .prevu { grid-column: 2; color: var(--faible); font-size: 12px; } .rang .passe { grid-column: 3; grid-row: 1; justify-self: end; } .rang .etat { grid-column: 3; grid-row: 2; justify-self: end; }
   }
   @media (hover: none) { .carte:hover { transform: none; } }
   @media (prefers-reduced-motion: reduce) { *, main { transition: none !important; animation: none !important; } .carte:hover { transform: none; } }
@@ -191,6 +233,8 @@
 <script src="agents.js"></script>
 <script src="ventes.js"></script>
 <script src="docs.js"></script>
+<script src="data/historique.js"></script>
+<div id="bulle" role="status" aria-live="polite"></div>
 <script>
 (function () {
   "use strict";
@@ -203,15 +247,19 @@
     rdv: '<path d="M2.5 5.5h11M5 1.5v2.5M11 1.5v2.5"/><rect x="2.5" y="3" width="11" height="11" rx="2"/><path d="M5.5 9.5l1.7 1.5 3.3-3"/>',
     devis: '<path d="M4 1.5h5.5L12.5 4.5v10h-8.5z"/><path d="M9.5 1.5v3h3M6.5 8h4M6.5 11h2.5"/>',
     paiements: '<rect x="1.5" y="3.5" width="13" height="9" rx="1.5"/><path d="M1.5 6.5h13M4 10h3"/>',
-    candidatures: '<circle cx="8" cy="5" r="2.5"/><path d="M3 14a5 5 0 0 1 10 0"/>'
+    candidatures: '<circle cx="8" cy="5" r="2.5"/><path d="M3 14a5 5 0 0 1 10 0"/>',
+    stats: '<path d="M2.5 13.5h11M4.5 11V8M8 11V4M11.5 11V6.5"/>',
+    potentiel: '<ellipse cx="8" cy="4.5" rx="5" ry="2"/><path d="M3 4.5v3.5c0 1.1 2.2 2 5 2s5-.9 5-2V4.5M3 8v3.5c0 1.1 2.2 2 5 2s5-.9 5-2V8"/>'
   };
-  var VUES = [["jour", "Aujourd'hui"], ["agents", "Agents"], ["docs", "Documents"]];
+  var VUES = [["jour", "Aujourd'hui"], ["stats", "Statistiques"], ["agents", "Agents"], ["docs", "Documents"]];
+  var FICHIERS = { a_faire: "../B2B/docs/TODO-B2B.md", journal: "../B2B/docs/JOURNAL-B2B.md", idees: "../B2B/docs/IDEES-MASTER.md" };   // liens en lecture seule (le fichier tel quel, dans un nouvel onglet)
+  var H = null, periode = "semaine";
   var DOCS = [["pipeline", "Pipeline"], ["sources", "Sources des chiffres"], ["a_faire", "À faire"], ["journal", "Journal"], ["decisions", "Décisions"], ["idees", "Idées"]];
   var JOURS = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"], MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
   var VEDETTE = "appels", CLE = "paiements";   // la carte du haut, et le chiffre qui garde l'ocre
   var A = null, V = null, D = null, vue = "jour", doc = "a_faire", choisi = null, recherche = "";
   try {
-    vue = localStorage.getItem("jarvis-vue") || "jour"; doc = localStorage.getItem("jarvis-doc") || "a_faire";
+    vue = localStorage.getItem("jarvis-vue") || "jour"; periode = localStorage.getItem("jarvis-periode") === "mois" ? "mois" : "semaine"; doc = localStorage.getItem("jarvis-doc") || "a_faire";
     var ancien = localStorage.getItem("jarvis-onglet");   // ancienne page à onglets
     if (!localStorage.getItem("jarvis-vue") && ancien && DOCS.some(function (d) { return d[0] === ancien; })) { vue = "docs"; doc = ancien; }
   } catch (e) {}
@@ -219,7 +267,9 @@
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   function md(s) { return esc(s).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\[\[(?:[^\]|]*\\?\|)?([^\]]+)\]\]/g, "$1"); }
   function val(v) { return v == null ? "—" : v; }
-  function memoriser() { try { localStorage.setItem("jarvis-vue", vue); localStorage.setItem("jarvis-doc", doc); } catch (e) {} }
+  function fmt(n) { return n == null ? "—" : Number(n).toLocaleString("fr-FR"); }
+  function montrer(x) { return x.valeur == null ? "—" : x.unite === "€" ? fmt(x.valeur) + " €" : x.valeur; }
+  function memoriser() { try { localStorage.setItem("jarvis-vue", vue); localStorage.setItem("jarvis-doc", doc); localStorage.setItem("jarvis-periode", periode); } catch (e) {} }
   function aujourdhui() { return (V && V.jour) || (A && A.chiffres && A.chiffres.jour) || ""; }
   function dateLongue(j) { var d = new Date(j + "T12:00:00"); if (!j || isNaN(d)) return ""; var s = JOURS[d.getDay()] + " " + d.getDate() + " " + MOIS[d.getMonth()]; return s.charAt(0).toUpperCase() + s.slice(1); }
   function quand(t) {   // « 07:30 » aujourd'hui, « hier 19:30 », sinon « 15 nov. »
@@ -252,7 +302,7 @@
   function simple(raison) { return /pas encore/i.test(raison || "") ? "Pas encore branché" : "Non disponible sur ce PC"; }
   function repartition(x) {   // seulement si ventes.json donne la vraie répartition des résultats de Sid ({"RDV pris": 1, ...})
     var r = x.repartition; if (!r || typeof r !== "object") return "";
-    var k = Object.keys(r).filter(function (n) { return typeof r[n] === "number"; }); if (!k.length) return "";
+    var k = Object.keys(r).filter(function (n) { return typeof r[n] === "number" && r[n] > 0; }); if (!k.length) return "";
     return '<ul class="repartition" aria-label="Résultats notés par Sid">' + k.map(function (n) { return "<li>" + esc(n) + "<b>" + r[n] + "</b></li>"; }).join("") + "</ul>";
   }
   function vueJour() {
@@ -266,9 +316,9 @@
           '<div><span class="lib">' + esc(ved.libelle) + " aujourd'hui</span><b" + (m ? ' class="manque"' : "") + ">" + esc(val(ved.valeur)) + '</b><span class="det"' + (m ? ' title="' + esc(ved.raison) + '">' + simple(ved.raison) : ">" + esc(ved.detail || "")) + "</span></div>" +
           (m ? "" : '<div class="droite-v">' + repartition(ved) + courbe(ved.serie) + "</div>") + "</section>";
       }
-      h += '<ol class="chiffres" style="--n:' + autres.length + '">' + autres.map(function (x) {
+      h += '<ol class="chiffres" style="--n:' + (autres.length > 5 ? 3 : autres.length) + '">' + autres.map(function (x) {
         var manque = x.valeur == null;
-        return '<li class="chiffre carte verre' + (x.cle === CLE ? " cle" : "") + '"><span class="pastille">' + svg(x.cle, 18) + "</span><b" + (manque ? ' class="manque"' : "") + ">" + esc(val(x.valeur)) +
+        return '<li class="chiffre carte verre' + (x.cle === CLE ? " cle" : "") + '"><span class="pastille">' + svg(x.cle, 18) + "</span><b" + (manque ? ' class="manque"' : "") + ">" + esc(montrer(x)) +
           '</b><span class="lib">' + esc(x.libelle) + '</span><span class="det"' + (manque ? ' title="' + esc(x.raison) + '">' + simple(x.raison) : ">" + esc(x.detail || "")) + "</span></li>";
       }).join("") + "</ol>";
     }
@@ -293,14 +343,93 @@
     if (!A) return h + '<p class="vide">Pas encore de données sur les agents : double-cliquez sur l\'icône « Jarvis - Mon entreprise » du bureau.</p>';
     if (A.source && A.source.indexOf("pas visible") >= 0) h += '<p class="note">Source : ' + esc(A.source) + ".</p>";
     var r = recherche.toLowerCase();
-    h += '<div class="poles">';
     POLES.forEach(function (p) {
       var ag = A.agents.filter(function (a) { return a.pole === p && (!r || (a.nom + " " + a.role).toLowerCase().indexOf(r) >= 0); });
       if (!ag.length && (p === "Autres" || r)) return;
-      h += '<section class="pole carte verre"><h2>' + p + '<span class="num">' + ag.length + "</span></h2>" + (ag.length ? ag.map(ligne).join("") : '<p class="vide" style="padding:0 8px">Aucun agent</p>') + "</section>";
+      h += '<section class="table-ag verre"><h2>' + p + '<span class="num">' + ag.length + '</span></h2><div class="rang entete meta" aria-hidden="true"><span></span><span>Agent et rôle</span><span>Prévu</span><span>Dernier passage</span><span>État</span></div>' +
+        (ag.length ? ag.map(rang).join("") : '<p class="vide" style="padding:0 8px 12px">Aucun agent</p>') + "</section>";
     });
-    return h + "</div>" + legende();
+    return h + legende();
   }
+  function rang(a) {   // une ligne : ce qu'il fait, l'heure prévue, le dernier passage, l'état (en place / désactivé / à construire)
+    var v = voyant(a), e = a.etat_liste || "en place", cls = e === "désactivé" ? "desactive" : e === "à construire" ? "construire" : "place";
+    return '<button class="rang" data-nom="' + esc(a.nom) + '" aria-pressed="' + (a.nom === choisi) + '"><i class="pt ' + v[0] + '" title="' + esc(v[1]) + '"></i><span class="qui"><b>' + esc(a.nom) + "</b><span>" + esc(a.phrase || a.role || "") +
+      '</span></span><span class="prevu">' + esc(String(a.horaire || "").replace(" sur le serveur", "")) + '</span><span class="passe num">' + esc(quand(a.dernier_passage)) + '</span><span class="etat ' + cls + '"' + (a.raison_etat ? ' title="' + esc(a.raison_etat) + '"' : "") + ">" + esc(e) + "</span></button>";
+  }
+
+  // --- Statistiques : historique (data/historique.js), graphiques SVG dessinés à la largeur réelle du bloc ---
+  function jourCourt(j) { var d = new Date(j + "T12:00:00"); return ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."][d.getDay()] + " " + d.getDate(); }
+  function fenetre() {   // les jours ENREGISTRÉS des 7 ou 30 derniers jours ; un jour absent n'est jamais rempli
+    var n = periode === "mois" ? 30 : 7, j = aujourdhui() || new Date().toISOString().slice(0, 10), d = new Date(j + "T12:00:00"); d.setDate(d.getDate() - n + 1);
+    var deb = d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
+    return { n: n, jours: (H && H.jours || []).filter(function (e) { return e.date >= deb && e.date <= j; }) };
+  }
+  function somme(js, k) { var c = js.filter(function (e) { return typeof e[k] === "number"; }); return c.length ? c.reduce(function (s, e) { return s + e[k]; }, 0) : null; }
+  function pc(a, b) { return a == null || b == null || !b ? "—" : Math.round(100 * a / b) + " %"; }
+  function vueStats() {
+    var h = '<div class="tete"><h1>Statistiques</h1><span class="droite"><span class="choix" role="group" aria-label="Période"><button data-periode="semaine" aria-pressed="' + (periode === "semaine") + '">Semaine</button><button data-periode="mois" aria-pressed="' + (periode === "mois") + '">Mois</button></span></span></div>';
+    if (!H || !(H.jours || []).length) return h + '<div class="verre accueil-vide"><h2>Pas encore d\'historique</h2><p>Le fichier data\\historique.json est écrit par outils\\agents-json.py (tâche Jarvis-Tableau-PC toutes les 15 min, ou l\'icône du bureau). Il apparaîtra ici dès le premier passage.</p></div>';
+    var f = fenetre(), js = f.jours, pot = (V && V.chiffres || []).filter(function (x) { return x.cle === "potentiel"; })[0];
+    h += '<p class="phrase-histo">' + (js.length < f.n ? js.length + " jour" + (js.length > 1 ? "s" : "") + " enregistré" + (js.length > 1 ? "s" : "") + " sur les " + f.n + " derniers (historique depuis le " + esc(dateLongue(H.jours[0].date).toLowerCase()) + ") : seuls ces jours sont dessinés, les jours manquants ne sont pas comblés."
+      : "Les " + f.n + " derniers jours.") + "</p>";
+    var ap = somme(js, "appels"), ch = somme(js, "leads_chauds"), rv = somme(js, "rdv");
+    h += '<ul class="stat-ligne">' + [["Appels notés", ap, "sur la période"], ["Leads chauds", ch, "À rappeler + Je dois réfléchir"], ["RDV pris", rv, "sur la période"]].map(function (x) {
+      return '<li class="verre"><span>' + x[0] + "</span><b" + (x[1] == null ? ' class="manque"' : "") + ">" + fmt(x[1]) + "</b><small>" + x[2] + "</small></li>"; }).join("") +
+      '<li class="verre"><span>Potentiel</span><b' + (pot && pot.valeur != null ? "" : ' class="manque"') + ">" + (pot ? esc(montrer(pot)) : "—") + "</b><small" + (pot && pot.valeur == null ? ' title="' + esc(pot.raison) + '"' : "") + ">" +
+      (pot && pot.valeur != null ? esc(pot.leads) + " leads chauds en cours × " + esc(fmt(pot.prix)) + " € · indicatif, pas une prévision" : "indicatif, pas une prévision · " + (pot ? simple(pot.raison) : "pas encore calculé")) + "</small></li></ul>";
+    h += '<section class="principal verre"><div class="tete"><h2>Appels notés par jour</h2><span class="meta">' + js.length + " jour" + (js.length > 1 ? "s" : "") + '</span></div><div class="graphe" data-g="barres"></div></section>';
+    var res = (H.resultats || []), tot = 0, parts = res.map(function (r) { var n = js.reduce(function (s, e) { return s + ((e.resultats || {})[r] || 0); }, 0); tot += n; return [r, n]; });
+    h += '<div class="trois"><section class="petit verre"><div class="tete"><h2>Répartition des résultats</h2><span class="meta">' + fmt(tot) + " résultats</span></div>" +
+      (tot ? parts.map(function (p) { var q = 100 * p[1] / tot; return '<div class="part" data-bulle="' + esc(p[0] + " : " + p[1] + " sur " + tot + " (" + q.toFixed(1).replace(".", ",") + " %)") + '" tabindex="0"><span>' + esc(p[0]) + '</span><svg width="100%" height="8" aria-hidden="true"><rect width="100%" height="8" rx="4" fill="var(--bleu-pale)"/>' +
+        (p[1] ? '<rect width="' + Math.max(1.5, q).toFixed(1) + '%" height="8" rx="4" fill="' + (p[0] === "RDV pris" ? "var(--bleu)" : "var(--bleu-clair)") + '"/>' : "") + "</svg><b>" + Math.round(q) + " %</b></div>"; }).join("") : '<p class="vide">Aucun résultat noté sur la période</p>') + "</section>";
+    var dv = somme(js, "devis"), pa = somme(js, "paiements"), et = [["Appels notés", ap], ["Leads chauds", ch], ["RDV pris", rv], ["Devis envoyés", dv], ["Paiements", pa]], max = Math.max(1, ap || 0);
+    h += '<section class="petit verre"><div class="tete"><h2>Entonnoir</h2><span class="meta">« — » : inconnu sur ce PC</span></div>' + et.map(function (x, i) {
+      var t = i ? '<p class="taux" title="Part de l\'étape précédente">↓ ' + pc(x[1], et[i - 1][1]) + "</p>" : "";
+      return t + '<div class="part" data-bulle="' + esc(x[0] + " : " + (x[1] == null ? "inconnu sur ce PC" : fmt(x[1]))) + '" tabindex="0"><span>' + x[0] + '</span><svg width="100%" height="8" aria-hidden="true"><rect width="100%" height="8" rx="4" fill="var(--bleu-pale)"/>' +
+        (x[1] ? '<rect width="' + Math.max(1.5, 100 * x[1] / max).toFixed(1) + '%" height="8" rx="4" fill="' + (i === 4 ? "var(--ocre)" : i ? "var(--bleu-clair)" : "var(--bleu)") + '"/>' : "") + "</svg><b" + (i === 4 && x[1] ? ' style="color:var(--ocre)"' : "") + ">" + fmt(x[1]) + "</b></div>";
+    }).join("") + "</section>";
+    h += '<section class="petit verre"><div class="tete"><h2>Leads chauds par jour</h2></div><div class="graphe" data-g="courbe"></div></section></div>';
+    return h;
+  }
+  function axes(w, h, g, max, pas) {   // grille discrète + libellés mono à gauche
+    var s = "";
+    for (var v = 0; v <= max; v += pas) { var y = (h - g.b - (h - g.b - g.t) * v / max).toFixed(1); s += '<line x1="' + g.l + '" x2="' + w + '" y1="' + y + '" y2="' + y + '" stroke="rgba(23,36,67,' + (v ? ".08" : ".16") + ')"/><text x="' + (g.l - 8) + '" y="' + y + '" dy="4" text-anchor="end">' + v + "</text>"; }
+    return s;
+  }
+  function echelle(m) { var pas = m <= 4 ? 1 : m <= 10 ? 2 : m <= 25 ? 5 : m <= 50 ? 10 : m <= 120 ? 20 : 50; return [Math.ceil(Math.max(m, 1) / pas) * pas, pas]; }
+  function graphes() {
+    var f = fenetre(), js = f.jours;
+    [].forEach.call(document.querySelectorAll(".graphe"), function (el) {
+      var w = Math.max(200, el.clientWidth), barres = el.dataset.g === "barres", h = barres ? (w < 500 ? 200 : 260) : 168, g = { l: 32, b: 28, t: 8 }, k = barres ? "appels" : "leads_chauds";
+      var pts = js.filter(function (e) { return typeof e[k] === "number"; });
+      if (!pts.length) { el.innerHTML = '<p class="vide">Aucun jour enregistré sur la période</p>'; return; }
+      var e = echelle(Math.max.apply(null, pts.map(function (x) { return x[k]; }))), max = e[0], slot = (w - g.l) / pts.length, pas = Math.ceil(pts.length / Math.max(1, Math.floor((w - g.l) / 56)));
+      var y = function (v) { return h - g.b - (h - g.b - g.t) * v / max; }, s = axes(w, h, g, max, e[1]);
+      pts.forEach(function (x, i) {
+        var cx = g.l + slot * (i + .5), lib = jourCourt(x.date), auj = x.date === aujourdhui();
+        if (i % pas === 0 || i === pts.length - 1) s += '<text x="' + cx.toFixed(1) + '" y="' + (h - 8) + '" text-anchor="middle">' + lib + "</text>";
+        var bulle = esc(dateLongue(x.date) + " · " + x[k] + (barres ? " appel" + (x[k] > 1 ? "s" : "") + " noté" + (x[k] > 1 ? "s" : "") : " lead" + (x[k] > 1 ? "s" : "") + " chaud" + (x[k] > 1 ? "s" : "")) + (auj ? " (en cours)" : ""));
+        if (barres) {
+          var bw = Math.min(48, slot * .6), top = y(x[k]);
+          s += '<rect x="' + (cx - bw / 2).toFixed(1) + '" y="' + top.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(0, h - g.b - top).toFixed(1) + '" rx="4" fill="' + (auj ? "var(--bleu)" : "var(--bleu-clair)") + '"/>' +
+            '<rect x="' + (cx - slot / 2).toFixed(1) + '" y="' + g.t + '" width="' + slot.toFixed(1) + '" height="' + (h - g.b - g.t) + '" fill="transparent" data-bulle="' + bulle + '" tabindex="0"/>';
+        } else s += '<circle cx="' + cx.toFixed(1) + '" cy="' + y(x[k]).toFixed(1) + '" r="3.5" fill="#fff" stroke="var(--bleu)" stroke-width="2"/><circle cx="' + cx.toFixed(1) + '" cy="' + y(x[k]).toFixed(1) + '" r="14" fill="transparent" data-bulle="' + bulle + '" tabindex="0"/>';
+      });
+      if (!barres && pts.length > 1) s = s.replace(/(<circle)/, '<polyline points="' + pts.map(function (x, i) { return (g.l + slot * (i + .5)).toFixed(1) + "," + y(x[k]).toFixed(1); }).join(" ") + '" fill="none" stroke="var(--bleu)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>$1');
+      el.innerHTML = '<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + " " + h + '" role="img" aria-label="' + (barres ? "Appels notés" : "Leads chauds") + " par jour, " + pts.length + ' jours">' + s + "</svg>";
+    });
+  }
+  function bulle(cible, x, y) {
+    var b = $("bulle"); if (!cible) { b.classList.remove("vu"); return; }
+    b.textContent = cible.getAttribute("data-bulle"); b.classList.add("vu");
+    if (x == null) { var r = cible.getBoundingClientRect(); x = r.left + r.width / 2; y = r.top; }
+    b.style.left = Math.max(8, Math.min(window.innerWidth - b.offsetWidth - 8, x - b.offsetWidth / 2)) + "px"; b.style.top = Math.max(8, y - b.offsetHeight - 12) + "px";
+  }
+  document.addEventListener("mousemove", function (e) { var c = e.target.closest && e.target.closest("[data-bulle]"); bulle(c, e.clientX, e.clientY); });
+  document.addEventListener("focusin", function (e) { var c = e.target.closest && e.target.closest("[data-bulle]"); bulle(c); });
+  document.addEventListener("focusout", function () { bulle(null); });
+  window.addEventListener("scroll", function () { bulle(null); }, { passive: true });
+  var tr; window.addEventListener("resize", function () { clearTimeout(tr); tr = setTimeout(function () { if (vue === "stats") graphes(); }, 150); });
   function ligne(a) {
     var v = voyant(a), e = a.derniere_erreur;
     return '<button class="agent" data-nom="' + esc(a.nom) + '" aria-pressed="' + (a.nom === choisi) + '" title="' + esc(v[1] + " · " + a.role) + '"><i class="pt ' + v[0] + '" aria-label="' + esc(v[1]) + '"></i><span class="nom">' + esc(a.nom) +
@@ -326,6 +455,7 @@
     if (doc === "pipeline") return h + vuePipeline();
     if (doc === "sources") return h + vueSources();
     if (!D) return h + '<p class="vide">docs.js absent : double-cliquez sur l\'icône « Jarvis - Mon entreprise » du bureau.</p>';
+    if (FICHIERS[doc]) h += '<a class="bouton lien-fichier" href="' + FICHIERS[doc] + '" target="_blank" rel="noopener">Ouvrir le fichier (lecture seule)</a>';
     var r = recherche.toLowerCase(), l = (D[doc] || []).filter(function (s) { return !r || (s.titre + " " + s.texte).toLowerCase().indexOf(r) >= 0; });
     return h + '<div class="docs verre">' + (l.length ? l.map(function (s) { return "<details><summary>" + md(s.titre) + '</summary><div class="corps">' + (md(s.texte) || '<span class="vide">(vide)</span>') + "</div></details>"; }).join("") : '<p class="vide" style="padding:8px">Rien ne correspond</p>') +
       '</div><p class="meta" style="margin:12px 4px 0">' + l.length + " entrées</p>";
@@ -352,22 +482,24 @@
     $("nav").innerHTML = VUES.map(function (o) { return '<button data-vue="' + o[0] + '" aria-label="' + o[1] + '"' + (o[0] === vue ? ' aria-current="page"' : "") + ">" + svg(o[0]) + "<span>" + o[1] + "</span></button>"; }).join("");
     $("pied").textContent = V && V.genere_le ? "Données du " + V.genere_le.slice(8, 10) + "/" + V.genere_le.slice(5, 7) + " à " + V.genere_le.slice(11, 16) + ", relues toutes les 5 min" : "";
     var foc = document.activeElement && document.activeElement.id === "recherche", pos = foc ? document.activeElement.selectionStart : 0;
-    $("contenu").innerHTML = vue === "agents" ? vueAgents() : vue === "docs" ? vueDocs() : vueJour();
+    $("contenu").innerHTML = vue === "agents" ? vueAgents() : vue === "docs" ? vueDocs() : vue === "stats" ? vueStats() : vueJour();
+    bulle(null); if (vue === "stats") graphes();
     var s = $("recherche");
     if (s) { s.oninput = function () { recherche = s.value; rendre(); }; if (foc) { s.focus(); s.setSelectionRange(pos, pos); } }
   }
   function appliquer() {
-    A = window.JARVIS_AGENTS || null; V = window.JARVIS_VENTES || null; D = window.JARVIS_DOCS || null;
+    A = window.JARVIS_AGENTS || null; V = window.JARVIS_VENTES || null; D = window.JARVIS_DOCS || null; H = window.JARVIS_HISTO || null;
     rendre(); if (choisi) panneau(choisi);
   }
   document.addEventListener("click", function (e) {
     var b = e.target.closest("[data-vue]"); if (b) { vue = b.dataset.vue; memoriser(); rendre(); window.scrollTo(0, 0); return; }
     var d = e.target.closest("[data-doc]"); if (d) { doc = d.dataset.doc; memoriser(); rendre(); return; }
-    var c = e.target.closest(".agent"); if (c) { panneau(c.dataset.nom); rendre(); }
+    var q = e.target.closest("[data-periode]"); if (q) { periode = q.dataset.periode; memoriser(); rendre(); return; }
+    var c = e.target.closest(".agent, .rang:not(.entete)"); if (c) { panneau(c.dataset.nom); rendre(); }
   });
   document.addEventListener("keydown", function (e) { if (e.key === "Escape" && choisi) { panneau(null); rendre(); } });
-  function recharger() {   // toutes les 5 min : relit agents.js, ventes.js et docs.js (réécrits par outils\agents-json.py)
-    var f = ["agents.js", "ventes.js", "docs.js"], n = 0;
+  function recharger() {   // toutes les 5 min : relit agents.js, ventes.js, docs.js et data/historique.js (réécrits par outils\agents-json.py)
+    var f = ["agents.js", "ventes.js", "docs.js", "data/historique.js"], n = 0;
     f.forEach(function (x) {
       var s = document.createElement("script"); s.src = x + "?t=" + Date.now();
       s.onload = s.onerror = function () { s.remove(); if (++n === f.length) appliquer(); };

@@ -36,6 +36,8 @@ $t = $(if ($table) { $table.PSObject.Properties[$Agent] } else { $null })
 if (-not $t) { Log "agent inconnu : « $Agent » (serveur-taches.json)"; exit 6 }
 $actifs = @($(if ($loc.PSObject.Properties['agents_actifs']) { $loc.agents_actifs })) | ForEach-Object { "$_" }
 if ($Agent -notin $actifs) { Log "agent « $Agent » non marqué actif dans agents_actifs (b2b.local.json) : rien lancé"; exit 4 }
+# « desactive » (serveur-taches.json, 18/11/2026) : agent mis en pause par Liam, fichiers gardés ; rien n'est lancé même s'il reste dans agents_actifs
+if ($t.Value.PSObject.Properties['desactive']) { Log "agent « $Agent » désactivé ($($t.Value.desactive)) : rien lancé"; exit 0 }
 # 2 bis) date d'activation et jours (serveur-taches.json : « actif_le » AAAA-MM-JJ, « jours » 0 = lundi … 6 = dimanche ; 15/11/2026) : avant la date ou hors jours, rien n'est lancé (code 0, aucune trace)
 $auj = Get-Date
 if ($env:JARVIS_B2B_AUJOURDHUI) { $auj = [datetime]::ParseExact($env:JARVIS_B2B_AUJOURDHUI, 'yyyy-MM-dd', $null) }   # tests : jour figé

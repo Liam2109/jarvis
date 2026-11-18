@@ -107,6 +107,7 @@ def en_panne(agents, maintenant, grace_minutes, taches=None, jours=None):
     out = []
     for a in agents:
         if not a.get("planifie"): continue
+        if (taches.get(a["nom"]) or {}).get("desactive"): continue   # agent désactivé (serveur-taches.json, ex. appels-liam le 18/11/2026) : jamais d'alerte « Panne »
         if not attendu_ce_jour(a["nom"], maintenant.date(), taches, (jours or {}).get(a["nom"]) if jours is not None else None): continue
         m = re.match(r"chaque jour à (\d{2}):(\d{2})$", str(a.get("horaire") or ""))
         if not m: continue

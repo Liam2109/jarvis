@@ -137,3 +137,5 @@ lots/*
 /prospection-trouves.csv
 /reponses-traitees.json
 /messages-a-valider.md
+
+dashboard/data/
