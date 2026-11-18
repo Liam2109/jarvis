@@ -1,0 +1,5 @@
+{
+  "envoi_automatique": false,
+  "heure_tache": "08:30",
+  "_aide": "envoi_automatique : false (défaut versionné, SIMULATION) ; l'activation réelle se fait dans relances-config.local.json (propre à la machine, jamais versionné). heure_tache : 08:30, jours ouvrés (serveur-taches.json). Dossier de Sid : dossier_sid_id d'appels-sid ; compte Google (défaut dans le code : contact.lmsites@gmail.com) : même jeton qu'appels-sid (lecture seule). Voir .claude\\skills\\agent-relances\\SKILL.md."
+}

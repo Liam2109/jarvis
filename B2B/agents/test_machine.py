@@ -113,7 +113,7 @@ assert not re.search(r"^\s*(import|from)\s+(selenium|playwright|pyppeteer)", src
 # ---------- 6) tâches du serveur (serveur-taches.json) : cohérence ----------
 T = json.loads((ICI / "serveur-taches.json").read_text(encoding="utf-8"))["agents"]
 assert set(T) == {"appels-sid", "appels-liam", "devis", "rendez-vous", "reponses", "prospection", "resume-sid", "stripe-alerte", "panne-alerte", "surveillant", "nettoyage-fichiers",
-                  "videos-veille", "videos-scripts", "videos-marketing", "videos-creation", "videos-publication", "videos-nettoyage", "alerte-candidatures"}, sorted(T)   # équipe Vidéos TikTok (16/11/2026), scripts dans Videos\agents
+                  "videos-veille", "videos-scripts", "videos-marketing", "videos-creation", "videos-publication", "videos-nettoyage", "alerte-candidatures", "relances"}, sorted(T)   # équipe Vidéos TikTok (16/11/2026), scripts dans Videos\agents
 assert T["videos-creation"]["heure"] == "06:00" and T["videos-creation"]["heures_en_plus"] == ["14:00", "22:00"] and T["videos-creation"]["commandes"] == [["passage"]]
 assert T["videos-publication"]["commandes"] == [["publier"]] and "actif_le" not in T["videos-publication"]   # désactivée : seulement après le « go publier » de Liam (agents_actifs)   # instagram retiré du serveur le 14/11/2026 (archive) ; resume-sid/stripe-alerte/panne-alerte ajoutés (étape Argent, 15/11/2026) ; surveillant du harness (15/11/2026)
 assert T["nettoyage-fichiers"]["heure"] == "03:00" and T["nettoyage-fichiers"]["commandes"] == [["nettoyer"]]   # nettoyage des traces et du journal de plus de 30 jours (15/11/2026)

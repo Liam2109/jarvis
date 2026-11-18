@@ -77,6 +77,16 @@
       ],
       "toutes_minutes": 5
     },
+    "relances": {
+      "script": "relances.py",
+      "commandes": [
+        [
+          "jour"
+        ]
+      ],
+      "heure": "08:30",
+      "jours": [0, 1, 2, 3, 4]
+    },
     "alerte-candidatures": {
       "script": "alerte-candidatures.py",
       "commandes": [

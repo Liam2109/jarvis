@@ -1,0 +1,43 @@
+{
+ "nom": "relances",
+ "responsable": "Vente",
+ "mission": "Chaque jour ouvré à 08:30, un message Discord « À rappeler aujourd'hui » pour Liam : leads chauds de Sid à J+3 et J+7 ouvrés (J+15 si moyen terme) ; ne contacte que Liam.",
+ "statut": "actif",
+ "script": "B2B/agents/relances.py",
+ "jours": [0, 1, 2, 3, 4],
+ "heures": {
+  "debut": "08:00",
+  "fin": "19:00"
+ },
+ "fichiers_lus": [
+  "feuilles Google « Appels Sid AAAA-MM-JJ » du dossier de Sid (lecture seule, jeton d'appels-sid)",
+  "B2B/agents/appels-sid-config.json (dossier_sid_id)",
+  "B2B/agents/relances-config.json"
+ ],
+ "fichiers_ecrits": [
+  "B2B/agents/relances-etat.json",
+  "B2B/agents/relances-journal.log"
+ ],
+ "canaux_discord": [
+  "alertes"
+ ],
+ "envoi_client": false,
+ "actions_interdites": [
+  "contacter un prospect, un client ou Sid (seul Liam reçoit le message)",
+  "écrire dans une feuille de Sid",
+  "annoncer deux fois la même relance d'un lead",
+  "plus de deux relances par appel chaud",
+  "relancer un lead noté ensuite RDV pris, Non catégorique, Trop cher, Déjà un site ou Pas le temps",
+  "utiliser une IA ou un service payant",
+  "afficher un secret (jeton, clé, adresse iCal)",
+  "encaisser, publier ou signer"
+ ],
+ "plafonds": {
+  "messages_par_jour": 3
+ },
+ "peut_engager": false,
+ "alerte_si_silence": "09:30",
+ "tests": [
+  "tests/agents/test_relances.py"
+ ]
+}
