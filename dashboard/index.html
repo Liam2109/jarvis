@@ -155,7 +155,7 @@
   .choix { display: inline-flex; gap: 4px; padding: 4px; border-radius: 20px; background: var(--verre-fort); border: 1px solid var(--bord-verre); }
   .choix button { height: 32px; padding: 0 14px; border: 0; border-radius: 16px; background: none; color: var(--doux); cursor: pointer; transition: background-color .2s var(--courbe), color .2s var(--courbe); }
   .choix button[aria-pressed="true"] { background: var(--bleu); color: #fff; font-weight: 500; }
-  .stat-ligne { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; margin: 0; padding: 0; list-style: none; }
+  .stat-ligne { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 24px; margin: 0; padding: 0; list-style: none; }
   .stat-ligne li { padding: 20px 24px; display: flex; flex-direction: column; }
   .stat-ligne span { color: var(--doux); } .stat-ligne b { font-size: 36px; line-height: 44px; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; margin: 8px 0 0; }
   .stat-ligne b.manque { color: var(--faible); font-weight: 400; } .stat-ligne small { color: var(--faible); font-size: 12px; line-height: 16px; margin-top: 4px; }
@@ -172,7 +172,14 @@
   .taux { padding: 0 0 0 4px; margin: 0 0 2px; color: var(--faible); font-family: var(--mono); font-size: 12px; line-height: 16px; }
   .phrase-histo { color: var(--doux); margin: -8px 0 24px; max-width: 90ch; }
   #bulle { position: fixed; z-index: 20; pointer-events: none; padding: 6px 10px; border-radius: 10px; background: var(--nuit); color: #fff; font-size: 13px; line-height: 18px; white-space: nowrap; box-shadow: 0 8px 24px rgba(23,36,67,.2); opacity: 0; transition: opacity .12s var(--courbe); }
-  #bulle.vu { opacity: 1; }
+  #bulle.vu { opacity: 1; } #bulle { white-space: pre; }
+  .courbes { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+  .courbes button { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 12px; border-radius: 16px; border: 1px solid var(--ligne-forte); background: var(--verre-fort); color: var(--texte); cursor: pointer; font: inherit; font-size: 13px; transition: opacity .2s var(--courbe); }
+  .courbes button[aria-pressed="false"] { opacity: .5; } .courbes small { color: var(--faible); font-size: 12px; }
+  .trait { width: 18px; border-top: 3px solid var(--c); border-radius: 2px; } .trait.tirets { border-top-style: dashed; }
+  .graphe rect.col { fill: transparent; } .graphe rect.col:hover, .graphe rect.col:focus-visible { fill: rgba(47,100,168,.07); stroke: none; }
+  .note-cours { margin: 12px 0 0; }
+  .metiers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 48px; } .metiers .part { grid-template-columns: 180px minmax(0, 1fr) 48px; }
 
   /* Agents : une ligne par agent (ce qu'il fait, heure prévue, dernier passage, état) */
   .table-ag { padding: 8px 16px 12px; margin-bottom: 24px; }
@@ -185,7 +192,7 @@
   .etat { font-size: 13px; } .etat.place { color: var(--bleu); font-weight: 500; } .etat.desactive { color: var(--faible); } .etat.construire { color: var(--doux); text-decoration: underline dotted; text-underline-offset: 3px; }
   .lien-fichier { display: inline-flex; margin: 0 0 16px; }
 
-  @media (max-width: 1180px) { .chiffres { grid-template-columns: repeat(2, minmax(0, 1fr)); } .chiffre:last-child:nth-child(odd) { grid-column: span 2; } .trois { grid-template-columns: 1fr 1fr; } .stat-ligne { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 1180px) { .chiffres { grid-template-columns: repeat(2, minmax(0, 1fr)); } .chiffre:last-child:nth-child(odd) { grid-column: span 2; } .trois { grid-template-columns: 1fr 1fr; } .stat-ligne { grid-template-columns: repeat(2, minmax(0, 1fr)); } .stat-ligne li:last-child:nth-child(odd) { grid-column: span 2; } }
   @media (max-width: 760px) {
     /* La barre latérale devient une barre du bas */
     .cote { top: auto; left: 12px; right: 12px; bottom: 12px; width: auto; padding: 6px; flex-direction: row; }
@@ -212,7 +219,8 @@
     #panneau { bottom: 88px; }
     .trois { grid-template-columns: 1fr; gap: 16px; margin-top: 16px; } .principal, .petit { padding: 20px 16px; } .principal { margin-top: 16px; }
     .stat-ligne { gap: 16px; } .stat-ligne li { padding: 16px; } .stat-ligne b { font-size: 28px; line-height: 36px; }
-    .part { grid-template-columns: 112px minmax(0, 1fr) 44px; gap: 8px; }
+    .part, .metiers .part { grid-template-columns: 112px minmax(0, 1fr) 44px; gap: 8px; } .metiers { grid-template-columns: 1fr; }
+    .courbes { justify-content: flex-start; } .courbes button { font-size: 12px; padding: 0 10px; }
     .table-ag { padding: 4px 8px 8px; }
     .rang { grid-template-columns: 16px minmax(0, 1fr) auto; row-gap: 2px; } .rang.entete { display: none; }
     .rang .prevu { grid-column: 2; color: var(--faible); font-size: 12px; } .rang .passe { grid-column: 3; grid-row: 1; justify-self: end; } .rang .etat { grid-column: 3; grid-row: 2; justify-self: end; }
@@ -253,13 +261,13 @@
   };
   var VUES = [["jour", "Aujourd'hui"], ["stats", "Statistiques"], ["agents", "Agents"], ["docs", "Documents"]];
   var FICHIERS = { a_faire: "../B2B/docs/TODO-B2B.md", journal: "../B2B/docs/JOURNAL-B2B.md", idees: "../B2B/docs/IDEES-MASTER.md" };   // liens en lecture seule (le fichier tel quel, dans un nouvel onglet)
-  var H = null, periode = "semaine";
+  var H = null, periode = "semaine", COCHES = { appels: true, chauds: true, devis: true, paiements: true };
   var DOCS = [["pipeline", "Pipeline"], ["sources", "Sources des chiffres"], ["a_faire", "À faire"], ["journal", "Journal"], ["decisions", "Décisions"], ["idees", "Idées"]];
   var JOURS = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"], MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
   var VEDETTE = "appels", CLE = "paiements";   // la carte du haut, et le chiffre qui garde l'ocre
   var A = null, V = null, D = null, vue = "jour", doc = "a_faire", choisi = null, recherche = "";
   try {
-    vue = localStorage.getItem("jarvis-vue") || "jour"; periode = localStorage.getItem("jarvis-periode") === "mois" ? "mois" : "semaine"; doc = localStorage.getItem("jarvis-doc") || "a_faire";
+    vue = localStorage.getItem("jarvis-vue") || "jour"; periode = { mois: "mois", an: "an" }[localStorage.getItem("jarvis-periode")] || "semaine"; var cc = JSON.parse(localStorage.getItem("jarvis-courbes") || "null"); if (cc) for (var k in COCHES) if (typeof cc[k] === "boolean") COCHES[k] = cc[k]; doc = localStorage.getItem("jarvis-doc") || "a_faire";
     var ancien = localStorage.getItem("jarvis-onglet");   // ancienne page à onglets
     if (!localStorage.getItem("jarvis-vue") && ancien && DOCS.some(function (d) { return d[0] === ancien; })) { vue = "docs"; doc = ancien; }
   } catch (e) {}
@@ -269,7 +277,7 @@
   function val(v) { return v == null ? "—" : v; }
   function fmt(n) { return n == null ? "—" : Number(n).toLocaleString("fr-FR"); }
   function montrer(x) { return x.valeur == null ? "—" : x.unite === "€" ? fmt(x.valeur) + " €" : x.valeur; }
-  function memoriser() { try { localStorage.setItem("jarvis-vue", vue); localStorage.setItem("jarvis-doc", doc); localStorage.setItem("jarvis-periode", periode); } catch (e) {} }
+  function memoriser() { try { localStorage.setItem("jarvis-vue", vue); localStorage.setItem("jarvis-doc", doc); localStorage.setItem("jarvis-periode", periode); localStorage.setItem("jarvis-courbes", JSON.stringify(COCHES)); } catch (e) {} }
   function aujourdhui() { return (V && V.jour) || (A && A.chiffres && A.chiffres.jour) || ""; }
   function dateLongue(j) { var d = new Date(j + "T12:00:00"); if (!j || isNaN(d)) return ""; var s = JOURS[d.getDay()] + " " + d.getDate() + " " + MOIS[d.getMonth()]; return s.charAt(0).toUpperCase() + s.slice(1); }
   function quand(t) {   // « 07:30 » aujourd'hui, « hier 19:30 », sinon « 15 nov. »
@@ -360,23 +368,30 @@
   // --- Statistiques : historique (data/historique.js), graphiques SVG dessinés à la largeur réelle du bloc ---
   function jourCourt(j) { var d = new Date(j + "T12:00:00"); return ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."][d.getDay()] + " " + d.getDate(); }
   function fenetre() {   // les jours ENREGISTRÉS des 7 ou 30 derniers jours ; un jour absent n'est jamais rempli
-    var n = periode === "mois" ? 30 : 7, j = aujourdhui() || new Date().toISOString().slice(0, 10), d = new Date(j + "T12:00:00"); d.setDate(d.getDate() - n + 1);
+    var n = periode === "an" ? 365 : periode === "mois" ? 30 : 7, j = aujourdhui() || new Date().toISOString().slice(0, 10), d = new Date(j + "T12:00:00"); d.setDate(d.getDate() - n + 1);
     var deb = d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
-    return { n: n, jours: (H && H.jours || []).filter(function (e) { return e.date >= deb && e.date <= j; }) };
+    return { n: n, deb: deb, fin: j, jours: (H && H.jours || []).filter(function (e) { return e.date >= deb && e.date <= j; }) };
   }
   function somme(js, k) { var c = js.filter(function (e) { return typeof e[k] === "number"; }); return c.length ? c.reduce(function (s, e) { return s + e[k]; }, 0) : null; }
   function pc(a, b) { return a == null || b == null || !b ? "—" : Math.round(100 * a / b) + " %"; }
   function vueStats() {
-    var h = '<div class="tete"><h1>Statistiques</h1><span class="droite"><span class="choix" role="group" aria-label="Période"><button data-periode="semaine" aria-pressed="' + (periode === "semaine") + '">Semaine</button><button data-periode="mois" aria-pressed="' + (periode === "mois") + '">Mois</button></span></span></div>';
+    var h = '<div class="tete"><h1>Statistiques</h1><span class="droite"><span class="choix" role="group" aria-label="Période">' + [["semaine", "7 jours"], ["mois", "30 jours"], ["an", "1 an"]].map(function (p) { return '<button data-periode="' + p[0] + '" aria-pressed="' + (periode === p[0]) + '">' + p[1] + "</button>"; }).join("") + ' </span></span></div>';
     if (!H || !(H.jours || []).length) return h + '<div class="verre accueil-vide"><h2>Pas encore d\'historique</h2><p>Le fichier data\\historique.json est écrit par outils\\agents-json.py (tâche Jarvis-Tableau-PC toutes les 15 min, ou l\'icône du bureau). Il apparaîtra ici dès le premier passage.</p></div>';
     var f = fenetre(), js = f.jours, pot = (V && V.chiffres || []).filter(function (x) { return x.cle === "potentiel"; })[0];
     h += '<p class="phrase-histo">' + (js.length < f.n ? js.length + " jour" + (js.length > 1 ? "s" : "") + " enregistré" + (js.length > 1 ? "s" : "") + " sur les " + f.n + " derniers (historique depuis le " + esc(dateLongue(H.jours[0].date).toLowerCase()) + ") : seuls ces jours sont dessinés, les jours manquants ne sont pas comblés."
-      : "Les " + f.n + " derniers jours.") + "</p>";
-    var ap = somme(js, "appels"), ch = somme(js, "leads_chauds"), rv = somme(js, "rdv");
+      : "Les " + f.n + " derniers jours.") + (periode === "an" ? " Vue 1 an : elle restera presque vide les premières semaines ; la courbe part du bord droit et s'allonge chaque jour." : "") + "</p>";
+    var ap = somme(js, "appels"), ch = somme(js, "leads_chauds"), rv = somme(js, "rdv"), vt = somme(js, "paiements");
+    var clo = vt == null ? ["—", "ventes tenues sur le serveur, pas encore relues ici"] : !rv ? ["—", "aucun RDV pris sur la période"] : [pc(vt, rv), vt + " vente" + (vt > 1 ? "s" : "") + " pour " + rv + " RDV pris"];
     h += '<ul class="stat-ligne">' + [["Appels notés", ap, "sur la période"], ["Leads chauds", ch, "À rappeler + Je dois réfléchir"], ["RDV pris", rv, "sur la période"]].map(function (x) {
       return '<li class="verre"><span>' + x[0] + "</span><b" + (x[1] == null ? ' class="manque"' : "") + ">" + fmt(x[1]) + "</b><small>" + x[2] + "</small></li>"; }).join("") +
       '<li class="verre"><span>Potentiel</span><b' + (pot && pot.valeur != null ? "" : ' class="manque"') + ">" + (pot ? esc(montrer(pot)) : "—") + "</b><small" + (pot && pot.valeur == null ? ' title="' + esc(pot.raison) + '"' : "") + ">" +
-      (pot && pot.valeur != null ? esc(pot.leads) + " leads chauds en cours × " + esc(fmt(pot.prix)) + " € · indicatif, pas une prévision" : "indicatif, pas une prévision · " + (pot ? simple(pot.raison) : "pas encore calculé")) + "</small></li></ul>";
+      (pot && pot.valeur != null ? esc(pot.leads) + " leads chauds en cours × " + esc(fmt(pot.prix)) + " € · indicatif, pas une prévision" : "indicatif, pas une prévision · " + (pot ? simple(pot.raison) : "pas encore calculé")) + "</small></li>" +
+      '<li class="verre"><span>Taux de closing</span><b' + (clo[0] === "—" ? ' class="manque"' : "") + ">" + clo[0] + "</b><small>ventes ÷ RDV pris · " + esc(clo[1]) + "</small></li></ul>";
+    h += '<section class="principal verre"><div class="tete"><h2>Évolution</h2><span class="droite courbes" role="group" aria-label="Courbes affichées">' + SERIES.map(function (s) {
+      var n = js.filter(function (e) { return s[3](e) != null; }).length;
+      return '<button data-courbe="' + s[0] + '" aria-pressed="' + COCHES[s[0]] + '"><i class="trait' + (s[4] ? " tirets" : "") + '" style="--c:' + s[2] + '"></i>' + s[1] + (n ? "" : " <small>pas encore de données</small>") + "</button>"; }).join("") +
+      '</span></div><div class="graphe" data-g="cours"></div><p class="meta note-cours">Une seule échelle pour toutes les courbes : décochez Appels pour voir les petites de près. Un jour non enregistré coupe la courbe, il n\'est jamais comblé.' +
+      (js.some(function (e) { return e.devis != null || e.paiements != null; }) ? "" : " Devis et ventes sont tenus sur le serveur : pas encore de données ici.") + "</p></section>";
     h += '<section class="principal verre"><div class="tete"><h2>Appels notés par jour</h2><span class="meta">' + js.length + " jour" + (js.length > 1 ? "s" : "") + '</span></div><div class="graphe" data-g="barres"></div></section>';
     var res = (H.resultats || []), tot = 0, parts = res.map(function (r) { var n = js.reduce(function (s, e) { return s + ((e.resultats || {})[r] || 0); }, 0); tot += n; return [r, n]; });
     h += '<div class="trois"><section class="petit verre"><div class="tete"><h2>Répartition des résultats</h2><span class="meta">' + fmt(tot) + " résultats</span></div>" +
@@ -389,6 +404,14 @@
         (x[1] ? '<rect width="' + Math.max(1.5, 100 * x[1] / max).toFixed(1) + '%" height="8" rx="4" fill="' + (i === 4 ? "var(--ocre)" : i ? "var(--bleu-clair)" : "var(--bleu)") + '"/>' : "") + "</svg><b" + (i === 4 && x[1] ? ' style="color:var(--ocre)"' : "") + ">" + fmt(x[1]) + "</b></div>";
     }).join("") + "</section>";
     h += '<section class="petit verre"><div class="tete"><h2>Leads chauds par jour</h2></div><div class="graphe" data-g="courbe"></div></section></div>';
+    var mt = {}; js.forEach(function (e) { for (var m in e.metiers || {}) { var x = mt[m] = mt[m] || { appels: 0, chauds: 0, rdv: 0 }; for (var c in x) x[c] += e.metiers[m][c] || 0; } });
+    var lm = Object.keys(mt).sort(function (a, b) { return mt[b].appels - mt[a].appels || a.localeCompare(b, "fr"); }), mm = Math.max.apply(null, lm.map(function (m) { return mt[m].appels; }).concat([1]));
+    h += '<section class="principal verre"><div class="tete"><h2>Par métier</h2><span class="meta">appels notés, dont leads chauds + RDV en bleu foncé</span></div>' + (lm.length ? '<div class="metiers">' + lm.map(function (m) {
+      var x = mt[m], q = x.chauds + x.rdv;
+      return '<div class="part" data-bulle="' + esc(m + " : " + x.appels + " appel" + (x.appels > 1 ? "s" : "") + " noté" + (x.appels > 1 ? "s" : "") + ", " + x.chauds + " lead" + (x.chauds > 1 ? "s" : "") + " chaud" + (x.chauds > 1 ? "s" : "") + ", " + x.rdv + " RDV (" + pc(q, x.appels) + ")") + '" tabindex="0"><span>' + esc(m) +
+        '</span><svg width="100%" height="8" aria-hidden="true"><rect width="100%" height="8" rx="4" fill="var(--bleu-pale)"/><rect width="' + Math.max(1.5, 100 * x.appels / mm).toFixed(1) + '%" height="8" rx="4" fill="var(--bleu-clair)"/>' +
+        (q ? '<rect width="' + Math.max(1.5, 100 * q / mm).toFixed(1) + '%" height="8" rx="4" fill="var(--bleu)"/>' : "") + "</svg><b>" + x.appels + "</b></div>"; }).join("") + "</div>"
+      : '<p class="vide">Pas encore de données par métier sur la période (colonne Métier des feuilles de Sid).</p>') + "</section>";
     return h;
   }
   function axes(w, h, g, max, pas) {   // grille discrète + libellés mono à gauche
@@ -397,9 +420,53 @@
     return s;
   }
   function echelle(m) { var pas = m <= 4 ? 1 : m <= 10 ? 2 : m <= 25 ? 5 : m <= 50 ? 10 : m <= 120 ? 20 : 50; return [Math.ceil(Math.max(m, 1) / pas) * pas, pas]; }
+  var SERIES = [   // clé, libellé, couleur, valeur d'un jour (null = inconnu), tirets
+    ["appels", "Appels", "var(--nuit)", function (e) { return typeof e.appels === "number" ? e.appels : null; }],
+    ["chauds", "Leads chauds / RDV", "var(--bleu)", function (e) { return e.leads_chauds == null && e.rdv == null ? null : (e.leads_chauds || 0) + (e.rdv || 0); }],
+    ["devis", "Devis faits", "#5B8FD0", function (e) { return typeof e.devis === "number" ? e.devis : null; }, true],
+    ["paiements", "Ventes / paiements", "var(--ocre)", function (e) { return typeof e.paiements === "number" ? e.paiements : null; }]];
+  function decaler(j, k) { var d = new Date(j + "T12:00:00"); d.setDate(d.getDate() + k); return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
+  function ecart(a, b) { return Math.round((new Date(b + "T12:00:00") - new Date(a + "T12:00:00")) / 864e5); }
+  function cours(el, f) {   // une courbe par catégorie cochée sur un vrai axe du temps ; un jour absent ou inconnu coupe la ligne, rien n'est comblé
+    var on = SERIES.filter(function (s) { return COCHES[s[0]]; }), js = f.jours, vals = [];
+    on.forEach(function (s) { js.forEach(function (e) { var v = s[3](e); if (v != null) vals.push(v); }); });
+    if (!on.length) { el.innerHTML = '<p class="vide">Aucune courbe cochée</p>'; return; }
+    if (!vals.length) { el.innerHTML = '<p class="vide">Pas encore de données pour ' + (on.length > 1 ? "les courbes cochées" : "cette courbe") + " sur la période</p>"; return; }
+    var w = Math.max(200, el.clientWidth), h = w < 500 ? 240 : 320, g = { l: 36, r: 16, b: 28, t: 12 }, n = f.n, larg = w - g.l - g.r, pasx = n > 1 ? larg / (n - 1) : larg;
+    var X = function (j) { return g.l + (n > 1 ? pasx * ecart(f.deb, j) : larg / 2); }, e = echelle(Math.max.apply(null, vals)), max = e[0];
+    var Y = function (v) { return h - g.b - (h - g.b - g.t) * v / max; }, s = "", d0 = H.jours[0].date;
+    if (d0 > f.deb) {   // avant le premier jour enregistré : zone pâle, jamais une ligne à 0
+      var xa = X(d0) - pasx / 2;
+      if (xa > g.l) s += '<rect x="' + g.l + '" y="' + g.t + '" width="' + (xa - g.l).toFixed(1) + '" height="' + (h - g.b - g.t) + '" fill="var(--bleu-pale)" opacity=".5"/>' + (xa - g.l > 150 ? '<text x="' + ((g.l + xa) / 2).toFixed(1) + '" y="' + ((h - g.b + g.t) / 2) + '" text-anchor="middle">pas encore de données</text>' : "");
+    }
+    s += axes(w - g.r, h, g, max, e[1]);
+    var MC = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."], k;
+    if (n > 60) { for (k = 0; k < n; k++) { var j = decaler(f.deb, k); if (j.slice(8) === "01") s += '<text x="' + X(j).toFixed(1) + '" y="' + (h - 8) + '" text-anchor="middle">' + MC[+j.slice(5, 7) - 1] + "</text>"; } }
+    else { var pas = Math.ceil(n / Math.max(1, Math.floor(larg / 64))); for (k = n - 1; k >= 0; k -= pas) { var j2 = decaler(f.deb, k); s += '<text x="' + X(j2).toFixed(1) + '" y="' + (h - 8) + '" text-anchor="' + (k === n - 1 && n > 1 ? "end" : "middle") + '"' + (k === n - 1 && n > 1 ? ' dx="8"' : "") + ">" + jourCourt(j2) + "</text>"; } }
+    var auj = aujourdhui();
+    js.forEach(function (x) {   // colonne de survol : toutes les courbes cochées ce jour-là
+      var t = dateLongue(x.date) + (x.date === auj ? " (en cours)" : "") + on.map(function (q) { var v = q[3](x); return "\n" + q[1] + " : " + (v == null ? "pas encore de données" : fmt(v)) + (q[0] === "chauds" && v != null ? " (" + (x.leads_chauds || 0) + " chauds, " + (x.rdv || 0) + " RDV)" : ""); }).join("");
+      var x0 = Math.max(g.l, X(x.date) - pasx / 2), x1 = Math.min(w - g.r + 8, X(x.date) + pasx / 2);
+      s += '<rect class="col" x="' + x0.toFixed(1) + '" y="' + g.t + '" width="' + Math.max(6, x1 - x0).toFixed(1) + '" height="' + (h - g.b - g.t) + '" data-bulle="' + esc(t) + '" tabindex="0"/>';
+    });
+    on.forEach(function (q) {
+      var seg = [], segs = [];
+      js.forEach(function (x, i) { var v = q[3](x), suite = i > 0 && ecart(js[i - 1].date, x.date) === 1; if (v == null || !suite) { if (seg.length) segs.push(seg); seg = []; } if (v != null) seg.push([X(x.date), Y(v), x.date === auj]); });
+      if (seg.length) segs.push(seg);
+      segs.forEach(function (sg) {
+        var enCours = sg.length > 1 && sg[sg.length - 1][2];   // aujourd'hui pas fini : dernier segment en pointillés clairs, jamais lu comme une chute
+        if (enCours) { var a = sg[sg.length - 2], z = sg.pop(); s += '<line x1="' + a[0].toFixed(1) + '" y1="' + a[1].toFixed(1) + '" x2="' + z[0].toFixed(1) + '" y2="' + z[1].toFixed(1) + '" stroke="' + q[2] + '" stroke-width="2" stroke-dasharray="2 5" stroke-linecap="round" opacity=".5" pointer-events="none"/>'; }
+        if (sg.length > 1) s += '<polyline points="' + sg.map(function (p) { return p[0].toFixed(1) + "," + p[1].toFixed(1); }).join(" ") + '" fill="none" stroke="' + q[2] + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"' + (q[4] ? ' stroke-dasharray="6 4"' : "") + ' pointer-events="none"/>';
+        if (enCours) sg.push(z);
+        sg.forEach(function (p) { if (n <= 31 || sg.length === 1 || p[2]) s += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="3.5" fill="' + (p[2] ? "#fff" : q[2]) + '" stroke="' + q[2] + '" stroke-width="2" pointer-events="none"/>'; });
+      });
+    });
+    el.innerHTML = '<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + " " + h + '" role="img" aria-label="Évolution sur ' + n + " jours : " + on.map(function (q) { return q[1]; }).join(", ") + '">' + s + "</svg>";
+  }
   function graphes() {
     var f = fenetre(), js = f.jours;
     [].forEach.call(document.querySelectorAll(".graphe"), function (el) {
+      if (el.dataset.g === "cours") { cours(el, f); return; }
       var w = Math.max(200, el.clientWidth), barres = el.dataset.g === "barres", h = barres ? (w < 500 ? 200 : 260) : 168, g = { l: 32, b: 28, t: 8 }, k = barres ? "appels" : "leads_chauds";
       var pts = js.filter(function (e) { return typeof e[k] === "number"; });
       if (!pts.length) { el.innerHTML = '<p class="vide">Aucun jour enregistré sur la période</p>'; return; }
@@ -495,6 +562,7 @@
     var b = e.target.closest("[data-vue]"); if (b) { vue = b.dataset.vue; memoriser(); rendre(); window.scrollTo(0, 0); return; }
     var d = e.target.closest("[data-doc]"); if (d) { doc = d.dataset.doc; memoriser(); rendre(); return; }
     var q = e.target.closest("[data-periode]"); if (q) { periode = q.dataset.periode; memoriser(); rendre(); return; }
+    var k = e.target.closest("[data-courbe]"); if (k) { COCHES[k.dataset.courbe] = !COCHES[k.dataset.courbe]; memoriser(); rendre(); return; }
     var c = e.target.closest(".agent, .rang:not(.entete)"); if (c) { panneau(c.dataset.nom); rendre(); }
   });
   document.addEventListener("keydown", function (e) { if (e.key === "Escape" && choisi) { panneau(null); rendre(); } });

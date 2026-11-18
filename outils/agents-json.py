@@ -305,10 +305,31 @@ def feuilles_sid(rs):
             if not rs.TITRE_SID.fullmatch(nom or ""): continue
             lignes = list(csv.reader(io.StringIO(d.lire_feuille_csv(i))))
             if not lignes or "Résultat" not in lignes[0]: continue
-            k = lignes[0].index("Résultat"); vals = [l[k].strip() for l in lignes[1:] if k < len(l) and l[k].strip()]
-            out.append({"modifiee": rs._jour_paris(mod), "resultats": {v: vals.count(v) for v in RESULTATS}, "avec": len(vals)})
+            k = lignes[0].index("Résultat"); km = lignes[0].index("Métier") if "Métier" in lignes[0] else None
+            notees = [l for l in lignes[1:] if k < len(l) and l[k].strip()]; vals = [l[k].strip() for l in notees]
+            out.append({"modifiee": rs._jour_paris(mod), "resultats": {v: vals.count(v) for v in RESULTATS}, "avec": len(vals),
+                        "metiers": compter_metiers((l[km] if km is not None and km < len(l) else "", l[k].strip()) for l in notees)})
         return True, out
     except Exception as e: return False, f"feuilles de Sid illisibles ({type(e).__name__})"
+
+
+def compter_metiers(paires):
+    """{métier: {appels, chauds, rdv}} à partir de paires (Métier, Résultat) des lignes notées ; métier vide = « Non renseigné ». Aucun nom d'entreprise."""
+    out = {}
+    for m, r in paires:
+        m = " ".join(str(m or "").split()); m = (m[:1].upper() + m[1:].lower()) if m else "Non renseigné"
+        x = out.setdefault(m, {"appels": 0, "chauds": 0, "rdv": 0}); x["appels"] += 1; x["chauds"] += r in CHAUDS; x["rdv"] += r == "RDV pris"
+    return out
+
+
+def metiers_du_jour(feuilles, jour):
+    out = {}
+    for f in feuilles:
+        if f["modifiee"] != jour: continue
+        for m, x in (f.get("metiers") or {}).items():
+            y = out.setdefault(m, {"appels": 0, "chauds": 0, "rdv": 0})
+            for c in y: y[c] += int(x.get(c, 0) or 0)
+    return out
 
 
 def devis_envoyes(jour):
@@ -355,6 +376,9 @@ def historique(maintenant=None, v=None, feuilles=None):
     a = c.get("appels") or {}
     if a.get("valeur") is not None and isinstance(a.get("repartition"), dict):
         fusionner(jours, entree(auj, a["valeur"], a["repartition"], (c.get("devis") or {}).get("valeur"), (c.get("paiements") or {}).get("valeur"), "du jour"), auj)
+    if feuilles is not None:      # répartition par métier (18/11/2026) : ajoutée aux jours qui ne l'ont pas encore, recalculée pour aujourd'hui seulement
+        for j, e in jours.items():
+            if j == auj or "metiers" not in e: e["metiers"] = metiers_du_jour(feuilles, j)
     return {"_aide": "Écrit par outils/agents-json.py : une entrée par jour (comptes seulement). null = inconnu sur ce PC, jamais 0.", "maj": maintenant.strftime("%Y-%m-%d %H:%M:%S"),
             "resultats": RESULTATS, "jours": [jours[k] for k in sorted(jours)]}
 

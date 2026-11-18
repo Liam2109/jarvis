@@ -22,7 +22,8 @@ def verifier(cond, texte):
 def res(d=None): return {r: (d or {}).get(r, 0) for r in AJ.RESULTATS}
 
 
-FEUILLES = [{"modifiee": "2026-11-16", "resultats": res({"Pas de réponse": 6, "À rappeler": 2, "RDV pris": 1}), "avec": 9},
+FEUILLES = [{"modifiee": "2026-11-16", "resultats": res({"Pas de réponse": 6, "À rappeler": 2, "RDV pris": 1}), "avec": 9,
+             "metiers": AJ.compter_metiers([("plombier", "À rappeler"), (" Plombier ", "RDV pris"), ("", "Pas de réponse")])},
             {"modifiee": "2026-11-17", "resultats": res({"À rappeler": 1}), "avec": 4},
             {"modifiee": "2026-11-17", "resultats": res({"RDV pris": 2}), "avec": 3}]
 VENTES = {"chiffres": [{"cle": "appels", "valeur": 12, "repartition": res({"À rappeler": 3})}, {"cle": "devis", "valeur": None}, {"cle": "paiements", "valeur": None}]}
@@ -36,6 +37,9 @@ try:
     verifier(all(e["devis"] is None and e["paiements"] is None for e in h["jours"]), "devis et paiements inconnus sur ce PC : null, jamais 0")
     verifier(j["2026-11-18"]["appels"] == 12 and not j["2026-11-18"]["complet"] and j["2026-11-17"]["complet"], "aujourd'hui depuis ventes(), non complet ; jours passés complets")
     verifier(len(j["2026-11-16"]["resultats"]) == 8, "les 8 résultats sont présents pour chaque jour")
+    m = j["2026-11-16"]["metiers"]
+    verifier(m == {"Plombier": {"appels": 2, "chauds": 1, "rdv": 1}, "Non renseigné": {"appels": 1, "chauds": 0, "rdv": 0}}, "répartition par métier : casse et espaces unifiés, métier vide = « Non renseigné »")
+    verifier(j["2026-11-17"]["metiers"] == {} and j["2026-11-18"]["metiers"] == {}, "feuilles sans colonne Métier connue : répartition vide, rien d'inventé")
 
     AJ.HISTO.parent.mkdir(parents=True); AJ.HISTO.write_text(json.dumps(h, ensure_ascii=False), encoding="utf-8")
     plus_bas = [dict(f, avec=1, resultats=res()) for f in FEUILLES]

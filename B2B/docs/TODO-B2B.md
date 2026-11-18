@@ -49,7 +49,7 @@ _Mise à jour : 16 nov. 2026, 17 h 30 (le fait est supprimé ; l'historique est 
 - [ ] Faire passer la publication et le déploiement des pages exemples par la garde (non branchés)
 - [ ] CEO Jarvis autonome, pont Discord de Jarvis (connecte: false) : après la 1re vente
 - [ ] Production (design, code, publication) : après la 1re vente
-- [ ] Tableau de bord, suite : courbes de la semaine, taux de closing, commissions ; devis et Stripe lisibles depuis le gros PC (aujourd'hui « — »)
+- [ ] Tableau de bord, suite : devis et ventes du serveur dans l'historique du gros PC (feuille « Chiffres serveur », idée du 18/11 dans IDEES-MASTER, à valider par Liam) ; commissions
 - [ ] Fiche d'accueil client (photos, couleurs, logo, avis, spécificités)
 - [ ] Recruter d'autres call callers (15 %, jamais de closers), dont un spécialiste restaurants
 - [ ] Intérim : créer les alertes sur l'espace candidat des agences, lancer `interim.py gmail-autoriser`, dire « go interim », répondre aux 4 questions du CV, déposer les 7 documents Samsic (toi-même)

@@ -74,12 +74,13 @@ Chaque idée est notée à la date où Liam la dit. Une idée pas encore faite r
 - 29/10 — Salon vocal « 💼 Travail » : Jarvis compte le temps passé dedans et affiche jour, semaine, mois dans un salon texte.
 - 29/10 — Contenu : Liam se filme pendant ses appels (jamais la voix du prospect sans accord).
 - 05/11 — Serveur : sans internet 5 min → redémarrer la carte Wi-Fi, sinon le PC (1 fois par heure au plus), agents relancés seuls, alerte Discord au retour.
-- 14/11 — Tableau de bord : courbes de la semaine, taux appel → RDV → devis → closing, carte de chaleur des créneaux, motifs de refus, commissions modifiables, pipeline, voyant par agent (heure de dernière exécution à ajouter dans agents-json.py).
+- 14/11 — Tableau de bord : carte de chaleur des créneaux, motifs de refus, commissions modifiables (courbes, taux et voyants faits le 18/11).
 - 14/11 — Méthode Claude Code (vidéo) : boucles avec critère de fin, sous-agents, bon modèle par tâche, /compact après chaque tâche.
 - 15/11 — Obsidian en vue « espace » pour voir les agents (plus tard).
 - 17/11 — Tableau de bord : faire disparaître les « — » du gros PC (état des devis, clé Stripe en lecture seule, journaux du serveur) ; la mise à jour sans clic est faite (tâche Jarvis-Tableau-PC, 15 min, 18/11).
 - 18/11 — Statistiques : dater chaque Résultat dans la feuille de Sid (colonne « Noté le ») pour un historique exact au jour près, au lieu du jour de dernière modification de la feuille.
-- 18/11 — Statistiques : taux RDV par créneau horaire et par métier pour choisir quand et qui Sid appelle (ce qui rapproche le plus d'une vente).
+- 18/11 — Statistiques : taux RDV par créneau horaire pour choisir quand Sid appelle (la répartition par métier est faite).
+- 18/11 — Devis et ventes sur le gros PC : le serveur écrit chaque soir (resume-sid, 19:30) une feuille Google « Chiffres serveur Jarvis » (date, devis envoyés, paiements, comptes seulement) avec le jeton Google qu'il a déjà, et agents-json.py la lit comme les feuilles de Sid. Gratuit, aucun secret dans le dépôt, pas de git push depuis le serveur (il ne fait que tirer).
 - 18/11 — Potentiel : compter un lead chaud une seule fois même s'il est rappelé plusieurs jours (registre commun), et le retirer quand il passe en « RDV pris » ou refus.
 
 ## À trancher (peut-être dépassées, à confirmer par Liam)
