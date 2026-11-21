@@ -1,0 +1,44 @@
+{
+ "nom": "chiffres-serveur",
+ "responsable": "Argent",
+ "mission": "Tous les soirs à 19:30, une ligne dans la feuille Google « Chiffres serveur Jarvis » : date, devis envoyés, paiements reçus. Aucun montant, aucune donnée client.",
+ "statut": "inactif",
+ "script": "B2B/agents/chiffres-serveur.py",
+ "jours": [0, 1, 2, 3, 4, 5, 6],
+ "heures": {
+  "debut": "19:00",
+  "fin": "23:59"
+ },
+ "fichiers_lus": [
+  "B2B/agents/devis-etat.json (statuts des devis, lecture seule, aucune coordonnée client)",
+  "Stripe en lecture seule (nombre de paiements réussis du jour, via resume-sid.stripe_jour ; clé lue dans Jarvis/.env, jamais affichée)",
+  "B2B/agents/chiffres-serveur-config.json"
+ ],
+ "fichiers_ecrits": [
+  "feuille Google « Chiffres serveur Jarvis » (une ligne par soir : date, devis envoyés, paiements reçus)",
+  "B2B/agents/chiffres-serveur-etat.json",
+  "B2B/agents/chiffres-serveur-journal.log"
+ ],
+ "canaux_discord": [],
+ "envoi_client": false,
+ "actions_interdites": [
+  "écrire un montant, un nom d'entreprise, un e-mail ou un téléphone dans la feuille",
+  "écrire deux lignes pour le même jour, ou modifier une ligne déjà écrite",
+  "écrire dans la vraie feuille avant le « go chiffres-serveur » de Liam",
+  "toucher la vraie feuille en mode essai (feuille de test seulement)",
+  "inventer un chiffre quand la source est indisponible",
+  "lire ou écrire une autre feuille, un autre fichier Drive ou une feuille de Sid",
+  "contacter un prospect, un client ou Sid",
+  "utiliser une IA ou un service payant",
+  "afficher un secret (jeton, clé)",
+  "encaisser, publier ou signer"
+ ],
+ "plafonds": {
+  "messages_par_jour": 1
+ },
+ "peut_engager": false,
+ "alerte_si_silence": null,
+ "tests": [
+  "tests/agents/test_chiffres_serveur.py"
+ ]
+}

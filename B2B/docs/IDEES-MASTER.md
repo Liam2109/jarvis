@@ -38,6 +38,7 @@ Chaque idée est notée à la date où Liam la dit. Une idée pas encore faite r
 - 27/10 — Chaîne automatique entre agents (prospection → réponse positive → rendez-vous → devis → Stripe → site → mise en ligne → maintenance), validation de Liam seulement aux points à risque.
 - 14/11 — Relances J+3 et J+7 (agent le plus rentable), puis rappel de closing : devis non payé sous 48 h → alerte pour rappeler.
 - 18/11 — Relances leads : chaque jour ouvré à 8 h 30, liste Discord des leads chauds de Sid à rappeler par Liam (3e et 7e jour ouvré, 15e si moyen terme). Fait le 18/11 (agent relances) ; reste : Liam note ses propres rappels pour sortir un lead du cycle.
+- 21/11 — Chiffres du serveur dans une feuille Google (date, devis envoyés, paiements reçus) pour que le tableau de bord du gros PC ait enfin ses courbes Devis et Ventes. Fait le 21/11 (agent chiffres-serveur, fermé jusqu'au « go ») ; reste : la lecture côté tableau de bord.
 - 14/11 — Pré-génération de pages au nom des prospects (20 d'avance), URL prête avant l'appel.
 - 14/11 — CEO Jarvis autonome après la 1re vente : lit les résultats, relances, lead chaud, devis, résumé du soir ; décisions engageantes soumises à Liam.
 - 15/11 — Boîte aux lettres Liam ↔ Claude Code : B2B/docs/FILE-ATTENTE.md et RESULTATS.md, après l'étape Vente.

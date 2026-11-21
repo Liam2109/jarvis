@@ -81,11 +81,25 @@ class Drive:
     def trouver_feuille(self, dossier, titre): return self._chercher(titre, FEUILLE_MIME, dossier)
 
     def creer_feuille(self, dossier, titre, contenu_csv):
-        """Crée la feuille en convertissant un CSV (séparateur « , »). Ne remplace jamais une feuille existante."""
+        """Crée la feuille en convertissant un CSV (séparateur « , »). Ne remplace jamais une feuille existante. `dossier` à None : à la racine du Drive."""
         try: from googleapiclient.http import MediaIoBaseUpload
         except ImportError: raise GA.BibliothequeManquante("Bibliothèques Google absentes : " + PIP) from None
         media = MediaIoBaseUpload(io.BytesIO(contenu_csv.encode("utf-8")), mimetype="text/csv", resumable=False)
-        return _appel(self.svc.files().create(body={"name": titre, "mimeType": FEUILLE_MIME, "parents": [dossier]}, media_body=media, fields="id"))["id"]
+        corps = {"name": titre, "mimeType": FEUILLE_MIME}
+        if dossier: corps["parents"] = [dossier]
+        return _appel(self.svc.files().create(body=corps, media_body=media, fields="id"))["id"]
+
+    def ajouter_lignes(self, id_, lignes):
+        """Ajoute des lignes à la FIN du premier onglet d'une feuille créée par cette app, sans rien relire ni réécrire (API Sheets v4 values.append ; la portée drive.file
+        l'autorise sur un fichier créé par ce jeton). `lignes` = [[valeur, ...]], écrites telles quelles (RAW : du texte reste du texte, relu à l'identique par l'export CSV).
+        -> nombre de lignes ajoutées d'après la réponse de Google."""
+        try: from googleapiclient.discovery import build
+        except ImportError: raise GA.BibliothequeManquante("Bibliothèques Google absentes : " + PIP) from None
+        svc = build("sheets", "v4", credentials=credentials(), cache_discovery=False)
+        titre = _appel(svc.spreadsheets().get(spreadsheetId=id_, fields="sheets(properties(title))"))["sheets"][0]["properties"]["title"]
+        r = _appel(svc.spreadsheets().values().append(spreadsheetId=id_, range=f"'{titre}'!A1", valueInputOption="RAW", insertDataOption="INSERT_ROWS",
+                                                      body={"values": [[str(v) for v in l] for l in lignes]}))
+        return int((r.get("updates") or {}).get("updatedRows") or 0)
 
     def parents(self, id_):
         """Dossiers parents d'un fichier (vérification après création)."""

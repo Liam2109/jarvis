@@ -68,6 +68,15 @@
       ],
       "heure": "19:30"
     },
+    "chiffres-serveur": {
+      "script": "chiffres-serveur.py",
+      "commandes": [
+        [
+          "jour"
+        ]
+      ],
+      "heure": "19:30"
+    },
     "stripe-alerte": {
       "script": "stripe-alerte.py",
       "commandes": [

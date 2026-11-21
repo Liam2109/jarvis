@@ -1,0 +1,8 @@
+{
+  "go_chiffres_serveur": false,
+  "envoi_automatique": false,
+  "heure_tache": "19:30",
+  "feuille": "Chiffres serveur Jarvis",
+  "feuille_essai": "Chiffres serveur Jarvis (essai)",
+  "_aide": "VERROU : go_chiffres_serveur reste false ici ; il ne passe à true que dans le fichier local de reglages de cet agent (hors git), apres le « go chiffres-serveur » ecrit par Liam. envoi_automatique : false = simulation (la ligne est affichee, rien n'est ecrit dans Google) ; l'activation reelle se fait aussi dans le fichier local. feuille : feuille Google creee a la racine du Drive du compte Google des agents (meme jeton que appels-sid, defaut du compte dans le script) ; une seule ligne par soir : Date, Devis envoyes, Paiements recus, rien d'autre. feuille_essai : feuille de test de --essai, jamais la vraie. heure_tache : 19:30, tous les jours (serveur-taches.json). Voir .claude\\skills\\agent-chiffres-serveur\\SKILL.md."
+}

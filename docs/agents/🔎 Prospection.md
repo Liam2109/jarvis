@@ -76,14 +76,14 @@ Trouver des entreprises locales, préparer les lots d'e-mails, les soumettre à 
 **Derniers résultats de test (cette machine) :**
 - `B2B/agents/test_prospection.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** 2026-11-17 01:23 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
+**Dernière trace :** 2026-11-21 13:53 ok · **Dernière erreur :** 2026-11-21 13:53 garde email_client (BLOQUE : envoi client hors lundi-vendredi 08:00-19:00 (Sat 13:53); AVERTIT : env) · **Dans agents_actifs (cette machine) :** oui
 
 ### Historique (5 dernières traces, sans données client)
-- 2026-11-17 01:23 | jour | ok | 16.51 s
-- 2026-11-17 01:13 | jour | ok | 15.57 s
-- 2026-11-17 01:03 | jour | ok | 19.05 s
-- 2026-11-17 00:53 | jour | ok | 17 s
-- 2026-11-17 00:43 | jour | ok | 16.84 s
+- 2026-11-21 13:53 | jour | ok | 10.77 s
+- 2026-11-21 13:53 | garde email_client | ERREUR (BLOQUE : envoi client hors lundi-vendredi 08:00-19:00 (Sat 13:53); AVERTIT : env) | 0.0 s
+- 2026-11-21 13:53 | garde email_client | ERREUR (BLOQUE : envoi client hors lundi-vendredi 08:00-19:00 (Sat 13:53); AVERTIT : env) | 0.0 s
+- 2026-11-21 13:53 | garde email_client | ERREUR (BLOQUE : envoi client hors lundi-vendredi 08:00-19:00 (Sat 13:53); AVERTIT : env) | 0.0 s
+- 2026-11-21 13:53 | garde email_client | ERREUR (BLOQUE : envoi client hors lundi-vendredi 08:00-19:00 (Sat 13:53); AVERTIT : env) | 0.0 s
 <!-- DYNAMIQUE:FIN -->
 
 ## Skill et règles

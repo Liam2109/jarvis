@@ -22,6 +22,7 @@ _Mise à jour : 16 nov. 2026, 17 h 30 (le fait est supprimé ; l'historique est 
 - [ ] Vidéos : ajouter videos-nettoyage, videos-veille, videos-scripts, videos-marketing et videos-creation à agents_actifs (3 vidéos par jour dès le 17/11, tout reste dans a-valider ; chaque agent écrit alors une trace et le surveillant le suit)
 - [ ] Vidéos ligne A puis ligne B : dire « go publier » sur la première vidéo de la ligne, puis suivre Videos\README.md (playwright, connexion toi-même, essai, go_publier dans la config locale) ; rien n'est publié avant
 - [ ] Vidéos ligne B : créer le compte TikTok séparé, mettre le formulaire Google en bio, renseigner `lignes.B.taux_commission` si tu veux un taux dans les vidéos (vide = « à la commission »)
+- [ ] Chiffres serveur : dire « go chiffres-serveur » quand tu veux ouvrir la feuille Google (puis, sur le serveur, go_chiffres_serveur et envoi_automatique à true dans les réglages locaux de l'agent, et « chiffres-serveur » dans agents_actifs)
 - [ ] Valider la liste des idées supprimées d'IDEES-MASTER.md (sauvegarde dans B2B\donnees\sauvegardes\) et trancher la section « À trancher »
 - [ ] Lundi 16 : prendre les ~15 dernières lignes de la feuille de Sid (ta propre liste « Appels Liam » commence mardi 17)
 - [ ] Serveur : ajouter « nettoyage-fichiers » aux agents actifs (tâche chaque jour à 03:00)
@@ -43,6 +44,7 @@ _Mise à jour : 16 nov. 2026, 17 h 30 (le fait est supprimé ; l'historique est 
 - [ ] Les tests laissent des dossiers dans %TEMP% : les faire se nettoyer eux-mêmes ; 6 mentions « Répondu / Refus » gardées exprès (anciennes feuilles de Sid)
 - [ ] Terminer l'étape Vente (réparer reponses.py, puis Réponses, Rendez-vous, Devis, relances des devis J+3 et J+7 ; relances des leads chauds faites le 18/11), chacun avec contrat + garde + test + fiche avant activation
 - [ ] Fiches agents : 19 « à compléter par Liam » (production, vente-relances, responsables Vente / Argent / Production) à remplir avec l'étape Vente ; agents sur le serveur : relancer generer-fiches.py là-bas pour avoir les traces
+- [ ] Tableau de bord : lire la feuille « Chiffres serveur Jarvis » dans outilsgents-json.py (devis et paiements des jours passés de historique.json, aujourd'hui null) pour remplir les courbes Devis et Ventes — à faire après le « go chiffres-serveur », quand la feuille existe
 - [ ] Faire passer la publication et le déploiement des pages exemples par la garde (non branchés)
 - [ ] CEO Jarvis autonome, pont Discord de Jarvis (connecte: false) : après la 1re vente
 - [ ] Production (design, code, publication) : après la 1re vente
