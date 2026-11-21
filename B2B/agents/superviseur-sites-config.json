@@ -1,0 +1,8 @@
+{
+  "go_superviseurs": false,
+  "envoi_automatique": false,
+  "heure_resume": "08:45",
+  "pages_max": 60,
+  "_aide": "Superviseur du domaine Sites : relit les fichiers de sites PRESENTS DANS LE DEPOT sur cette machine (apres un git pull, jamais le gros PC). pages_max : nombre de pages HTML lues par dossier de site. Il ne reecrit jamais une page : liens casses, images absentes, restes de modele et noindex partent en alerte. sites_indexables : dossiers de sites qui DOIVENT etre indexes par Google (le noindex y devient une alerte) ; vide = tous les sites du depot sont des apercus ou des exemples, donc noindex obligatoire. Les images et les polices ne sont pas versionnees : un dossier de site sans aucun media sur cette machine n'est jamais signale pour une image absente.",
+  "sites_indexables": []
+}

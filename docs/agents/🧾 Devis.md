@@ -69,14 +69,14 @@ Préparer le devis écrit (texte et PDF) à partir d'une fiche, le montrer à Li
 **Derniers résultats de test (cette machine) :**
 - `B2B/agents/test_devis.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** 2026-11-21 13:55 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
+**Dernière trace :** 2026-11-21 14:16 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
 
 ### Historique (5 dernières traces, sans données client)
-- 2026-11-21 13:55 | jour | ok | 0.13 s
-- 2026-11-21 13:52 | jour | ok | 0.14 s
-- 2026-11-21 13:49 | jour | ok | 0.29 s
-- 2026-11-21 13:46 | jour | ok | 0.8 s
-- 2026-11-21 13:43 | jour | ok | 0.17 s
+- 2026-11-21 14:16 | jour | ok | 0.13 s
+- 2026-11-21 14:13 | jour | ok | 0.13 s
+- 2026-11-21 14:10 | jour | ok | 0.19 s
+- 2026-11-21 14:07 | jour | ok | 0.13 s
+- 2026-11-21 14:04 | jour | ok | 0.13 s
 <!-- DYNAMIQUE:FIN -->
 
 ## Skill et règles

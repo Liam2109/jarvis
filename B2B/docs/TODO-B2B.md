@@ -19,6 +19,7 @@ _Mise à jour : 16 nov. 2026, 17 h 30 (le fait est supprimé ; l'historique est 
 - [ ] Test de cohérence : étendre aux notes docs\decisions et docs\agents (la note « Offre 595 + 49 » avait encore 990–1 490 € et « lien à créer », hors du périmètre du test) ; vérifier aussi les 3 autres notes de décision
 
 ## Liam
+- [ ] Superviseurs : dire « go superviseurs » quand tu veux les ouvrir (je mets alors go_superviseurs à true dans les réglages locaux communs), puis ajouter superviseur-vente, superviseur-prospection, superviseur-sites, superviseur-mail et jarvis-vue à agents_actifs et passer envoi_automatique à true pour recevoir le résumé Discord de chaque domaine et le message groupé du soir
 - [ ] Vidéos : ajouter videos-nettoyage, videos-veille, videos-scripts, videos-marketing et videos-creation à agents_actifs (3 vidéos par jour dès le 17/11, tout reste dans a-valider ; chaque agent écrit alors une trace et le surveillant le suit)
 - [ ] Vidéos ligne A puis ligne B : dire « go publier » sur la première vidéo de la ligne, puis suivre Videos\README.md (playwright, connexion toi-même, essai, go_publier dans la config locale) ; rien n'est publié avant
 - [ ] Vidéos ligne B : créer le compte TikTok séparé, mettre le formulaire Google en bio, renseigner `lignes.B.taux_commission` si tu veux un taux dans les vidéos (vide = « à la commission »)

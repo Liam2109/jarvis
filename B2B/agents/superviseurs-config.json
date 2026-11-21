@@ -1,0 +1,8 @@
+{
+  "go_superviseurs": false,
+  "envoi_automatique": false,
+  "grace_minutes": 20,
+  "tolerance_cycles": 3,
+  "heure_resume": "08:45",
+  "_aide": "VERROU COMMUN des superviseurs : go_superviseurs reste false ici ; il ne passe a true que dans la variante LOCALE de ce fichier (hors git), apres le « go superviseurs » ecrit par Liam. Le lever ici ouvre les quatre superviseurs et la vue Jarvis d'un coup. envoi_automatique : false = simulation (le resume est affiche, rien ne part sur Discord). grace_minutes : delai avant de dire qu'un agent a heure fixe n'a pas tourne. tolerance_cycles : un agent cyclique est dit bloque apres ce nombre de cycles sans trace. heure_resume : heure a partir de laquelle le resume du jour est poste meme s'il n'y a rien a signaler. Chaque superviseur peut surcharger ces valeurs dans son propre fichier de reglages. Voir .claude\\skills\u0007gent-superviseur-vente\\SKILL.md."
+}

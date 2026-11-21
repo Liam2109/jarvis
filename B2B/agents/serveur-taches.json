@@ -143,6 +143,56 @@
       ],
       "heure": "03:00"
     },
+    "superviseur-vente": {
+      "script": "superviseur-vente.py",
+      "commandes": [
+        [
+          "passage"
+        ]
+      ],
+      "toutes_minutes": 30,
+      "actif_le": "2026-11-21"
+    },
+    "superviseur-prospection": {
+      "script": "superviseur-prospection.py",
+      "commandes": [
+        [
+          "passage"
+        ]
+      ],
+      "toutes_minutes": 30,
+      "actif_le": "2026-11-21"
+    },
+    "superviseur-sites": {
+      "script": "superviseur-sites.py",
+      "commandes": [
+        [
+          "passage"
+        ]
+      ],
+      "toutes_minutes": 30,
+      "actif_le": "2026-11-21"
+    },
+    "superviseur-mail": {
+      "script": "superviseur-mail.py",
+      "commandes": [
+        [
+          "passage"
+        ]
+      ],
+      "toutes_minutes": 30,
+      "actif_le": "2026-11-21"
+    },
+    "jarvis-vue": {
+      "script": "jarvis-vue.py",
+      "commandes": [
+        [
+          "passage"
+        ]
+      ],
+      "toutes_minutes": 30,
+      "actif_le": "2026-11-21"
+    },
     "videos-veille": {
       "script": "..\\..\\Videos\\agents\\veille.py",
       "commandes": [["jour"]],

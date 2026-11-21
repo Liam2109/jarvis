@@ -1,0 +1,60 @@
+{
+ "nom": "superviseur-sites",
+ "responsable": "Production",
+ "mission": "Toutes les 30 min : relit les fichiers de sites presents dans le depot (liens casses, images absentes, restes de modele, noindex) et alerte Liam. Ne reecrit jamais une page.",
+ "statut": "inactif",
+ "script": "B2B/agents/superviseur-sites.py",
+ "jours": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6
+ ],
+ "heures": {
+  "debut": "07:00",
+  "fin": "22:00"
+ },
+ "fichiers_lus": [
+  "B2B/sites/*/ et B2B/pages-exemple/*/ presents dans le depot (HTML, CSS, JS)",
+  "B2B/pages-exemple/suivi.csv (si present)",
+  "B2B/docs/OFFRE-REFERENCE.json (phrases interdites, liens de paiement)",
+  "B2B/logs/agents (traces du jour)",
+  "B2B/agents/serveur-taches.json"
+ ],
+ "fichiers_ecrits": [
+  "B2B/pages-exemple/suivi.csv (ligne strictement en double retiree)",
+  "B2B/agents/superviseur-sites-etat.json",
+  "B2B/agents/superviseur-sites-journal.log",
+  "B2B/a-valider/AAAA-MM-JJ-superviseur-sites.md"
+ ],
+ "canaux_discord": [
+  "alertes"
+ ],
+ "envoi_client": false,
+ "actions_interdites": [
+  "modifier un fichier de site (HTML, CSS, JS, image) : signale seulement",
+  "deployer, mettre en ligne ou retirer une page",
+  "supprimer une donnee, une ligne, une fiche ou un fichier",
+  "ecraser une valeur deja ecrite par un agent ou par Liam",
+  "toucher a un montant, un paiement, un prix ou un devis",
+  "toucher au code, aux skills, aux docs ou a un fichier suivi par git",
+  "ecrire dans les donnees d'un autre domaine que le sien",
+  "corriger quoi que ce soit avant le « go superviseurs » de Liam",
+  "relancer plus d'une fois par jour le meme agent",
+  "contacter un prospect, un client, Sid ou qui que ce soit d'autre que Liam",
+  "utiliser une IA ou un service payant",
+  "afficher un secret (jeton, cle, adresse iCal)",
+  "envoyer au client, encaisser, publier ou signer"
+ ],
+ "plafonds": {
+  "messages_par_jour": 6
+ },
+ "peut_engager": false,
+ "alerte_si_silence": null,
+ "tests": [
+  "tests/agents/test_superviseurs.py"
+ ]
+}

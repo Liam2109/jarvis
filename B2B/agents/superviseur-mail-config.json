@@ -1,0 +1,8 @@
+{
+  "go_superviseurs": false,
+  "envoi_automatique": false,
+  "heure_resume": "08:45",
+  "boite_attendue": "emoliam255@gmail.com",
+  "portee_attendue": "https://www.googleapis.com/auth/gmail.readonly",
+  "_aide": "Superviseur du domaine Mail : surveille l'agent interim qui trie la boite des alertes d'agences. Il ne lit ni la boite ni un jeton : il verifie les portees Gmail ecrites dans le code (lecture seule), la boite reglee, les fiches d'agences et les actions a rappeler. boite_attendue et portee_attendue : toute difference part en alerte."
+}

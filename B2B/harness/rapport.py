@@ -28,6 +28,7 @@ def garde(c):
     if not p.is_file(): return "script absent"
     t = p.read_text(encoding="utf-8", errors="replace")
     if c["nom"] == "surveillant": t += (ICI / "surveillant.py").read_text(encoding="utf-8")
+    if "import superviseurs" in t: t += (ICI / "superviseurs.py").read_text(encoding="utf-8")   # superviseurs de domaine : leurs envois passent par le moteur commun
     return "oui" if any(g in t for g in GARDES) else "non"
 
 

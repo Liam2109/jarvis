@@ -1,0 +1,6 @@
+{
+  "go_superviseurs": false,
+  "envoi_automatique": false,
+  "heure_resume": "08:45",
+  "_aide": "Superviseur du domaine Vente (devis, chiffres-serveur, stripe-alerte, rendez-vous, reponses). Le verrou et l'envoi se levent dans la variante LOCALE de superviseurs-config.json (hors git) ou de ce fichier. Aucun fichier d'argent n'est jamais corrige : tout ecart sur un paiement, un montant ou un prix part en alerte Discord et attend le « go » de Liam."
+}

@@ -35,6 +35,7 @@ Chaque idée est notée à la date où Liam la dit. Une idée pas encore faite r
 - 17/11 — Vidéos au niveau des agents B2B (contrat, garde du contenu, trace par exécution, test, skill détaillé, fiche en 4 rubriques, fiche Chaîne vidéo) : réalisée le 17/11. Suite possible : une alerte du surveillant si aucune vidéo n'arrive dans a-valider deux passages de suite.
 
 ## Agents
+- 21/11 — Superviseurs de domaine : un responsable par domaine (Vente, Prospection, Sites, Mail) qui vérifie toutes les 30 min que ses agents ont tourné et que leurs données ne se contredisent pas, corrige le sans risque et alerte pour le reste ; vue Jarvis qui remet les 4 états en un fichier court et un message groupé. Construit le 21/11, fermé jusqu'au « go superviseurs ».
 - 27/10 — Chaîne automatique entre agents (prospection → réponse positive → rendez-vous → devis → Stripe → site → mise en ligne → maintenance), validation de Liam seulement aux points à risque.
 - 14/11 — Relances J+3 et J+7 (agent le plus rentable), puis rappel de closing : devis non payé sous 48 h → alerte pour rappeler.
 - 18/11 — Relances leads : chaque jour ouvré à 8 h 30, liste Discord des leads chauds de Sid à rappeler par Liam (3e et 7e jour ouvré, 15e si moyen terme). Fait le 18/11 (agent relances) ; reste : Liam note ses propres rappels pour sortir un lead du cycle.

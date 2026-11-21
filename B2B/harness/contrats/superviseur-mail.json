@@ -1,0 +1,63 @@
+{
+ "nom": "superviseur-mail",
+ "responsable": "Jarvis (CEO)",
+ "mission": "Toutes les 30 min : le tri du courrier des agences tourne-t-il, reste-t-il en lecture seule, les fiches et les actions a rappeler sont-elles intactes ? Alerte sans rien toucher si non.",
+ "statut": "inactif",
+ "script": "B2B/agents/superviseur-mail.py",
+ "jours": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6
+ ],
+ "heures": {
+  "debut": "07:00",
+  "fin": "22:00"
+ },
+ "fichiers_lus": [
+  "B2B/agents/interim.py (portees Gmail declarees dans le code)",
+  "B2B/agents/interim-config.json (boite reglee, fiches d'agences)",
+  "B2B/agents/interim-etat.json",
+  "B2B/agents/interim-suivi.csv",
+  "B2B/logs/agents (traces du jour)",
+  "B2B/agents/serveur-taches.json"
+ ],
+ "fichiers_ecrits": [
+  "B2B/agents/interim-suivi.csv (ligne strictement en double retiree)",
+  "B2B/agents/interim-etat.json (cle manquante ajoutee vide)",
+  "B2B/agents/superviseur-mail-etat.json",
+  "B2B/agents/superviseur-mail-journal.log",
+  "B2B/a-valider/AAAA-MM-JJ-superviseur-mail.md"
+ ],
+ "canaux_discord": [
+  "alertes"
+ ],
+ "envoi_client": false,
+ "actions_interdites": [
+  "ouvrir la boite, lire un mail, un jeton, un mot de passe ou une piece jointe",
+  "modifier B2B/agents/interim-config.json (fiches d'agences : donnees de Liam)",
+  "retablir tout seul une action a rappeler disparue",
+  "supprimer une donnee, une ligne, une fiche ou un fichier",
+  "ecraser une valeur deja ecrite par un agent ou par Liam",
+  "toucher a un montant, un paiement, un prix ou un devis",
+  "toucher au code, aux skills, aux docs ou a un fichier suivi par git",
+  "ecrire dans les donnees d'un autre domaine que le sien",
+  "corriger quoi que ce soit avant le « go superviseurs » de Liam",
+  "relancer plus d'une fois par jour le meme agent",
+  "contacter un prospect, un client, Sid ou qui que ce soit d'autre que Liam",
+  "utiliser une IA ou un service payant",
+  "afficher un secret (jeton, cle, adresse iCal)",
+  "envoyer au client, encaisser, publier ou signer"
+ ],
+ "plafonds": {
+  "messages_par_jour": 6
+ },
+ "peut_engager": false,
+ "alerte_si_silence": null,
+ "tests": [
+  "tests/agents/test_superviseurs.py"
+ ]
+}

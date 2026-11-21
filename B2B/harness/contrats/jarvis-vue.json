@@ -1,0 +1,56 @@
+{
+ "nom": "jarvis-vue",
+ "responsable": "Jarvis (CEO)",
+ "mission": "Toutes les 30 min : remet l'etat des quatre superviseurs (ok, corrige, bloque) dans un fichier court et un seul message Discord groupe par jour. Ne corrige rien, ne relance rien.",
+ "statut": "inactif",
+ "script": "B2B/agents/jarvis-vue.py",
+ "jours": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6
+ ],
+ "heures": {
+  "debut": "07:00",
+  "fin": "23:00"
+ },
+ "fichiers_lus": [
+  "B2B/agents/superviseur-*-etat.json et leurs journaux",
+  "B2B/agents/superviseur-*-config.json (verrou)"
+ ],
+ "fichiers_ecrits": [
+  "B2B/logs/superviseurs/ETAT-SUPERVISEURS.md (hors git, reecrit a chaque passage)",
+  "B2B/agents/jarvis-vue-etat.json",
+  "B2B/agents/jarvis-vue-journal.log"
+ ],
+ "canaux_discord": [
+  "alertes"
+ ],
+ "envoi_client": false,
+ "actions_interdites": [
+  "corriger, reparer ou relancer quoi que ce soit (elle ne fait que lire)",
+  "recalculer un chiffre remonte par un superviseur",
+  "supprimer une donnee, une ligne, une fiche ou un fichier",
+  "ecraser une valeur deja ecrite par un agent ou par Liam",
+  "toucher a un montant, un paiement, un prix ou un devis",
+  "toucher au code, aux skills, aux docs ou a un fichier suivi par git",
+  "ecrire dans les donnees d'un autre domaine que le sien",
+  "corriger quoi que ce soit avant le « go superviseurs » de Liam",
+  "relancer plus d'une fois par jour le meme agent",
+  "contacter un prospect, un client, Sid ou qui que ce soit d'autre que Liam",
+  "utiliser une IA ou un service payant",
+  "afficher un secret (jeton, cle, adresse iCal)",
+  "envoyer au client, encaisser, publier ou signer"
+ ],
+ "plafonds": {
+  "messages_par_jour": 6
+ },
+ "peut_engager": false,
+ "alerte_si_silence": null,
+ "tests": [
+  "tests/agents/test_superviseurs.py"
+ ]
+}

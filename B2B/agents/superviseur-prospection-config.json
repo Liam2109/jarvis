@@ -1,0 +1,6 @@
+{
+  "go_superviseurs": false,
+  "envoi_automatique": false,
+  "heure_resume": "08:45",
+  "_aide": "Superviseur du domaine Prospection (relances, appels-sid, prospection). Corrige seul : relance d'un agent plante, cle d'etat manquante, doublon strictement identique, ordre des dates de l'historique du tableau de bord. Alerte sans rien toucher : deux entrees pour le meme jour, date dans le futur, chiffres qui se contredisent."
+}

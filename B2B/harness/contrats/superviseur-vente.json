@@ -1,0 +1,67 @@
+{
+ "nom": "superviseur-vente",
+ "responsable": "Vente",
+ "mission": "Toutes les 30 min : les agents de la vente ont-ils tourne, leurs donnees se contredisent-elles ? Corrige le sans risque, alerte et attend « go » pour tout ce qui touche a l'argent.",
+ "statut": "inactif",
+ "script": "B2B/agents/superviseur-vente.py",
+ "jours": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6
+ ],
+ "heures": {
+  "debut": "07:00",
+  "fin": "22:00"
+ },
+ "fichiers_lus": [
+  "B2B/harness/contrats (horaires attendus)",
+  "B2B/logs/agents (traces du jour)",
+  "B2B/agents/serveur-taches.json",
+  "B2B/agents/devis-etat.json",
+  "B2B/agents/stripe-alerte-etat.json",
+  "B2B/agents/chiffres-serveur-etat.json",
+  "B2B/agents/rendez-vous-etat.json",
+  "B2B/agents/reponses-traitees.json",
+  "dashboard/ventes.json (si present)",
+  "B2B/a-valider du jour et B2B/messages-a-valider.md (phrases interdites, liens de paiement, secrets)",
+  "B2B/docs/OFFRE-REFERENCE.json (prix de reference)"
+ ],
+ "fichiers_ecrits": [
+  "B2B/agents/devis-etat.json (cle manquante ajoutee vide, doublon identique retire)",
+  "B2B/agents/reponses-traitees.json (doublon identique retire)",
+  "B2B/agents/superviseur-vente-etat.json",
+  "B2B/agents/superviseur-vente-journal.log",
+  "B2B/a-valider/AAAA-MM-JJ-superviseur-vente.md"
+ ],
+ "canaux_discord": [
+  "alertes"
+ ],
+ "envoi_client": false,
+ "actions_interdites": [
+  "ecrire dans un fichier d'argent (stripe-alerte-etat.json, chiffres-serveur-etat.json) : signale seulement",
+  "modifier un brouillon destine a Liam ou a un client",
+  "supprimer une donnee, une ligne, une fiche ou un fichier",
+  "ecraser une valeur deja ecrite par un agent ou par Liam",
+  "toucher a un montant, un paiement, un prix ou un devis",
+  "toucher au code, aux skills, aux docs ou a un fichier suivi par git",
+  "ecrire dans les donnees d'un autre domaine que le sien",
+  "corriger quoi que ce soit avant le « go superviseurs » de Liam",
+  "relancer plus d'une fois par jour le meme agent",
+  "contacter un prospect, un client, Sid ou qui que ce soit d'autre que Liam",
+  "utiliser une IA ou un service payant",
+  "afficher un secret (jeton, cle, adresse iCal)",
+  "envoyer au client, encaisser, publier ou signer"
+ ],
+ "plafonds": {
+  "messages_par_jour": 6
+ },
+ "peut_engager": false,
+ "alerte_si_silence": null,
+ "tests": [
+  "tests/agents/test_superviseurs.py"
+ ]
+}

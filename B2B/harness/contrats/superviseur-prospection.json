@@ -1,0 +1,66 @@
+{
+ "nom": "superviseur-prospection",
+ "responsable": "Prospection",
+ "mission": "Toutes les 30 min : les agents de la prospection ont-ils tourne, un prospect est-il compte deux fois, une date est-elle illogique ? Corrige le sans risque, alerte pour le reste.",
+ "statut": "inactif",
+ "script": "B2B/agents/superviseur-prospection.py",
+ "jours": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6
+ ],
+ "heures": {
+  "debut": "07:00",
+  "fin": "22:00"
+ },
+ "fichiers_lus": [
+  "B2B/harness/contrats (horaires attendus)",
+  "B2B/logs/agents (traces du jour)",
+  "B2B/agents/serveur-taches.json",
+  "B2B/agents/relances-etat.json",
+  "B2B/agents/appels-sid-etat.json",
+  "B2B/agents/appels-sid-historique.json",
+  "B2B/agents/prospection-etat.json",
+  "dashboard/data/historique.json (si present)"
+ ],
+ "fichiers_ecrits": [
+  "B2B/agents/relances-etat.json (cle manquante ajoutee vide)",
+  "B2B/agents/appels-sid-etat.json (cle manquante ajoutee vide)",
+  "B2B/agents/prospection-etat.json (cle manquante ajoutee vide, doublon identique retire)",
+  "dashboard/data/historique.json (jours remis dans l'ordre des dates)",
+  "B2B/agents/superviseur-prospection-etat.json",
+  "B2B/agents/superviseur-prospection-journal.log",
+  "B2B/a-valider/AAAA-MM-JJ-superviseur-prospection.md"
+ ],
+ "canaux_discord": [
+  "alertes"
+ ],
+ "envoi_client": false,
+ "actions_interdites": [
+  "supprimer une relance deja annoncee (le lead serait relance deux fois)",
+  "recalculer un chiffre d'appels, de leads ou de rendez-vous",
+  "supprimer une donnee, une ligne, une fiche ou un fichier",
+  "ecraser une valeur deja ecrite par un agent ou par Liam",
+  "toucher a un montant, un paiement, un prix ou un devis",
+  "toucher au code, aux skills, aux docs ou a un fichier suivi par git",
+  "ecrire dans les donnees d'un autre domaine que le sien",
+  "corriger quoi que ce soit avant le « go superviseurs » de Liam",
+  "relancer plus d'une fois par jour le meme agent",
+  "contacter un prospect, un client, Sid ou qui que ce soit d'autre que Liam",
+  "utiliser une IA ou un service payant",
+  "afficher un secret (jeton, cle, adresse iCal)",
+  "envoyer au client, encaisser, publier ou signer"
+ ],
+ "plafonds": {
+  "messages_par_jour": 6
+ },
+ "peut_engager": false,
+ "alerte_si_silence": null,
+ "tests": [
+  "tests/agents/test_superviseurs.py"
+ ]
+}

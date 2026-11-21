@@ -1,0 +1,6 @@
+{
+  "go_superviseurs": false,
+  "envoi_automatique": false,
+  "heure_resume": "19:40",
+  "_aide": "Vue Jarvis des quatre superviseurs : un fichier court (B2B\\logs\\superviseurs\\ETAT-SUPERVISEURS.md, hors git) et UN message Discord groupe par jour a partir de heure_resume. Elle ne corrige rien et ne relance rien. Meme verrou « go superviseurs » que les quatre superviseurs."
+}
