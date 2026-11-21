@@ -171,7 +171,8 @@
         ]
       ],
       "toutes_minutes": 30,
-      "actif_le": "2026-11-21"
+      "actif_le": "2026-11-21",
+      "desactive": "2026-11-21 : le domaine ne tourne pas encore pour de vrai, décision de Liam (fichiers gardés ; retirer cette clé pour l'ouvrir)"
     },
     "superviseur-mail": {
       "script": "superviseur-mail.py",
@@ -181,7 +182,8 @@
         ]
       ],
       "toutes_minutes": 30,
-      "actif_le": "2026-11-21"
+      "actif_le": "2026-11-21",
+      "desactive": "2026-11-21 : le domaine ne tourne pas encore pour de vrai, décision de Liam (fichiers gardés ; retirer cette clé pour l'ouvrir)"
     },
     "jarvis-vue": {
       "script": "jarvis-vue.py",
@@ -191,7 +193,8 @@
         ]
       ],
       "toutes_minutes": 30,
-      "actif_le": "2026-11-21"
+      "actif_le": "2026-11-21",
+      "desactive": "2026-11-21 : deux domaines sur quatre seulement, le message groupé n'apporterait rien (retirer cette clé quand Sites et Mail tourneront)"
     },
     "videos-veille": {
       "script": "..\\..\\Videos\\agents\\veille.py",

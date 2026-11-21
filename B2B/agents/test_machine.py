@@ -121,6 +121,8 @@ assert T["nettoyage-fichiers"]["heure"] == "03:00" and T["nettoyage-fichiers"]["
 assert T["chiffres-serveur"]["heure"] == "19:30" and T["chiffres-serveur"]["commandes"] == [["jour"]]   # une ligne par soir dans la feuille Google (21/11/2026)
 for s in ("superviseur-vente", "superviseur-prospection", "superviseur-sites", "superviseur-mail", "jarvis-vue"):   # superviseurs de domaine (21/11/2026) : un passage toutes les 30 min, fermes par le verrou « go superviseurs »
     assert T[s]["toutes_minutes"] == 30 and T[s]["commandes"] == [["passage"]] and T[s]["actif_le"] == "2026-11-21", s
+for s in ("superviseur-vente", "superviseur-prospection"): assert not T[s].get("desactive"), s          # ouverts le 21/11/2026 (go superviseurs de Liam) : Vente et Prospection seulement
+for s in ("superviseur-sites", "superviseur-mail", "jarvis-vue"): assert T[s].get("desactive"), s        # tenus fermes par la cle « desactive » : ces domaines ne tournent pas encore pour de vrai
 assert T["surveillant"]["heure"] == "19:45" and T["surveillant"]["lundi"] == "07:50" and T["surveillant"]["commandes"] == [["verifier"]]
 for nom, t in T.items():
     assert (ICI / t["script"]).is_file() and t["commandes"] and bool(t.get("toutes_minutes")) != bool(t.get("heure")), nom   # une cadence OU une heure
