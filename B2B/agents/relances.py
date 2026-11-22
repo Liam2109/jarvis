@@ -103,13 +103,13 @@ def _plat(t): return "".join(c for c in unicodedata.normalize("NFD", str(t).lowe
 
 
 def leads(feuilles):
-    """{tel: lead} : dernier résultat chaud de chaque numéro, sauf si une feuille plus récente l'exclut. lead = nom, ville, note, appel (date), moyen_terme."""
+    """{tel: lead} : dernier résultat chaud de chaque numéro, sauf si une feuille plus récente l'exclut. lead = nom, ville, resultat (la raison : « À rappeler » ou « Je dois réfléchir »), note, appel (date), moyen_terme."""
     chauds, exclus = {}, {}
     for jour, lignes in feuilles:
         for l in lignes:
             t = tel_cle(l["tel"])
             if not t: continue
-            if l["resultat"] in CHAUDS: chauds[t] = {"nom": l["nom"], "ville": l["ville"], "note": l["note"], "appel": jour, "moyen_terme": any(m in _plat(l["note"]) for m in MOTS_MOYEN_TERME)}
+            if l["resultat"] in CHAUDS: chauds[t] = {"nom": l["nom"], "ville": l["ville"], "resultat": l["resultat"], "note": l["note"], "appel": jour, "moyen_terme": any(m in _plat(l["note"]) for m in MOTS_MOYEN_TERME)}
             elif l["resultat"] in EXCLUS: exclus[t] = max(jour, exclus.get(t, ""))
     return {t: x for t, x in chauds.items() if not (t in exclus and exclus[t] > x["appel"])}
 
@@ -117,14 +117,23 @@ def leads(feuilles):
 def cle_annonce(t, lead, n): return f"{t}|{lead['appel']}|{n}"
 
 
+def etape(lead, jour):
+    """(numéro de relance, date prévue, déjà due ?) d'un lead au `jour` : la relance la plus récente déjà due, sinon la prochaine à venir. Seule définition du rythme (lue aussi par le tableau de bord)."""
+    rythme = RYTHME_MOYEN_TERME if lead["moyen_terme"] else RYTHME
+    j = date.fromisoformat(jour)
+    dates = [(n, ouvre_apres(date.fromisoformat(lead["appel"]), k)) for n, k in rythme]
+    dues = [x for x in dates if x[1] <= j]
+    n, d = dues[-1] if dues else dates[0]
+    return n, d.isoformat(), bool(dues)
+
+
 def a_rappeler(tous, jour, etat):
     """[(tel, lead, n)] à annoncer le `jour` : la relance la plus récente déjà due, si elle n'a jamais été annoncée et si aucune relance plus tardive ne l'a déjà été."""
-    j = date.fromisoformat(jour); out = []
+    out = []
     for t, x in sorted(tous.items(), key=lambda kv: (kv[1]["appel"], kv[1]["nom"])):
+        n, _, due = etape(x, jour)
+        if not due: continue
         rythme = RYTHME_MOYEN_TERME if x["moyen_terme"] else RYTHME
-        dues = [n for n, k in rythme if ouvre_apres(date.fromisoformat(x["appel"]), k) <= j]
-        if not dues: continue
-        n = dues[-1]
         if any(cle_annonce(t, x, m) in etat["annonces"] for m, _ in rythme if m >= n): continue
         out.append((t, x, n))
     return out

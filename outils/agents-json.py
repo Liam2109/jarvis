@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """Tableau de bord « Jarvis - Mon entreprise » : écrit dashboard/agents.json, agents.js (même contenu, lu par la page même en file://) et docs.js (onglets À faire, Journal, Décisions, Idées).
-Aussi ventes.json/js (chiffres du jour + Potentiel) et data/historique.json/js (une entrée par jour depuis le 16/11/2026). Lancé toutes les 15 min par la tâche Jarvis-Tableau-PC (outils/tache-dashboard-pc.ps1).
+Aussi ventes.json/js (chiffres du jour + Potentiel), data/historique.json/js (une entrée par jour depuis le 16/11/2026) et data/leads.json/js (les leads chauds que Liam doit rappeler).
+Lancé toutes les 15 min par la tâche Jarvis-Tableau-PC (outils/tache-dashboard-pc.ps1).
 
 Lecture seule, sans réseau ni token Claude. Sources : B2B/agents/*.py (un agent = un script qui appelle M.exiger), leur .md, docs/agents/agent-<nom>.md,
 B2B/agents/b2b.local.json, B2B/agents/serveur-taches.json, les fichiers *-etat.json et *-journal.log, les tâches planifiées Windows Jarvis-B2B-* de CE PC.
 Un nouvel agent apparaît seul dès que son script est créé dans B2B/agents/.
 
-Confidentialité : AUCUN secret ni donnée de prospect. Seuls sortent : noms d'agents, rôles (docs), horaires, dates, mots d'action du journal (2e colonne,
-jamais la 3e qui peut contenir un nom d'entreprise) et des COMPTES (nombres). Aucune lecture de .env, de jeton ni de config locale autre que b2b.local.json.
+Confidentialité : AUCUN secret. Dans agents.json, ventes.json, docs.js et data/historique.json : aucune donnée de prospect — seuls sortent noms d'agents, rôles (docs), horaires,
+dates, mots d'action du journal (2e colonne, jamais la 3e qui peut contenir un nom d'entreprise) et des COMPTES (nombres), e-mails et téléphones masqués.
+SEULE EXCEPTION, data/leads.json (22/11/2026) : les leads chauds à rappeler, avec nom, ville et téléphone, comme le message Discord de l'agent Relances ; dashboard\\data\\ est hors
+git. Aucune lecture de .env, de jeton ni de config locale autre que b2b.local.json.
 
   python outils/agents-json.py          écrit les deux fichiers (écriture atomique)
   python outils/agents-json.py --ouvrir écrit puis ouvre dashboard/index.html dans le navigateur par défaut (icône du bureau)
@@ -279,6 +282,7 @@ def ventes(maintenant=None, rs=None):
 
 # --- historique (dashboard/data/historique.json, 18/11/2026) : une entrée par jour depuis le 16/11/2026, comptes seulement ---------------------------------
 HISTO = SORTIE / "data" / "historique.json"
+LEADS = SORTIE / "data" / "leads.json"      # carte « Leads chauds à appeler » (22/11/2026) : noms et numéros des prospects à rappeler, hors git, jamais masqués (voir ecrire)
 DEBUT_HISTO = "2026-11-16"
 RESULTATS = ["Pas de réponse", "À rappeler", "RDV pris", "Non catégorique", "Je dois réfléchir", "Trop cher", "Déjà un site", "Pas le temps"]   # = resume-sid.RESULTATS
 CHAUDS = ("À rappeler", "Je dois réfléchir")
@@ -292,8 +296,10 @@ def prix_pack():
 
 
 def feuilles_sid(rs):
-    """(dispo, [{modifiee, resultats, avec}] | raison) : chaque feuille « Appels Sid AAAA-MM-JJ » du dossier de Sid, jour de dernière modification (Paris) et comptes par Résultat.
-    Lecture seule, une lecture par feuille ; aucun nom d'entreprise ne sort d'ici."""
+    """(dispo, [{jour, modifiee, resultats, avec, metiers, lignes}] | raison) : chaque feuille « Appels Sid AAAA-MM-JJ » du dossier de Sid, avec le jour de SON TITRE (= le jour des appels,
+    même définition que relances.py et le registre), le jour de dernière modification (Paris, pour information) et les comptes par Résultat.
+    `lignes` (lignes notées : entreprise, ville, téléphone, résultat, note) ne sert qu'à la carte « Leads chauds à appeler » et n'entre jamais dans l'historique.
+    Lecture seule, une lecture par feuille."""
     if rs is None: return False, "mode test : aucune lecture Google"
     try:
         conf = rs.cfg(); racine = str(rs.M.lire_fusionnee(rs.APPELS_SID_CONFIG).get("dossier_sid_id") or "").strip()
@@ -302,15 +308,24 @@ def feuilles_sid(rs):
         if (d.compte() or "").lower() != conf["compte_google"].lower(): return False, "jeton Google d'un autre compte"
         out = []
         for i, nom, mod in d.lister_feuilles_modifiees(racine):
-            if not rs.TITRE_SID.fullmatch(nom or ""): continue
+            m = rs.TITRE_SID.fullmatch(nom or "")
+            if not m: continue
             lignes = list(csv.reader(io.StringIO(d.lire_feuille_csv(i))))
             if not lignes or "Résultat" not in lignes[0]: continue
             k = lignes[0].index("Résultat"); km = lignes[0].index("Métier") if "Métier" in lignes[0] else None
             notees = [l for l in lignes[1:] if k < len(l) and l[k].strip()]; vals = [l[k].strip() for l in notees]
-            out.append({"modifiee": rs._jour_paris(mod), "resultats": {v: vals.count(v) for v in RESULTATS}, "avec": len(vals),
-                        "metiers": compter_metiers((l[km] if km is not None and km < len(l) else "", l[k].strip()) for l in notees)})
+            out.append({"jour": m.group(1), "modifiee": rs._jour_paris(mod), "resultats": {v: vals.count(v) for v in RESULTATS}, "avec": len(vals),
+                        "metiers": compter_metiers((l[km] if km is not None and km < len(l) else "", l[k].strip()) for l in notees),
+                        "lignes": lignes_notees(lignes[0], notees)})
         return True, out
     except Exception as e: return False, f"feuilles de Sid illisibles ({type(e).__name__})"
+
+
+def lignes_notees(entete, notees):
+    """Lignes notées d'une feuille de Sid -> [{nom, ville, tel, resultat, note}] (le format attendu par relances.leads). Ne sert qu'à la carte des leads chauds."""
+    ix = {c: (entete.index(n) if n in entete else None) for c, n in (("nom", "Entreprise"), ("ville", "Ville"), ("tel", "Téléphone"), ("resultat", "Résultat"), ("note", "Note"))}
+    v = lambda l, k: l[ix[k]].strip() if ix[k] is not None and ix[k] < len(l) else ""
+    return [{c: v(l, c) for c in ix} for l in notees]
 
 
 def compter_metiers(paires):
@@ -323,9 +338,10 @@ def compter_metiers(paires):
 
 
 def metiers_du_jour(feuilles, jour):
+    """Répartition par métier du jour : les feuilles dont le TITRE porte ce jour (pas celles modifiées ce jour-là)."""
     out = {}
     for f in feuilles:
-        if f["modifiee"] != jour: continue
+        if f.get("jour") != jour: continue
         for m, x in (f.get("metiers") or {}).items():
             y = out.setdefault(m, {"appels": 0, "chauds": 0, "rdv": 0})
             for c in y: y[c] += int(x.get(c, 0) or 0)
@@ -343,13 +359,15 @@ def entree(jour, appels, resultats, devis=None, paiements=None, source=""):
     return {"date": jour, "appels": appels, "resultats": r, "leads_chauds": sum(r[v] for v in CHAUDS), "rdv": r["RDV pris"], "devis": devis, "paiements": paiements, "source": source}
 
 
-def fusionner(jours, e, auj):
-    """Une seule entrée par date. Un jour passé (complet) n'est remplacé que par un compte d'appels au moins égal ; une valeur inconnue (None) n'efface jamais une valeur connue."""
+def fusionner(jours, e, auj, autorite=False):
+    """Une seule entrée par date. `autorite` : l'entrée est recalculée depuis la feuille « Appels Sid » de ce jour-là, qui fait foi — elle remplace l'ancienne même si elle est plus
+    basse (c'est ainsi qu'un jour faussé se corrige). Sinon un jour passé (complet) n'est remplacé que par un compte d'appels au moins égal.
+    Dans les deux cas, une valeur inconnue (None) n'efface jamais une valeur connue."""
     old = jours.get(e["date"])
     if old:
         for k in ("devis", "paiements"):
             if e.get(k) is None and old.get(k) is not None: e[k] = old[k]
-        if old.get("complet") and (old.get("appels") or 0) > (e["appels"] or 0):
+        if not autorite and old.get("complet") and (old.get("appels") or 0) > (e["appels"] or 0):
             for k in ("devis", "paiements"):
                 if old.get(k) is None: old[k] = e[k]
             return
@@ -358,37 +376,86 @@ def fusionner(jours, e, auj):
 
 
 def historique(maintenant=None, v=None, feuilles=None):
-    """Lit, complète et renvoie l'historique : jours passés manquants depuis DEBUT_HISTO reconstruits depuis les feuilles (jour de dernière modification, comme le résumé
-    du soir ; paiements passés inconnus = None), puis le jour courant depuis ventes(). Relancer ne crée jamais de doublon."""
+    """Lit, complète et renvoie l'historique. Un appel est compté le jour de la FEUILLE qui le porte (la date de son titre, « Appels Sid AAAA-MM-JJ »), jamais le jour où la feuille
+    a été modifiée : Sid note souvent ses appels un ou deux jours après, et la même feuille était alors recomptée EN ENTIER chaque jour où il y touchait — les leads déjà traités
+    la veille revenaient comme neufs (cause corrigée le 22/11/2026). Chaque jour depuis DEBUT_HISTO dont la feuille est encore sur le Drive est donc recalculé depuis elle (elle fait
+    foi) ; un jour dont la feuille a été mise à la corbeille (7 jours) garde la valeur déjà enregistrée. Sans lecture Google (mode test), le jour courant vient de ventes().
+    Relancer ne crée jamais de doublon."""
     maintenant = maintenant or datetime.now(); auj = maintenant.date().isoformat()
     h = lire_json(HISTO, {}) or {}
     jours = {e["date"]: e for e in h.get("jours", []) if isinstance(e, dict) and e.get("date")}
     for e in jours.values(): e["complet"] = e["date"] < auj
-    if feuilles is not None:
-        d = date.fromisoformat(DEBUT_HISTO)
-        while d.isoformat() < auj:
-            j = d.isoformat()
-            if j not in jours:
-                fs = [f for f in feuilles if f["modifiee"] == j]
-                fusionner(jours, entree(j, sum(f["avec"] for f in fs), {r: sum(f["resultats"].get(r, 0) for f in fs) for r in RESULTATS}, devis_envoyes(j), None, "reconstruit"), auj)
-            d += timedelta(days=1)
     c = {x["cle"]: x for x in (v or {}).get("chiffres", [])}
     a = c.get("appels") or {}
-    if a.get("valeur") is not None and isinstance(a.get("repartition"), dict):
+    par_jour = {}
+    for f in (feuilles or []): par_jour.setdefault(f.get("jour"), []).append(f)
+    if feuilles:      # au moins une feuille lue : les jours sont recalculés depuis les feuilles (une liste vide ne remet jamais l'historique à zéro)
+        d = date.fromisoformat(DEBUT_HISTO)
+        while d.isoformat() <= auj:
+            j = d.isoformat(); d += timedelta(days=1)
+            fs = par_jour.get(j)
+            if fs is None and j in jours: continue      # feuille mise à la corbeille : le jour déjà enregistré est gardé tel quel
+            fs = fs or []
+            dv = (c.get("devis") or {}).get("valeur") if j == auj else devis_envoyes(j)
+            pa = (c.get("paiements") or {}).get("valeur") if j == auj else None
+            fusionner(jours, entree(j, sum(f["avec"] for f in fs), {r: sum(f["resultats"].get(r, 0) for f in fs) for r in RESULTATS}, dv, pa, "feuille du jour"), auj, autorite=True)
+    elif feuilles is None and a.get("valeur") is not None and isinstance(a.get("repartition"), dict):
         fusionner(jours, entree(auj, a["valeur"], a["repartition"], (c.get("devis") or {}).get("valeur"), (c.get("paiements") or {}).get("valeur"), "du jour"), auj)
-    if feuilles is not None:      # répartition par métier (18/11/2026) : ajoutée aux jours qui ne l'ont pas encore, recalculée pour aujourd'hui seulement
+    if feuilles:      # répartition par métier (18/11/2026) : recalculée pour les jours dont la feuille est là, ajoutée à ceux qui ne l'ont pas encore
         for j, e in jours.items():
-            if j == auj or "metiers" not in e: e["metiers"] = metiers_du_jour(feuilles, j)
+            if par_jour.get(j) is not None or "metiers" not in e: e["metiers"] = metiers_du_jour(feuilles, j)
     return {"_aide": "Écrit par outils/agents-json.py : une entrée par jour (comptes seulement). null = inconnu sur ce PC, jamais 0.", "maj": maintenant.strftime("%Y-%m-%d %H:%M:%S"),
             "resultats": RESULTATS, "jours": [jours[k] for k in sorted(jours)]}
 
 
-def potentiel(feuilles_dispo, feuilles):
-    """Leads chauds en cours (lignes « À rappeler » ou « Je dois réfléchir » dans toutes les feuilles de Sid) × prix du pack. Indicatif, aucun taux de conversion."""
+def aligner_jour(v, feuilles, jour):
+    """Aligne les trois chiffres d'appels de la carte « Aujourd'hui » sur la même définition que l'historique : la feuille « Appels Sid <jour> », et non toutes les feuilles modifiées
+    aujourd'hui — sinon une vieille feuille que Sid rouvre fait réapparaître ses appels et ses leads comme s'ils étaient du jour. Le résumé du soir (resume-sid) garde sa règle."""
+    fs = [f for f in feuilles if f.get("jour") == jour]
+    r = {x: sum(f["resultats"].get(x, 0) for f in fs) for x in RESULTATS}
+    ou = f"feuille « Appels Sid {jour} »" if fs else f"aucune feuille « Appels Sid {jour} » (liste du jour pas encore créée, ou jour sans appels)"
+    neuf = {"appels": {"valeur": sum(f["avec"] for f in fs), "detail": ou},
+            "chauds": {"valeur": sum(r[x] for x in CHAUDS), "detail": f"{r['À rappeler']} à rappeler · {r['Je dois réfléchir']} je dois réfléchir" if fs else ou},
+            "rdv": {"valeur": r["RDV pris"], "detail": "notés « RDV pris » par Sid" if fs else ou}}
+    if fs: neuf["appels"]["repartition"] = r
+    for x in v.get("chiffres", []):
+        if x["cle"] in neuf: x.pop("raison", None); x.pop("repartition", None); x.update(neuf[x["cle"]])
+    return v
+
+
+def _relances():
+    """Module B2B/agents/relances.py (nom à tiret) : on réutilise SON critère de lead chaud et SON rythme de relances (relances.leads, relances.etape) au lieu de les réécrire."""
+    import importlib.util
+    if str(AGENTS) not in sys.path: sys.path.insert(0, str(AGENTS))
+    spec = importlib.util.spec_from_file_location("relances_agent", AGENTS / "relances.py")
+    m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+    return m
+
+
+def leads_a_appeler(feuilles, jour, R=None):
+    """(dispo, [lead] | raison) : les leads chauds en cours, chacun avec LA RAISON pour laquelle il est chaud — le Résultat noté par Sid (« À rappeler » ou « Je dois réfléchir ») et sa
+    Note. Critère, exclusions et rythme des relances viennent de l'agent Relances (relances.leads, relances.etape) : rien n'est réinventé ni inventé ici ; une Note vide reste vide.
+    Les leads dus (relance à faire) sortent en premier."""
+    try: R = R or _relances()
+    except Exception as e: return False, f"relances.py illisible ({type(e).__name__})"
+    try:
+        tous = R.leads(sorted(((f.get("jour") or "", f.get("lignes") or []) for f in feuilles), key=lambda x: x[0]))
+        out = []
+        for t, x in tous.items():
+            n, prevu, due = R.etape(x, jour)
+            out.append({"nom": x["nom"], "ville": x["ville"], "tel": R.tel_lisible(t), "raison": x["resultat"], "note": x["note"], "appel": x["appel"],
+                        "relance": n, "prevu": prevu, "due": bool(due), "moyen_terme": bool(x["moyen_terme"])})
+        return True, sorted(out, key=lambda l: (not l["due"], l["prevu"], l["nom"]))
+    except Exception as e: return False, f"leads chauds illisibles ({type(e).__name__})"
+
+
+def potentiel(dispo, leads):
+    """Leads chauds en cours × prix du pack. `leads` = la liste de leads_a_appeler (même critère que l'agent Relances : un lead compté une fois, les exclus retirés) ou la raison de
+    son absence. Indicatif, aucun taux de conversion."""
     prix = prix_pack()
     if prix is None: return {"valeur": None, "raison": "prix du pack illisible (B2B/docs/OFFRE-REFERENCE.json)"}
-    if not feuilles_dispo: return {"valeur": None, "raison": str(feuilles)}
-    n = sum(f["resultats"].get(r, 0) for f in feuilles for r in CHAUDS)
+    if not dispo: return {"valeur": None, "raison": str(leads)}
+    n = len(leads)
     return {"valeur": n * prix, "unite": "€", "leads": n, "prix": prix, "detail": f"{n} leads chauds en cours × {prix} € · indicatif, pas une prévision"}
 
 
@@ -398,11 +465,16 @@ def masquer(t):
     return re.sub(r"(?<!\d)(?:\+33\s?|0)[1-9](?:[ .-]?\d\d){4}(?!\d)", "[téléphone masqué]", t)
 
 
-def ecrire(donnees, chiffres_ventes=None, histo=None):
+def ecrire(donnees, chiffres_ventes=None, histo=None, leads=None):
     SORTIE.mkdir(exist_ok=True)
     if histo is not None:      # data/historique.json (gardé d'un lancement à l'autre) + data/historique.js (même contenu, lu par la page en file://)
         HISTO.parent.mkdir(exist_ok=True); t = masquer(json.dumps(histo, ensure_ascii=False, indent=1))
         for p, contenu in ((HISTO, t), (HISTO.with_suffix(".js"), "window.JARVIS_HISTO = " + t + ";\n")):
+            tmp = p.with_name(p.name + ".tmp"); tmp.write_text(contenu, encoding="utf-8"); os.replace(tmp, p)
+    if leads is not None:      # data/leads.json : SEUL fichier du tableau de bord qui porte des noms et des numéros de prospects (ceux que Liam doit rappeler, comme le message
+        LEADS.parent.mkdir(exist_ok=True)      # Discord de l'agent Relances). dashboard\data\ est hors git (.gitignore) : rien de tout cela n'entre dans le coffre ni dans un commit.
+        t = json.dumps(leads, ensure_ascii=False, indent=1)
+        for p, contenu in ((LEADS, t), (LEADS.with_suffix(".js"), "window.JARVIS_LEADS = " + t + ";\n")):
             tmp = p.with_name(p.name + ".tmp"); tmp.write_text(contenu, encoding="utf-8"); os.replace(tmp, p)
     texte = masquer(json.dumps(donnees, ensure_ascii=False, indent=1)); docs = masquer(json.dumps(documents(), ensure_ascii=False))
     fichiers = [("agents.json", texte), ("agents.js", "window.JARVIS_AGENTS = " + texte + ";\n"), ("docs.js", "window.JARVIS_DOCS = " + docs + ";\n")]
@@ -420,8 +492,13 @@ def main():
         except Exception: rs = None      # ventes() redit la raison
     v = ventes(maintenant, rs)
     dispo, fs = feuilles_sid(rs)
-    v["chiffres"].append(dict(cle="potentiel", libelle="Potentiel", **potentiel(dispo, fs)))
-    ecrire(construire(maintenant), v, historique(maintenant, v, fs if dispo else None))
+    jour = maintenant.date().isoformat()
+    if dispo: aligner_jour(v, fs, jour)
+    dispo_l, lds = leads_a_appeler(fs, jour) if dispo else (False, fs)
+    v["chiffres"].append(dict(cle="potentiel", libelle="Potentiel", **potentiel(dispo_l, lds)))
+    leads = {"jour": jour, "genere_le": maintenant.strftime("%Y-%m-%d %H:%M:%S"), "critere": "agent Relances : Résultat « À rappeler » ou « Je dois réfléchir » noté par Sid, sauf si une feuille plus récente l'exclut",
+             "leads": lds if dispo_l else [], "raison": "" if dispo_l else str(lds)}
+    ecrire(construire(maintenant), v, historique(maintenant, v, fs if dispo else None), leads)
     if "--ouvrir" in sys.argv[1:] and os.name == "nt": os.startfile(str(SORTIE / "index.html"))
 
 

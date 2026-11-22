@@ -135,6 +135,18 @@
   .rempli { height: 100%; background: var(--bleu); border-radius: 4px; }
   .etape b { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
 
+  /* Leads chauds à appeler (22/11/2026) : une ligne par lead, la raison écrite telle que Sid l'a notée */
+  .leads { margin: 0; padding: 0; list-style: none; }
+  .leads li { display: grid; grid-template-columns: minmax(0, 1fr) 150px; column-gap: 16px; row-gap: 2px; padding: 12px 8px; border-top: 1px solid var(--ligne); }
+  .leads li:first-child { border-top: 0; }
+  .leads .qui b { font-weight: 600; } .leads .qui span { color: var(--faible); }
+  .leads .tel { justify-self: end; align-self: start; }
+  .leads .motif { grid-column: 1 / 3; color: var(--doux); }
+  .leads .motif i { font-style: normal; font-weight: 600; } .leads .motif .sans { color: var(--faible); }
+  .leads .quand { grid-column: 1 / 3; }
+  .leads li.due { background: var(--verre-fort); border-radius: 12px; }
+  .leads li.due .quand { color: var(--bleu-moyen); }
+
   /* Panneau de détail d'un agent */
   #panneau { position: fixed; top: 16px; right: 16px; bottom: 16px; width: min(440px, calc(100% - 32px)); padding: 24px; overflow-y: auto; z-index: 10; background: rgba(255,255,255,.9); transform: translateX(calc(100% + 32px)); visibility: hidden; transition: transform .3s var(--courbe), visibility 0s .3s; }
   #panneau.ouvert { transform: none; visibility: visible; transition: transform .3s var(--courbe); }
@@ -216,6 +228,7 @@
     .etape { grid-template-columns: 136px 1fr 32px; gap: 8px; }
     .poles { grid-template-columns: 1fr; gap: 16px; }
     .source-l { grid-template-columns: 1fr 40px; } .source-l span:last-child { grid-column: 1 / 3; }
+    .leads li { grid-template-columns: 1fr; } .leads .tel { justify-self: start; } .leads .motif, .leads .quand { grid-column: 1; }
     #panneau { bottom: 88px; }
     .trois { grid-template-columns: 1fr; gap: 16px; margin-top: 16px; } .principal, .petit { padding: 20px 16px; } .principal { margin-top: 16px; }
     .stat-ligne { gap: 16px; } .stat-ligne li { padding: 16px; } .stat-ligne b { font-size: 28px; line-height: 36px; }
@@ -242,6 +255,7 @@
 <script src="ventes.js"></script>
 <script src="docs.js"></script>
 <script src="data/historique.js"></script>
+<script src="data/leads.js"></script>
 <div id="bulle" role="status" aria-live="polite"></div>
 <script>
 (function () {
@@ -265,7 +279,7 @@
   var DOCS = [["pipeline", "Pipeline"], ["sources", "Sources des chiffres"], ["a_faire", "À faire"], ["journal", "Journal"], ["decisions", "Décisions"], ["idees", "Idées"]];
   var JOURS = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"], MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
   var VEDETTE = "appels", CLE = "paiements";   // la carte du haut, et le chiffre qui garde l'ocre
-  var A = null, V = null, D = null, vue = "jour", doc = "a_faire", choisi = null, recherche = "";
+  var A = null, V = null, D = null, L = null, vue = "jour", doc = "a_faire", choisi = null, recherche = "";
   try {
     vue = localStorage.getItem("jarvis-vue") || "jour"; periode = { mois: "mois", an: "an" }[localStorage.getItem("jarvis-periode")] || "semaine"; var cc = JSON.parse(localStorage.getItem("jarvis-courbes") || "null"); if (cc) for (var k in COCHES) if (typeof cc[k] === "boolean") COCHES[k] = cc[k]; doc = localStorage.getItem("jarvis-doc") || "a_faire";
     var ancien = localStorage.getItem("jarvis-onglet");   // ancienne page à onglets
@@ -330,7 +344,22 @@
           '</b><span class="lib">' + esc(x.libelle) + '</span><span class="det"' + (manque ? ' title="' + esc(x.raison) + '">' + simple(x.raison) : ">" + esc(x.detail || "")) + "</span></li>";
       }).join("") + "</ol>";
     }
-    return h + carteAgents();
+    return h + carteLeads() + carteAgents();
+  }
+  function jjmm(j) { return j && j.length === 10 ? j.slice(8, 10) + "/" + j.slice(5, 7) : esc(j || ""); }
+  function carteLeads() {   // les leads chauds à rappeler (data/leads.js), avec la raison notée par Sid ; Liam appelle lui-même, Jarvis n'appelle personne
+    var t = '<section class="bloc verre" aria-labelledby="t-leads"><div class="tete"><h2 id="t-leads">Leads chauds à appeler</h2>';
+    if (!L) return t + '</div><p class="vide">data\\leads.js absent : double-cliquez sur l\'icône « Jarvis - Mon entreprise » du bureau.</p></section>';
+    var l = L.leads || [], dus = l.filter(function (x) { return x.due; }).length;
+    t += '<span class="meta">' + (l.length ? dus + " à rappeler maintenant · " + (l.length - dus) + " en attente" : "aucun lead chaud en cours") + "</span></div>";
+    if (!l.length) return t + '<p class="vide">' + (L.raison ? "Leads chauds non disponibles : " + esc(L.raison) : "Aucun lead chaud dans les feuilles de Sid : aucune ligne « À rappeler » ou « Je dois réfléchir » en cours.") + "</p></section>";
+    t += '<ul class="leads">' + l.map(function (x) {
+      var auj = aujourdhui(), quoi = "relance " + esc(x.relance) + (x.prevu === auj ? " à faire aujourd'hui" : x.due ? " due depuis le " + jjmm(x.prevu) : " prévue le " + jjmm(x.prevu));
+      return '<li' + (x.due ? ' class="due"' : "") + '><span class="qui"><b>' + esc(x.nom || "(nom absent)") + "</b>" + (x.ville ? " <span>· " + esc(x.ville) + "</span>" : "") + "</span>" +
+        '<span class="num tel">' + esc(x.tel || "—") + '</span><span class="motif">' + (x.raison ? "<i>" + esc(x.raison) + "</i>" : '<span class="sans">raison non notée par Sid</span>') +
+        (x.note ? " · « " + esc(x.note) + " »" : ' · <span class="sans">aucune note de Sid</span>') + '</span><span class="meta quand">appel du ' + jjmm(x.appel) + " · " + quoi + (x.moyen_terme ? " · moyen terme" : "") + "</span></li>";
+    }).join("") + "</ul>";
+    return t + '<p class="meta" style="margin:16px 0 0">' + esc(L.critere || "") + ". Liam rappelle lui-même : aucun agent n'appelle ces entreprises.</p></section>";
   }
   function legende() { return '<p class="meta legende"><span><i class="pt ok"></i>passé aujourd\'hui</span><span><i class="pt ancien"></i>passé avant</span><span><i class="pt"></i>aucun passage visible ici</span><span><i class="pt erreur"></i>erreur</span></p>'; }
   function carteAgents() {
@@ -543,11 +572,19 @@
     $("voir-journal").onclick = function () { $("journal-agent").hidden = !$("journal-agent").hidden; };
   }
 
+  // La page relit les fichiers toutes les 5 min (recharger) et outils\agents-json.py les réécrit toutes les 15 min (tâche Jarvis-Tableau-PC) : les appels du jour arrivent seuls.
+  // Si plus rien n'est recalculé (tâche arrêtée, PC en veille, erreur), l'âge des données est dit ici au lieu de laisser croire que la page est à jour.
+  function retard() {
+    var t = Date.parse((V.genere_le || "").replace(" ", "T"));
+    if (isNaN(t)) return "";
+    var min = Math.round((Date.now() - t) / 6e4);
+    return min >= 30 ? " · pas recalculées depuis " + (min < 120 ? min + " min" : Math.round(min / 60) + " h") + " (tâche Jarvis-Tableau-PC)" : "";
+  }
   function rendre() {
     if (!VUES.some(function (o) { return o[0] === vue; })) vue = "jour";
     if (!DOCS.some(function (d) { return d[0] === doc; })) doc = "a_faire";
     $("nav").innerHTML = VUES.map(function (o) { return '<button data-vue="' + o[0] + '" aria-label="' + o[1] + '"' + (o[0] === vue ? ' aria-current="page"' : "") + ">" + svg(o[0]) + "<span>" + o[1] + "</span></button>"; }).join("");
-    $("pied").textContent = V && V.genere_le ? "Données du " + V.genere_le.slice(8, 10) + "/" + V.genere_le.slice(5, 7) + " à " + V.genere_le.slice(11, 16) + ", relues toutes les 5 min" : "";
+    $("pied").textContent = V && V.genere_le ? "Données du " + V.genere_le.slice(8, 10) + "/" + V.genere_le.slice(5, 7) + " à " + V.genere_le.slice(11, 16) + ", relues toutes les 5 min" + retard() : "";
     var foc = document.activeElement && document.activeElement.id === "recherche", pos = foc ? document.activeElement.selectionStart : 0;
     $("contenu").innerHTML = vue === "agents" ? vueAgents() : vue === "docs" ? vueDocs() : vue === "stats" ? vueStats() : vueJour();
     bulle(null); if (vue === "stats") graphes();
@@ -555,7 +592,7 @@
     if (s) { s.oninput = function () { recherche = s.value; rendre(); }; if (foc) { s.focus(); s.setSelectionRange(pos, pos); } }
   }
   function appliquer() {
-    A = window.JARVIS_AGENTS || null; V = window.JARVIS_VENTES || null; D = window.JARVIS_DOCS || null; H = window.JARVIS_HISTO || null;
+    A = window.JARVIS_AGENTS || null; V = window.JARVIS_VENTES || null; D = window.JARVIS_DOCS || null; H = window.JARVIS_HISTO || null; L = window.JARVIS_LEADS || null;
     rendre(); if (choisi) panneau(choisi);
   }
   document.addEventListener("click", function (e) {
@@ -567,7 +604,7 @@
   });
   document.addEventListener("keydown", function (e) { if (e.key === "Escape" && choisi) { panneau(null); rendre(); } });
   function recharger() {   // toutes les 5 min : relit agents.js, ventes.js, docs.js et data/historique.js (réécrits par outils\agents-json.py)
-    var f = ["agents.js", "ventes.js", "docs.js", "data/historique.js"], n = 0;
+    var f = ["agents.js", "ventes.js", "docs.js", "data/historique.js", "data/leads.js"], n = 0;
     f.forEach(function (x) {
       var s = document.createElement("script"); s.src = x + "?t=" + Date.now();
       s.onload = s.onerror = function () { s.remove(); if (++n === f.length) appliquer(); };
