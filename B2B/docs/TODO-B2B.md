@@ -19,7 +19,7 @@ _Mise à jour : 16 nov. 2026, 17 h 30 (le fait est supprimé ; l'historique est 
 - [ ] Test de cohérence : étendre aux notes docs\decisions et docs\agents (la note « Offre 595 + 49 » avait encore 990–1 490 € et « lien à créer », hors du périmètre du test) ; vérifier aussi les 3 autres notes de décision
 
 ## Liam
-- [ ] Graphe Obsidian : dire si « 📞 Appels Liam » (pôle Prospection) et « 🔁 Relances » (pôle Vente, pas encore construit) doivent passer sous leur superviseur — ils restent liés au CEO car ils ne sont pas dans AGENTS_SUIVIS ; si oui, les ajouter à la liste du superviseur concerné
+- [ ] Dire « go superviseur-videos » quand tu le veux : le verrou commun « go superviseurs » ne l'ouvre pas tout seul. Mettre go_superviseur_videos à true dans la variante locale de B2B\agents\superviseur-videos-config.json (hors git), retirer la clé « desactive » de superviseur-videos dans serveur-taches.json, puis l'ajouter à agents_actifs (mode d'emploi complet dans le skill agent-superviseur-videos)
 - [ ] Vidéos : ajouter videos-nettoyage, videos-veille, videos-scripts, videos-marketing et videos-creation à agents_actifs (3 vidéos par jour dès le 17/11, tout reste dans a-valider ; chaque agent écrit alors une trace et le surveillant le suit)
 - [ ] Vidéos ligne A puis ligne B : dire « go publier » sur la première vidéo de la ligne, puis suivre Videos\README.md (playwright, connexion toi-même, essai, go_publier dans la config locale) ; rien n'est publié avant
 - [ ] Vidéos ligne B : créer le compte TikTok séparé, mettre le formulaire Google en bio, renseigner `lignes.B.taux_commission` si tu veux un taux dans les vidéos (vide = « à la commission »)
@@ -37,6 +37,7 @@ _Mise à jour : 16 nov. 2026, 17 h 30 (le fait est supprimé ; l'historique est 
 - [ ] Stripe : SIRET et mention TVA art. 293 B en pied de facture ; site web (encore ecom-quiz.vercel.app) et description publique
 - [ ] Malt : candidats « Prospection téléphonique B2B », répondre à Eric Ling
 - [ ] Facebook Normandie et Leboncoin : poster l'offre « page exemple à ton nom »
+- [ ] Donner un Drive à Claude pour le prompt d'un site classique (modèle à réutiliser)
 
 ## Agents (ensuite, une étape à la fois)
 - [ ] Vidéos : regarder les sketchs test de la ligne B (Videos-valider6-11-17-1400 T03, 2026-11-18-1400 L01, 2026-11-19-1400 série épisode 1 avec Nadia, 2026-11-20-1400 N01 avec M. Bernard) ; pour un nouveau lot de 20 sketches, le demander à Claude dans le chat (Codex absent du serveur) puis « python Videosgents\sketches.py lot Videos\idees-nouvelles\AAAA-MM-JJ.json »

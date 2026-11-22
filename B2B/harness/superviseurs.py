@@ -78,6 +78,13 @@ def cfg(agent, defaut=None):
         try: M.surcharge_locale(p, c)
         except M.ErreurLocale as e: raise ErreurAgent(str(e))
     c["go_superviseurs"] = c.get("go_superviseurs") is True
+    # Verrou PROPRE à un domaine (22/11/2026) : une clé « go_<agent> » (tirets -> soulignés) dans ses réglages. Absente = seul le verrou commun compte
+    # (les quatre premiers superviseurs ne changent pas). Présente et pas true = ce domaine reste fermé MÊME si le « go superviseurs » commun est ouvert :
+    # un superviseur ajouté après coup ne s'ouvre jamais tout seul, Liam le dit domaine par domaine.
+    cle_propre = "go_" + agent.replace("-", "_")
+    if cle_propre in c:
+        c["verrou_propre"] = cle_propre
+        c["go_superviseurs"] = c["go_superviseurs"] and c[cle_propre] is True
     c["envoi_automatique"] = c.get("envoi_automatique") is True
     for k, mini, maxi in (("grace_minutes", 0, 240), ("tolerance_cycles", 1, 20)):
         v = c.get(k)
@@ -444,7 +451,8 @@ def collecter(controles):
 
 
 def message(domaine, agents_etat, soucis, verrou_ferme):
-    """Résumé court du domaine : où en sont les agents, ce qui a été corrigé, ce qui attend un « go »."""
+    """Résumé court du domaine : où en sont les agents, ce qui a été corrigé, ce qui attend un « go ».
+    `verrou_ferme` : False, ou le nom du verrou fermé (« go superviseurs », ou le verrou propre du domaine)."""
     corriges = [s for s in soucis if s.corrige]
     bloques = [s for s in soucis if s.risque]
     restants = [s for s in soucis if not s.risque and not s.corrige]
@@ -454,7 +462,7 @@ def message(domaine, agents_etat, soucis, verrou_ferme):
     if corriges: l += ["- corrigé :"] + [f"  - {s.change}" for s in corriges]
     if bloques: l += ["- **bloqué, j'attends « go »** (rien n'a été touché) :"] + [f"  - {s.ligne()}" for s in bloques]
     if restants: l += ["- vu, pas corrigé :"] + [f"  - {s.ligne()}" for s in restants]
-    if verrou_ferme: l.append("- _verrou « go superviseurs » fermé : aucune correction appliquée._")
+    if verrou_ferme: l.append(f"- _verrou « {verrou_ferme if isinstance(verrou_ferme, str) else 'go superviseurs'} » fermé : aucune correction appliquée._")
     return "\n".join(l)
 
 
@@ -508,11 +516,12 @@ def passage(agent, domaine, agents_suivis, controles, conf, essai=False, mainten
             s.detail = (s.detail + " ; " if s.detail else "") + f"correction impossible ({type(ex).__name__})"
     bloques = [s for s in soucis if s.risque]
     nouveaux = [s for s in bloques if s.cle not in etat["en_attente"]]
-    texte = message(domaine, agents_etat, soucis, verrou)
+    nom_verrou = conf.get("verrou_propre") or "go superviseurs"
+    texte = message(domaine, agents_etat, soucis, nom_verrou if verrou else False)
     plage = dans_plage(m, conf)
     a_dire = bool(nouveaux) or any(s.corrige for s in soucis) or (jour not in etat["resumes"] and f"{m:%H:%M}" >= conf["heure_resume"])
     if essai: poste = "essai : rien envoyé, rien écrit, rien relancé"
-    elif verrou: poste = "verrou « go superviseurs » fermé : rien envoyé"
+    elif verrou: poste = f"verrou « {nom_verrou} » fermé : rien envoyé"
     elif not a_dire: poste = "rien de neuf à dire (résumé du jour déjà posté)"
     elif not plage: poste = f"hors plage d'envoi ({conf['heure_debut']}-{conf['heure_fin']}) : gardé pour le passage du matin"
     elif conf["envoi_automatique"]: poste = "posté sur Discord" if (envoyer or alerter_discord)(texte) else "Discord : non envoyé, réessayé au prochain passage"

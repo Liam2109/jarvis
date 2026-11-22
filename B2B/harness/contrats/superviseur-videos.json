@@ -1,0 +1,66 @@
+{
+ "nom": "superviseur-videos",
+ "responsable": "Jarvis (CEO)",
+ "mission": "Toutes les 30 min : les sept agents de la chaine video ont-ils tourne, dans l'ordre, et leurs donnees se contredisent-elles ? Corrige le sans risque, alerte et attend « go » pour tout ce qui touche a la publication.",
+ "statut": "inactif",
+ "script": "B2B/agents/superviseur-videos.py",
+ "jours": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6
+ ],
+ "heures": {
+  "debut": "07:00",
+  "fin": "22:00"
+ },
+ "fichiers_lus": [
+  "B2B/harness/contrats (horaires attendus)",
+  "B2B/logs/agents (traces du jour des sept agents video)",
+  "B2B/agents/serveur-taches.json",
+  "Videos/videos-publication-etat.json (si present)",
+  "Videos/publication.verrou (si present)",
+  "Videos/a-valider/*.txt (legendes qui attendent Liam)",
+  "Videos/journal-videos.csv (si present)",
+  "Videos/scripts/sujets.json (si present)",
+  "B2B/docs/OFFRE-REFERENCE.json (phrases interdites, liens de paiement)"
+ ],
+ "fichiers_ecrits": [
+  "Videos/journal-videos.csv (ligne strictement en double retiree)",
+  "Videos/scripts/sujets.json (sujet strictement en double retire)",
+  "B2B/agents/superviseur-videos-etat.json",
+  "B2B/agents/superviseur-videos-journal.log",
+  "B2B/a-valider/AAAA-MM-JJ-superviseur-videos.md"
+ ],
+ "canaux_discord": [
+  "alertes"
+ ],
+ "envoi_client": false,
+ "actions_interdites": [
+  "ecrire dans Videos/videos-publication-etat.json : signale seulement (une video deja publiee pourrait repartir)",
+  "retirer le verrou Videos/publication.verrou (deux publications en meme temps)",
+  "publier, depublier ou toucher a une video, une legende ou un script : texte destine au public",
+  "supprimer une donnee, une ligne, une fiche ou un fichier",
+  "ecraser une valeur deja ecrite par un agent ou par Liam",
+  "toucher a un montant, un paiement, un prix ou un devis",
+  "toucher au code, aux skills, aux docs ou a un fichier suivi par git",
+  "ecrire dans les donnees d'un autre domaine que le sien",
+  "corriger quoi que ce soit avant le « go superviseurs » commun ET le « go superviseur-videos » propre a ce domaine",
+  "relancer plus d'une fois par jour le meme agent",
+  "contacter un prospect, un client, Sid ou qui que ce soit d'autre que Liam",
+  "utiliser une IA ou un service payant",
+  "afficher un secret (jeton, cle, adresse iCal)",
+  "envoyer au client, encaisser, publier ou signer"
+ ],
+ "plafonds": {
+  "messages_par_jour": 6
+ },
+ "peut_engager": false,
+ "alerte_si_silence": null,
+ "tests": [
+  "tests/agents/test_superviseurs.py"
+ ]
+}

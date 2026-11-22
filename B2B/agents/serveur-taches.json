@@ -185,6 +185,17 @@
       "actif_le": "2026-11-21",
       "desactive": "2026-11-21 : le domaine ne tourne pas encore pour de vrai, décision de Liam (fichiers gardés ; retirer cette clé pour l'ouvrir)"
     },
+    "superviseur-videos": {
+      "script": "superviseur-videos.py",
+      "commandes": [
+        [
+          "passage"
+        ]
+      ],
+      "toutes_minutes": 30,
+      "actif_le": "2026-11-22",
+      "desactive": "2026-11-22 : nouveau domaine, fermé jusqu'au « go superviseur-videos » de Liam (verrou propre go_superviseur_videos ; retirer cette clé pour le planifier)"
+    },
     "jarvis-vue": {
       "script": "jarvis-vue.py",
       "commandes": [

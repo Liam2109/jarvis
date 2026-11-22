@@ -114,15 +114,19 @@ assert not re.search(r"^\s*(import|from)\s+(selenium|playwright|pyppeteer)", src
 T = json.loads((ICI / "serveur-taches.json").read_text(encoding="utf-8"))["agents"]
 assert set(T) == {"appels-sid", "appels-liam", "devis", "rendez-vous", "reponses", "prospection", "resume-sid", "stripe-alerte", "panne-alerte", "surveillant", "nettoyage-fichiers",
                   "videos-veille", "videos-scripts", "videos-marketing", "videos-creation", "videos-publication", "videos-nettoyage", "alerte-candidatures", "relances", "interim", "chiffres-serveur",
-                  "superviseur-vente", "superviseur-prospection", "superviseur-sites", "superviseur-mail", "jarvis-vue"}, sorted(T)   # équipe Vidéos TikTok (16/11/2026), scripts dans Videos\agents
+                  "superviseur-vente", "superviseur-prospection", "superviseur-sites", "superviseur-mail", "superviseur-videos", "jarvis-vue"}, sorted(T)   # équipe Vidéos TikTok (16/11/2026), scripts dans Videos\agents
 assert T["videos-creation"]["heure"] == "06:00" and T["videos-creation"]["heures_en_plus"] == ["14:00", "22:00"] and T["videos-creation"]["commandes"] == [["passage"]]
 assert T["videos-publication"]["commandes"] == [["publier"]] and "actif_le" not in T["videos-publication"]   # désactivée : seulement après le « go publier » de Liam (agents_actifs)   # instagram retiré du serveur le 14/11/2026 (archive) ; resume-sid/stripe-alerte/panne-alerte ajoutés (étape Argent, 15/11/2026) ; surveillant du harness (15/11/2026)
 assert T["nettoyage-fichiers"]["heure"] == "03:00" and T["nettoyage-fichiers"]["commandes"] == [["nettoyer"]]   # nettoyage des traces et du journal de plus de 30 jours (15/11/2026)
 assert T["chiffres-serveur"]["heure"] == "19:30" and T["chiffres-serveur"]["commandes"] == [["jour"]]   # une ligne par soir dans la feuille Google (21/11/2026)
-for s in ("superviseur-vente", "superviseur-prospection", "superviseur-sites", "superviseur-mail", "jarvis-vue"):   # superviseurs de domaine (21/11/2026) : un passage toutes les 30 min, fermes par le verrou « go superviseurs »
-    assert T[s]["toutes_minutes"] == 30 and T[s]["commandes"] == [["passage"]] and T[s]["actif_le"] == "2026-11-21", s
+for s in ("superviseur-vente", "superviseur-prospection", "superviseur-sites", "superviseur-mail", "superviseur-videos", "jarvis-vue"):   # superviseurs de domaine (21/11/2026, Videos le 22/11) : un passage toutes les 30 min, fermes par le verrou « go superviseurs »
+    assert T[s]["toutes_minutes"] == 30 and T[s]["commandes"] == [["passage"]], s
+    assert T[s]["actif_le"] == ("2026-11-22" if s == "superviseur-videos" else "2026-11-21"), s
 for s in ("superviseur-vente", "superviseur-prospection"): assert not T[s].get("desactive"), s          # ouverts le 21/11/2026 (go superviseurs de Liam) : Vente et Prospection seulement
-for s in ("superviseur-sites", "superviseur-mail", "jarvis-vue"): assert T[s].get("desactive"), s        # tenus fermes par la cle « desactive » : ces domaines ne tournent pas encore pour de vrai
+for s in ("superviseur-sites", "superviseur-mail", "superviseur-videos", "jarvis-vue"): assert T[s].get("desactive"), s   # tenus fermes par la cle « desactive » : ces domaines ne tournent pas encore pour de vrai
+# Videos (22/11/2026) a EN PLUS son verrou propre : go_superviseur_videos reste false dans son fichier versionne, meme si le « go superviseurs » commun est ouvert
+cfg_videos = json.loads((ICI / "superviseur-videos-config.json").read_text(encoding="utf-8"))
+assert cfg_videos["go_superviseur_videos"] is False, "le verrou propre du domaine Videos doit rester ferme dans git"
 assert T["surveillant"]["heure"] == "19:45" and T["surveillant"]["lundi"] == "07:50" and T["surveillant"]["commandes"] == [["verifier"]]
 for nom, t in T.items():
     assert (ICI / t["script"]).is_file() and t["commandes"] and bool(t.get("toutes_minutes")) != bool(t.get("heure")), nom   # une cadence OU une heure
@@ -147,12 +151,14 @@ env = {**os.environ, "JARVIS_TEST": "1", "PYTHONIOENCODING": "utf-8", "PYTHONDON
 for agent, args in [(n, [] if n == "reponses" else T[n]["commandes"][0]) for n in T] + [("instagram", ["jour"])]:   # chaque agent du serveur (sa vraie commande, lue dans serveur-taches.json) + l'archive instagram (lancée à la main : refusée aussi)
     script = copie / "agents" / (T[agent]["script"] if agent in T else agent + ".py"); dossier = videos if agent.startswith("videos-") else copie / "agents"
     lanceur = ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File"] if script.suffix == ".ps1" else [sys.executable]   # videos-nettoyage : agent PowerShell
-    p = subprocess.run(lanceur + [str(script)] + [x for x in args if x], capture_output=True, text=True, timeout=60, env=env, cwd=str(copie))
+    # errors="replace" (22/11/2026) : videos-nettoyage est un agent PowerShell, son refus accentué sort dans la page de codes de la console (0x82),
+    # ce qui laissait p.stdout à None et faisait échouer le contrôle du message au hasard de la machine.
+    p = subprocess.run(lanceur + [str(script)] + [x for x in args if x], capture_output=True, text=True, errors="replace", timeout=60, env=env, cwd=str(copie))
     assert p.returncode == 3, (agent, p.returncode, p.stdout[-300:], p.stderr[-300:])
     jr = dossier / f"{agent}-journal.log"
     assert jr.is_file() and "refusé" in jr.read_text(encoding="utf-8") and "UNE-AUTRE-MACHINE" in jr.read_text(encoding="utf-8"), agent   # le journal le dit
     assert not any(dossier.glob(f"{agent}-etat.json")), f"{agent} : aucun état écrit"
-    assert "machine" in (p.stdout + p.stderr).lower()
+    assert "machine" in ((p.stdout or "") + (p.stderr or "")).lower(), agent
 # --a-blanc et commandes de lecture ne sont pas refusés (rien n'est écrit ni envoyé)
 p = subprocess.run([sys.executable, str(copie / "agents" / "rendez-vous.py"), "etat"], capture_output=True, text=True, timeout=60, env=env, cwd=str(copie))
 assert p.returncode == 0, (p.returncode, p.stdout[-300:], p.stderr[-300:])

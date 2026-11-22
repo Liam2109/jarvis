@@ -1,0 +1,6 @@
+{
+  "go_superviseur_videos": false,
+  "publications_max_par_jour": 3,
+  "legendes_max": 40,
+  "_aide": "VERROU PROPRE au domaine Videos : go_superviseur_videos reste false ici (fichier versionne). Il s'ajoute au verrou commun go_superviseurs : tant que l'un des deux est false, ce superviseur ne corrige rien et ne poste rien, MEME si les quatre autres superviseurs sont ouverts. Pour l'ouvrir, Liam ecrit go_superviseur_videos a true dans la variante LOCALE de ce fichier (superviseur-videos-config.local.json, hors git), apres avoir dit « go superviseur-videos ». publications_max_par_jour : plafond par jour et par ligne au-dela duquel l'etat de publication est signale (jamais corrige). legendes_max : nombre de legendes de Videos\\a-valider relues par passage. Les autres reglages (grace_minutes, tolerance_cycles, heure_resume, plage d'envoi) viennent de superviseurs-config.json. Voir .claude\\skills\\agent-superviseur-videos\\SKILL.md."
+}

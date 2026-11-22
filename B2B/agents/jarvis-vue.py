@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Vue Jarvis des superviseurs (21/11/2026) : le seul endroit où Liam voit l'état des quatre domaines d'un coup d'œil (Vente, Prospection, Sites, Mail).
+"""Vue Jarvis des superviseurs (21/11/2026) : le seul endroit où Liam voit l'état des cinq domaines d'un coup d'œil (Vente, Prospection, Sites, Mail, Vidéos).
 Elle NE CORRIGE RIEN et ne relance rien : elle lit l'état et le journal que chaque superviseur a déjà écrits, et les remet en un fichier court
 (B2B\\logs\\superviseurs\\ETAT-SUPERVISEURS.md, hors git, réécrit à chaque passage, sans historique) plus UN seul message Discord groupé par jour.
 
@@ -24,13 +24,14 @@ import traces as T
 
 AGENT, DOMAINE = "jarvis-vue", "Jarvis"
 DEFAUT = {"heure_resume": "19:40"}
-DOMAINES = [("superviseur-vente", "Vente"), ("superviseur-prospection", "Prospection"), ("superviseur-sites", "Sites"), ("superviseur-mail", "Mail")]
+DOMAINES = [("superviseur-vente", "Vente"), ("superviseur-prospection", "Prospection"), ("superviseur-sites", "Sites"), ("superviseur-mail", "Mail"),
+            ("superviseur-videos", "Vidéos")]
 SORTIE = ICI.parent / "logs" / "superviseurs" / "ETAT-SUPERVISEURS.md"
 SIGNES = {"ok": "OK", "corrigé": "corrigé", "bloqué": "BLOQUÉ (attend « go »)", "jamais passé": "jamais passé", "inconnu": "état illisible"}
 
 
 def resumes(conf):
-    """L'état remonté par les quatre superviseurs, lu tel quel (aucun contrôle refait, aucune écriture)."""
+    """L'état remonté par les superviseurs de domaine, lu tel quel (aucun contrôle refait, aucune écriture)."""
     out = []
     for agent, domaine in DOMAINES:
         try: r = S.resume_pour_jarvis(agent, domaine, S.cfg(agent, {}))
@@ -107,7 +108,7 @@ def cmd_etat(conf):
 
 
 def main(argv=None):
-    p = argparse.ArgumentParser(prog=AGENT, description="Vue Jarvis des quatre superviseurs : un fichier court et un message Discord groupé, aucune correction.")
+    p = argparse.ArgumentParser(prog=AGENT, description="Vue Jarvis des superviseurs de domaine : un fichier court et un message Discord groupé, aucune correction.")
     sp = p.add_subparsers(dest="cmd", required=True)
     j = sp.add_parser("passage"); j.add_argument("--essai", "--a-blanc", dest="essai", action="store_true", help="lit, affiche, n'écrit rien, n'envoie rien")
     j.add_argument("--maintenant", default=None, help="heure figée (tests)")
