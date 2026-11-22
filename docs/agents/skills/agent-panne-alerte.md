@@ -26,7 +26,7 @@ Alerter Liam sur Discord quand un agent planifié à heure fixe n'a pas tourné 
 
 ## Cas limites gérés par le code
 - Trop tôt pour juger (avant heure + grâce) : rien.
-- **Agent en attente (22/11/2026) : rien.** Un agent absent de `agents_actifs` (Liam ne l'a pas encore ouvert sur cette machine) ou dont un verrou `go_*` est fermé dans ses réglages (ex. `go_interim` avant le « go interim ») n'est pas cassé : il attend. Il n'est jamais compté en panne et rien ne part sur Discord. Même règle que les superviseurs et le surveillant du harness. Le verrou commun des superviseurs est lu dans l'ordre du code (fichiers versionnés d'abord, variantes locales ensuite), donc un « go » posé une seule fois dans la variante locale commune est bien vu.
+- **Agent en attente (22/11/2026) : rien.** Un agent absent de `agents_actifs` (Liam ne l'a pas encore ouvert sur cette machine) ou dont un verrou `go_*` est fermé dans ses réglages (ex. `go_interim` avant le « go interim ») n'est pas cassé : il attend. Il n'est jamais compté en panne et rien ne part sur Discord. Même règle que les superviseurs et le surveillant du harness. Le verrou COMMUN `go_superviseurs` ne concerne QUE les superviseurs (corrigé le 22/11/2026 : lu pour tout le monde, son défaut false mettait « en attente » chaque agent planifié, donc plus aucune panne n'était signalée) ; il est lu dans l'ordre du code (fichiers versionnés d'abord, variantes locales ensuite), donc un « go » posé une seule fois dans la variante locale commune est bien vu.
 - Agent désactivé dans `serveur-taches.json`, pas encore actif (`actif_le`) ou hors de ses jours (week-end d'un agent des jours ouvrés) : rien.
 - Jamais deux fois la même alerte le même jour.
 - État illisible : arrêt, code 2, rien n'est écrit.

@@ -147,6 +147,9 @@ class EnAttentePasEnPanne(unittest.TestCase):
     def test_aucune_alerte_discord_pour_un_agent_en_attente(self):
         self.PA.construire_agents = lambda: [self.AGENTS[0]]
         self.PA.taches_serveur = lambda: self.TACHES
+        ancien = self.PA.M.agents_actifs   # agents_actifs FACTICE : cmd_verifier ne le reçoit pas en paramètre, le test ne doit pas dépendre
+        self.PA.M.agents_actifs = lambda: ["relances"]   # des réglages de la machine (vide sur le gros PC = aucun jugement, donc une fausse panne)
+        self.addCleanup(lambda: setattr(self.PA.M, "agents_actifs", ancien))
         envoyes = []; self.PA.alerter_discord = lambda t: envoyes.append(t) or True
         with redirect_stdout(io.StringIO()) as f:
             self.PA.cmd_verifier({"envoi_automatique": True, "grace_minutes": 15}, False, self.MARDI_MIDI)

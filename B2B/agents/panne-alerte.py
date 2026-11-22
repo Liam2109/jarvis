@@ -101,7 +101,10 @@ def en_attente(nom, actifs=None):
         liste = set(M.agents_actifs()) if actifs is None else set(actifs)
     except M.ErreurLocale: return False   # réglages locaux illisibles : on ne déclare personne en attente à tort
     if liste and nom not in liste: return True   # liste vide (machine sans réglage B2B) : on ne juge pas, c'est la machine qui n'est pas un serveur
-    conf, fichiers = {}, [f for f in (ICI / "superviseurs-config.json", ICI / f"{nom}-config.json") if f.exists()]
+    # Le verrou COMMUN « go_superviseurs » ne concerne que les superviseurs (22/11/2026) : lu pour tout le monde, son défaut false déclarait EN ATTENTE
+    # chaque agent planifié (appels-sid, resume-sid…), donc plus aucune panne n'était signalée. Masqué sur le serveur, où une variante locale l'ouvre.
+    communs = (ICI / "superviseurs-config.json",) if nom.startswith("superviseur") else ()
+    conf, fichiers = {}, [f for f in (*communs, ICI / f"{nom}-config.json") if f.exists()]
     try:
         for f in fichiers:   # même ordre que B2B/harness/superviseurs.py : les DEUX fichiers versionnés d'abord, puis les DEUX variantes locales (sinon le défaut
             conf.update({k: v for k, v in json.loads(f.read_text(encoding="utf-8-sig")).items() if not k.startswith("_")})   # « false » du fichier de l'agent écraserait le « go » posé dans la variante locale commune)
