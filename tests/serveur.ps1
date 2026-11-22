@@ -179,7 +179,11 @@ $maj = Join-Path $Root 'maj-auto.ps1'
 $mc = Get-Content $maj -Raw -Encoding UTF8
 Verifier ($mc -match 'pull --ff-only' -and $mc -match 'reset --hard' -and $mc -match 'merge-base --is-ancestor' -and $mc -match 'Send-AlerteMaj' -and $mc -match 'arreter\.ps1' -and $mc -match 'maj-auto-refuse\.txt') 'maj-auto.ps1 : fetch, pull --ff-only, tests, arrêt/relance, reset --hard, alerte, commit refusé mémorisé'
 $lignesEnv = @($mc -split "`n" | Where-Object { $_ -match '(?i)(Remove-Item|Set-Content|Out-File|Copy-Item|Move-Item)[^\r\n]*\.env\b' })
-Verifier ($lignesEnv.Count -eq 1 -and $lignesEnv[0] -match '\.env\.bak' -and $mc -notmatch 'Remove-Item[^\r\n]*memoire') 'maj-auto.ps1 : n''écrit .env que par le déchiffrement atomique (Restore-EnvDepuisChiffre) et pour remettre l''ancien .env.bak après un retour arrière ; ne touche jamais memoire\'
+Verifier ($lignesEnv.Count -eq 1 -and $lignesEnv[0] -match '\.env\.bak') 'maj-auto.ps1 : n''écrit .env que par le déchiffrement atomique (Restore-EnvDepuisChiffre) et pour remettre l''ancien .env.bak après un retour arrière'
+# Ne supprime dans memoire\ QUE ses propres fichiers (maj-auto-refuse.txt, maj-auto-alertes.json, son verrou) : jamais la to-do, les notes ni le résumé de Liam.
+$supMem = @($mc -split "`n" | Where-Object { $_ -match '(?i)Remove-Item' } | Where-Object { $_ -match '(?i)memoire|Get-FichierMemoire|\$verrou|\$refuse' })
+$mauvaisSup = @($supMem | Where-Object { $_ -notmatch "(?i)(Get-FichierMemoire '?maj-auto|\`$verrou|\`$refuse)" })
+Verifier ($mauvaisSup.Count -eq 0) ('maj-auto.ps1 : dans memoire\ il ne supprime que ses propres fichiers (verrou, commit refusé, horaires d''alerte) — jamais todo.md, notes.md ni resume.md' + $(if ($mauvaisSup.Count) { ' — À EXAMINER : ' + (($mauvaisSup | ForEach-Object { $_.Trim() }) -join ' ; ') }))
 if (-not $aGit) { Verifier $true '(git absent : scénarios de mise à jour sautés)' } else {
     $env:GIT_AUTHOR_NAME = 'test'; $env:GIT_AUTHOR_EMAIL = 't@t.t'; $env:GIT_COMMITTER_NAME = 'test'; $env:GIT_COMMITTER_EMAIL = 't@t.t'
     $ErrorActionPreference = 'Continue'      # (git écrit des avertissements sur stderr : ce ne sont pas des erreurs)
@@ -236,13 +240,32 @@ if (-not $aGit) { Verifier $true '(git absent : scénarios de mise à jour saut�
     $r = Maj
     Verifier ($r.code -eq 0 -and $r.sortie -match 'tests verts' -and (Tete $S) -eq (Tete $D) -and -not (Test-Path "$S\memoire\maj-auto-refuse.txt")) 'D) un nouveau commit corrigé est adopté (le refus est oublié)'
     $v4 = Tete $S
-    # E : historique divergent
+    # E0 : local EN AVANCE (commits faits ici, pas encore poussés) — 22/11/2026 : ce n'est PAS une divergence, il n'y a rien à tirer. Avant, l'alerte
+    # « l'historique local n'est pas un ancêtre de origin/main » partait à CHAQUE passage (~300 messages Discord pour un seul commit non poussé).
+    "fait ici" | Set-Content "$S\ICI.txt" -Encoding ASCII; & git -C $S add -A 2>$null; & git -C $S -c user.name=t -c user.email=t@t.t commit -q -m 'commit local' 2>$null
+    $vAvance = Tete $S
+    $r = Maj
+    Verifier ($r.code -eq 0 -and (Tete $S) -eq $vAvance -and -not (Test-Path $alerte)) 'E0) local en avance (commit pas encore poussé) : code 0, AUCUNE alerte, rien n''est changé'
+    Verifier ($r.sortie -match 'pas encore poussés' -and $r.sortie -notmatch 'divergé') 'E0) c''est dit comme « à jour, 1 commit fait ici pas encore poussé », jamais comme une divergence'
+    & git -C $S reset -q --hard $v4 2>$null; & git -C $S clean -qfd 2>$null
+    # E : historique VRAIMENT divergent (chacun a des commits que l'autre n'a pas)
     "local" | Set-Content "$S\LOCAL.txt" -Encoding ASCII; & git -C $S add -A 2>$null; & git -C $S -c user.name=t -c user.email=t@t.t commit -q -m local 2>$null
     $vLocal = Tete $S
     Pousser '5'
     $r = Maj
     Verifier ($r.code -eq 2 -and (Tete $S) -eq $vLocal -and (Test-Path $alerte) -and (Get-Content $alerte -Raw) -match 'historique') 'E) historique local qui diverge : aucune mise à jour, aucun écrasement, alerte'
+    # E2 : la MÊME alerte non résolue n'est pas renvoyée à chaque passage (cooldown -HeuresSilenceAlerte)
+    Remove-Item $alerte -Force
+    $r = Maj
+    Verifier ($r.code -eq 2 -and -not (Test-Path $alerte) -and $r.sortie -match 'silence') 'E2) même divergence au passage suivant : toujours refusée (code 2) mais l''alerte n''est PAS renvoyée (cooldown)'
+    $fAl = "$S\memoire\maj-auto-alertes.json"
+    Verifier ((Test-Path $fAl) -and (Get-Content $fAl -Raw) -match 'historique-divergent') 'E2) l''heure du dernier envoi est mémorisée dans memoire\maj-auto-alertes.json'
+    $r = Maj '-HeuresSilenceAlerte', '0'
+    Verifier ($r.code -eq 2 -and (Test-Path $alerte) -and (Get-Content $alerte -Raw) -match 'historique') 'E2) le silence passé, la même alerte repart (rien n''est perdu)'
     & git -C $S reset -q --hard $v4 2>$null; Remove-Item $alerte -Force -ErrorAction SilentlyContinue
+    $r = Maj
+    Verifier ($r.code -eq 0 -and -not (Test-Path $fAl)) 'E2) divergence résolue : le compteur de silence est oublié (la prochaine vraie alerte partira tout de suite)'
+    Pousser '6'      # du nouveau sur origin pour le scénario F (sinon maj-auto s'arrête à « à jour » avant de voir le fichier modifié à la main)
     # F : fichier suivi modifié sur le serveur
     Add-Content "$S\VERSION.txt" 'modif locale' -Encoding ASCII
     $r = Maj

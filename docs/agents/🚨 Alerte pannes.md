@@ -46,6 +46,8 @@ Alerter Liam sur Discord quand un agent planifié à heure fixe n'a pas tourné 
 - outils/agents-json.py
 - journaux des agents
 - B2B/agents/serveur-taches.json
+- B2B/agents/b2b.local.json (agents_actifs)
+- B2B/agents/<agent>-config.json et sa variante locale (verrous go_*, booléens seulement)
 
 **Écrit :**
 - B2B/agents/panne-alerte-etat.json
@@ -67,14 +69,14 @@ Alerter Liam sur Discord quand un agent planifié à heure fixe n'a pas tourné 
 **Derniers résultats de test (cette machine) :**
 - `tests/agents/test_panne_alerte.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** 2026-11-21 14:13 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
+**Dernière trace :** 2026-11-22 17:53 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
 
 ### Historique (5 dernières traces, sans données client)
-- 2026-11-21 14:13 | verifier | ok | 1.77 s
-- 2026-11-21 14:08 | verifier | ok | 1.9 s
-- 2026-11-21 14:03 | verifier | ok | 1.85 s
-- 2026-11-21 13:58 | verifier | ok | 2.12 s
-- 2026-11-21 13:53 | verifier | ok | 2.02 s
+- 2026-11-22 17:53 | verifier | ok | 2.16 s
+- 2026-11-22 17:48 | verifier | ok | 1.89 s
+- 2026-11-22 17:43 | verifier | ok | 1.94 s
+- 2026-11-22 17:38 | verifier | ok | 12.87 s
+- 2026-11-22 09:28 | verifier | ok | 2.42 s
 <!-- DYNAMIQUE:FIN -->
 
 ## Skill et règles

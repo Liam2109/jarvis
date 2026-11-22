@@ -4,10 +4,15 @@
 #     un test est rouge : git reset --hard sur l'ancien commit, Jarvis relancé (ancienne version), journal + alerte Discord ; le commit refusé n'est pas réessayé tant qu'il reste le même.
 #   Après des tests verts, SI B2B\agents\b2b.local.json existe (réglage propre à cette machine) : dépendances Python de B2B\requirements.txt puis tâches planifiées « Jarvis-B2B-<agent> » des seuls agents
 #   actifs (lib\b2b-serveur.ps1, idempotent). Sans ce fichier (PC de bureau) : rien. Un échec de cette étape n'annule jamais la mise à jour de Jarvis.
-# Ne touche JAMAIS à memoire\, logs\ ni config.local.json (ignorés par git : ni pull ni reset ne les modifient). .env n'est écrit que par le déchiffrement ATOMIQUE de .env.chiffre
+#   Quand il n'y a RIEN à tirer (serveur déjà à jour, ou commits d'ici pas encore poussés), les tâches B2B MANQUANTES sont tout de même créées (22/11/2026) : un agent
+#   ajouté à agents_actifs sans nouveau commit avait sinon une tâche qui n'arrivait jamais, donc une fausse alerte « Panne » chaque jour. Une tâche existante n'est pas touchée.
+#   Local en avance (origin est un ancêtre du local) = « à jour », AUCUNE alerte. Vraie divergence (chacun a des commits que l'autre n'a pas) = refus + alerte, au plus une
+#   fois toutes les -HeuresSilenceAlerte heures tant qu'elle n'est pas résolue (avant : une alerte identique toutes les 10 min).
+# Ne touche JAMAIS aux fichiers de memoire\ de Liam (todo, notes, résumé), à logs\ ni à config.local.json (ignorés par git : ni pull ni reset ne les modifient) ; dans memoire\ il n'écrit
+# et ne supprime que SES fichiers : son verrou, maj-auto-refuse.txt et maj-auto-alertes.json (heure du dernier envoi de chaque alerte). .env n'est écrit que par le déchiffrement ATOMIQUE de .env.chiffre
 # (ancien .env dans .env.bak ; échec = ancien .env conservé + alerte ; mise à jour refusée = clés remises comme avant).
-# Options (tests / essais) : -Simulation (dit s'il y a une mise à jour, ne change rien) · -Racine · -ScriptTests · -SansArret · -SansRelance · -SansPip · -FichierAlerte (alerte écrite dans ce fichier au lieu de Discord).
-param([switch]$Simulation, [string]$Racine = $PSScriptRoot, [string]$ScriptTests = 'tests\tout.ps1', [switch]$SansArret, [switch]$SansRelance, [switch]$SansPip, [string]$FichierAlerte = '', [string]$Branche = 'main')
+# Options (tests / essais) : -Simulation (dit s'il y a une mise à jour, ne change rien) · -Racine · -ScriptTests · -SansArret · -SansRelance · -SansPip · -FichierAlerte (alerte écrite dans ce fichier au lieu de Discord) · -HeuresSilenceAlerte.
+param([switch]$Simulation, [string]$Racine = $PSScriptRoot, [string]$ScriptTests = 'tests\tout.ps1', [switch]$SansArret, [switch]$SansRelance, [switch]$SansPip, [string]$FichierAlerte = '', [string]$Branche = 'main', [double]$HeuresSilenceAlerte = 6)
 $ErrorActionPreference = 'Stop'
 Set-Location $Racine
 . (Join-Path $Racine 'lib\journal.ps1')
@@ -20,9 +25,29 @@ function Invoke-Git {
     $o = & git -C $Racine @args 2>&1 | Out-String
     @{ code = $LASTEXITCODE; sortie = $o.Trim() }
 }
-function Send-AlerteMaj([string]$texte) {
+function Test-AlerteEnSilence([string]$cle) {
+    # Anti-boucle (22/11/2026) : une même alerte NON RÉSOLUE revenait à chaque passage (toutes les 10 min, ~300 messages Discord). Avec une clé, elle n'est
+    # envoyée qu'une fois toutes les $HeuresSilenceAlerte heures. Retourne $true s'il faut se taire ; sinon note l'heure d'envoi et retourne $false.
+    if (-not $cle) { return $false }
+    $h = Read-JsonMemoire 'maj-auto-alertes.json' $null
+    $o = @{}; if ($h) { foreach ($p in $h.PSObject.Properties) { $o[$p.Name] = "$($p.Value)" } }
+    if ($o.ContainsKey($cle)) {
+        try { if (((Get-Date) - [datetime]::Parse($o[$cle], [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::RoundtripKind)).TotalHours -lt $HeuresSilenceAlerte) { return $true } } catch { }
+    }
+    $o[$cle] = (Get-Date).ToString('o'); Save-JsonMemoire 'maj-auto-alertes.json' $o
+    $false
+}
+function Reset-AlerteSilence {
+    # Plus rien à signaler (serveur à jour ou version adoptée) : le compteur de silence est oublié, la prochaine vraie alerte part tout de suite.
+    Remove-Item (Get-FichierMemoire 'maj-auto-alertes.json') -Force -ErrorAction SilentlyContinue
+}
+function Send-AlerteMaj([string]$texte, [string]$Cle = '') {
     # Alerte Discord (salon système, mention de Liam) : REST direct, car Jarvis est arrêté pendant les tests. Le jeton n'est jamais affiché ni journalisé.
     $texte = Hide-Secrets $texte
+    if ($Cle -and (Test-AlerteEnSilence $Cle)) {
+        Write-Journal -Action 'Mise à jour auto' -Resultat "alerte « $Cle » déjà envoyée il y a moins de $HeuresSilenceAlerte h : pas renvoyée"
+        Say "alerte déjà envoyée il y a moins de $HeuresSilenceAlerte h : pas renvoyée (silence)"; return
+    }
     if ($FichierAlerte) { Set-Content $FichierAlerte $texte -Encoding UTF8; return }
     try {
         Import-JarvisEnv
@@ -45,6 +70,17 @@ function Start-JarvisServeur {
     if ($SansRelance) { Say 'relance de Jarvis : ignorée (-SansRelance)'; return }
     Start-Process powershell.exe -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', "`"$Racine\jarvis.ps1`"" -WindowStyle Hidden -WorkingDirectory $Racine | Out-Null
     Say 'Jarvis relancé'
+}
+function Sync-TachesManquantesB2B {
+    # Rattrapage (22/11/2026) : les tâches « Jarvis-B2B-<agent> » n'étaient (re)créées qu'APRÈS un pull suivi de tests verts. Un agent ajouté à agents_actifs
+    # sans nouveau commit n'avait donc jamais sa tâche, et panne-alerte le signalait « en panne » chaque jour (nettoyage-fichiers, relances, chiffres-serveur,
+    # surveillant et les 2 superviseurs, le 22/11/2026). Seules les tâches MANQUANTES sont créées : une tâche existante n'est jamais touchée.
+    if ($Simulation) { return }
+    if (-not (Get-Command Sync-B2BTaches -ErrorAction SilentlyContinue)) { return }
+    try {
+        $s = Sync-B2BTaches $Racine -SeulementManquantes
+        if ($s) { Say $s; foreach ($l in @($s -split "`n" | Where-Object { $_.Trim() })) { Write-Journal -Action 'B2B serveur' -Resultat $l } }
+    } catch { Say "B2B : rattrapage des tâches ignoré (erreur : $($_.Exception.Message))" }
 }
 function Stop-JarvisServeur {
     if ($SansArret) { Say 'arrêt de Jarvis : ignoré (-SansArret)'; return }
@@ -76,18 +112,25 @@ try {
     $f = Invoke-Git fetch origin $Branche
     if ($f.code -ne 0) { Write-Journal -Action 'Mise à jour auto' -Resultat ("fetch impossible (réseau ?) : " + (Hide-Secrets ($f.sortie -replace '\s+', ' '))); Say 'fetch impossible'; return }
     $ancien = (Invoke-Git rev-parse HEAD).sortie; $nouveau = (Invoke-Git rev-parse "origin/$Branche").sortie
-    if ($ancien -eq $nouveau) { Say 'à jour'; return }
+    if ($ancien -eq $nouveau) { Say 'à jour'; Reset-AlerteSilence; Sync-TachesManquantesB2B; return }
     $refuse = Get-FichierMemoire 'maj-auto-refuse.txt'
     if ((Test-Path $refuse) -and ((Get-Content $refuse -Raw).Trim() -eq $nouveau)) { Say "version $($nouveau.Substring(0, 7)) déjà refusée (tests rouges) : en attente d'un nouveau commit"; return }
     if ((Invoke-Git merge-base --is-ancestor $ancien $nouveau).code -ne 0) {
-        $m = "mise à jour refusée : l'historique local ($($ancien.Substring(0, 7))) n'est pas un ancêtre de origin/$Branche ($($nouveau.Substring(0, 7))) ; rien n'a été changé"
-        Write-Journal -Action 'Mise à jour auto' -Resultat $m; Send-AlerteMaj $m; Say $m; exit 2
+        if ((Invoke-Git merge-base --is-ancestor $nouveau $ancien).code -eq 0) {
+            # Local EN AVANCE : des commits faits ICI ne sont pas encore poussés. Ce n'est PAS une divergence (origin est un ancêtre du local) : il n'y a simplement
+            # rien à tirer. Avant le 22/11/2026 ce cas déclenchait l'alerte « l'historique local n'est pas un ancêtre de origin/main » à chaque passage.
+            $n = (Invoke-Git rev-list --count "$nouveau..$ancien").sortie
+            Say "à jour : $n commit(s) fait(s) ici ne sont pas encore poussés vers origin/$Branche ; rien à tirer"
+            Reset-AlerteSilence; Sync-TachesManquantesB2B; return
+        }
+        $m = "mise à jour refusée : l'historique local ($($ancien.Substring(0, 7))) a divergé de origin/$Branche ($($nouveau.Substring(0, 7))) : chacun a des commits que l'autre n'a pas ; rien n'a été changé"
+        Write-Journal -Action 'Mise à jour auto' -Resultat $m; Send-AlerteMaj $m -Cle 'historique-divergent'; Say $m; exit 2
     }
     Say "mise à jour disponible : $($ancien.Substring(0, 7)) -> $($nouveau.Substring(0, 7))"
     if ($Simulation) { Say '[simulation] rien n''est modifié'; return }
     if ((Invoke-Git status --porcelain --untracked-files=no).sortie) {
         $m = 'mise à jour refusée : des fichiers suivis par git ont été modifiés sur ce PC (mettez les réglages de cette machine dans config.local.json)'
-        Write-Journal -Action 'Mise à jour auto' -Resultat $m; Send-AlerteMaj $m; Say $m; exit 3
+        Write-Journal -Action 'Mise à jour auto' -Resultat $m; Send-AlerteMaj $m -Cle 'modifs-locales'; Say $m; exit 3
     }
     $p = Invoke-Git pull --ff-only origin $Branche
     if ($p.code -ne 0) { $m = 'mise à jour refusée : git pull --ff-only a échoué'; Write-Journal -Action 'Mise à jour auto' -Resultat ($m + ' : ' + (Hide-Secrets ($p.sortie -replace '\s+', ' '))); Send-AlerteMaj $m; Say $m; exit 4 }
@@ -116,6 +159,7 @@ try {
     if (-not $rouge) {
         Write-Journal -Action 'Mise à jour auto' -Resultat "tests verts : version $($nouveau.Substring(0, 7)) adoptée"
         Remove-Item $refuse -Force -ErrorAction SilentlyContinue
+        Reset-AlerteSilence
         Say "tests verts : version $($nouveau.Substring(0, 7)) adoptée"
         if (Get-Command Update-B2BServeur -ErrorAction SilentlyContinue) {      # agents B2B : requirements + tâches planifiées des agents ACTIFS seulement (b2b.local.json) ; sans réglage B2B sur cette machine : rien
             $b2b = Update-B2BServeur $Racine -SansPip:$SansPip; if ($b2b) { Say $b2b }

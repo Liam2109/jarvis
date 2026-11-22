@@ -74,7 +74,7 @@ Tous les soirs à 19:30, une ligne dans la feuille Google « Chiffres serveur Ja
 **Derniers résultats de test (cette machine) :**
 - `tests/agents/test_chiffres_serveur.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** 2026-11-21 13:58 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** non (Liam l'ajoute s'il veut le planifier)
+**Dernière trace :** 2026-11-21 13:58 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
 
 ### Historique (5 dernières traces, sans données client)
 - 2026-11-21 13:58 | garde feuille | ok (AVERTIT : envoi_automatique = false : l'agent devrait être en simulation; AVERTI) | 0.0 s

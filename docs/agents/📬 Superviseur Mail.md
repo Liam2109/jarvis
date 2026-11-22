@@ -87,7 +87,7 @@ Toutes les 30 min : le tri du courrier des agences tourne-t-il, reste-t-il en le
 **Derniers résultats de test (cette machine) :**
 - `tests/agents/test_superviseurs.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** aucune · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** non (Liam l'ajoute s'il veut le planifier)
+**Dernière trace :** aucune · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
 
 ### Historique (5 dernières traces, sans données client)
 - aucune trace sur cette machine

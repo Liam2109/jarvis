@@ -201,6 +201,23 @@ Verifier ((($script:Sup | Sort-Object) -join ',') -eq 'Jarvis-B2B-devis,Jarvis-B
 $premier = ($script:Reg | Sort-Object) -join ','; $script:Reg = @(); $script:Sup = @(); $script:Exist = @('Jarvis-B2B-appels-sid', 'Jarvis-B2B-rendez-vous', 'Jarvis-MajAuto')
 [void](Sync-B2BTaches $RB)
 Verifier ((($script:Reg | Sort-Object) -join ',') -eq $premier -and $script:Sup.Count -eq 0) 'idempotent : relancée, même résultat, rien à retirer, aucun doublon'
+# -SeulementManquantes (22/11/2026) : rattrapage appelé par maj-auto toutes les 10 min quand le serveur est déjà à jour. Incident : nettoyage-fichiers était dans agents_actifs mais sans tâche
+# (les tâches n'étaient créées qu'après un pull), donc « Panne : nettoyage-fichiers » chaque jour. Une tâche qui existe déjà ne doit JAMAIS être réenregistrée (son « toutes les N min » repartirait de zéro).
+$script:Reg = @(); $script:Sup = @(); $script:Exist = @('Jarvis-B2B-rendez-vous', 'Jarvis-MajAuto', 'Jarvis-Serveur')
+LocalB @{ machine_active = 'PC-SERVEUR'; agents_actifs = @('rendez-vous', 'appels-sid') }
+$s = Sync-B2BTaches $RB -SeulementManquantes
+Verifier ((($script:Reg | Sort-Object) -join ',') -eq 'Jarvis-B2B-appels-sid' -and $script:Sup.Count -eq 0) 'rattrapage : seule la tâche MANQUANTE (appels-sid) est créée, celle qui existe (rendez-vous) n''est pas réenregistrée'
+Verifier ($s -match 'Jarvis-B2B-appels-sid' -and $s -notmatch 'Jarvis-B2B-rendez-vous') 'rattrapage : seule la tâche créée est dite (journal)'
+$script:Reg = @(); $script:Sup = @(); $script:Exist = @('Jarvis-B2B-rendez-vous', 'Jarvis-B2B-appels-sid', 'Jarvis-MajAuto')
+$s = Sync-B2BTaches $RB -SeulementManquantes
+Verifier ($script:Reg.Count -eq 0 -and $script:Sup.Count -eq 0 -and -not $s) 'rattrapage : rien ne manque -> aucune tâche touchée et RIEN n''est dit (pas une ligne de journal toutes les 10 min)'
+$script:Reg = @(); $script:Sup = @(); $script:Exist = @('Jarvis-B2B-rendez-vous', 'Jarvis-B2B-appels-sid', 'Jarvis-B2B-instagram', 'Jarvis-MajAuto')
+$s = Sync-B2BTaches $RB -SeulementManquantes
+Verifier ($script:Reg.Count -eq 0 -and (($script:Sup | Sort-Object) -join ',') -eq 'Jarvis-B2B-instagram') 'rattrapage : une tâche en trop est tout de même retirée ; Jarvis-MajAuto jamais touchée'
+LocalB @{ machine_active = 'PC-BUREAU'; agents_actifs = @('rendez-vous') }; $script:Reg = @(); $script:Sup = @(); $script:Exist = @('Jarvis-B2B-rendez-vous')
+[void](Sync-B2BTaches $RB -SeulementManquantes)
+Verifier ($script:Reg.Count -eq 0 -and (($script:Sup | Sort-Object) -join ',') -eq 'Jarvis-B2B-rendez-vous') 'rattrapage sur une autre machine : rien n''est créé, les tâches d''ici sont retirées'
+LocalB @{ machine_active = 'PC-SERVEUR'; agents_actifs = @('rendez-vous', 'appels-sid') }
 LocalB @{ machine_active = 'PC-BUREAU'; agents_actifs = @('rendez-vous') }; $script:Reg = @(); $script:Sup = @()
 [void](Sync-B2BTaches $RB)
 Verifier ($script:Reg.Count -eq 0) 'autre machine : aucune tâche enregistrée (même si des agents sont listés)'
@@ -222,6 +239,7 @@ $maj = Join-Path $Root 'maj-auto.ps1'; $mc = Lire $maj
 Verifier ($mc -match 'b2b-serveur\.ps1' -and $mc -match 'Update-B2BServeur') 'maj-auto.ps1 charge lib\b2b-serveur.ps1 et appelle Update-B2BServeur'
 $iTests = $mc.IndexOf('tests verts : version'); $iB2B = $mc.IndexOf('Update-B2BServeur ', $mc.IndexOf('function ') + 1); $iPull = $mc.IndexOf('pull --ff-only origin')
 Verifier ($iB2B -gt $iPull -and $iB2B -gt 0) 'l''étape B2B vient APRÈS un pull réussi'
+Verifier ($mc -match 'Sync-B2BTaches \$Racine -SeulementManquantes' -and $mc -match "if \(\`$ancien -eq \`$nouveau\) \{ Say 'à jour'; Reset-AlerteSilence; Sync-TachesManquantesB2B") 'maj-auto.ps1 : serveur déjà à jour -> les tâches B2B MANQUANTES sont tout de même créées (22/11/2026)'
 if (-not $aGit) { Verifier $true '(git absent : scénarios sautés)' } else {
     $env:GIT_AUTHOR_NAME = 'test'; $env:GIT_AUTHOR_EMAIL = 't@t.t'; $env:GIT_COMMITTER_NAME = 'test'; $env:GIT_COMMITTER_EMAIL = 't@t.t'
     $ErrorActionPreference = 'Continue'

@@ -56,11 +56,12 @@ class AgentPanneAlerte(unittest.TestCase):
         self.agents = [{"nom": "appels-sid", "planifie": True, "horaire": "chaque jour à 07:30", "dernier_passage": "2026-11-16 07:31"},
                        {"nom": "resume-sid", "planifie": True, "horaire": "chaque jour à 19:30", "dernier_passage": ""},
                        {"nom": "devis", "planifie": True, "horaire": "toutes les 3 min", "dernier_passage": ""}]
+        self.ACTIFS = ["appels-sid", "resume-sid", "devis"]   # agents_actifs donné : le test ne dépend pas des réglages de la machine qui le lance
 
     def test_en_panne(self):
-        self.assertEqual(self.PA.en_panne(self.agents, datetime(2026, 11, 17, 7, 50), 15), [("appels-sid", "07:30")])
-        self.assertEqual(self.PA.en_panne(self.agents, datetime(2026, 11, 17, 7, 40), 15), [], "délai de grâce")
-        self.assertEqual(self.PA.en_panne(self.agents, datetime(2026, 11, 17, 20, 0), 15), [("appels-sid", "07:30"), ("resume-sid", "19:30")])
+        self.assertEqual(self.PA.en_panne(self.agents, datetime(2026, 11, 17, 7, 50), 15, actifs=self.ACTIFS), [("appels-sid", "07:30")])
+        self.assertEqual(self.PA.en_panne(self.agents, datetime(2026, 11, 17, 7, 40), 15, actifs=self.ACTIFS), [], "délai de grâce")
+        self.assertEqual(self.PA.en_panne(self.agents, datetime(2026, 11, 17, 20, 0), 15, actifs=self.ACTIFS), [("appels-sid", "07:30"), ("resume-sid", "19:30")])
 
     def test_une_seule_alerte_et_simulation(self):
         self.PA.construire_agents = lambda: self.agents; envoyes = []; self.PA.alerter_discord = lambda t: envoyes.append(t) or True
@@ -84,8 +85,8 @@ class ActivationEtJoursOuvres(unittest.TestCase):
     def setUp(self): self.PA = C.agent("panne-alerte"); self.vide = Path(tempfile.mkdtemp()) / "logs"
 
     def test_panne_alerte(self):
-        for n in self.SILENCE: self.assertEqual(self.PA.en_panne(self.AGENTS, n, 15, self.TACHES), [], f"silence le {n:%A %d/%m}")
-        self.assertEqual(self.PA.en_panne(self.AGENTS, datetime(2026, 11, 17, 7, 50), 15, self.TACHES), [("appels-liam", "07:30")], "mardi 17/11, actif, aucune exécution : alerte")
+        for n in self.SILENCE: self.assertEqual(self.PA.en_panne(self.AGENTS, n, 15, self.TACHES, actifs=["appels-liam"]), [], f"silence le {n:%A %d/%m}")
+        self.assertEqual(self.PA.en_panne(self.AGENTS, datetime(2026, 11, 17, 7, 50), 15, self.TACHES, actifs=["appels-liam"]), [("appels-liam", "07:30")], "mardi 17/11, actif, aucune exécution : alerte")
 
     def test_surveillant(self):
         for n in self.SILENCE: self.assertEqual(SV.defauts(n, [self.CONTRAT], self.vide, self.TACHES)[0], [], f"silence le {n:%A %d/%m}")
@@ -94,9 +95,66 @@ class ActivationEtJoursOuvres(unittest.TestCase):
     def test_vrais_reglages_dimanche(self):
         """Avec le vrai serveur-taches.json et les vrais contrats : aucun agent des jours ouvrés n'est en panne un dimanche, appels-liam pas avant le 17/11."""
         agents = [{"nom": n, "planifie": True, "horaire": "chaque jour à 07:30", "dernier_passage": ""} for n in ("appels-liam", "appels-sid")]
-        self.assertEqual(self.PA.en_panne(agents, datetime(2026, 11, 15, 20, 0), 15), [])
-        self.assertEqual(self.PA.en_panne(agents, datetime(2026, 11, 16, 8, 0), 15), [("appels-sid", "07:30")], "lundi 16 : appels-sid attendu, appels-liam pas encore")
+        self.assertEqual(self.PA.en_panne(agents, datetime(2026, 11, 15, 20, 0), 15, actifs=["appels-liam", "appels-sid"]), [])
+        self.assertEqual(self.PA.en_panne(agents, datetime(2026, 11, 16, 8, 0), 15, actifs=["appels-liam", "appels-sid"]), [("appels-sid", "07:30")], "lundi 16 : appels-sid attendu, appels-liam pas encore")
         self.assertEqual(self.PA.taches_serveur()["appels-liam"]["actif_le"], "2026-11-17")
+
+
+class EnAttentePasEnPanne(unittest.TestCase):
+    """22/11/2026 : « Panne : interim — aucune exécution aujourd'hui » reçue deux jours de suite alors que Liam n'a jamais dit « go interim » (agent absent de
+    agents_actifs, verrou go_interim fermé). Un agent pas encore ouvert est EN ATTENTE, pas en panne : aucune alerte, aucun message Discord."""
+    TACHES = {"interim": {"heure": "07:30", "jours": [0, 1, 2, 3, 4]}, "relances": {"heure": "08:30", "jours": [0, 1, 2, 3, 4]}}
+    AGENTS = [{"nom": "interim", "planifie": True, "horaire": "chaque jour à 07:30", "dernier_passage": ""},
+              {"nom": "relances", "planifie": True, "horaire": "chaque jour à 08:30", "dernier_passage": ""}]
+    MARDI_MIDI = datetime(2026, 11, 17, 12, 0)
+
+    def setUp(self):
+        self.PA = C.agent("panne-alerte"); self.tmp = Path(tempfile.mkdtemp())
+        self.ancien_ici = self.PA.ICI; self.PA.ICI = self.tmp   # dossier de réglages FACTICE : les vrais réglages ne sont ni lus ni écrits
+        self.PA.ETAT, self.PA.JOURNAL = self.tmp / "etat.json", self.tmp / "journal.log"
+
+    def tearDown(self): self.PA.ICI = self.ancien_ici
+
+    def reglages(self, nom, contenu, local=False):
+        suffixe = "-config.local.json" if local else "-config.json"   # réglages FACTICES dans un dossier temporaire : jamais les vrais fichiers de la machine
+        (self.tmp / (nom + suffixe)).write_text(json.dumps(contenu), encoding="utf-8")
+
+    def test_absent_de_agents_actifs_jamais_en_panne(self):
+        self.assertTrue(self.PA.en_attente("interim", actifs=["relances"]), "hors agents_actifs : en attente")
+        self.assertFalse(self.PA.en_attente("relances", actifs=["relances"]))
+        self.assertEqual(self.PA.en_panne(self.AGENTS, self.MARDI_MIDI, 15, self.TACHES, actifs=["relances"]), [("relances", "08:30")],
+                         "seul relances est signalé : interim n'est pas dans agents_actifs")
+
+    def test_verrou_go_ferme_jamais_en_panne(self):
+        self.reglages("interim", {"go_interim": False, "envoi_automatique": False})
+        self.reglages("relances", {"envoi_automatique": True})
+        self.assertTrue(self.PA.en_attente("interim", actifs=["interim", "relances"]), "verrou go_interim fermé : en attente")
+        self.assertEqual(self.PA.en_panne(self.AGENTS, self.MARDI_MIDI, 15, self.TACHES, actifs=["interim", "relances"]), [("relances", "08:30")])
+
+    def test_verrou_go_ouvert_redevient_une_panne(self):
+        self.reglages("interim", {"go_interim": True, "envoi_automatique": True})
+        self.assertFalse(self.PA.en_attente("interim", actifs=["interim"]), "« go interim » donné : l'agent doit tourner, un silence est une vraie panne")
+        self.assertEqual(self.PA.en_panne(self.AGENTS, self.MARDI_MIDI, 15, self.TACHES, actifs=["interim"]), [("interim", "07:30")])
+
+    def test_verrou_ouvert_dans_la_variante_locale_commune(self):
+        """Verrou commun des superviseurs : « go » posé une seule fois dans la variante locale du fichier commun, alors que le fichier versionné de l'agent dit false."""
+        self.reglages("superviseurs", {"go_superviseurs": False})
+        self.reglages("superviseur-vente", {"go_superviseurs": False})
+        self.reglages("superviseurs", {"go_superviseurs": True}, local=True)
+        self.assertFalse(self.PA.en_attente("superviseur-vente", actifs=["superviseur-vente"]),
+                         "le défaut false du fichier de l'agent ne doit pas écraser le « go » de la variante locale commune")
+
+    def test_aucune_alerte_discord_pour_un_agent_en_attente(self):
+        self.PA.construire_agents = lambda: [self.AGENTS[0]]
+        self.PA.taches_serveur = lambda: self.TACHES
+        envoyes = []; self.PA.alerter_discord = lambda t: envoyes.append(t) or True
+        with redirect_stdout(io.StringIO()) as f:
+            self.PA.cmd_verifier({"envoi_automatique": True, "grace_minutes": 15}, False, self.MARDI_MIDI)
+        self.assertEqual(envoyes, [], "interim en attente : rien n'est posté sur Discord")
+        self.assertIn("Aucune panne", f.getvalue())
+
+    def test_liste_vide_aucun_jugement(self):
+        self.assertFalse(self.PA.en_attente("interim", actifs=[]), "machine sans réglage B2B : on ne déclare personne en attente")
 
 
 class AppelsSidFeuille(unittest.TestCase):

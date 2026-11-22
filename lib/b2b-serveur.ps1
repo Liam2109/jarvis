@@ -74,19 +74,26 @@ function Get-B2BTaches([string]$racine) {
     $plan.taches = $liste
     $plan
 }
-function Sync-B2BTaches([string]$racine) {
+function Sync-B2BTaches([string]$racine, [switch]$SeulementManquantes) {
     # (Re)crée les tâches des agents actifs, retire celles des agents qui ne le sont plus. Retourne un résumé (vide : rien à dire).
+    # -SeulementManquantes (rattrapage de maj-auto quand le serveur est DÉJÀ à jour, toutes les 10 min) : seules les tâches ABSENTES sont créées et les tâches
+    # en trop retirées ; une tâche existante n'est jamais réenregistrée (son intervalle « toutes les N min » repartirait de zéro à chaque passage, donc un agent
+    # à 30 min ne tournerait jamais) et rien n'est dit quand il n'y a rien à faire (pas une ligne de journal toutes les 10 min).
     $plan = Get-B2BTaches $racine; $dit = @()
     $existantes = @(Get-B2BTachesExistantes | Where-Object { $_ -like "$($script:PrefixeTacheB2B)*" })
     if (-not $plan.ok) {
         if ($plan.autreMachine) { foreach ($n in $existantes) { Unregister-TacheB2B $n; $dit += "B2B : tâche $n retirée ($($plan.raison))" } }
-        elseif ((Get-B2BConfigLocale $racine).presente) { $dit += "B2B : aucune tâche ($($plan.raison))" }
+        elseif (-not $SeulementManquantes -and (Get-B2BConfigLocale $racine).presente) { $dit += "B2B : aucune tâche ($($plan.raison))" }
     } else {
-        foreach ($t in $plan.taches) { Register-TacheB2B $t; $dit += "B2B : tâche $($t.nom) $(if ($t.heure) { "chaque jour à $($t.heure)$(if ($t.PSObject.Properties['heures_en_plus'] -and @($t.heures_en_plus).Count) { ', ' + (@($t.heures_en_plus) -join ', ') })$(if ($t.PSObject.Properties['lundi'] -and $t.lundi) { " et le lundi à $($t.lundi)" })" } else { "toutes les $($t.minutes) min" }) créée ou mise à jour$(if (Test-B2BSimulation) { ' (simulation)' })" }
+        foreach ($t in $plan.taches) {
+            if ($SeulementManquantes -and ($t.nom -in $existantes)) { continue }
+            Register-TacheB2B $t; $dit += "B2B : tâche $($t.nom) $(if ($t.heure) { "chaque jour à $($t.heure)$(if ($t.PSObject.Properties['heures_en_plus'] -and @($t.heures_en_plus).Count) { ', ' + (@($t.heures_en_plus) -join ', ') })$(if ($t.PSObject.Properties['lundi'] -and $t.lundi) { " et le lundi à $($t.lundi)" })" } else { "toutes les $($t.minutes) min" }) créée ou mise à jour$(if (Test-B2BSimulation) { ' (simulation)' })" }
         $voulues = @($plan.taches | ForEach-Object { $_.nom })
         foreach ($n in $existantes) { if ($n -notin $voulues) { Unregister-TacheB2B $n; $dit += "B2B : tâche $n retirée (agent non actif)" } }
-        foreach ($w in $plan.avertissements) { $dit += "B2B : $w" }
-        if (-not $plan.taches.Count) { $dit += 'B2B : aucun agent actif dans agents_actifs : aucune tâche (tout est éteint par défaut)' }
+        if (-not $SeulementManquantes) {
+            foreach ($w in $plan.avertissements) { $dit += "B2B : $w" }
+            if (-not $plan.taches.Count) { $dit += 'B2B : aucun agent actif dans agents_actifs : aucune tâche (tout est éteint par défaut)' }
+        }
     }
     $dit -join "`n"
 }

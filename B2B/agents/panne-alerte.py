@@ -6,7 +6,9 @@ Même modèle que les autres agents B2B : réglages (panne-alerte-config.json), 
   python agents\\panne-alerte.py verifier [--a-blanc]    une vérification (agents à heure fixe seulement, ex. appels-sid 07:30, resume-sid 19:30) ; lancé périodiquement par la tâche planifiée
   python agents\\panne-alerte.py etat                    dernières pannes alertées (ou simulées) aujourd'hui
 
-Un agent à « toutes_minutes » (devis, rendez-vous, reponses, prospection, stripe-alerte) n'est pas concerné : il n'a pas d'heure unique à manquer."""
+Un agent à « toutes_minutes » (devis, rendez-vous, reponses, prospection, stripe-alerte) n'est pas concerné : il n'a pas d'heure unique à manquer.
+Jamais d'alerte pour un agent EN ATTENTE (22/11/2026) : absent de agents_actifs, ou verrou « go_* » fermé dans ses réglages (ex. go_interim tant que Liam n'a pas
+dit « go interim »). Il n'est pas cassé, il n'est pas encore ouvert : même règle que les superviseurs et le surveillant du harness."""
 import argparse, importlib.util, json, re, sys
 from datetime import date, datetime
 from pathlib import Path
@@ -91,6 +93,24 @@ def jours_contrat(nom):
     except (OSError, ValueError, KeyError): return None
 
 
+def en_attente(nom, actifs=None):
+    """Vrai si l'agent n'est PAS censé tourner sur cette machine : absent de agents_actifs (Liam ne l'a pas encore ouvert), ou verrou « go_* » fermé dans ses
+    réglages (ex. go_interim tant que Liam n'a pas dit « go interim »). Un agent en attente n'est jamais une panne (22/11/2026) : il attend, il n'est pas cassé.
+    Aucun contenu de fichier de réglages n'est lu autrement que pour ces clés « go_* » (booléens), jamais affiché."""
+    try:
+        liste = set(M.agents_actifs()) if actifs is None else set(actifs)
+    except M.ErreurLocale: return False   # réglages locaux illisibles : on ne déclare personne en attente à tort
+    if liste and nom not in liste: return True   # liste vide (machine sans réglage B2B) : on ne juge pas, c'est la machine qui n'est pas un serveur
+    conf, fichiers = {}, [f for f in (ICI / "superviseurs-config.json", ICI / f"{nom}-config.json") if f.exists()]
+    try:
+        for f in fichiers:   # même ordre que B2B/harness/superviseurs.py : les DEUX fichiers versionnés d'abord, puis les DEUX variantes locales (sinon le défaut
+            conf.update({k: v for k, v in json.loads(f.read_text(encoding="utf-8-sig")).items() if not k.startswith("_")})   # « false » du fichier de l'agent écraserait le « go » posé dans la variante locale commune)
+        for f in fichiers: M.surcharge_locale(f, conf)
+    except (OSError, ValueError, M.ErreurLocale): return False
+    gos = [k for k in conf if k.startswith("go_")]
+    return bool(gos) and not all(conf[k] is True for k in gos)
+
+
 def attendu_ce_jour(nom, jour, taches, jours=None):
     """Faux avant la date d'activation (actif_le) et hors des jours prévus (tâche, sinon contrat) : week-end d'un agent des jours ouvrés = aucune alerte (15/11/2026)."""
     t = taches.get(nom) or {}
@@ -99,15 +119,20 @@ def attendu_ce_jour(nom, jour, taches, jours=None):
     return js is None or jour.weekday() in js
 
 
-def en_panne(agents, maintenant, grace_minutes, taches=None, jours=None):
+def en_panne(agents, maintenant, grace_minutes, taches=None, jours=None, actifs=None):
     """-> [(nom, heure)] des agents actifs, planifiés à heure fixe (ex. « chaque jour à 07:30 »), dont l'heure + délai de grâce est dépassée sans passage aujourd'hui.
-    Jamais un agent pas encore actif (actif_le de serveur-taches.json) ni hors de ses jours (contrat : lundi-vendredi -> rien le samedi et le dimanche). `jours` (tests) : {nom: [jours]}."""
+    Jamais un agent pas encore actif (actif_le de serveur-taches.json), hors de ses jours (contrat : lundi-vendredi -> rien le samedi et le dimanche),
+    ni EN ATTENTE (absent de agents_actifs ou verrou « go_* » fermé). `jours` (tests) : {nom: [jours]} ; `actifs` (tests) : liste agents_actifs."""
     j = maintenant.date().isoformat(); minute_actuelle = maintenant.hour * 60 + maintenant.minute
     taches = taches_serveur() if taches is None else taches
+    if actifs is None:
+        try: actifs = set(M.agents_actifs())
+        except M.ErreurLocale: actifs = None   # réglages locaux illisibles : en_attente() ne déclare personne en attente à tort
     out = []
     for a in agents:
         if not a.get("planifie"): continue
         if (taches.get(a["nom"]) or {}).get("desactive"): continue   # agent désactivé (serveur-taches.json, ex. appels-liam le 18/11/2026) : jamais d'alerte « Panne »
+        if en_attente(a["nom"], actifs): continue   # hors agents_actifs ou verrou « go_* » fermé (ex. interim le 22/11/2026) : en attente, pas en panne
         if not attendu_ce_jour(a["nom"], maintenant.date(), taches, (jours or {}).get(a["nom"]) if jours is not None else None): continue
         m = re.match(r"chaque jour à (\d{2}):(\d{2})$", str(a.get("horaire") or ""))
         if not m: continue

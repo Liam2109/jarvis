@@ -20,7 +20,9 @@
  "fichiers_lus": [
   "outils/agents-json.py",
   "journaux des agents",
-  "B2B/agents/serveur-taches.json"
+  "B2B/agents/serveur-taches.json",
+  "B2B/agents/b2b.local.json (agents_actifs)",
+  "B2B/agents/<agent>-config.json et sa variante locale (verrous go_*, booléens seulement)"
  ],
  "fichiers_ecrits": [
   "B2B/agents/panne-alerte-etat.json",

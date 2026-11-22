@@ -93,14 +93,14 @@ Créer chaque jour ouvré à 07:30 le tableur « Appels Sid AAAA-MM-JJ » de Sid
 - `tests/agents/test_appels_sid.py` : pas encore lancé par `generer-fiches.py --tests`
 - `tests/agents/test_appels_registre.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** 2026-11-21 07:30 ok · **Dernière erreur :** 2026-11-20 07:39 stock (stock bas : 331 entreprise(s) neuve(s), moins de 3 jours de listes (seuil 345)) · **Dans agents_actifs (cette machine) :** oui
+**Dernière trace :** 2026-11-22 07:30 ok · **Dernière erreur :** 2026-11-20 07:39 stock (stock bas : 331 entreprise(s) neuve(s), moins de 3 jours de listes (seuil 345)) · **Dans agents_actifs (cette machine) :** oui
 
 ### Historique (5 dernières traces, sans données client)
+- 2026-11-22 07:30 | jour | ok | 0.35 s
 - 2026-11-21 07:30 | jour | ok | 0.29 s
 - 2026-11-20 07:39 | jour | ok | 565.49 s
 - 2026-11-20 07:39 | stock | ERREUR (stock bas : 331 entreprise(s) neuve(s), moins de 3 jours de listes (seuil 345)) | 0.0 s
 - 2026-11-19 07:45 | jour | ok | 938.23 s
-- 2026-11-19 07:45 | stock | ERREUR (stock bas : 330 entreprise(s) neuve(s), moins de 3 jours de listes (seuil 345)) | 0.0 s
 <!-- DYNAMIQUE:FIN -->
 
 ## Skill et règles
