@@ -11,7 +11,8 @@ Lire ce fichier, puis **seulement** la note du sujet en cours (jamais tous les d
 | Domaine | Lire |
 |---|---|
 | Règles de toute session (ne jamais lancer Jarvis, tests silencieux, `.env`, permissions) | CLAUDE |
-| Démarrer/arrêter Jarvis, raccourcis, voix, mémoire, Discord | README |
+| Démarrer/arrêter Jarvis, raccourcis, voix, mémoire, Discord (court) | README |
+| Fonctionnalités avancées/désactivées de Jarvis (veille marché, train, presets, pilotage…) | README-DETAIL |
 | Réglages | `config.json` (suivi par git) + `config.local.json` (cette machine, hors git) |
 | Journal du jour / mémoire de Jarvis | `logs\journal-AAAA-MM-JJ.md` · `memoire\todo.md`, `notes.md`, `resume.md` |
 | Agence B2B : règles permanentes, style des sites, ressources PC | B2B/CLAUDE |
