@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """Fiches Obsidian des agents (15/11/2026, un seul graphe depuis 20 h) : la fiche détaillée de chaque contrat est écrite DANS sa note
 docs\\agents\\<nom de la note>.md (correspondance : B2B\\harness\\fiches-noms.json ; null = pas de note). La note « 🧠 Jarvis (CEO) » reçoit
-en plus les responsables et l'organigramme (Mermaid). Copie de chaque skill (.claude\\skills\\<skill>\\SKILL.md -> docs\\agents\\skills\\<skill>.md).
+en plus les responsables et l'organigramme (Mermaid). Graphe en arbre (22/11/2026) : Jarvis (CEO) -> les 4 superviseurs de domaine -> leurs agents
+(AGENTS_SUIVIS) ; les agents sans domaine restent liés directement au CEO. Ces liens sont à la main dans « Liens et décisions » ; --verifier les contrôle (liens_arbre). Copie de chaque skill (.claude\\skills\\<skill>\\SKILL.md -> docs\\agents\\skills\\<skill>.md).
 Lecture seule du code, sans réseau ni IA. Règle du graphe : la partie générée ne contient AUCUN lien [[...]] (chemins en texte simple).
 Dans le frontmatter, seules les clés statut, mode, horaire, tags sont réécrites (les autres restent) ; seule la partie entre
 <!-- GENERE:DEBUT --> et <!-- GENERE:FIN --> est réécrite ; les zones « Liens et décisions » et « Notes de Liam » qui suivent sont conservées.
 Le bloc DYNAMIQUE (derniers tests, dernières traces) change d'une machine à l'autre : il n'entre pas dans la vérification.
   python B2B\\harness\\generer-fiches.py              régénère les fiches
   python B2B\\harness\\generer-fiches.py --tests      lance d'abord les tests des contrats (JARVIS_TEST=1) et note leur résultat (B2B\\logs\\agents\\_tests-fiches.json, hors git)
-  python B2B\\harness\\generer-fiches.py --verifier   code 1 si une fiche manque ou n'est pas à jour, ou si un agent actif n'a pas de skill (rien n'est écrit)"""
+  python B2B\\harness\\generer-fiches.py --verifier   code 1 si une fiche manque ou n'est pas à jour, si un agent actif n'a pas de skill, ou si l'arbre des liens est faux (rien n'est écrit)"""
 import argparse, json, os, re, subprocess, sys, time
 from pathlib import Path
 
@@ -18,6 +19,7 @@ sys.path.insert(0, str(ICI))
 import traces as T   # noqa: E402
 import rapport as R   # noqa: E402
 from valider import valider   # noqa: E402
+from domaines import domaines   # noqa: E402  agents de chaque superviseur de domaine (AGENTS_SUIVIS)
 
 CONTRATS, SKILLS = ICI / "contrats", RACINE / ".claude" / "skills"
 SORTIE = RACINE / "docs" / "agents"; COPIES = SORTIE / "skills"; NOMS_JSON = ICI / "fiches-noms.json"
@@ -323,6 +325,21 @@ def copies_skills(): return {COPIES / f"{p.parent.name}.md": sans_liens(p.read_t
 def lire(p): return p.read_text(encoding="utf-8") if p.is_file() else None
 
 
+def liens_arbre(n):
+    """Arbre du graphe Obsidian (22/11/2026) : un agent suivi par un superviseur est lié depuis la note de SON superviseur, et plus depuis « 🧠 Jarvis (CEO) ».
+    Ces liens vivent dans la zone « Liens et décisions », conservée à chaque régénération (la partie générée n'a aucun lien) : écrits à la main, ce contrôle les garde justes."""
+    pb = []; ceo_nom = n.get("jarvis-ceo"); ceo = lire(SORTIE / f"{ceo_nom}.md") or ""
+    for sup, (d, agents) in domaines().items():
+        s = lire(SORTIE / f"{n[sup]}.md") if n.get(sup) else None
+        if s is None: pb.append(f"note du superviseur absente : {n.get(sup) or sup}"); continue
+        if f"|{ceo_nom}]]" not in s: pb.append(f"{n[sup]} : aucun lien vers « {ceo_nom} » dans « Liens et décisions »")
+        for a in agents:
+            if not n.get(a): continue
+            if f"|{n[a]}]]" not in s: pb.append(f"{n[sup]} : lien manquant vers « {n[a]} » (agent du domaine {d})")
+            if f"|{n[a]}]]" in ceo: pb.append(f"{ceo_nom} : lien direct vers « {n[a]} » à retirer (cet agent dépend de « {n[sup]} »)")
+    return pb
+
+
 def verifier(cs):
     schema = json.loads((ICI / "contrat.schema.json").read_text(encoding="utf-8")); ts = taches(); pb = []
     n, cb = cibles(cs); copies = copies_skills()
@@ -336,6 +353,7 @@ def verifier(cs):
         if lire(p) != t: pb.append(f"copie de skill absente ou pas à jour : {p.relative_to(RACINE)}")
     pc = SORTIE / f"{NOTE_CHAINE}.md"; a = lire(pc)
     if a is None or FIN not in a or a.split(FIN, 1)[0] != note_chaine(cs, ts, a).split(FIN, 1)[0]: pb.append(f"note de la chaîne vidéo absente ou pas à jour : {pc.relative_to(RACINE)}")
+    pb += liens_arbre(n)
     for c in cs:
         if c["statut"] in ("actif", "simulation"):
             pb += [f"agent actif sans skill : {c['nom']} (.claude/skills/{s}/SKILL.md)" for s in skills_de(c["nom"]) if not (SKILLS / s / "SKILL.md").is_file()]

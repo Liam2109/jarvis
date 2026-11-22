@@ -103,7 +103,8 @@ Toutes les 30 min : relit les fichiers de sites presents dans le depot (liens ca
 
 _Zone conservée à chaque régénération : liens vers docs\decisions et docs clés seulement._
 
-Liens : aucun pour l'instant.
+Rattaché à : [[docs/agents/🧠 Jarvis (CEO)|🧠 Jarvis (CEO)]]
+Agents suivis (Sites) : [[docs/agents/🌐 Page exemple|🌐 Page exemple]]
 
 ## Notes de Liam
 

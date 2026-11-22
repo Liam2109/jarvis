@@ -102,7 +102,8 @@ Toutes les 30 min : le tri du courrier des agences tourne-t-il, reste-t-il en le
 
 _Zone conservée à chaque régénération : liens vers docs\decisions et docs clés seulement._
 
-Liens : aucun pour l'instant.
+Rattaché à : [[docs/agents/🧠 Jarvis (CEO)|🧠 Jarvis (CEO)]]
+Agents suivis (Mail) : [[docs/agents/🌙 Intérim nuit|🌙 Intérim nuit]]
 
 ## Notes de Liam
 

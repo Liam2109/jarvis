@@ -1,5 +1,5 @@
 {
- "_lisez-moi": "Agent (nom du contrat) -> nom de sa note dans docs\\agents (sans .md). null = pas de note (agent retiré). Nouvel agent : contrat + une entrée ici + un lien dans « 🧠 Jarvis (CEO) ».",
+ "_lisez-moi": "Agent (nom du contrat) -> nom de sa note dans docs\\agents (sans .md). null = pas de note (agent retiré). Nouvel agent : contrat + une entrée ici + un lien dans la note de son superviseur de domaine (« Liens et décisions ») s'il est dans AGENTS_SUIVIS d'un superviseur, sinon dans « 🧠 Jarvis (CEO) » ; jamais les deux (graphe en arbre, contrôlé par generer-fiches.py --verifier).",
  "page-exemple": "🌐 Page exemple",
  "reponses": "💬 Réponses",
  "stripe-alerte": "💶 Alerte Stripe",

@@ -105,7 +105,8 @@ Toutes les 30 min : les agents de la prospection ont-ils tourne, un prospect est
 
 _Zone conservée à chaque régénération : liens vers docs\decisions et docs clés seulement._
 
-Liens : aucun pour l'instant.
+Rattaché à : [[docs/agents/🧠 Jarvis (CEO)|🧠 Jarvis (CEO)]]
+Agents suivis (Prospection) : [[docs/agents/☎️ Relances leads|☎️ Relances leads]] · [[docs/agents/📞 Appels Sid|📞 Appels Sid]] · [[docs/agents/🔎 Prospection|🔎 Prospection]]
 
 ## Notes de Liam
 

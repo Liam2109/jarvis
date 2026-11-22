@@ -2,7 +2,8 @@
 """Vérifie le graphe Obsidian (15/11/2026, « un seul graphe ») : lecture seule, sans réseau ni IA.
 Périmètre : INDEX.md, docs\\agents\\*.md (sans les copies de skills, orphelines et masquées), docs\\decisions\\*.md et les docs clés qu'ils citent.
   1. aucun lien [[...]] ne pointe vers une note inexistante ;
-  2. une note d'agent (sauf « 🧠 Jarvis (CEO) ») ne contient aucun lien vers un autre agent, un responsable ou un skill ;
+  2. graphe en arbre (22/11/2026) : seule « 🧠 Jarvis (CEO) » cite librement des agents ; une note de superviseur de domaine ne cite que le CEO
+     et les agents de son domaine (B2B\harness\domaines.py, lu dans AGENTS_SUIVIS) ; toute autre note d'agent ne cite aucun agent, responsable ni skill ;
   3. les liens [[docs/decisions/...]] de chaque note sont identiques à ceux du dernier commit (git HEAD) ;
   4. le graphe forme UNE seule composante connexe.
   python B2B\\harness\\graphe.py      code 1 si un point échoue"""
@@ -10,6 +11,8 @@ import re, subprocess, sys
 from pathlib import Path
 
 RACINE = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from domaines import liens_permis   # noqa: E402  arbre des liens permis par superviseur de domaine
 AGENTS, DECISIONS = RACINE / "docs" / "agents", RACINE / "docs" / "decisions"
 CEO = AGENTS / "🧠 Jarvis (CEO).md"
 LIEN = re.compile(r"!?\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|[^\]]*)?\]\]")
@@ -39,7 +42,7 @@ def perimetre():
 
 
 def verifier():
-    notes = toutes_notes(); par_nom = {}
+    notes = toutes_notes(); par_nom = {}; permis = liens_permis()
     for n in sorted(notes, key=len): par_nom.setdefault(Path(n).stem.casefold(), []).append(n)
     pb, aretes, noeuds = [], {}, set(perimetre())
     for n in perimetre():
@@ -50,7 +53,8 @@ def verifier():
             r = resoudre(c, notes, par_nom)
             if r is None: pb.append(f"lien vers une note inexistante : [[{c}]] dans {n}"); continue
             aretes.setdefault(n, set()).add(r); aretes.setdefault(r, set()).add(n); noeuds.add(r)
-            if n.startswith("docs/agents/") and p != CEO and (r.startswith("docs/agents/") or r.startswith("B2B/docs/agents/") or "/skills/" in r):
+            if (n.startswith("docs/agents/") and p != CEO and r not in permis.get(n, ())
+                    and (r.startswith("docs/agents/") or r.startswith("B2B/docs/agents/") or "/skills/" in r)):
                 pb.append(f"lien interdit (agent, responsable ou skill) : [[{c}]] dans {n}")
         avant = git("show", f"HEAD:{n}")
         if avant is not None:

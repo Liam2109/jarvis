@@ -103,7 +103,8 @@ Toutes les 30 min : les agents de la vente ont-ils tourne, leurs donnees se cont
 
 _Zone conservée à chaque régénération : liens vers docs\decisions et docs clés seulement._
 
-Liens : aucun pour l'instant.
+Rattaché à : [[docs/agents/🧠 Jarvis (CEO)|🧠 Jarvis (CEO)]]
+Agents suivis (Vente) : [[docs/agents/🧾 Devis|🧾 Devis]] · [[docs/agents/📊 Chiffres serveur|📊 Chiffres serveur]] · [[docs/agents/💶 Alerte Stripe|💶 Alerte Stripe]] · [[docs/agents/📅 Rendez-vous|📅 Rendez-vous]] · [[docs/agents/💬 Réponses|💬 Réponses]]
 
 ## Notes de Liam
 
