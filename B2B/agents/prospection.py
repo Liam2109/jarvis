@@ -42,7 +42,7 @@ DEPARTEMENTS = ZN.departements_ouverts(4)   # tous les départements de l'annuai
 def depts_ouverts():
     return ZN.departements_ouverts()
 PETITS = "NN,00,01,02,03,11"  # sans salarié à moins de 20 : artisans, pas de grands groupes
-DEFAUT = {"par_boite_par_jour": 10, "reseaux_par_jour": 10, "pause_envoi_s": [90, 300], "cible_trouves": 30, "max_examinees": 300, "osm_requetes_par_passage": 3, "pause_overpass_s": 15, "osm_max_examinees": 40, "osm_max_jour": 300, "decouverte_places": False, "places_max_jour": 30, "places_requetes_par_passage": 1, "pause_site_s": 3, "rayon_osm_m": 40000, "appels_par_jour": 100, "liste_appels_heure": "08:00", "liste_appels_md": False, "decouverte_osm": False, "formulaires_par_jour": 10, "pagespeed_par_jour": 30, "seuil_pagespeed": 50, "lent_secondes": 4, "lourd_octets": 1500000,
+DEFAUT = {"par_boite_par_jour": 10, "reseaux_par_jour": 10, "pause_envoi_s": [90, 300], "cible_trouves": 30, "max_examinees": 300, "duree_max_etape_s": 900, "sauvegarde_tous": 10, "osm_requetes_par_passage": 3, "pause_overpass_s": 15, "osm_max_examinees": 40, "osm_max_jour": 300, "decouverte_places": False, "places_max_jour": 30, "places_requetes_par_passage": 1, "pause_site_s": 3, "rayon_osm_m": 40000, "appels_par_jour": 100, "liste_appels_heure": "08:00", "liste_appels_md": False, "decouverte_osm": False, "formulaires_par_jour": 10, "pagespeed_par_jour": 30, "seuil_pagespeed": 50, "lent_secondes": 4, "lourd_octets": 1500000,
           "recherches_reseaux_par_jour": 40, "ans_site_vieux": 4, "envoi_automatique": False, "ecoute_max_heures": 12, "ecoute_pause_s": 60,
           "heure_limite": "17:00", "lot_attendre_les_deux_boites": False, "seuil_faiblesse": 25, "mesure_images": True, "verifier_sitemap": False, "montee_pas": 10, "montee_plafond": 50, "taux_alerte_retours": 0.05, "plaintes_max": 1, "retours_min_envois": 20,
           "quota_par_boite": 10, "cycle_minutes": 10, "recul_max_minutes": 60, "lot_min_emails": 5, "epuise_apres": 3, "seuil_vague": 15}
@@ -82,6 +82,37 @@ def etat_lire():
 
 def etat_ecrire(e, a_blanc):
     if not a_blanc: ETAT.write_text(json.dumps(e, ensure_ascii=False, indent=1), encoding="utf-8")
+
+
+# --- durée maximale par étape et enregistrement au fil de l'eau (23/11/2026) ----------------------------------------------------------------
+# Une étape de recherche (annuaire, OpenStreetMap, Places) s'arrête d'elle-même après duree_max_etape_s secondes (0 ou absent = sans limite) et écrit l'état et
+# prospection-trouves.csv toutes les sauvegarde_tous entreprises : un passage tué ou en panne ne perd pas ce qui est déjà trouvé.
+horloge = time.monotonic
+
+
+def delai_depasse(debut, conf):
+    """Vrai si l'étape commencée à `debut` (horloge()) a dépassé conf["duree_max_etape_s"] ; 0 ou absent = sans limite."""
+    d = conf.get("duree_max_etape_s") or 0
+    return bool(d) and horloge() - debut >= d
+
+
+def sauver_au_fil(etat, garde, nouveaux, a_blanc):
+    """Écrit prospection-trouves.csv (déjà gardées + nouvelles) et l'état ; à blanc : rien."""
+    if a_blanc: return
+    ecrire_trouves(garde + nouveaux); etat_ecrire(etat, False)
+
+
+def naf_du_metier(metier):
+    return next((naf for naf, m in NAF_BATIMENT + NAF_COMMERCES if m == metier), "")
+
+
+def rendre_au_tampon(etat, cands):
+    """Entreprises livrées par l'annuaire mais pas examinées : ni « vues » ni perdues, elles repartent en tête du tampon de leur code NAF."""
+    par_naf = {}
+    for c in cands:
+        etat["vus"].pop(c["siren"], None); par_naf.setdefault(naf_du_metier(c["metier"]), []).append(c)
+    for naf, liste in par_naf.items():
+        t = etat.setdefault("tampon", {}); t[naf] = liste + t.get(naf, [])
 
 
 def aujourdhui(): return str(date.today())
@@ -777,21 +808,34 @@ def cmd_chercher(a_blanc, conf):
     nouveaux, vus_n, raisons, stats = [], 0, {}, {}
     budget = max(0, conf["max_examinees"] - examinees_jour(etat))   # plafond de l'annuaire : par jour (n'arrête pas la découverte OpenStreetMap)
     if not budget: print(f"  Annuaire : plafond du jour atteint ({conf['max_examinees']} examinées), passage sauté")
-    while len(nouveaux) < conf["cible_trouves"] and vus_n < budget:
-        lot = candidats(etat, min(25, budget - vus_n))
-        if not lot: break
-        for c in lot:
-            vus_n += 1
-            if c["siren"] in deja: continue
-            st = {}
-            ligne, motif = enrichir(c, etat, conf, stat=st)
-            if ligne and (S.cle(ligne) in cles or ligne["email"].lower() in mails): ligne, motif = None, "exclu (STOP ou refus)"
-            elif ligne and ZN.cp_hors_zone(ligne.get("cp", "")): ligne, motif = None, "hors zone"
-            elif ligne and (mx := motif_exclusion(ligne["nom"], ligne["email"], ligne.get("site_actuel", ""), partages_connus(garde + nouveaux))): ligne, motif = None, mx
-            compter(stats, c["metier"], st)
-            if ligne: nouveaux.append(ligne); print(f"  + {ligne['nom']} ({ligne['ville']}) : {ligne['email'] or ('formulaire ' + ligne['formulaire'] if ligne.get('formulaire') else ligne['facebook'] or ligne['linkedin'])}")
-            else: etat["vus"][c["siren"]] = motif; raisons[motif] = raisons.get(motif, 0) + 1
-            if len(nouveaux) >= conf["cible_trouves"]: break
+    debut, arret, restants = horloge(), False, []; chaque = conf.get("sauvegarde_tous") or 0
+
+    def instantane():   # copie de l'état où les entreprises livrées mais pas encore examinées sont rendues au tampon (un passage tué n'en perd aucune)
+        e = json.loads(json.dumps(etat)); rendre_au_tampon(e, restants); return e
+    try:
+        while len(nouveaux) < conf["cible_trouves"] and vus_n < budget and not arret:
+            lot = candidats(etat, min(25, budget - vus_n))
+            if not lot: break
+            restants = list(lot)
+            for j, c in enumerate(lot):
+                if delai_depasse(debut, conf):
+                    arret = True; print(f"  Annuaire : durée maximale de l'étape atteinte ({conf['duree_max_etape_s']} s), arrêt ; {len(restants)} entreprise(s) remise(s) en réserve"); break
+                restants = lot[j:]; vus_n += 1
+                if c["siren"] in deja: restants = lot[j + 1:]; continue
+                st = {}
+                ligne, motif = enrichir(c, etat, conf, stat=st)
+                if ligne and (S.cle(ligne) in cles or ligne["email"].lower() in mails): ligne, motif = None, "exclu (STOP ou refus)"
+                elif ligne and ZN.cp_hors_zone(ligne.get("cp", "")): ligne, motif = None, "hors zone"
+                elif ligne and (mx := motif_exclusion(ligne["nom"], ligne["email"], ligne.get("site_actuel", ""), partages_connus(garde + nouveaux))): ligne, motif = None, mx
+                compter(stats, c["metier"], st)
+                if ligne: nouveaux.append(ligne); print(f"  + {ligne['nom']} ({ligne['ville']}) : {ligne['email'] or ('formulaire ' + ligne['formulaire'] if ligne.get('formulaire') else ligne['facebook'] or ligne['linkedin'])}")
+                else: etat["vus"][c["siren"]] = motif; raisons[motif] = raisons.get(motif, 0) + 1
+                restants = lot[j + 1:]
+                if chaque and vus_n % chaque == 0: sauver_au_fil(instantane(), garde, nouveaux, a_blanc)
+                if len(nouveaux) >= conf["cible_trouves"]: break
+    except BaseException:
+        sauver_au_fil(instantane(), garde, nouveaux, a_blanc); raise   # panne : ce qui est trouvé est gardé, l'entreprise en cause revient dans le tampon
+    rendre_au_tampon(etat, restants)
     print(f"{vus_n} entreprise(s) examinée(s), {len(nouveaux)} avec contact public" + (" ; écartées : " + ", ".join(f"{v} {k}" for k, v in raisons.items()) if raisons else ""))
     print(rapport_texte(stats, "Rapport de ce passage"))
     PASSAGE["annuaire"] = {"metier": ", ".join(sorted(stats)) or "-", "commune": "-", "elements": vus_n, "emails": sum(1 for l in nouveaux if l.get("email"))}
@@ -1758,8 +1802,9 @@ def cmd_decouvrir(a_blanc, conf, ouvrir=urllib.request.urlopen, lire=lire_page, 
     deja = {S.cle(l) for l in garde}; adresses = {l["email"].lower() for l in garde if l["email"]}; n_req = 0; ident_osm, _ = R.charger_identite()
     budget = max(0, min(conf["osm_max_examinees"], conf["osm_max_jour"] - examinees_jour(etat, "stats_osm"))); reqs = []   # compteur du jour propre à OpenStreetMap
     if not budget: print(f"  OpenStreetMap : plafond du jour atteint ({conf['osm_max_jour']} examinées), passage sauté")
+    debut = horloge(); chaque = conf.get("sauvegarde_tous") or 0
     for z, lab, tags, k in list(requetes_osm(etat)) if budget else []:
-        if n_req >= conf["osm_requetes_par_passage"] or len(tampon) >= conf["osm_max_examinees"] * 3: break
+        if n_req >= conf["osm_requetes_par_passage"] or len(tampon) >= conf["osm_max_examinees"] * 3 or delai_depasse(debut, conf): break
         if n_req: dormir(conf["pause_overpass_s"])
         try: data = appel_overpass(requete_overpass(tags, z, conf), ouvrir, dormir)
         except Exception as e:
@@ -1771,10 +1816,12 @@ def cmd_decouvrir(a_blanc, conf, ouvrir=urllib.request.urlopen, lire=lire_page, 
         print(f"  Overpass {k} : {len(data.get('elements', []))} élément(s)")
     stats, nouveaux, raisons, examines = {}, [], {}, 0
     while tampon and examines < budget:
+        if delai_depasse(debut, conf): print(f"  OpenStreetMap : durée maximale de l'étape atteinte ({conf['duree_max_etape_s']} s), arrêt ; {len(tampon)} entreprise(s) gardée(s) en réserve"); break
         c = tampon.pop(0); examines += 1
         if "osm:" + c["id"] in etat["vus"]: continue
         st = {}
-        ligne, motif = enrichir_osm(c, etat, conf, lire, outils, st, dormir)
+        try: ligne, motif = enrichir_osm(c, etat, conf, lire, outils, st, dormir)
+        except BaseException: tampon.insert(0, c); sauver_au_fil(etat, garde, nouveaux, a_blanc); raise   # panne : l'entreprise en cause reste en réserve, le reste est gardé
         mx = ligne and motif_ligne(ligne, garde + nouveaux, cles, mails, deja, adresses)
         if mx: ligne, motif = None, mx
         compter(stats, c["metier"], st)
@@ -1784,6 +1831,7 @@ def cmd_decouvrir(a_blanc, conf, ouvrir=urllib.request.urlopen, lire=lire_page, 
             print(f"  + {ligne['nom']} ({ligne['ville']}) [{st['canal']}] {ligne['email'] or ligne['formulaire'] or ligne['telephone']}")
         else: raisons[motif] = raisons.get(motif, 0) + 1
         etat["vus"]["osm:" + c["id"]] = "retenu" if ligne else motif
+        if chaque and examines % chaque == 0: sauver_au_fil(etat, garde, nouveaux, a_blanc)
         dormir(conf["pause_site_s"])   # pause entre deux entreprises examinées (sites lus ou domaines essayés)
     print(f"{examines} entreprise(s) examinée(s) depuis OpenStreetMap, {len(nouveaux)} retenue(s)" + (" ; écartées : " + ", ".join(f"{v} {k}" for k, v in raisons.items()) if raisons else "") + f" ; {len(tampon)} en réserve")
     print(rapport_texte(stats, "Rapport de ce passage (découverte depuis les sites)"))
@@ -1851,18 +1899,21 @@ def cmd_places(a_blanc, conf, ouvrir=urllib.request.urlopen, lire=lire_page, dor
     if not restant: print(f"  Google Places : plafond du jour atteint ({conf['places_max_jour']} examinées), passage sauté")
     elif not cle: print("  Google Places : GOOGLE_PLACES_API_KEY absente de B2B\\.env, source sautée"); restant = 0
     deja = {S.cle(l) for l in garde}; adresses = {l["email"].lower() for l in garde if l["email"]}
-    actifs = [lab for lab, _ in OSM_METIERS if metier_actif(lab)]; faits = set(pl["faits"])
+    actifs = [lab for lab, _ in OSM_METIERS if metier_actif(lab)]; faits = set(pl["faits"]); debut = horloge(); chaque = conf.get("sauvegarde_tous") or 0
     for ville in villes_places():
         for lab in actifs:
             k = f"{ville}|{lab}"
             if restant <= 0 or k in faits or n_req >= conf["places_requetes_par_passage"]: continue
+            if delai_depasse(debut, conf): restant = 0; print(f"  Google Places : durée maximale de l'étape atteinte ({conf['duree_max_etape_s']} s), arrêt"); continue
             try: data = appel_places(f"{lab} {ville}", cle, ouvrir)
             except Exception as e:
                 print(f"  {e}"); _client["erreur_api"] = True; restant = 0; continue   # erreur de facturation ou d'autorisation : arrêt de la source, aucun nouvel essai
             n_req += 1; cands = [c for c in candidats_places(data, lab) if "places:" + c["id"] not in etat["vus"]]; reqs.append((lab, ville, len(data.get("places", [])))); print(f"  Google Places {k} : {len(data.get('places', []))} fiche(s)")
             for c in cands[:restant]:
+                if delai_depasse(debut, conf): restant = 0; print(f"  Google Places : durée maximale de l'étape atteinte ({conf['duree_max_etape_s']} s), arrêt"); break
                 examines += 1; restant -= 1; st = {}
-                ligne, motif = enrichir_osm(c, etat, conf, lire, outils, st, dormir)
+                try: ligne, motif = enrichir_osm(c, etat, conf, lire, outils, st, dormir)
+                except BaseException: sauver_au_fil(etat, garde, nouveaux, a_blanc); raise
                 if ligne: ligne.update(cp="", telephone="")   # adresse et téléphone de Google : jamais gardés
                 mx = ligne and motif_ligne(ligne, garde + nouveaux, cles, mails, deja, adresses)
                 if mx: ligne, motif = None, mx
@@ -1874,6 +1925,7 @@ def cmd_places(a_blanc, conf, ouvrir=urllib.request.urlopen, lire=lire_page, dor
                     print(f"  + {ligne['nom']} ({ligne['ville']}) [{st['canal']}] {ligne['email'] or ligne['formulaire']}")
                 else: raisons[motif] = raisons.get(motif, 0) + 1
                 etat["vus"]["places:" + c["id"]] = "retenu" if ligne else motif
+                if chaque and examines % chaque == 0: sauver_au_fil(etat, garde, nouveaux, a_blanc)
                 dormir(conf["pause_site_s"])
             if all("places:" + c["id"] in etat["vus"] for c in cands): pl["faits"].append(k)   # requête terminée seulement si toutes ses fiches sont examinées
     print(f"{examines} entreprise(s) examinée(s) depuis Google Places, {len(nouveaux)} retenue(s)" + (" ; écartées : " + ", ".join(f"{v} {k}" for k, v in raisons.items()) if raisons else ""))
