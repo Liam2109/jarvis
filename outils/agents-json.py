@@ -511,6 +511,19 @@ def leads_a_appeler(feuilles, jour, R=None):
     except Exception as e: return False, f"leads chauds illisibles ({type(e).__name__})"
 
 
+def leads_de_la_file(jour):
+    """File unique « leads chauds » (B2B/agents/leads_chauds.py, maillon 2 de CARTE-RELAIS, 23/11/2026), même lecture que le reste : un fichier local, aucune dépendance de plus.
+    -> liste au format de leads_a_appeler, ou None si la file n'existe pas (la lecture des feuilles de Sid sert alors de secours)."""
+    try:
+        if str(AGENTS) not in sys.path: sys.path.insert(0, str(AGENTS))
+        import leads_chauds as LC
+        file = LC.lire()
+    except Exception: return None
+    if file is None: return None
+    return [{"nom": l["nom"], "ville": l.get("ville", ""), "tel": LC.tel_lisible(l["tel"]), "raison": l.get("resultat", ""), "note": l.get("note", ""), "appel": l.get("resultat_le", ""),
+             "relance": 1, "prevu": l.get("jour", ""), "due": bool(l.get("jour")) and l["jour"] <= jour, "moyen_terme": bool(l.get("moyen_terme")), "rappelle": l.get("rappelle", "Sid")} for l in file]
+
+
 def potentiel(dispo, leads):
     """Leads chauds en cours × prix du pack. `leads` = la liste de leads_a_appeler (même critère que l'agent Relances : un lead compté une fois, les exclus retirés) ou la raison de
     son absence. Indicatif, aucun taux de conversion."""
@@ -556,9 +569,10 @@ def main():
     dispo, fs = feuilles_sid(rs)
     jour = maintenant.date().isoformat()
     if dispo: aligner_jour(v, fs, jour)
-    dispo_l, lds = leads_a_appeler(fs, jour) if dispo else (False, fs)
+    lds = leads_de_la_file(jour); dispo_l = lds is not None   # la file unique d'abord ; sinon les feuilles de Sid (secours)
+    if not dispo_l: dispo_l, lds = leads_a_appeler(fs, jour) if dispo else (False, fs)
     v["chiffres"].append(dict(cle="potentiel", libelle="Potentiel", **potentiel(dispo_l, lds)))
-    leads = {"jour": jour, "genere_le": maintenant.strftime("%Y-%m-%d %H:%M:%S"), "critere": "agent Relances : Résultat « À rappeler » ou « Je dois réfléchir » noté par Sid, sauf si une feuille plus récente l'exclut",
+    leads = {"jour": jour, "genere_le": maintenant.strftime("%Y-%m-%d %H:%M:%S"), "critere": "file unique des leads chauds (registre) : « À rappeler » ou « Je dois réfléchir » noté par Sid, sans STOP ni refus ; rappel par Sid ou un closer",
              "leads": lds if dispo_l else [], "raison": "" if dispo_l else str(lds)}
     ecrire(construire(maintenant), v, historique(maintenant, v, fs if dispo else None), leads)
     if "--ouvrir" in sys.argv[1:] and os.name == "nt": os.startfile(str(SORTIE / "index.html"))

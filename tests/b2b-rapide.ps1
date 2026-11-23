@@ -6,7 +6,7 @@ $Root = Split-Path -Parent $PSScriptRoot; $sw = [Diagnostics.Stopwatch]::StartNe
 & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'harness.ps1'); if ($LASTEXITCODE -ne 0) { $rouge++ }
 Write-Host '5) Tests Python courts des agents B2B'
 $py = (Get-Command python -ErrorAction SilentlyContinue)
-foreach ($f in 'test_machine.py', 'test_stripe_alerte.py', 'test_resume_sid.py', 'test_rendez_vous.py', 'test_devis.py', 'test_reponses.py', 'test_appels_sid.py') {
+foreach ($f in 'test_machine.py', 'test_stripe_alerte.py', 'test_resume_sid.py', 'test_rendez_vous.py', 'test_devis.py', 'test_reponses.py', 'test_appels_sid.py', 'test_leads_chauds.py') {
     $t = [Diagnostics.Stopwatch]::StartNew(); $o = & $py.Source (Join-Path $Root "B2B\agents\$f") 2>&1 | Out-String; $c = $LASTEXITCODE
     if ($c -eq 0) { Write-Host ("  OK    {0} ({1:N1} s)" -f $f, $t.Elapsed.TotalSeconds) } else { Write-Host ("  ECHEC {0} : {1}" -f $f, (($o -split "`n" | Select-Object -Last 2) -join ' ')) -ForegroundColor Red; $rouge++ }
 }

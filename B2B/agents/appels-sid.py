@@ -750,7 +750,7 @@ def _purger_sorties_expirees(etat, jour, historique, jours_sans_rappel):
 # À partir de RG.DEBUT : avant toute liste, les Résultat des feuilles précédentes (Sid et Liam) sont lus dans le registre ; ensuite seulement la liste est générée.
 # Les reprises viennent du registre (règles dans registre.py) ; les entreprises neuves sont celles de candidats() que le registre ne connaît pas, réparties sur les
 # départements (76, 27, 14, 50, 61) et mélangées entre métiers (jamais regroupées par ville). Les listes d'avant le 17/11 gardent les anciennes règles (_bilan_veille).
-import registre as RG
+import registre as RG, leads_chauds as LC
 CONFIG_LIAM, ETAT_LIAM = ICI / "appels-liam-config.json", ICI / "appels-liam-etat.json"
 TITRE_LIAM = "Appels Liam {}"
 DEFAUT_LIAM = {"envoi_automatique": False, "par_liste": 15, "heure_tache": "07:30", "jours_appel": ["lundi", "mardi", "mercredi", "jeudi", "vendredi"], "dossier_liam_id": ""}
@@ -889,18 +889,12 @@ def _tel_lisible(t): return " ".join(t[k:k + 2] for k in range(0, len(t), 2)) if
 
 
 def alerter_leads(reg, jour, conf, a_blanc=False):
-    """Une alerte Discord pour Liam par lead chaud (À rappeler, Je dois réfléchir) noté par Sid : entreprise, téléphone, Note ; une seule fois par lead (alerte_lead dans le registre,
-    posé seulement si Discord a bien reçu le message). À blanc et simulation : affiché, rien envoyé, rien marqué. Le journal ne contient ni nom ni numéro. -> textes des alertes."""
-    textes = []
-    for k, x in RG.leads_chauds(reg):
-        t = (f"Lead chaud ({x['dernier_resultat']}, feuille de Sid du {x['resultat_le']}) : {x['nom']} ({x.get('commune', '')}), {_tel_lisible(x.get('tel', ''))}. "
-             f"Note de Sid : {x.get('note') or '(vide)'}. Retiré de la liste de Sid : à rappeler par Liam.")
-        textes.append(t)
-        if a_blanc: print("  [à blanc] alerte lead chaud qui serait envoyée : " + t); continue
-        if not conf.get("envoi_automatique"): print("  [simulation] alerte lead chaud : " + t); continue
-        if alerter_discord(t): x["alerte_lead"] = jour
-        else: print("  ! alerte lead chaud non envoyée : réessayée au prochain passage")
-    if textes and not a_blanc: journaliser("lead", f"{jour} : {len(textes)} lead(s) chaud(s) signalé(s) à Liam")
+    """Maillon 2 de CARTE-RELAIS (23/11/2026) : la file unique « leads chauds » (leads_chauds.py, B2B\\donnees\\leads-chauds.json) est mise à jour depuis le registre ; une alerte
+    Discord par lead à son entrée (nom, téléphone, jour, qui rappelle : Sid par défaut), jamais de répétition. Liam ne rappelle pas. Aucun message au prospect. À blanc et simulation :
+    affiché, rien envoyé, rien marqué, file non écrite. Le journal ne contient ni nom ni numéro. -> textes des alertes."""
+    envoyer = alerter_discord if conf.get("envoi_automatique") and not a_blanc else None
+    entres, sortis, textes = LC.synchroniser(reg, jour, envoyer, rappelle=conf.get("rappelle_lead") or "Sid", ecrire=not a_blanc)
+    if not a_blanc: journaliser("lead", f"{jour} : file des leads chauds, {len(entres)} entré(s), {len(sortis)} sorti(s), {len(textes)} alerte(s)")
     return textes
 
 
