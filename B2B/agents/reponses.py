@@ -25,6 +25,7 @@ ICI = Path(__file__).resolve().parent
 RACINE = ICI.parent
 sys.path.insert(0, str(ICI))
 import suivi as S, gmail_api as GA, machine as M   # machine : config locale + machine active
+import reponse_auto as RA                            # maillon 1 : réponse courte avec créneaux (réglage reponse_auto_envoi, faux par défaut)
 
 CONFIG, TRAITES = ICI / "reponses-config.json", ICI / "reponses-traitees.json"
 RETOURS_FICHIER = ICI / "prospection-retours.json"   # rebonds et plaintes comptés ici (fichier à part : prospection-etat.json n'est écrit que par prospection.py)
@@ -262,6 +263,38 @@ def appliquer(r, cl):
     return "statut inchangé (à lire)"
 
 
+def reponse_auto(r, cl, statut_avant, slots, agenda_ok, c, envoyer=None, signer=None, ident=None):
+    """Maillon 1 : -> ligne ajoutée à l'alerte Discord. Réglage reponse_auto_envoi faux (défaut) : le message est écrit dans B2B\\donnees\\reponses-auto\\, rien n'est envoyé.
+    Vrai : envoi par l'API Gmail depuis la boîte qui a reçu la réponse, une seule fois par prospect."""
+    p = r["prospect"]; cle = S.cle(p); reel = bool(c.get("reponse_auto_envoi")); dest = r.get("repondre") or r.get("de")
+    raison = RA.raison_de_ne_pas_repondre(cl, statut_avant, cle, slots, agenda_ok, not reel, dest)
+    if raison: return f"↩️ Réponse automatique NON envoyée : {raison}. À traiter par Liam."
+    if signer is None:
+        import redaction as RD; signer = RD.avec_signature
+    ident = ident if ident is not None else M.lire_fusionnee(ICI / "identite.json")
+    texte = RA.message(slots, decalage_paris, ident, signer); objet = RA.objet_reponse(r["objet"]); slots_txt = ", ".join(RA.creneau_texte(s, decalage_paris) for s in slots[:3])
+    if reel:
+        compte = r.get("compte", "")
+        if not (c["api"]["actif"] and compte in c["api"]["comptes"]): return "↩️ Réponse automatique NON envoyée : boîte de réception sans jeton d'envoi. À traiter par Liam."
+        try:
+            sys.path.insert(0, str(RACINE / "harness")); import garde
+            if not garde.avant_envoi("mail", texte, dest, agent="reponses"): return "↩️ Réponse automatique bloquée par la garde du harness. À traiter par Liam."
+        except ImportError: pass
+        from email.message import EmailMessage; from email.utils import formatdate
+        msg = EmailMessage(); msg["From"] = f"{ident.get('prenom_nom', '')} <{compte}>"; msg["To"] = dest; msg["Subject"] = objet; msg["Date"] = formatdate(localtime=True)
+        if str(r.get("mid", "")).startswith("<"): msg["In-Reply-To"] = msg["References"] = r["mid"]
+        msg.set_content(texte)
+        try: (envoyer or (lambda m: GA.client(compte).envoyer(m)))(msg)
+        except (GA.JetonExpire, GA.BibliothequeManquante, GA.ErreurApi) as e: return f"↩️ Réponse automatique NON envoyée ({type(e).__name__}). À traiter par Liam."
+        mode = "envoye"
+    else: mode = "simule"
+    RA.etat_noter(cle, mode, r["mid"]); f = RA.ecrire_message(p, dest, objet, texte, mode); RA.ligne_relais(p, mode, slots_txt); RA.noter_registre(p, mode, slots_txt)
+    lignes = S.lire()
+    for l in lignes:
+        if S.cle(l) == cle: l["note"] = (l["note"] + f" | réponse auto {mode} le {date.today()} : {slots_txt}").strip(" |"); S.ecrire(lignes); break
+    return (f"↩️ Réponse automatique ENVOYÉE au prospect ({slots_txt})." if mode == "envoye" else f"↩️ SIMULATION (rien envoyé) : réponse écrite dans {f.name}, créneaux {slots_txt}. Active reponse_auto_envoi pour l'envoi.")
+
+
 def resume_discord(cl, p, extrait, action):
     """Résumé court pour 💬-réponses (négative, STOP, autre) : aucune mention, texte du prospect assaini."""
     e = re.sub(r"\s+", " ", assainir(extrait)).strip()
@@ -419,7 +452,7 @@ def lire_api(c, jours, deja, par_mail, par_nom, propres, ouvrir=GA.client):
 def cfg():
     c = M.lire_fusionnee(CONFIG)      # réglages par défaut + reponses-config.local.json (salons, comptes, API Gmail de CETTE machine)
     c.setdefault("comptes", [{"adresse": "contact.lmsites@gmail.com", "var": "GMAIL_1_APP_PASSWORD"}, {"adresse": "liamdigital2109@gmail.com", "var": "GMAIL_2_APP_PASSWORD"}])
-    c.setdefault("salon_paiement_id", ""); c.setdefault("utilisateur_id", ""); c.setdefault("jours_relus", 14)
+    c.setdefault("salon_paiement_id", ""); c.setdefault("utilisateur_id", ""); c.setdefault("jours_relus", 14); c.setdefault("reponse_auto_envoi", False)
     c["api"] = {"actif": False, "comptes": [], **c.get("api", {})}  # actif = API Gmail (OAuth) à la place d'IMAP ; comptes = boîtes lues et utilisées pour l'envoi (test-gmail-api.py <adresse>)
     if not c["api"]["comptes"] and c["api"].get("adresse"): c["api"]["comptes"] = [c["api"]["adresse"]]  # ancien réglage à un seul compte
     c["api"]["comptes"] = [x.strip().lower() for x in c["api"]["comptes"]]; c["api"].pop("adresse", None)
@@ -457,11 +490,13 @@ def main():
     salons = {}
     compte = {"positive": 0, "négative": 0, "STOP": 0, "autre": 0}
     for r in reponses:
-        p = r["prospect"]; cl = classer(r["objet"], r["texte"]); compte[cl] += 1
+        p = r["prospect"]; statut_avant = p["statut"]; cl = classer(r["objet"], r["texte"]); compte[cl] += 1
         if cl == "STOP" and PLAINTE.search(r["texte"]): RETOURS["plaintes"][r["mid"]] = str(date.today())
         print(f"- {p['nom']} ({p['ville']}) : {cl}")
         action = "" if a.a_blanc else appliquer(r, cl)   # statut + exclusions d'abord : ils ne dépendent pas de Discord
-        if cl == "positive": msg, cle_salon, nom_salon = "🚨 PRIORITÉ " + message_discord(uid or "0", p, r["texte"], r["repondre"], slots, bool(ics), boite=r["compte"]), "salon_important_id", "important"
+        if cl == "positive":
+            auto = "↩️ Réponse automatique : à blanc, rien fait." if a.a_blanc else reponse_auto(r, cl, statut_avant, slots, bool(ics), c)
+            msg, cle_salon, nom_salon = ("🚨 PRIORITÉ " + message_discord(uid or "0", p, r["texte"], r["repondre"], slots, bool(ics), boite=r["compte"]))[:1650] + "\n" + auto, "salon_important_id", "important"
         else: msg, cle_salon, nom_salon = resume_discord(cl, p, r["texte"], action or "à blanc : rien modifié"), "salon_reponses_id", "réponses"
         if a.a_blanc: print("  [à blanc] " + msg.replace(chr(10), chr(10) + "  ")); continue
         salons[cle_salon] = salons.get(cle_salon) or salon_par_nom(jeton, cle_salon, nom_salon, c["salon_paiement_id"])

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Tests silencieux de l'agent Réponses (aucun réseau, aucune boîte, aucun statut touché) : python agents\test_reponses.py"""
-import sys
+import os, sys
+os.environ.setdefault("JARVIS_TEST", "1")
 from datetime import datetime, timezone
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -82,4 +83,30 @@ assert R.lire_boite_api(FauxClient(), 14, set(), {}, {}, set()) == []
 assert list(R.RETOURS["rebonds"]) == ["<b1@x>"], R.RETOURS      # 1 rebond lié sur 2 : l'ancien rebond sans lien est ignoré
 R.RETOURS["rebonds"].clear()
 import shutil; shutil.rmtree(_tmp, ignore_errors=True)
+# --- maillon 1 : réponse automatique (simulation par défaut, un seul message par prospect, jamais à un STOP / refus / ambigu) ---
+_a = Path(tempfile.mkdtemp(prefix="reponse-auto-")); R.S.FICHIER = _a / "suivi.csv"
+with open(R.S.FICHIER, "w", encoding="utf-8-sig", newline="") as f:
+    w = csv.DictWriter(f, fieldnames=R.S.COLS, delimiter=";"); w.writeheader()
+    for n, v in (("Oui Sarl", "Rouen"), ("Stop Sarl", "Rouen"), ("Amb Sarl", "Rouen")): w.writerow({"nom": n, "ville": v, "email": n.split()[0].lower() + "@x.fr", "statut": "envoyé", "date_envoi": "2026-11-20"})
+def r2(nom, texte, mid="<m1@x>"):
+    p = next(l for l in R.S.lire() if l["nom"] == nom); return dict(mid=mid, de=p["email"], repondre=p["email"], objet="Re: " + nom, texte=texte, prospect=p, compte="x@x.fr")
+CA = {"reponse_auto_envoi": False, "api": {"actif": True, "comptes": ["x@x.fr"]}}; SL = R.creneaux(None, datetime(2026, 11, 23, 8, 0, tzinfo=timezone.utc), 3); ID = {"prenom_nom": "Liam", "entreprise": "E", "siret": "", "telephone": "", "email_reponse": ""}
+SG = lambda t, i: t + "\n\n" + i["prenom_nom"]
+partis = []
+r = r2("Oui Sarl", "Oui, intéressé, rappelez-moi"); assert R.classer(r["objet"], r["texte"]) == "positive"
+out = R.reponse_auto(r, "positive", "envoyé", SL, True, CA, envoyer=partis.append, signer=SG, ident=ID)
+assert "SIMULATION" in out and not partis, out                              # un « oui » produit une réponse, en simulation : rien n'est envoyé
+assert any(f.suffix == ".md" for f in R.RA.DOSSIER.iterdir()) and "Bonjour" not in next(R.RA.DOSSIER.iterdir()).read_text(encoding="utf-8")
+assert "réponse auto simule" in next(l for l in R.S.lire() if l["nom"] == "Oui Sarl")["note"] and R.RA.RELAIS.exists()
+out = R.reponse_auto(r, "positive", "répondu", SL, True, CA, envoyer=partis.append, signer=SG, ident=ID); assert "NON envoyée" in out and "déjà répondu" in out   # pas de double réponse
+for nom, t in (("Stop Sarl", "STOP"), ("Stop Sarl", "Non merci, pas intéressé"), ("Amb Sarl", "Je suis intéressé mais pas intéressé par le prix")):
+    rr = r2(nom, t, "<m2@x>"); cl = R.classer(rr["objet"], rr["texte"]); assert cl != "positive"
+    assert "NON envoyée" in R.reponse_auto(rr, cl, "envoyé", SL, True, {**CA, "reponse_auto_envoi": True}, envoyer=partis.append, signer=SG, ident=ID) and not partis   # STOP, refus, ambigu : aucune réponse
+assert "NON envoyée" in R.reponse_auto(r2("Amb Sarl", "oui"), "positive", "STOP", SL, True, CA, signer=SG, ident=ID)        # déjà STOP
+assert "agenda" in R.reponse_auto(r2("Amb Sarl", "oui"), "positive", "envoyé", SL, False, CA, signer=SG, ident=ID)           # pas d'agenda lu : pas de créneau inventé
+reel = {**CA, "reponse_auto_envoi": True}; r = r2("Amb Sarl", "Oui avec plaisir", "<m3@x>")
+assert "ENVOYÉE" in R.reponse_auto(r, "positive", "envoyé", SL, True, reel, envoyer=partis.append, signer=SG, ident=ID) and len(partis) == 1 and partis[0]["To"] == "amb@x.fr"
+assert "In-Reply-To" in partis[0] and "NON envoyée" in R.reponse_auto(r, "positive", "répondu", SL, True, reel, envoyer=partis.append, signer=SG, ident=ID) and len(partis) == 1
+assert R.cfg()["reponse_auto_envoi"] is False
+shutil.rmtree(_a, ignore_errors=True)
 print("créneaux :", [R.fr_creneau(x) for x in s]); print("OK : tous les tests passent")
