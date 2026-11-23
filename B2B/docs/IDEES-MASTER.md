@@ -2,7 +2,6 @@
 Chaque idée est notée à la date où Liam la dit. Une idée pas encore faite reste ici en une à trois lignes ; une idée réalisée est supprimée 3 semaines après (l'historique est dans git). Réduit le 15/11/2026 (sauvegarde de l'ancienne version : `B2B\donnees\sauvegardes\IDEES-MASTER-2026-11-15.md`, hors git).
 
 ## Vente et offre
-- 14/11 — Offre fondateur (3 premiers clients) : 295 € au lieu de 595 €, 49 €/mois inchangé, contre le droit de montrer le site et un témoignage vidéo de 30 s.
 - 14/11 — Garantie zéro risque : « si la page ne vous plaît pas, vous ne payez rien ».
 - 14/11 — Avant/après chiffré : capture du site actuel (ou de son absence) et score PageSpeed à côté de la nouvelle page.
 - 14/11 — Cercle proche d'abord (ami, parent, commerçant connu) pour la 1re vente et la 1re preuve.
@@ -35,23 +34,19 @@ Chaque idée est notée à la date où Liam la dit. Une idée pas encore faite r
 - 17/11 — Vidéos au niveau des agents B2B (contrat, garde du contenu, trace par exécution, test, skill détaillé, fiche en 4 rubriques, fiche Chaîne vidéo) : réalisée le 17/11. Suite possible : une alerte du surveillant si aucune vidéo n'arrive dans a-valider deux passages de suite.
 
 ## Agents
-- 21/11 — Superviseurs de domaine : un responsable par domaine (Vente, Prospection, Sites, Mail) qui vérifie toutes les 30 min que ses agents ont tourné et que leurs données ne se contredisent pas, corrige le sans risque et alerte pour le reste ; vue Jarvis qui remet les 4 états en un fichier court et un message groupé. Construit le 21/11, fermé jusqu'au « go superviseurs ».
 - 27/10 — Chaîne automatique entre agents (prospection → réponse positive → rendez-vous → devis → Stripe → site → mise en ligne → maintenance), validation de Liam seulement aux points à risque.
 - 14/11 — Relances J+3 et J+7 (agent le plus rentable), puis rappel de closing : devis non payé sous 48 h → alerte pour rappeler.
-- 18/11 — Relances leads : chaque jour ouvré à 8 h 30, liste Discord des leads chauds de Sid à rappeler par Liam (3e et 7e jour ouvré, 15e si moyen terme). Fait le 18/11 (agent relances) ; reste : Liam note ses propres rappels pour sortir un lead du cycle.
-- 21/11 — Chiffres du serveur dans une feuille Google (date, devis envoyés, paiements reçus) pour que le tableau de bord du gros PC ait enfin ses courbes Devis et Ventes. Fait le 21/11 (agent chiffres-serveur, fermé jusqu'au « go ») ; reste : la lecture côté tableau de bord.
-- 14/11 — Pré-génération de pages au nom des prospects (20 d'avance), URL prête avant l'appel.
 - 14/11 — CEO Jarvis autonome après la 1re vente : lit les résultats, relances, lead chaud, devis, résumé du soir ; décisions engageantes soumises à Liam.
 - 15/11 — Boîte aux lettres Liam ↔ Claude Code : B2B/docs/FILE-ATTENTE.md et RESULTATS.md, après l'étape Vente.
 - 30/10 — Agent Réponses : classer comme refus les refus polis (compliments puis « non », cas LM ELEC), exclure l'adresse et prévenir Liam dans 💬-réponses (à vérifier dans reponses.py).
-- 22/11 — Leads chauds à rappeler : bouton corbeille (pas intéressés) ; IA gratuite pour comprendre les remarques de Sid.
-- 22/11 — Tableau de bord : agents par catégorie (1 superviseur = 1 catégorie), activer la plupart des agents inactifs, activité à jour.
-- 22/11 — Agent LinkedIn (Claude Code, ChatGPT ou Cowork) après le règlement du quota ; règle modèles : Sonnet 5.5 élevé par défaut, Claude dit quand passer à Opus 5.
 - 14/11 — Gabarit unique pour créer les skills (entrées, procédure, règles, critère de fin, exemples).
 
+- 23/11 — Agent LinkedIn : 1 à 2 posts par jour sur ton profil, en alternance recrutement appelants/closers (15 % / 10 %) et recherche de prospects pour un site web ; sans emoji ni image ; vouvoiement ; CTA = message privé ; Claude écrit un lot de ~14 posts dans le chat, l'agent les distribue sur Discord, tu valides (✅) puis tu copies-colles toi-même. Construit le 23/11 en simulation, en attente du « go linkedin ».
+- 23/11 — LinkedIn, mesurer avant d'insister : noter pendant 3 semaines quel type de post (recrutement ou prospect) amène un message privé, puis garder seulement celui qui mène à un appelant, un closer ou un rendez-vous. Les artisans locaux sont peu sur LinkedIn : les posts « prospect » risquent de ne rien rapporter.
+
+- 23/11 — Conversation LinkedIn dédiée : une conversation neuve à chaque fois (sans historique), écrire « post LinkedIn » ou « post LinkedIn : <idée> » et recevoir 2 posts à coller ; à faire chaque jour dans la to-do ; cibles élargies à tous ceux sans site (artisans, commerçants, agriculteurs) ; closers à 15 % comme les appelants ; Discord seulement si un salon LinkedIn existe.
 ## Sites et pages exemples
 - 24/10 — Niveau « premium » avec 3D utile en option payante, après les pages standard.
-- 24/10 — Mesure sans cookie des appels et clics sur le numéro, pour montrer un résultat chiffré à l'artisan après 30 jours.
 - 24/10 — Restaurant : réservation réelle (outil externe) branchée après la vente.
 - 27/10 — Adapter chaque page aux couleurs et au logo de l'entreprise (style personnalisé, éviter « la patte Claude » relevée par LM ELEC le 30/10).
 - 27/10 — Demander à chaque plombier client 2 vraies photos avant/après (accord écrit) ; même curseur pour électricien et plâtrier ; repli sans JavaScript si la page part en ligne.
@@ -61,30 +56,19 @@ Chaque idée est notée à la date où Liam la dit. Une idée pas encore faite r
 - 04/11 — Le Velours (restaurant) : ajouter une vidéo en tête de page.
 - 11/11 — Skill « site-premium-cinematique » à écrire après validation de luxe2 par Liam.
 
-## Intérim (revenu d'appoint)
-- 18/11 — Agent interim : alertes des agences lues sur emoliam255, résumé chaque matin, rappel du lundi, suivi des agences. Construit le 18/11, fermé jusqu'au « go interim ».
-- 18/11 — Plus tard : lire aussi les offres France Travail par leur flux public (gratuit) si les alertes des agences ne suffisent pas.
-
 ## Équipe
 - 08/11 — Recruter d'autres appelants : Codeur.com en plus de Malt et des 2 groupes Facebook.
 - 03/11 — Appelants : lien Google Meet automatique dans le planning de rendez-vous ; contact par WhatsApp (numéro à donner par Liam).
 - 14/11 — Connecteur d'écoute de réunion (nom à donner par Liam) : vérifier gratuité et accord des participants.
-- 17/11 — Candidats venus par message privé : leur répondre avec le lien du formulaire pour qu'ils passent par l'alerte candidatures (un seul circuit, rien d'oublié).
-- 17/11 — Brouillon de réponse aux candidats : y ajouter le lien d'agenda du rendez-vous de 15 min en visio, quand Liam en aura un dédié au recrutement.
 
 ## Jarvis, Discord et outils
 - 29/10 — Discord : salons important, journal, erreurs ; catégories Autres projets (saas-ciel, quiz-artisans, tri-mail), Carrière, Contenu (idées-vidéos, scripts-cold-call, résultats).
 - 29/10 — Salon vocal « 💼 Travail » : Jarvis compte le temps passé dedans et affiche jour, semaine, mois dans un salon texte.
 - 29/10 — Contenu : Liam se filme pendant ses appels (jamais la voix du prospect sans accord).
 - 05/11 — Serveur : sans internet 5 min → redémarrer la carte Wi-Fi, sinon le PC (1 fois par heure au plus), agents relancés seuls, alerte Discord au retour.
-- 14/11 — Tableau de bord : carte de chaleur des créneaux, motifs de refus, commissions modifiables (courbes, taux et voyants faits le 18/11).
+- 14/11 — Tableau de bord : courbes de la semaine, taux appel → RDV → devis → closing, carte de chaleur des créneaux, motifs de refus, commissions modifiables, pipeline, voyant par agent (heure de dernière exécution à ajouter dans agents-json.py).
 - 14/11 — Méthode Claude Code (vidéo) : boucles avec critère de fin, sous-agents, bon modèle par tâche, /compact après chaque tâche.
 - 15/11 — Obsidian en vue « espace » pour voir les agents (plus tard).
-- 17/11 — Tableau de bord : faire disparaître les « — » du gros PC (état des devis, clé Stripe en lecture seule, journaux du serveur) ; la mise à jour sans clic est faite (tâche Jarvis-Tableau-PC, 15 min, 18/11).
-- 18/11 — Statistiques : dater chaque Résultat dans la feuille de Sid (colonne « Noté le ») pour un historique exact au jour près, au lieu du jour de dernière modification de la feuille.
-- 18/11 — Statistiques : taux RDV par créneau horaire pour choisir quand Sid appelle (la répartition par métier est faite).
-- 18/11 — Devis et ventes sur le gros PC : le serveur écrit chaque soir (resume-sid, 19:30) une feuille Google « Chiffres serveur Jarvis » (date, devis envoyés, paiements, comptes seulement) avec le jeton Google qu'il a déjà, et agents-json.py la lit comme les feuilles de Sid. Gratuit, aucun secret dans le dépôt, pas de git push depuis le serveur (il ne fait que tirer).
-- 18/11 — Potentiel : compter un lead chaud une seule fois même s'il est rappelé plusieurs jours (registre commun), et le retirer quand il passe en « RDV pris » ou refus.
 
 ## À trancher (peut-être dépassées, à confirmer par Liam)
 - 24/10 — Page d'index privée des liens de maquettes pour Liam (le tableau de bord la remplace peut-être).
@@ -95,3 +79,23 @@ Chaque idée est notée à la date où Liam la dit. Une idée pas encore faite r
 - 05/11 — Listes d'appels : archiver plutôt que supprimer l'ancienne feuille, pour garder les comptes rendus de Sid.
 - 14/11 — 5e responsable « Système » (l'alerte pannes reste sous Argent pour l'instant).
 - 02/11 — Échecs anciens de test_prospection.py (textes de redaction.py, fiches OSM sans code postal, cmd_approuver à 3 arguments).
+
+## Ajouts du chat 17 nov. (copie complète : IDEES-CLAUDE-CHAT.md)
+- Agent événements hebdo : au moins 10 événements, 45 min max, gratuit ou pas cher, zone élargie si gros événement, envoi Discord le dimanche soir. « go événements », après les premières ventes.
+- Fiverr et LinkedIn : sources de freelances/missions en plus de Malt. trustmrr.com : trouver des idées de SaaS, plus tard.
+- Agents conférence, CV (modifier ses CV), contrat : plus tard, pas avant les ventes.
+- Skill GitHub heydamir/unslop (CC BY 4.0, crédit à Damir Sokolovsky) pour redessiner le dashboard. « go dashboard ».
+- Obsidian en 3D plus tard : système solaire, une planète = un agent/dossier, soleil bleu = Jarvis.
+- Groupes Facebook (étudiants, recherche de closers) : recruter des appelants. Commission décidée : 15 % appelants et 15 % closers.
+- Lettres aux restaurants avec carte de visite : abandonné. Vidéo de recrutement à filmer par Liam.
+- Correctif Sid (17/11, commit 7b04941) : relecture des 3 dernières feuilles, leads chauds en alerte Discord, résumé sur toutes les feuilles modifiées.
+23/11 — Agents qui se parlent : chaque événement (réponse, rendez-vous, devis, paiement) doit déclencher l'agent suivant tout seul (réponse « oui » → devis → lien Stripe → relance), Liam surveille seulement. D'abord : carte des passages de relais entre agents et des maillons manquants (lecture seule).
+23/11 — TikTok = personal brand IA/automatisation, face caméra, sans objectif de vente ; une vidéo longue par jour au début ; acheteurs = téléphone + LinkedIn.
+
+## Prix et offre (décidé par Liam le 23/11, à aligner plus tard)
+- 23/11 — Prix pack plus bas, environ 495 € (au lieu de 595 €) ; 49 € PAR AN (nom de domaine) au lieu de 49 €/mois ; modifications ensuite payantes (environ 5 € chacune, ou à l'année, à trancher). Scripts, devis, OFFRE-REFERENCE.json, TECHNIQUES-CLOSING et Stripe pas encore alignés. Abandonnés : offre fondateur 295 €, pages pré-générées avant l'appel, mesure des appels/clics.
+
+## Social media
+- 23/11 — Catégorie « Social media » tout à gauche du dashboard : stats TikTok et YouTube (YouTube via API gratuite, TikTok à la main), Instagram plus tard. TikTok perso : conversation « TikTok » (écrire « idée » : sujet + début, milieu, fin), vidéos faites par Liam lui-même (IA surtout, aussi soin de soi et personal brand ; ni son business ni sa vie).
+- 23/11 — Chaque vidéo : un titre et une description avec les liens YouTube, TikTok et Instagram de Liam (liens à donner, dans la description) ; à ajouter à la fiche idees-tiktok.
+- 23/11 — Agent type Claude Cowork (agent qui travaille seul sur le PC à partir d'un objectif), côté biz, plus tard.
