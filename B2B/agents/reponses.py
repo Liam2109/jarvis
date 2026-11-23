@@ -263,16 +263,16 @@ def appliquer(r, cl):
     return "statut inchangé (à lire)"
 
 
-def reponse_auto(r, cl, statut_avant, slots, agenda_ok, c, envoyer=None, signer=None, ident=None):
+def reponse_auto(r, cl, statut_avant, c, envoyer=None, signer=None, ident=None):
     """Maillon 1 : -> ligne ajoutée à l'alerte Discord. Réglage reponse_auto_envoi faux (défaut) : le message est écrit dans B2B\\donnees\\reponses-auto\\, rien n'est envoyé.
     Vrai : envoi par l'API Gmail depuis la boîte qui a reçu la réponse, une seule fois par prospect."""
     p = r["prospect"]; cle = S.cle(p); reel = bool(c.get("reponse_auto_envoi")); dest = r.get("repondre") or r.get("de")
-    raison = RA.raison_de_ne_pas_repondre(cl, statut_avant, cle, slots, agenda_ok, not reel, dest)
+    raison = RA.raison_de_ne_pas_repondre(cl, statut_avant, cle, not reel, dest)
     if raison: return f"↩️ Réponse automatique NON envoyée : {raison}. À traiter par Liam."
     if signer is None:
         import redaction as RD; signer = RD.avec_signature
     ident = ident if ident is not None else M.lire_fusionnee(ICI / "identite.json")
-    texte = RA.message(slots, decalage_paris, ident, signer); objet = RA.objet_reponse(r["objet"]); slots_txt = ", ".join(RA.creneau_texte(s, decalage_paris) for s in slots[:3])
+    texte = RA.message(ident, signer); objet = RA.objet_reponse(r["objet"])
     if reel:
         compte = r.get("compte", "")
         if not (c["api"]["actif"] and compte in c["api"]["comptes"]): return "↩️ Réponse automatique NON envoyée : boîte de réception sans jeton d'envoi. À traiter par Liam."
@@ -288,11 +288,11 @@ def reponse_auto(r, cl, statut_avant, slots, agenda_ok, c, envoyer=None, signer=
         except (GA.JetonExpire, GA.BibliothequeManquante, GA.ErreurApi) as e: return f"↩️ Réponse automatique NON envoyée ({type(e).__name__}). À traiter par Liam."
         mode = "envoye"
     else: mode = "simule"
-    RA.etat_noter(cle, mode, r["mid"]); f = RA.ecrire_message(p, dest, objet, texte, mode); RA.ligne_relais(p, mode, slots_txt); RA.noter_registre(p, mode, slots_txt)
+    RA.etat_noter(cle, mode, r["mid"]); f = RA.ecrire_message(p, dest, objet, texte, mode); RA.ligne_relais(p, mode); RA.noter_registre(p, mode)
     lignes = S.lire()
     for l in lignes:
-        if S.cle(l) == cle: l["note"] = (l["note"] + f" | réponse auto {mode} le {date.today()} : {slots_txt}").strip(" |"); S.ecrire(lignes); break
-    return (f"↩️ Réponse automatique ENVOYÉE au prospect ({slots_txt})." if mode == "envoye" else f"↩️ SIMULATION (rien envoyé) : réponse écrite dans {f.name}, créneaux {slots_txt}. Active reponse_auto_envoi pour l'envoi.")
+        if S.cle(l) == cle: l["note"] = (l["note"] + f" | réponse auto {mode} le {date.today()}").strip(" |"); S.ecrire(lignes); break
+    return ("↩️ Réponse automatique ENVOYÉE au prospect (numéro et créneau demandés)." if mode == "envoye" else f"↩️ SIMULATION (rien envoyé) : réponse écrite dans {f.name}. Active reponse_auto_envoi pour l'envoi.")
 
 
 def resume_discord(cl, p, extrait, action):
@@ -495,7 +495,7 @@ def main():
         print(f"- {p['nom']} ({p['ville']}) : {cl}")
         action = "" if a.a_blanc else appliquer(r, cl)   # statut + exclusions d'abord : ils ne dépendent pas de Discord
         if cl == "positive":
-            auto = "↩️ Réponse automatique : à blanc, rien fait." if a.a_blanc else reponse_auto(r, cl, statut_avant, slots, bool(ics), c)
+            auto = "↩️ Réponse automatique : à blanc, rien fait." if a.a_blanc else reponse_auto(r, cl, statut_avant, c)
             msg, cle_salon, nom_salon = ("🚨 PRIORITÉ " + message_discord(uid or "0", p, r["texte"], r["repondre"], slots, bool(ics), boite=r["compte"]))[:1650] + "\n" + auto, "salon_important_id", "important"
         else: msg, cle_salon, nom_salon = resume_discord(cl, p, r["texte"], action or "à blanc : rien modifié"), "salon_reponses_id", "réponses"
         if a.a_blanc: print("  [à blanc] " + msg.replace(chr(10), chr(10) + "  ")); continue

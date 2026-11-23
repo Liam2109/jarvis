@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Maillon 1 de docs\\agents\\CARTE-RELAIS.md (23/11/2026) : réponse courte et automatique à un prospect qui répond POSITIVEMENT, avec 2 ou 3 créneaux d'appel de 15 min.
+"""Maillon 1 de docs\\agents\\CARTE-RELAIS.md (23/11/2026) : réponse courte et automatique à un prospect qui répond POSITIVEMENT : un membre de l'équipe rappelle, on demande le numéro et le jour + matin/après-midi.
 Appelé par reponses.py, jamais seul. Réglage séparé reponse_auto_envoi (reponses-config.json), FAUX par défaut : en simulation, le message est écrit dans
 B2B\\donnees\\reponses-auto\\ et annoncé sur Discord, RIEN n'est envoyé. Une seule réponse par prospect, aucune relance par ce maillon.
 Jamais de réponse automatique à un STOP, un refus ou un message ambigu (classés « autre » par reponses.classer) : seule l'alerte Discord existante part.
-Aucun texte inventé : modèle fixe, créneaux calculés sur l'agenda ; pas d'agenda lu = pas de réponse (alerte). Aucun prix, aucune promesse de résultat."""
+Aucun texte inventé : modèle fixe, aucun agenda lu, aucun créneau. Aucun prix, aucune promesse de résultat."""
 import json, os, re
 from datetime import date
 from pathlib import Path
@@ -19,17 +19,13 @@ BLOQUES = ("STOP", "refusé", "devis", "signé", "exclu")
 JOURS = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
 
 
-def creneau_texte(u, decalage):
-    l = u + decalage(u)
-    return f"{JOURS[l.weekday()]} {l.day:02d}/{l.month:02d} à {l:%H}h{l:%M}"
-
-
-def message(slots, decalage, ident, signer):
-    """Texte fixe, ton oral. 2 ou 3 créneaux de 15 min. signer(texte, ident) ajoute la signature de Liam."""
+def message(ident, signer):
+    """Texte fixe, ton oral, aucun créneau ni agenda : un membre de l'équipe rappelle ; on demande le numéro et le jour + matin/après-midi. signer(texte, ident) ajoute signature et ligne STOP."""
     lignes = ["Merci pour votre réponse.", "",
-              "Le plus simple : un appel de 15 minutes, je vous explique en deux mots ce que je vous propose et vous me dites ce que vous en pensez. Je suis libre :", ""]
-    lignes += [f"• {creneau_texte(s, decalage)} (15 min)" for s in slots[:3]]
-    lignes += ["", "Dites-moi lequel vous arrange, et le numéro où vous joindre. Si aucun ne va, proposez-moi une autre heure."]
+              "Un membre de notre équipe va vous rappeler pour vous expliquer en deux mots ce que nous vous proposons.", "",
+              "Pour que ça tombe au bon moment, dites-moi simplement :",
+              "• le meilleur numéro pour vous joindre ;",
+              "• le jour et la tranche horaire qui vous arrangent (matin ou après-midi)."]
     return signer("\n".join(lignes), ident)
 
 
@@ -49,12 +45,11 @@ def etat_noter(cle, mode, mid):
     tmp.write_text(json.dumps(e, ensure_ascii=False, indent=1, sort_keys=True), encoding="utf-8"); os.replace(tmp, ETAT)
 
 
-def raison_de_ne_pas_repondre(cl, statut_avant, cle, slots, agenda_ok, simulation, destinataire):
+def raison_de_ne_pas_repondre(cl, statut_avant, cle, simulation, destinataire):
     """None = on peut répondre ; sinon la raison (affichée dans l'alerte Discord, qui prévient Liam à la place)."""
     if cl != "positive": return "réponse non positive : aucune réponse automatique"
     if statut_avant in BLOQUES: return f"prospect déjà en « {statut_avant} »"
     if not destinataire or "@" not in destinataire: return "adresse de réponse introuvable"
-    if not agenda_ok or len(slots) < 2: return "agenda non lu ou moins de 2 créneaux libres : pas de créneau inventé"
     ancien = etat_lire().get(cle)
     if ancien and (ancien.get("mode") == "envoye" or simulation): return f"déjà répondu le {ancien.get('date')} (une seule réponse par prospect)"
     return None
@@ -68,19 +63,19 @@ def ecrire_message(p, destinataire, objet, texte, mode, jour=None):
     return f
 
 
-def ligne_relais(p, mode, slots_txt):
+def ligne_relais(p, mode):
     RELAIS.parent.mkdir(parents=True, exist_ok=True)
     with open(RELAIS, "a", encoding="utf-8") as f:
-        f.write(json.dumps({"date": str(date.today()), "relais": "réponse positive → réponse au prospect avec créneaux", "prospect": p.get("nom", ""), "ville": p.get("ville", ""),
-                            "mode": mode, "creneaux": slots_txt}, ensure_ascii=False) + "\n")
+        f.write(json.dumps({"date": str(date.today()), "relais": "réponse positive → réponse au prospect (numéro et créneau demandés)", "prospect": p.get("nom", ""), "ville": p.get("ville", ""),
+                            "mode": mode}, ensure_ascii=False) + "\n")
 
 
-def noter_registre(p, mode, slots_txt, registre=None):
+def noter_registre(p, mode, registre=None):
     """Ajoute au lead du registre le champ « reponse_auto » (aucun autre champ : dernier_resultat et retour pilotent les rappels). Introuvable : rien."""
     import registre as RG
     try:
         with RG.verrou():
             reg = RG.charger(); k = RG.trouver(reg, p.get("nom"), p.get("ville"), p.get("telephone"))
             if not k: return False
-            reg["entreprises"][k]["reponse_auto"] = {"date": str(date.today()), "mode": mode, "creneaux": slots_txt}; RG.sauver(reg); return True
+            reg["entreprises"][k]["reponse_auto"] = {"date": str(date.today()), "mode": mode}; RG.sauver(reg); return True
     except (OSError, ValueError, TimeoutError): return False

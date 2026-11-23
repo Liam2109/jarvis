@@ -259,6 +259,7 @@
 <script src="docs.js"></script>
 <script src="data/historique.js"></script>
 <script src="data/leads.js"></script>
+<script src="data/relais.js"></script>
 <div id="bulle" role="status" aria-live="polite"></div>
 <script>
 (function () {
@@ -282,7 +283,7 @@
   var DOCS = [["pipeline", "Pipeline"], ["sources", "Sources des chiffres"], ["a_faire", "À faire"], ["journal", "Journal"], ["decisions", "Décisions"], ["idees", "Idées"]];
   var JOURS = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"], MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
   var VEDETTE = "appels", CLE = "paiements";   // la carte du haut, et le chiffre qui garde l'ocre
-  var A = null, V = null, D = null, L = null, vue = "jour", doc = "a_faire", choisi = null, recherche = "";
+  var A = null, V = null, D = null, L = null, R = null, vue = "jour", doc = "a_faire", choisi = null, recherche = "";
   try {
     vue = localStorage.getItem("jarvis-vue") || "jour"; periode = { mois: "mois", an: "an" }[localStorage.getItem("jarvis-periode")] || "semaine"; var cc = JSON.parse(localStorage.getItem("jarvis-courbes") || "null"); if (cc) for (var k in COCHES) if (typeof cc[k] === "boolean") COCHES[k] = cc[k]; doc = localStorage.getItem("jarvis-doc") || "a_faire";
     var ancien = localStorage.getItem("jarvis-onglet");   // ancienne page à onglets
@@ -347,7 +348,18 @@
           '</b><span class="lib">' + esc(x.libelle) + '</span><span class="det"' + (manque ? ' title="' + esc(x.raison) + '">' + simple(x.raison) : ">" + esc(x.detail || "")) + "</span></li>";
       }).join("") + "</ol>";
     }
-    return h + carteLeads() + carteAgents();
+    return h + carteLeads() + carteRelais() + carteAgents();
+  }
+  function carteRelais() {   // les relais automatiques (data/relais.js, lu depuis B2B\donnees\relais.jsonl) : un par ligne, le plus récent d'abord
+    var t = '<section class="bloc verre" aria-labelledby="t-rel"><div class="tete"><h2 id="t-rel">Relais</h2>';
+    if (!R) return t + '</div><p class="vide">data\\relais.js absent : double-cliquez sur l\'icône « Jarvis - Mon entreprise » du bureau.</p></section>';
+    var l = R.relais || [];
+    t += '<span class="meta">' + (l.length ? l.length + " dernier" + (l.length > 1 ? "s" : "") : "aucun relais") + "</span></div>";
+    if (!l.length) return t + '<p class="vide">Aucun relais enregistré pour le moment.</p></section>';
+    return t + '<ul class="leads">' + l.map(function (x) {
+      return '<li><span class="qui"><b>' + esc(x.prospect || "(nom absent)") + "</b>" + (x.ville ? " <span>· " + esc(x.ville) + "</span>" : "") + '</span><span class="meta tel">' + jjmm(x.date) + " · " + esc(x.mode || "") +
+        '</span><span class="motif">' + esc(x.relais || "") + (x.creneaux ? " · " + esc(x.creneaux) : "") + "</span></li>";
+    }).join("") + "</ul></section>";
   }
   function jjmm(j) { return j && j.length === 10 ? j.slice(8, 10) + "/" + j.slice(5, 7) : esc(j || ""); }
   function carteLeads() {   // les leads chauds à rappeler (data/leads.js), avec la raison notée par Sid ; Liam appelle lui-même, Jarvis n'appelle personne
@@ -594,7 +606,7 @@
     if (s) { s.oninput = function () { recherche = s.value; rendre(); }; if (foc) { s.focus(); s.setSelectionRange(pos, pos); } }
   }
   function appliquer() {
-    A = window.JARVIS_AGENTS || null; V = window.JARVIS_VENTES || null; D = window.JARVIS_DOCS || null; H = window.JARVIS_HISTO || null; L = window.JARVIS_LEADS || null;
+    A = window.JARVIS_AGENTS || null; V = window.JARVIS_VENTES || null; D = window.JARVIS_DOCS || null; H = window.JARVIS_HISTO || null; L = window.JARVIS_LEADS || null; R = window.JARVIS_RELAIS || null;
     rendre(); if (choisi) panneau(choisi);
   }
   document.addEventListener("click", function (e) {

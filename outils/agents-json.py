@@ -560,8 +560,23 @@ def masquer(t):
     return re.sub(r"(?<!\d)(?:\+33\s?|0)[1-9](?:[ .-]?\d\d){4}(?!\d)", "[téléphone masqué]", t)
 
 
+def lire_relais(n=30):
+    """B2B/donnees/relais.jsonl : une ligne JSON par relais (maillon 1, réponse positive). -> les n dernières, la plus récente d'abord ; ligne illisible ignorée ; fichier absent = []."""
+    out = []
+    try:
+        for l in (RACINE / "B2B" / "donnees" / "relais.jsonl").read_text(encoding="utf-8-sig").splitlines():
+            try: out.append(json.loads(l))
+            except ValueError: pass
+    except OSError: pass
+    return out[-n:][::-1]
+
+
 def ecrire(donnees, chiffres_ventes=None, histo=None, leads=None):
     SORTIE.mkdir(exist_ok=True)
+    rel = {"genere_le": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "relais": lire_relais()}      # data/relais.json : noms de prospects, hors git comme leads.json
+    (SORTIE / "data").mkdir(exist_ok=True); t = json.dumps(rel, ensure_ascii=False, indent=1)
+    for p, contenu in ((SORTIE / "data" / "relais.json", t), (SORTIE / "data" / "relais.js", "window.JARVIS_RELAIS = " + t + ";\n")):
+        tmp = p.with_name(p.name + ".tmp"); tmp.write_text(contenu, encoding="utf-8"); os.replace(tmp, p)
     if histo is not None:      # data/historique.json (gardé d'un lancement à l'autre) + data/historique.js (même contenu, lu par la page en file://)
         HISTO.parent.mkdir(exist_ok=True); t = masquer(json.dumps(histo, ensure_ascii=False, indent=1))
         for p, contenu in ((HISTO, t), (HISTO.with_suffix(".js"), "window.JARVIS_HISTO = " + t + ";\n")):
