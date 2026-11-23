@@ -196,6 +196,17 @@
       "actif_le": "2026-11-22",
       "desactive": "2026-11-22 : nouveau domaine, fermé jusqu'au « go superviseur-videos » de Liam (verrou propre go_superviseur_videos ; retirer cette clé pour le planifier)"
     },
+    "linkedin": {
+      "script": "linkedin.py",
+      "commandes": [
+        [
+          "jour"
+        ]
+      ],
+      "heure": "07:45",
+      "jours": [0, 1, 2, 3, 4],
+      "desactive": "2026-11-23 : nouvel agent, fermé jusqu'au « go linkedin » de Liam (en simulation : envoi_automatique=false ; retirer cette clé, ajouter linkedin à agents_actifs puis passer envoi_automatique à true dans le fichier local)"
+    },
     "jarvis-vue": {
       "script": "jarvis-vue.py",
       "commandes": [

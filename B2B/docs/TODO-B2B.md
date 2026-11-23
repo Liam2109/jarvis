@@ -1,6 +1,6 @@
 # To-do B2B — LM MULTI-SERVICES
 
-_Mise à jour : 16 nov. 2026, 17 h 30 (le fait est supprimé ; l'historique est dans le journal et dans git)_
+_Mise à jour : 23 nov. 2026, 15 h (le fait est supprimé ; l'historique est dans le journal et dans git)_
 
 ## Lundi 16 nov. (appels d'abord)
 - [x] 07 h 35 : la feuille de Sid n'existait pas (simulation depuis le 13/11 au soir) ; corrigé, feuille « Appels 2026-11-16 » créée (100 lignes), alerte surveillant 08:15 ajoutée pour la prochaine fois
@@ -41,6 +41,8 @@ _Mise à jour : 16 nov. 2026, 17 h 30 (le fait est supprimé ; l'historique est 
 - [ ] Donner un Drive à Claude pour le prompt d'un site classique (modèle à réutiliser)
 
 ## Agents (ensuite, une étape à la fois)
+- [ ] Agent LinkedIn (construit, en simulation) : demander à Claude un 1er lot de ~14 posts, le coller dans B2B\linkedin\lot-AAAA-MM-JJ.md, essayer `python B2B\agents\linkedin.py importer --essai` puis `jour --essai` ; ensuite dire « go linkedin » (retirer « desactive » de sa tâche, l'ajouter à agents_actifs sur le serveur, envoi_automatique à true dans linkedin-config.local.json)
+- [ ] Vérifier dans Drive que « Appels Sid 2026-11-23 » existe avec 100 lignes (sinon appels-sid est encore en simulation)
 - [ ] Vidéos : regarder les sketchs test de la ligne B (Videos-valider6-11-17-1400 T03, 2026-11-18-1400 L01, 2026-11-19-1400 série épisode 1 avec Nadia, 2026-11-20-1400 N01 avec M. Bernard) ; pour un nouveau lot de 20 sketches, le demander à Claude dans le chat (Codex absent du serveur) puis « python Videosgents\sketches.py lot Videos\idees-nouvelles\AAAA-MM-JJ.json »
 - [ ] Vidéos : faire un « publier --essai » sur chaque ligne avant le go publier, pour voir où TikTok place la case « contenu généré par IA » (le dry-run le dit)
 - [ ] Vidéos : avant le « go publier », faire relever l'adresse TikTok par l'agent publication (colonne url_tiktok de journal-videos.csv, vide pour l'instant)

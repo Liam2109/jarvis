@@ -1,0 +1,50 @@
+{
+ "nom": "linkedin",
+ "responsable": "Prospection",
+ "mission": "Chaque jour ouvré à 07:45, poste sur Discord 1 à 2 posts LinkedIn pour Liam, à valider (✅ ❌) puis coller lui-même. Ne publie jamais sur LinkedIn.",
+ "statut": "simulation",
+ "script": "B2B/agents/linkedin.py",
+ "jours": [0, 1, 2, 3, 4],
+ "heures": {
+  "debut": "07:45",
+  "fin": "19:00"
+ },
+ "fichiers_lus": [
+  "B2B/linkedin/lot-AAAA-MM-JJ.md (lots de posts écrits par Claude dans le chat, collés par Liam)",
+  "B2B/linkedin/file.json",
+  "B2B/docs/OFFRE-REFERENCE.json (prix)",
+  "B2B/agents/linkedin-config.json",
+  "réactions ✅ ❌ 📌 de Liam sur Discord (lecture seule)"
+ ],
+ "fichiers_ecrits": [
+  "B2B/linkedin/file.json (file des posts, statuts, état)",
+  "B2B/agents/linkedin-journal.log"
+ ],
+ "canaux_discord": [
+  "b2b"
+ ],
+ "envoi_client": false,
+ "actions_interdites": [
+  "publier sur LinkedIn, par une API ou en automatisant le site (Liam copie et colle lui-même)",
+  "republier seul un post proposé et non validé (il est signalé, jamais reproposé)",
+  "proposer un post qui contient un emoji, une image, un lien, un e-mail, un téléphone ou plus de 3 hashtags",
+  "tutoyer, inventer un témoignage, un client ou un chiffre, promettre un résultat ou un gain",
+  "écrire un prix ou une commission autre que ceux de OFFRE-REFERENCE.json (pack 595 €, site complet 994 €, 49 €/mois) et des commissions 15 % appelants et 10 % closers",
+  "utiliser une phrase interdite de OFFRE-REFERENCE.json ou un appel à l'action autre que « écrivez-moi en message privé »",
+  "proposer de passer sur place ou de rencontrer un prospect (appels seulement)",
+  "présenter une page exemple comme un client",
+  "lire une réaction d'un autre compte que celui de Liam",
+  "appeler Claude, une IA ou un service payant",
+  "contacter un prospect, un client ou Sid",
+  "afficher un secret (jeton, clé)",
+  "encaisser, publier ou signer"
+ ],
+ "plafonds": {
+  "messages_par_jour": 6
+ },
+ "peut_engager": false,
+ "alerte_si_silence": "08:15",
+ "tests": [
+  "tests/agents/test_linkedin.py"
+ ]
+}

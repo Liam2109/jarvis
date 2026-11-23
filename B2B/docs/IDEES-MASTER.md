@@ -43,6 +43,9 @@ Chaque idée est notée à la date où Liam la dit. Une idée pas encore faite r
 - 30/10 — Agent Réponses : classer comme refus les refus polis (compliments puis « non », cas LM ELEC), exclure l'adresse et prévenir Liam dans 💬-réponses (à vérifier dans reponses.py).
 - 14/11 — Gabarit unique pour créer les skills (entrées, procédure, règles, critère de fin, exemples).
 
+- 23/11 — Agent LinkedIn : 1 à 2 posts par jour sur ton profil, en alternance recrutement appelants/closers (15 % / 10 %) et recherche de prospects pour un site web ; sans emoji ni image ; vouvoiement ; CTA = message privé ; Claude écrit un lot de ~14 posts dans le chat, l'agent les distribue sur Discord, tu valides (✅) puis tu copies-colles toi-même. Construit le 23/11 en simulation, en attente du « go linkedin ».
+- 23/11 — LinkedIn, mesurer avant d'insister : noter pendant 3 semaines quel type de post (recrutement ou prospect) amène un message privé, puis garder seulement celui qui mène à un appelant, un closer ou un rendez-vous. Les artisans locaux sont peu sur LinkedIn : les posts « prospect » risquent de ne rien rapporter.
+
 ## Sites et pages exemples
 - 24/10 — Niveau « premium » avec 3D utile en option payante, après les pages standard.
 - 24/10 — Mesure sans cookie des appels et clics sur le numéro, pour montrer un résultat chiffré à l'artisan après 30 jours.

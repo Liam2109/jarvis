@@ -114,11 +114,12 @@ assert not re.search(r"^\s*(import|from)\s+(selenium|playwright|pyppeteer)", src
 T = json.loads((ICI / "serveur-taches.json").read_text(encoding="utf-8"))["agents"]
 assert set(T) == {"appels-sid", "appels-liam", "devis", "rendez-vous", "reponses", "prospection", "resume-sid", "stripe-alerte", "panne-alerte", "surveillant", "nettoyage-fichiers",
                   "videos-veille", "videos-scripts", "videos-marketing", "videos-creation", "videos-publication", "videos-nettoyage", "alerte-candidatures", "relances", "interim", "chiffres-serveur",
-                  "superviseur-vente", "superviseur-prospection", "superviseur-sites", "superviseur-mail", "superviseur-videos", "jarvis-vue"}, sorted(T)   # équipe Vidéos TikTok (16/11/2026), scripts dans Videos\agents
+                  "superviseur-vente", "superviseur-prospection", "superviseur-sites", "superviseur-mail", "superviseur-videos", "jarvis-vue", "linkedin"}, sorted(T)   # équipe Vidéos TikTok (16/11/2026), scripts dans Videos\agents
 assert T["videos-creation"]["heure"] == "06:00" and T["videos-creation"]["heures_en_plus"] == ["14:00", "22:00"] and T["videos-creation"]["commandes"] == [["passage"]]
 assert T["videos-publication"]["commandes"] == [["publier"]] and "actif_le" not in T["videos-publication"]   # désactivée : seulement après le « go publier » de Liam (agents_actifs)   # instagram retiré du serveur le 14/11/2026 (archive) ; resume-sid/stripe-alerte/panne-alerte ajoutés (étape Argent, 15/11/2026) ; surveillant du harness (15/11/2026)
 assert T["nettoyage-fichiers"]["heure"] == "03:00" and T["nettoyage-fichiers"]["commandes"] == [["nettoyer"]]   # nettoyage des traces et du journal de plus de 30 jours (15/11/2026)
 assert T["chiffres-serveur"]["heure"] == "19:30" and T["chiffres-serveur"]["commandes"] == [["jour"]]   # une ligne par soir dans la feuille Google (21/11/2026)
+assert T["linkedin"]["heure"] == "07:45" and T["linkedin"]["jours"] == [0, 1, 2, 3, 4] and T["linkedin"]["commandes"] == [["jour"]] and T["linkedin"]["desactive"]   # posts LinkedIn de Liam, fermé jusqu'au « go linkedin » (23/11/2026)
 for s in ("superviseur-vente", "superviseur-prospection", "superviseur-sites", "superviseur-mail", "superviseur-videos", "jarvis-vue"):   # superviseurs de domaine (21/11/2026, Videos le 22/11) : un passage toutes les 30 min, fermes par le verrou « go superviseurs »
     assert T[s]["toutes_minutes"] == 30 and T[s]["commandes"] == [["passage"]], s
     assert T[s]["actif_le"] == ("2026-11-22" if s == "superviseur-videos" else "2026-11-21"), s

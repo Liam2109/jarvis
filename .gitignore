@@ -36,6 +36,10 @@ B2B/agents/*
 !B2B/docs/
 B2B/docs/*
 !B2B/docs/*.md
+# Agent linkedin (23/11/2026) : seuls les lots de posts collés par Liam partent sur GitHub (pour arriver sur le serveur) ; file.json (état de la file) jamais
+!B2B/linkedin/
+B2B/linkedin/*
+!B2B/linkedin/lot-*.md
 !B2B/sites/
 B2B/sites/*
 !B2B/sites/moteur/
