@@ -90,3 +90,4 @@
 - 2026-11-23 (chat) : agent LinkedIn cadré en 7 réponses (profil perso, 1-2 posts/jour, Claude écrit par lots, copier-coller manuel, CTA message privé) ; prompt Claude Code à relire avant lancement ; feuille de Sid du 23/11 à vérifier dans Drive.
 - 2026-11-23 (gros PC) : agent linkedin construit en simulation (linkedin.py, contrat, règles de contenu, tests\agents\test_linkedin.py, skill, tâche 07:45 lundi-vendredi désactivée) ; il ne publie jamais sur LinkedIn et reste fermé tant que Liam n'a pas dit « go linkedin ».
 - 2026-11-23 (chat) : lot 1 de 14 posts LinkedIn écrit et contrôlé (0 refus au contrôle local), déposé dans B2B\linkedin\lot-2026-11-23.md ; posts 3 et 9 parlent du closer, à retirer si Liam ne recrute pas de closers.
+- 2026-11-23 (chat) : closers passés à 15 % dans linkedin.py, tests, contrat, note (skill .claude non modifiable à distance) ; lot 1 réécrit (posts 3, 7, 9) et élargi aux agriculteurs, 14 posts contrôlés ; tests à relancer par Liam.
