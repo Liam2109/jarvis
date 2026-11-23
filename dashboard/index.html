@@ -537,7 +537,7 @@
   function vuePipeline() {
     if (!A) return '<p class="vide">Pas encore de données : double-cliquez sur l\'icône du bureau.</p>';
     var c = A.chiffres || {}, p = c.pipeline || [], max = Math.max.apply(null, p.map(function (x) { return x[1] || 0; }).concat([1]));
-    var t = [["Rendez-vous à venir", c.rendez_vous_a_venir], ["E-mails envoyés", c.emails_envoyes_total], ["Devis en cours", c.devis_en_cours], ["Appels Sid du jour", c.appels_sid_aujourdhui]];
+    var t = [["Rendez-vous à venir", c.rendez_vous_a_venir], ["E-mails envoyés", c.emails_envoyes_total], ["Devis en cours", c.devis_en_cours], ["Fiches Sid préparées du jour", c.fiches_sid_preparees_aujourdhui]];
     return '<section class="pipeline verre"><div class="stats">' + t.map(function (x) { return "<div><span>" + x[0] + "</span><b>" + esc(val(x[1])) + "</b></div>"; }).join("") + "</div>" +
       p.map(function (x) { return '<div class="etape"><span>' + esc(x[0]) + '</span><div class="piste"><div class="rempli" style="width:' + (x[1] ? Math.max(2, 100 * x[1] / max) : 0) + '%"></div></div><b>' + esc(val(x[1])) + "</b></div>"; }).join("") +
       '<p class="meta" style="margin:16px 0 0">Comptes seulement · « — » : pas de donnée sur ce PC</p></section>';

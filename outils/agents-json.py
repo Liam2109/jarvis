@@ -197,7 +197,7 @@ def chiffres_du_jour(jour):
     c["devis_en_cours"] = sum(1 for v in d.values() if v.get("statut") in ("préparé", "validé", "envoyé", "accepté"))
     c["devis_payes"] = sum(1 for v in d.values() if v.get("statut") == "payé")
     listes = (lire_json(AGENTS / "appels-sid-etat.json", {}) or {}).get("listes", {})
-    c["appels_sid_aujourdhui"] = int((listes.get(j) or {}).get("nombre", 0) or 0)
+    c["fiches_sid_preparees_aujourdhui"] = int((listes.get(j) or {}).get("nombre", 0) or 0)
     return c
 
 
@@ -264,7 +264,7 @@ def construire(maintenant=None, photo_serveur=None):
                            "statut": "inactif", "suspendu": False, "dernier_passage": None, "dernier_resultat": None, "derniere_erreur": None, "pole": POLES.get(nom, "Autres"),
                            "journal": [], "responsable": None, "note": None, "note_obsidian": None, "sans_script": True})
     ailleurs = bool(machine_active) and machine_active != ce_pc
-    photo = (photo_serveur or lire_serveur(machine_active)) if ailleurs else None
+    photo = (photo_serveur or lire_serveur(str(local.get("serveur_adresse", "") or "").strip() or machine_active)) if ailleurs else None   # serveur_adresse : IP du serveur, dans b2b.local.json (jamais en dur ici)
     vus = fusionner_serveur(agents, photo) if photo else 0
     for a in agents:
         d = (serveur.get(a["nom"]) or {}).get("desactive")
@@ -275,7 +275,7 @@ def construire(maintenant=None, photo_serveur=None):
         a["categorie"] = CATEGORIE.get(a["nom"], "Jarvis (CEO)")
         a["voyant"], a["voyant_raison"] = voyant(a, j)
         a["note_extrait"] = extrait_note(a["nom"]) if a.get("note") else None
-    du_jour = {"prospection": ("prospects trouvés", c["prospects_trouves_aujourdhui"]), "appels-sid": ("appels Sid", c["appels_sid_aujourdhui"]),
+    du_jour = {"prospection": ("prospects trouvés", c["prospects_trouves_aujourdhui"]), "appels-sid": ("fiches Sid préparées", c["fiches_sid_preparees_aujourdhui"]),
                "rendez-vous": ("rendez-vous", c["rendez_vous_aujourdhui"]), "devis": ("devis préparés", c["devis_prepares_aujourdhui"])}
     for a in agents:
         if a.get("vu_sur_serveur"): continue      # le chiffre du jour du serveur (journaux et états locaux de ce PC absents) est déjà en place
