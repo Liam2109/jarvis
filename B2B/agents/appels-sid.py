@@ -61,7 +61,7 @@ NAF_SID = {"plombier": ["43.22A", "43.22B"], "electricien": ["43.21A"], "coiffeu
            "traiteur": ["56.21Z"], "boucher": ["47.22Z"], "serrurier": ["95.29Z"], "paysagiste": ["81.30Z"], "taxi": ["49.32Z"],
            "auto_ecole": ["85.53Z"], "nettoyage": ["81.21Z", "81.22Z"]}
 ZONE = {"departements": list(NORMANDIE)}   # remplacé par cfg() : les départements dans lesquels l'agent cherche et accepte une entreprise
-DEFAUT = {"envoi_automatique": False, "par_liste": 100,
+DEFAUT = {"envoi_automatique": False, "alerte_leads_envoi": False, "par_liste": 100,
           "repartition": {m: 5 for m in NAF_SID},   # ~20 métiers, environ 5 par métier dans une liste de 100 (règle fixe de Liam, 10 nov. 2026)
           "cible_reserve": 400, "seuil_alerte": 200, "sourcing_requetes_max": 6, "pause_overpass_s": 15, "sourcing_refaire_jours": 30,
           "zone": "Normandie", "departements": list(NORMANDIE), "sirene_actif": True, "sirene_requetes_max": 12, "sirene_pages_max": 4, "sirene_sites_max": 30, "pause_sirene_s": 1, "pause_site_s": 2,
@@ -250,6 +250,7 @@ def cfg():
     deps = [str(d).strip() for d in c.get("departements") or [] if str(d).strip() in NORMANDIE and str(d).strip() in ZN.DEPTS_AUTORISES]
     c["departements"] = [d for d in NORMANDIE if d in deps] or list(NORMANDIE); ZONE["departements"] = list(c["departements"])
     c["envoi_automatique"] = c.get("envoi_automatique") is True; c["avec_site"] = c.get("avec_site") is True
+    c["alerte_leads_envoi"] = c.get("alerte_leads_envoi") is True   # 23/11/2026 : alerte Discord des leads chauds seulement, indépendante de envoi_automatique (aucune action Google)
     jrs = [str(j).strip().lower() for j in c.get("jours_appel") or [] if str(j).strip().lower() in JOURS_SEMAINE]
     c["jours_appel"] = jrs or list(JOURS_SEMAINE)   # réglage absent ou invalide -> aucune restriction (tous les jours), jamais un blocage silencieux
     if not isinstance(c.get("repartition"), dict): c["repartition"] = DEFAUT["repartition"]
@@ -892,10 +893,20 @@ def alerter_leads(reg, jour, conf, a_blanc=False):
     """Maillon 2 de CARTE-RELAIS (23/11/2026) : la file unique « leads chauds » (leads_chauds.py, B2B\\donnees\\leads-chauds.json) est mise à jour depuis le registre ; une alerte
     Discord par lead à son entrée (nom, téléphone, jour, qui rappelle : Sid par défaut), jamais de répétition. Liam ne rappelle pas. Aucun message au prospect. À blanc et simulation :
     affiché, rien envoyé, rien marqué, file non écrite. Le journal ne contient ni nom ni numéro. -> textes des alertes."""
-    envoyer = alerter_discord if conf.get("envoi_automatique") and not a_blanc else None
+    envoyer = alerter_discord if conf.get("alerte_leads_envoi") and not a_blanc else None
     entres, sortis, textes = LC.synchroniser(reg, jour, envoyer, rappelle=conf.get("rappelle_lead") or "Sid", ecrire=not a_blanc)
     if not a_blanc: journaliser("lead", f"{jour} : file des leads chauds, {len(entres)} entré(s), {len(sortis)} sorti(s), {len(textes)} alerte(s)")
     return textes
+
+
+def cmd_alerter_leads(conf, jour, a_blanc=False):
+    """Passe « leads chauds » seule (23/11/2026) : lit le registre local, met à jour la file donnees\leads-chauds.json et alerte sur Discord selon alerte_leads_envoi (indépendant de
+    envoi_automatique). Aucune feuille Google créée ni relue, aucun partage, aucun nettoyage du Drive, pas de preparer_registre."""
+    try: reg = RG.charger()
+    except (OSError, ValueError): raise ErreurAgent("registre des entreprises illisible : rien n'est fait")
+    textes = alerter_leads(reg, jour, conf, a_blanc)
+    print(f"  Leads chauds : {len(textes)} alerte(s) {'à envoyer' if not conf.get('alerte_leads_envoi') or a_blanc else 'envoyée(s)'}" + (" (simulation : alerte_leads_envoi=false)" if textes and not conf.get("alerte_leads_envoi") else ""))
+    return 0
 
 
 def neuves_registre(conf, etat, jour, reg, n, historique, qui, a_blanc=False, sites_trouves=None, hors_ligne=False, deja=None):
@@ -1558,7 +1569,7 @@ def main(argv=None):
     for nom in ("preparer", "sourcer", "jour"): sp.add_parser(nom, parents=[base]).add_argument("--jour", default=None)
     sc = sp.choices["sourcer"]; sc.add_argument("--dept", default=None, choices=list(NORMANDIE), help="limite le sourcing à un département"); sc.add_argument("--simulation", action="store_true", help="aucun réseau, données fictives, rien n'est écrit")
     sp.choices["preparer"].add_argument("--hors-ligne", action="store_true", help="aucune requête réseau, vérification de site simulée (implique --a-blanc)")
-    for nom in ("etat", "google-autoriser", "rediriger-liste", "rendre-liste"): sp.add_parser(nom, parents=[base])
+    for nom in ("etat", "google-autoriser", "rediriger-liste", "rendre-liste", "alerter-leads"): sp.add_parser(nom, parents=[base])
     c = sp.add_parser("annuler", parents=[base]); c.add_argument("jour", nargs="?"); c.add_argument("--force", action="store_true")
     for nom in ("installer-tache", "retirer-tache"): sp.add_parser(nom, parents=[base]).add_argument("--oui", action="store_true")
     args = p.parse_args(argv); M.exiger("appels-sid", args.cmd, getattr(args, "a_blanc", False) or getattr(args, "simulation", False) or getattr(args, "hors_ligne", False))      # --simulation et --hors-ligne n'écrivent rien et n'ouvrent aucun réseau : permises sur toute machine, comme --a-blanc
@@ -1570,6 +1581,7 @@ def main(argv=None):
             return cmd_sourcer(conf, jour, args.a_blanc or args.simulation, [args.dept] if args.dept else None)
         if args.cmd == "jour": return cmd_jour(conf, jour, args.a_blanc)
         if args.cmd == "etat": return cmd_etat(conf)
+        if args.cmd == "alerter-leads": return cmd_alerter_leads(conf, date.today().isoformat(), args.a_blanc)
         if args.cmd == "annuler": return cmd_annuler(date_valide(args.jour) if args.jour else None, args.force, args.a_blanc)
         if args.cmd == "rediriger-liste": return cmd_rediriger(args.a_blanc)
         if args.cmd == "rendre-liste": return cmd_rendre(args.a_blanc)

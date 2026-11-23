@@ -245,7 +245,7 @@ class Relecture(unittest.TestCase):
         return "\n".join(",".join('"' + c.replace('"', '""') + '"' for c in l) for l in lignes)
 
     def sid(self, jour, drive, envoi=True):
-        conf = A.cfg(); conf["envoi_automatique"] = envoi; conf["dossier_sid_id"] = "DSID"; etat = A.etat_lire()
+        conf = A.cfg(); conf["envoi_automatique"] = envoi; conf["alerte_leads_envoi"] = envoi; conf["dossier_sid_id"] = "DSID"; etat = A.etat_lire()
         return muet(A.preparer_registre, RG.SID, conf, etat, jour, False, drive, hors_ligne=True)
 
     def test_feuille_de_la_veille_relue(self):

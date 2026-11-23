@@ -1139,6 +1139,25 @@ _buf = io.StringIO()
 with _cl.redirect_stdout(_buf): A._formater_sans_bloquer(_DriveSansSheets(), "F")
 verifier("SANS mise en forme" in _buf.getvalue() and "API « Google Sheets »" in _buf.getvalue(), f"échec de mise en forme signalé dans la sortie : {_buf.getvalue().strip()[:160]}")
 
+print("35. Alerte leads chauds : réglage alerte_leads_envoi indépendant de envoi_automatique, aucune action Google (23/11/2026)")
+import registre as _RG
+_reg = _RG.vide(); _k = _RG.cle("Lead Test", "Rouen", "0235000001")
+_reg["entreprises"][_k] = {"nom": "Lead Test", "commune": "Rouen", "tel": "0235000001", "statut": "à reprendre", "dernier_resultat": "À rappeler", "resultat_le": "2026-11-20", "note": "n", "lus": {"Sid|2026-11-20": "À rappeler"}}
+_RG.sauver(_reg)
+_envoyes = []; _alerte0 = A.alerter_discord; A.alerter_discord = lambda t: (_envoyes.append(t) or True)
+_drive0 = A.ouvrir_drive; A.ouvrir_drive = lambda *a, **k: (_ for _ in ()).throw(AssertionError("Google interdit pour l'alerte des leads"))
+_prep0 = A.preparer_registre; A.preparer_registre = lambda *a, **k: (_ for _ in ()).throw(AssertionError("preparer_registre interdit pour l'alerte des leads"))
+try:
+    verifier(A.cfg()["alerte_leads_envoi"] is False and A.cfg()["envoi_automatique"] is False, "défaut : alerte_leads_envoi et envoi_automatique faux")
+    with contextlib.redirect_stdout(io.StringIO()): A.cmd_alerter_leads({"alerte_leads_envoi": False, "envoi_automatique": True}, "2026-11-23")
+    verifier(not _envoyes, "alerte_leads_envoi faux (même avec envoi_automatique vrai) : rien n'est envoyé")
+    with contextlib.redirect_stdout(io.StringIO()): A.cmd_alerter_leads({"alerte_leads_envoi": True, "envoi_automatique": False}, "2026-11-23")
+    verifier(len(_envoyes) == 1 and A.LC.charger()["alertes"].get(_k) == "2026-11-23", "alerte_leads_envoi vrai (envoi_automatique faux) : une alerte Discord, lead marqué, aucun appel Google")
+    with contextlib.redirect_stdout(io.StringIO()): A.cmd_alerter_leads({"alerte_leads_envoi": True, "envoi_automatique": False}, "2026-11-24")
+    verifier(len(_envoyes) == 1 and A.LC.FICHIER.exists() and _k in A.LC.charger()["leads"], "2e passe : 0 nouvelle alerte, leads-chauds.json écrit")
+finally:
+    A.alerter_discord, A.ouvrir_drive, A.preparer_registre = _alerte0, _drive0, _prep0
+
 monde(trouves=[], config={})   # ne laisse aucun fichier temporaire dans un état inattendu pour la suite
 
 print()
