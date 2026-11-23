@@ -14,7 +14,8 @@ _Mise à jour : 23 nov. 2026, 15 h (le fait est supprimé ; l'historique est dan
 - [ ] Droit de rétractation (vente à distance), formulation d'arrêt, transfert du domaine (code chez le bureau d'enregistrement) : à faire relire
 - [ ] Clause de rétractation de 14 jours dans le devis, à faire relire
 - [ ] Prévoir comment livrer un site complet multi-pages avant d'en vendre un
-- [ ] Commissions : appelant 15 %, closer 15 % (décidé le 23/11) ; à décider : sur le premier paiement seulement ou aussi sur les 49 €/mois ; aligner OFFRE-REFERENCE.json, scripts et TECHNIQUES-CLOSING si besoin
+- [ ] Tarification du 23/11 : pack environ 495 € (au lieu de 595 €) + 29 €/mois (domaine, hébergement et petites modifications inclus) à la place de « 49 €/an + modifications payantes » ; à confirmer : 495 ou 500, prix du site complet ; aligner devis, scripts, Stripe et OFFRE-REFERENCE.json plus tard
+- [ ] Commissions : appelant 15 %, closer 15 % (décidé le 23/11) ; à décider : sur le premier paiement seulement ou aussi sur les 29 €/mois ; aligner OFFRE-REFERENCE.json, scripts et TECHNIQUES-CLOSING si besoin
 - [ ] Décider : petit acompte (environ 100 €) pour le client sans confiance ? Contredit « sans acompte » ; pas dans les scripts avant décision
 - [ ] Test de cohérence : étendre aux notes docs\decisions et docs\agents (la note « Offre 595 + 49 » avait encore 990–1 490 € et « lien à créer », hors du périmètre du test) ; vérifier aussi les 3 autres notes de décision
 
