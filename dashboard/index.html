@@ -96,9 +96,12 @@
 
   /* Voyants : bleu plein = passé aujourd'hui, anneau bleu = passé avant, gris bleuté = aucun passage visible, losange bleu nuit = erreur */
   .pt { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex: none; background: rgba(23,36,67,.28); }
-  .pt.ok { background: var(--bleu); }
-  .pt.ancien { background: none; box-shadow: inset 0 0 0 2px var(--bleu); }
-  .pt.erreur { width: 9px; height: 9px; background: var(--texte); border-radius: 1px; transform: rotate(45deg); }
+  .pt.vert { background: #2E9E6B; }
+  .pt.orange { background: #E08A1E; }
+  .pt.rouge { background: #D6453D; }
+  .pt.gris { background: rgba(23,36,67,.28); }
+  .note-agent { white-space: pre-line; font-size: 13px; line-height: 20px; margin: 0 0 16px; padding: 12px 16px; border-radius: 12px; background: rgba(255,255,255,.6); border: 1px solid var(--bord-verre); }
+  #panneau h3 { font-size: 14px; line-height: 20px; margin: 24px 0 8px; }
   .legende { display: flex; gap: 8px 20px; flex-wrap: wrap; margin: 20px 0 0; padding-top: 16px; border-top: 1px solid var(--ligne); } .legende span { display: inline-flex; align-items: center; gap: 8px; }
 
   .poles { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; align-items: start; }
@@ -260,7 +263,7 @@
 <script>
 (function () {
   "use strict";
-  var POLES = ["Trouver", "Vendre", "Encaisser", "Communiquer", "Autres"];
+  var POLES = ["Vente", "Prospection", "Sites", "Mail", "Vidéos", "Jarvis (CEO)"];   // un superviseur par domaine (champ « categorie » d'agents.json)
   var ICONES = {   // icônes au trait, trait 1,5
     jour: '<path d="M2.5 5.5h11M5 1.5v2.5M11 1.5v2.5"/><rect x="2.5" y="3" width="11" height="11" rx="2"/>',
     agents: '<circle cx="4.5" cy="4.5" r="2"/><circle cx="11.5" cy="4.5" r="2"/><circle cx="4.5" cy="11.5" r="2"/><circle cx="11.5" cy="11.5" r="2"/>',
@@ -302,10 +305,10 @@
     return d.getDate() + " " + ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."][d.getMonth()];
   }
   function voyant(a) {
-    if (a.statut === "erreur" || a.suspendu) return ["erreur", a.suspendu ? "Suspendu" : "En erreur"];
-    if (a.dernier_passage && a.dernier_passage.slice(0, 10) === aujourdhui()) return ["ok", "Passé aujourd'hui"];
-    if (a.dernier_passage) return ["ancien", "Dernier passage avant aujourd'hui"];
-    return ["", "Aucun passage visible sur ce PC"];
+    if (a.statut === "erreur" || a.suspendu) return ["rouge", a.suspendu ? "Suspendu" : "En erreur"];
+    if (a.etat_liste === "désactivé" || a.etat_liste === "à construire") return ["gris", a.etat_liste === "désactivé" ? "Désactivé" : "À construire"];
+    if (!a.dernier_passage) return ["gris", "Aucun passage visible"];
+    return a.dernier_passage.slice(0, 10) === aujourdhui() ? ["vert", "Passé aujourd'hui"] : ["orange", "Pas encore passé aujourd'hui"];
   }
   function svg(nom, t) { t = t || 16; return '<svg width="' + t + '" height="' + t + '" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONES[nom] || ICONES.docs) + "</svg>"; }
 
@@ -361,16 +364,16 @@
     }).join("") + "</ul>";
     return t + '<p class="meta" style="margin:16px 0 0">' + esc(L.critere || "") + ". Liam rappelle lui-même : aucun agent n'appelle ces entreprises.</p></section>";
   }
-  function legende() { return '<p class="meta legende"><span><i class="pt ok"></i>passé aujourd\'hui</span><span><i class="pt ancien"></i>passé avant</span><span><i class="pt"></i>aucun passage visible ici</span><span><i class="pt erreur"></i>erreur</span></p>'; }
+  function legende() { return '<p class="meta legende"><span><i class="pt vert"></i>passé aujourd\'hui</span><span><i class="pt orange"></i>pas encore passé aujourd\'hui</span><span><i class="pt gris"></i>désactivé, à construire ou jamais passé</span><span><i class="pt rouge"></i>erreur ou suspendu</span></p>'; }
   function carteAgents() {
     if (!A) return '<section class="bloc verre"><h2>Agents</h2><p class="vide">Pas encore de données sur les agents : double-cliquez sur l\'icône du bureau.</p></section>';
     var ok = 0, err = 0;
-    A.agents.forEach(function (a) { var v = voyant(a)[0]; if (v === "ok") ok++; if (v === "erreur") err++; });
+    A.agents.forEach(function (a) { var v = voyant(a)[0]; if (v === "vert") ok++; if (v === "rouge") err++; });
     var h = '<section class="bloc verre" aria-labelledby="t-ag"><div class="tete"><h2 id="t-ag">Agents</h2><span class="meta">' + ok + " sur " + A.agents.length + " passés aujourd'hui · " + err + " en erreur</span>" +
       '<span class="droite"><button class="lien" data-vue="agents">Tout voir</button></span></div><div class="colonnes">';
     POLES.forEach(function (p) {
-      var ag = A.agents.filter(function (a) { return a.pole === p; });
-      if (!ag.length && p === "Autres") return;
+      var ag = A.agents.filter(function (a) { return (a.categorie || "Jarvis (CEO)") === p; });
+      if (!ag.length && p === "Jarvis (CEO)") return;
       h += '<div class="colonne"><h3>' + p + '<span class="num">' + ag.length + "</span></h3>" + (ag.length ? ag.map(ligne).join("") : '<p class="vide" style="padding:0 8px">Aucun agent</p>') + "</div>";
     });
     return h + "</div>" + legende() + "</section>";
@@ -381,8 +384,8 @@
     if (A.source && A.source.indexOf("pas visible") >= 0) h += '<p class="note">Source : ' + esc(A.source) + ".</p>";
     var r = recherche.toLowerCase();
     POLES.forEach(function (p) {
-      var ag = A.agents.filter(function (a) { return a.pole === p && (!r || (a.nom + " " + a.role).toLowerCase().indexOf(r) >= 0); });
-      if (!ag.length && (p === "Autres" || r)) return;
+      var ag = A.agents.filter(function (a) { return (a.categorie || "Jarvis (CEO)") === p && (!r || (a.nom + " " + a.role).toLowerCase().indexOf(r) >= 0); });
+      if (!ag.length && (p === "Jarvis (CEO)" || r)) return;
       h += '<section class="table-ag verre"><h2>' + p + '<span class="num">' + ag.length + '</span></h2><div class="rang entete meta" aria-hidden="true"><span></span><span>Agent et rôle</span><span>Prévu</span><span>Dernier passage</span><span>État</span></div>' +
         (ag.length ? ag.map(rang).join("") : '<p class="vide" style="padding:0 8px 12px">Aucun agent</p>') + "</section>";
     });
@@ -529,7 +532,7 @@
   function ligne(a) {
     var v = voyant(a), e = a.derniere_erreur;
     return '<button class="agent" data-nom="' + esc(a.nom) + '" aria-pressed="' + (a.nom === choisi) + '" title="' + esc(v[1] + " · " + a.role) + '"><i class="pt ' + v[0] + '" aria-label="' + esc(v[1]) + '"></i><span class="nom">' + esc(a.nom) +
-      '</span><span class="num">' + esc(quand(a.dernier_passage)) + "</span>" + (v[0] === "erreur" && e ? '<span class="err">Erreur : ' + esc(e.action) + " · " + esc(quand(e.date)) + "</span>" : "") + "</button>";
+      '</span><span class="num">' + esc(quand(a.dernier_passage)) + "</span>" + (v[0] === "rouge" && e ? '<span class="err">Erreur : ' + esc(e.action) + " · " + esc(quand(e.date)) + "</span>" : "") + "</button>";
   }
   function vuePipeline() {
     if (!A) return '<p class="vide">Pas encore de données : double-cliquez sur l\'icône du bureau.</p>';
@@ -562,14 +565,13 @@
     if (!a) { p.classList.remove("ouvert"); p.setAttribute("aria-hidden", "true"); return; }
     var v = voyant(a), e = a.derniere_erreur ? esc(a.derniere_erreur.action) + " · " + esc(a.derniere_erreur.date) : "aucune", c = a.chiffre_du_jour || {};
     p.innerHTML = '<button class="bouton fermer" id="fermer" aria-label="Fermer"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>' +
-      '<h2><i class="pt ' + v[0] + '"></i>' + esc(a.nom) + '</h2><div class="meta" style="margin-top:4px">' + esc(a.pole) + " · " + esc(v[1]) + "</div><p>" + esc(a.role) + "</p>" +
+      '<h2><i class="pt ' + v[0] + '"></i>' + esc(a.nom) + '</h2><div class="meta" style="margin-top:4px">' + esc(a.categorie || a.pole) + " · " + esc(v[1]) + "</div><p>" + esc(a.role) + "</p>" +
       "<dl><dt>Responsable</dt><dd>" + esc(a.responsable || "—") + "</dd><dt>Horaires</dt><dd>" + esc(a.horaire) + "</dd><dt>Machine</dt><dd>" + esc(a.machine) + "</dd><dt>Sur ce PC</dt><dd>" + (a.tourne_sur_ce_pc ? "tourne" : "ne tourne pas") + (a.planifie_sur_ce_pc ? ", planifié" : "") +
       "</dd><dt>Dernier passage</dt><dd>" + esc(a.dernier_passage || "aucun ici") + "</dd><dt>Dernier résultat</dt><dd>" + esc(a.dernier_resultat || "—") + "</dd><dt>Dernière erreur</dt><dd>" + e + "</dd><dt>" + esc(c.libelle || "Chiffre du jour") + "</dt><dd>" + esc(val(c.valeur)) + "</dd></dl>" +
-      '<div class="boutons">' + (a.note_obsidian ? '<a class="bouton" href="' + esc(a.note_obsidian) + '">Ouvrir sa note</a>' : "") + '<button class="bouton" id="voir-journal">Voir son journal</button></div><div class="journal-agent" id="journal-agent" hidden>' +
+      '<h3>Sa note</h3>' + (a.note_extrait ? '<p class="note-agent">' + esc(a.note_extrait) + "</p>" : '<p class="vide">Pas de note pour cet agent</p>') + (a.note_obsidian ? '<div class="boutons"><a class="bouton" href="' + esc(a.note_obsidian) + '">Ouvrir sa note</a></div>' : "") + '<h3>Son journal</h3><div class="journal-agent" id="journal-agent" style="margin-top:0">' +
       ((a.journal || []).slice().reverse().map(function (l) { return '<div><span class="num">' + esc(l[0]) + "</span>" + esc(l[1]) + "</div>"; }).join("") || '<p class="vide">Aucune ligne de journal sur ce PC</p>') + "</div>";
     p.classList.add("ouvert"); p.setAttribute("aria-hidden", "false");
     $("fermer").onclick = function () { panneau(null); rendre(); };
-    $("voir-journal").onclick = function () { $("journal-agent").hidden = !$("journal-agent").hidden; };
   }
 
   // La page relit les fichiers toutes les 5 min (recharger) et outils\agents-json.py les réécrit toutes les 15 min (tâche Jarvis-Tableau-PC) : les appels du jour arrivent seuls.

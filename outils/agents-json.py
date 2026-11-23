@@ -91,6 +91,33 @@ def journal(nom):
 
 POLES = {"prospection": "Trouver", "page-exemple": "Trouver", "appels-sid": "Vendre", "appels-liam": "Vendre", "rendez-vous": "Vendre", "reponses": "Vendre", "devis": "Vendre",
          "stripe-alerte": "Encaisser", "resume-sid": "Communiquer", "vente-relances": "Vendre", "relances": "Vendre", "interim": "Autres", "facebook": "Trouver"}     # tout nouvel agent : « Autres »
+# Catégories = un superviseur par domaine (23/11/2026) ; tout agent non listé reste sous Jarvis (CEO). Les agents vidéo vivent dans Videos\agents, leur superviseur est ici.
+SUPERVISEURS = ["Vente", "Prospection", "Sites", "Mail", "Vidéos", "Jarvis (CEO)"]
+CATEGORIE = {"devis": "Vente", "relances": "Vente", "rendez-vous": "Vente", "reponses": "Vente", "chiffres-serveur": "Vente", "stripe-alerte": "Vente", "superviseur-vente": "Vente", "vente-relances": "Vente",
+             "prospection": "Prospection", "appels-sid": "Prospection", "appels-liam": "Prospection", "superviseur-prospection": "Prospection", "facebook": "Prospection",
+             "page-exemple": "Sites", "superviseur-sites": "Sites", "interim": "Mail", "superviseur-mail": "Mail", "superviseur-videos": "Vidéos"}
+
+
+def voyant(a, jour):
+    """Statut à quatre couleurs : rouge = erreur ou suspendu ; gris = désactivé, à construire ou jamais passé ; vert = passé aujourd'hui ; orange = déjà passé mais pas encore aujourd'hui. -> (couleur, raison)"""
+    if a.get("statut") == "erreur" or a.get("suspendu"): return "rouge", "Suspendu" if a.get("suspendu") else "En erreur"
+    if a.get("etat_liste") in ("désactivé", "à construire"): return "gris", "Désactivé" if a["etat_liste"] == "désactivé" else "À construire"
+    dp = a.get("dernier_passage")
+    if not dp: return "gris", "Aucun passage visible"
+    return ("vert", "Passé aujourd'hui") if str(dp)[:10] == jour else ("orange", "Pas encore passé aujourd'hui")
+
+
+def extrait_note(nom, n=900):
+    """Début du corps de la note docs/agents de l'agent (sans l'en-tête), pour le panneau du tableau de bord."""
+    try: t = note_de(nom).read_text(encoding="utf-8")
+    except OSError: return None
+    t = re.sub(r"^---\s*\n.*?\n---\s*\n?", "", t, count=1, flags=re.S)
+    t = re.sub(r"<!--.*?-->", "", re.sub(r"\[\[([^\]|]+)(?:\|[^\]]*)?\]\]", r"\1", t), flags=re.S)
+    m = re.search(r"### Mission\s*(.*?)(?=\n## |\Z)", t, re.S)      # « Rôle et limites » : mission, étapes, interdits (sans entrées/sorties ni contrat)
+    t = re.sub(r"\n?#{1,4} ", "\n", m.group(1) if m else t).replace("`", "").strip()
+    return (t[:n].rsplit(" ", 1)[0] + "…" if len(t) > n else t) or None
+
+
 # Page Agents (18/11/2026) : état « à construire » décidé ici (raison affichée) ; « désactivé » vient de serveur-taches.json › desactive ; sinon « en place ».
 A_CONSTRUIRE = {"devis": "l'état des devis est sur le serveur, pas encore relié à ce tableau de bord",
                 "alerte-candidatures": "formulaire de candidature pas encore relié (fermé jusqu'au « go alerte »)",
@@ -174,7 +201,32 @@ def chiffres_du_jour(jour):
     return c
 
 
-def construire(maintenant=None):
+CHAMPS_SERVEUR = ("statut", "suspendu", "dernier_passage", "dernier_resultat", "derniere_erreur", "journal", "chiffre_du_jour")      # état vivant : les journaux et *-etat.json sont hors git, donc vus seulement sur la machine active
+
+
+def lire_serveur(hote, port=8080, delai=4):
+    """Photo agents.json de la machine active (servie en lecture seule par servir-dashboard.py) ; None si injoignable. JARVIS_TEST=1 : aucun réseau."""
+    if not hote or os.environ.get("JARVIS_TEST") == "1": return None
+    from urllib.request import urlopen
+    try:
+        with urlopen(f"http://{hote}:{port}/agents.json", timeout=delai) as r: d = json.loads(r.read().decode("utf-8-sig"))
+        return d if isinstance(d, dict) and isinstance(d.get("agents"), list) else None
+    except Exception: return None
+
+
+def fusionner_serveur(agents, photo):
+    """Surcharge l'état vivant de chaque agent par celui de la machine active ; notes, rôles et liens restent ceux de ce PC. -> nombre d'agents mis à jour."""
+    par_nom = {a.get("nom"): a for a in photo.get("agents", []) if isinstance(a, dict)}; n = 0
+    for a in agents:
+        s = par_nom.get(a["nom"])
+        if not s: continue
+        for k in CHAMPS_SERVEUR:
+            if k in s: a[k] = s[k]
+        a["tourne_sur_ce_pc"], a["planifie_sur_ce_pc"], a["vu_sur_serveur"] = bool(s.get("tourne_sur_ce_pc")), bool(s.get("planifie_sur_ce_pc")), True; n += 1
+    return n
+
+
+def construire(maintenant=None, photo_serveur=None):
     maintenant = maintenant or datetime.now()
     local = lire_json(AGENTS / "b2b.local.json", {}) or {}
     machine_active = str(local.get("machine_active", "") or "")
@@ -211,14 +263,22 @@ def construire(maintenant=None):
             agents.append({"nom": nom, "role": phrase, "machine": "aucune", "planifie": False, "horaire": "non planifié", "planifie_sur_ce_pc": False, "tourne_sur_ce_pc": False,
                            "statut": "inactif", "suspendu": False, "dernier_passage": None, "dernier_resultat": None, "derniere_erreur": None, "pole": POLES.get(nom, "Autres"),
                            "journal": [], "responsable": None, "note": None, "note_obsidian": None, "sans_script": True})
+    ailleurs = bool(machine_active) and machine_active != ce_pc
+    photo = (photo_serveur or lire_serveur(machine_active)) if ailleurs else None
+    vus = fusionner_serveur(agents, photo) if photo else 0
     for a in agents:
         d = (serveur.get(a["nom"]) or {}).get("desactive")
         a["etat_liste"], a["raison_etat"] = (("désactivé", str(d)) if d else ("à construire", A_CONSTRUIRE[a["nom"]]) if a["nom"] in A_CONSTRUIRE else ("en place", ""))
         a["phrase"] = (re.split(r"(?<=[.;])\s|\s—\s", a["role"] or "", maxsplit=1)[0].rstrip(".;") + ".")[:160] if a["role"] else ""
     c = chiffres_du_jour(maintenant.date()); j = maintenant.date().isoformat()
+    for a in agents:
+        a["categorie"] = CATEGORIE.get(a["nom"], "Jarvis (CEO)")
+        a["voyant"], a["voyant_raison"] = voyant(a, j)
+        a["note_extrait"] = extrait_note(a["nom"]) if a.get("note") else None
     du_jour = {"prospection": ("prospects trouvés", c["prospects_trouves_aujourdhui"]), "appels-sid": ("appels Sid", c["appels_sid_aujourdhui"]),
                "rendez-vous": ("rendez-vous", c["rendez_vous_aujourdhui"]), "devis": ("devis préparés", c["devis_prepares_aujourdhui"])}
     for a in agents:
+        if a.get("vu_sur_serveur"): continue      # le chiffre du jour du serveur (journaux et états locaux de ce PC absents) est déjà en place
         lib, n = du_jour.get(a["nom"], ("actions du jour", lignes_du_jour(a["nom"], j)))
         a["chiffre_du_jour"] = {"libelle": lib, "valeur": n}
     rep = lignes_du_jour("reponses", j)
@@ -228,7 +288,9 @@ def construire(maintenant=None):
     return {
         "genere_le": maintenant.strftime("%Y-%m-%d %H:%M:%S"), "ce_pc": ce_pc, "machine_active": machine_active,
         "ce_pc_est_actif": bool(machine_active) and machine_active == ce_pc,
-        "source": "fichiers locaux de " + ce_pc + (" ; l'état en direct du serveur " + machine_active + " n'est pas visible d'ici (états et journaux hors git)" if machine_active and machine_active != ce_pc else ""),
+        "source": ("état des agents lu sur le serveur " + machine_active + " (photo du " + str(photo.get("genere_le", "?")) + ", " + str(vus) + " agents)") if vus else
+                  "fichiers locaux de " + ce_pc + (" ; le serveur " + machine_active + " est injoignable (port 8080), son état en direct n'est pas visible d'ici" if ailleurs else ""),
+        "serveur_lu": bool(vus), "serveur_photo": photo.get("genere_le") if vus else None,
         "chiffres": c, "agents": agents,
     }
 
