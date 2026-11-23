@@ -5,9 +5,9 @@ Chaque idée est notée à la date où Liam la dit. Une idée pas encore faite r
 - 14/11 — Garantie zéro risque : « si la page ne vous plaît pas, vous ne payez rien ».
 - 14/11 — Avant/après chiffré : capture du site actuel (ou de son absence) et score PageSpeed à côté de la nouvelle page.
 - 14/11 — Cercle proche d'abord (ami, parent, commerçant connu) pour la 1re vente et la 1re preuve.
-- 14/11 — Conditions de vente écrites (contenu du pack, durée et arrêt des 49 €/mois) et SIRET sur les devis.
+- 14/11 — Conditions de vente écrites (contenu du pack, durée et arrêt des 29 €/mois) et SIRET sur les devis.
 - 14/11 — Stripe : nom public LM MULTI-SERVICES, SIRET et mention TVA art. 293 B ; renouvellement annuel du domaine dans Stripe plus tard ; « Playwork » : lien ou orthographe à donner par Liam.
-- 14/11 — Commissions : 10 % appelant + 10 % closer (au lieu de 15 + 15) ; sur le premier paiement seulement ou aussi sur les 49 €/mois, à décider.
+- 14/11 — Commissions : 10 % appelant + 10 % closer (au lieu de 15 + 15) ; sur le premier paiement seulement ou aussi sur les 29 €/mois, à décider.
 - 14/11 — Prévoir comment livrer un site complet multi-pages avant d'en vendre un.
 - 15/11 — Client sans confiance : petit acompte (~100 €) qui paie un appel de travail, site préparé sous 24 h. À décider (contredit « sans acompte »).
 - 15/11 — Enrichir TECHNIQUES-CLOSING.md avec de bonnes phrases de vente.
@@ -93,7 +93,7 @@ Chaque idée est notée à la date où Liam la dit. Une idée pas encore faite r
 23/11 — TikTok = personal brand IA/automatisation, face caméra, sans objectif de vente ; une vidéo longue par jour au début ; acheteurs = téléphone + LinkedIn.
 
 ## Prix et offre (décidé par Liam le 23/11, à aligner plus tard)
-- 23/11 — Prix pack plus bas, environ 495 € (au lieu de 595 €) ; 49 € PAR AN (nom de domaine) au lieu de 49 €/mois ; modifications ensuite payantes (environ 5 € chacune, ou à l'année, à trancher). Scripts, devis, OFFRE-REFERENCE.json, TECHNIQUES-CLOSING et Stripe pas encore alignés. Abandonnés : offre fondateur 295 €, pages pré-générées avant l'appel, mesure des appels/clics.
+- 23/11 — Prix pack environ 495 € (au lieu de 595 €) ; 29 €/mois (domaine, hébergement et petites modifications inclus) à la place de « 49 €/an + modifications payantes ». Reste à confirmer : 495 ou 500, prix du site complet, commissions sur le premier paiement seulement ou aussi sur les 29 €/mois. Scripts, devis, OFFRE-REFERENCE.json, TECHNIQUES-CLOSING et Stripe pas encore alignés. Abandonnés : offre fondateur 295 €, pages pré-générées avant l'appel, mesure des appels/clics.
 
 ## Social media
 - 23/11 — Catégorie « Social media » tout à gauche du dashboard : stats TikTok et YouTube (YouTube via API gratuite, TikTok à la main), Instagram plus tard. TikTok perso : conversation « TikTok » (écrire « idée » : sujet + début, milieu, fin), vidéos faites par Liam lui-même (IA surtout, aussi soin de soi et personal brand ; ni son business ni sa vie).
