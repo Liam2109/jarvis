@@ -219,7 +219,7 @@ $octets = [IO.File]::ReadAllBytes((Join-Path $Root 'lib\initiatives.ps1')); $oct
 Verifier ($octets[0] -eq 0xEF -and $octets[1] -eq 0xBB -and $octets[2] -eq 0xBF) 'lib\initiatives.ps1 en UTF-8 avec BOM'
 $js = Get-Content (Join-Path $Root 'jarvis.ps1') -Raw -Encoding UTF8; $dc = Get-Content (Join-Path $Root 'lib\discord.ps1') -Raw -Encoding UTF8
 Verifier ($js -match 'lib\\initiatives\.ps1' -and $js -match '\(Update-Initiatives\)' -and $dc -match 'Invoke-InitiativeCommande') 'jarvis.ps1 charge le module et appelle Update-Initiatives dans la boucle ; discord.ps1 route les commandes'
-Verifier ((Get-Content (Join-Path $Root 'README.md') -Raw -Encoding UTF8) -match 'initiatives_niveau') 'README : initiatives décrites'
+Verifier (((Get-Content (Join-Path $Root 'README.md') -Raw -Encoding UTF8) + (Get-Content (Join-Path $Root 'README-DETAIL.md') -Raw -Encoding UTF8)) -match 'initiatives_niveau') 'README : initiatives décrites'
 Verifier ((Get-FileHash (Join-Path $Root 'config.json')).Hash -eq $hashConfig) 'config.json réel inchangé par le test'
 
 Write-Host ''

@@ -211,7 +211,7 @@ $pyCand = "import sys; sys.path.insert(0, r'$Root\pont-discord'); import notifie
 $oCand = "$(& python -I -c $pyCand)"
 Verifier ($oCand -match '444444' -and $oCand -notmatch '333333') 'notifier.py : salon « candidatures » (config.local.json) distinct du salon « annonces-train », ne s''y replie jamais'
 Remove-Item "$TR\config.json", "$TR\config.local.json" -Force -ErrorAction SilentlyContinue
-Verifier ((Get-Content (Join-Path $Root 'README.md') -Raw -Encoding UTF8) -match 'candidatures-test') 'README : commande décrite'
+Verifier (((Get-Content (Join-Path $Root 'README.md') -Raw -Encoding UTF8) + (Get-Content (Join-Path $Root 'README-DETAIL.md') -Raw -Encoding UTF8)) -match 'candidatures-test') 'README : commande décrite'
 Verifier ((Get-FileHash (Join-Path $Root 'config.json')).Hash -eq $hashConfig) 'config.json réel inchangé par le test'
 Remove-Item Env:GMAIL_CLIENT_ID, Env:GMAIL_CLIENT_SECRET -ErrorAction SilentlyContinue
 

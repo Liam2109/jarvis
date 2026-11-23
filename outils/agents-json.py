@@ -75,6 +75,21 @@ def role_doc(nom):
     except OSError: return ""
 
 
+def derniere_trace(nom):
+    """Dernière ligne de B2B/logs/agents/<agent>/AAAA-MM-JJ.jsonl (le fichier du jour le plus récent) -> {quand, resultat, ok} ; None si aucune trace lisible. Jamais le commerce."""
+    d = AGENTS.parent / "logs" / "agents" / nom
+    try: fichiers = sorted(d.glob("*.jsonl"), reverse=True)
+    except OSError: return None
+    for f in fichiers:
+        try: lignes = f.read_text(encoding="utf-8", errors="ignore").splitlines()
+        except OSError: continue
+        for l in reversed(lignes):
+            try: x = json.loads(l)
+            except ValueError: continue
+            if isinstance(x, dict) and x.get("heure"): return {"quand": str(x["heure"]).replace("T", " ")[:19], "resultat": str(x.get("resultat") or "")[:60], "ok": x.get("ok")}
+    return None
+
+
 def journal(nom):
     """-> (dernier passage, dernier résultat, dernière erreur, 30 dernières lignes) : date + mot d'action seulement (jamais la 3e colonne)."""
     dernier = resultat = erreur = None; liste = []
@@ -86,6 +101,11 @@ def journal(nom):
         quand, action = m.group(1), m.group(2)[:60]
         dernier, resultat = quand, action; liste.append([quand, action])
         if ERREUR.search(action): erreur = {"date": quand, "action": action}
+    tr = derniere_trace(nom)
+    if tr:      # la trace du harness fait foi pour « passé aujourd'hui » (les agents n'écrivent pas tous dans leur .log) ; sans trace, l'ancien comportement
+        dernier = tr["quand"]; resultat = resultat or tr["resultat"]
+        if tr["ok"] is False: erreur = {"date": dernier, "action": "erreur (trace)"}
+        elif erreur is not None and erreur["date"] != dernier: erreur = None if erreur["date"] < dernier else erreur
     return dernier, resultat, erreur, liste[-30:]
 
 

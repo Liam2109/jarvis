@@ -93,3 +93,4 @@
 - 2026-11-23 (chat) : lot 1 de 14 posts LinkedIn écrit et contrôlé (0 refus au contrôle local), déposé dans B2B\linkedin\lot-2026-11-23.md ; posts 3 et 9 parlent du closer, à retirer si Liam ne recrute pas de closers.
 - 2026-11-23 (chat) : closers passés à 15 % dans linkedin.py, tests, contrat, note (skill .claude non modifiable à distance) ; lot 1 réécrit (posts 3, 7, 9) et élargi aux agriculteurs, 14 posts contrôlés ; tests à relancer par Liam.
 - 2026-11-23 : alerte des leads chauds séparée de envoi_automatique (réglage alerte_leads_envoi, commande alerter-leads, aucune action Google) ; relance au 07/12 pour GT Concepet et Garage du Rond Point ; passe réelle : 3 leads, 0 alerte, leads-chauds.json écrit.
+- 2026-11-23 : tableau de bord : « passé aujourd'hui » lu dans la trace B2B\logs\agents (repli sur le .log) ; 4 tests README lisent aussi README-DETAIL.md, tests verts

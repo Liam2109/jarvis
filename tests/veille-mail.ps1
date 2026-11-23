@@ -252,7 +252,7 @@ Verifier ($txt7 -match 'Mode : RÉEL' -and $txt7 -match 'Cartes envoyées : 5' -
 $script:Cartes = @(); $script:Appels = @(); $res8 = Invoke-VeilleMailTest (Get-VeilleMailTestOptions @()); $txt8 = $res8.lignes -join "`n"
 Verifier ($res8.carteSimulees -eq 0 -and ([regex]::Matches($txt8, 'déjà vue : aucune nouvelle carte')).Count -eq 5 -and $script:Cartes.Count -eq 0) 'ensuite, la simulation montre les 5 offres « déjà vues » (aucune nouvelle carte)'
 $js = Get-Content (Join-Path $Root 'jarvis.ps1') -Raw -Encoding UTF8
-Verifier ($js -match "'veille-mail-test'" -and $js -match 'Invoke-VeilleMailTest' -and (Get-Content (Join-Path $Root 'README.md') -Raw -Encoding UTF8) -match 'veille-mail-test') 'jarvis.ps1 offre la commande veille-mail-test ; le README la décrit'
+Verifier ($js -match "'veille-mail-test'" -and $js -match 'Invoke-VeilleMailTest' -and ((Get-Content (Join-Path $Root 'README.md') -Raw -Encoding UTF8) + (Get-Content (Join-Path $Root 'README-DETAIL.md') -Raw -Encoding UTF8)) -match 'veille-mail-test') 'jarvis.ps1 offre la commande veille-mail-test ; le README la décrit'
 Fixer 'veille_mail' 'non'
 # ---------- 7c. Indeed France (Rouen), Indeed Suisse, SNCF, France Travail ----------
 Write-Host '7c. Indeed, SNCF, France Travail'
@@ -289,7 +289,7 @@ Verifier ([regex]::Matches($sm, "'POST'").Count -eq 2 -and [regex]::Matches($sm,
 Verifier ($sm -notmatch '(?i)Invoke-Claude|claude -p|Start-Ollama|Initialize-Ollama|Start-Process\s+\$url' -or $sm -match 'try \{ Start-Process \$url \}') 'aucun appel à Claude ; Ollama jamais démarré (la traduction réutilise la veille horaire)'
 $js = Get-Content (Join-Path $Root 'jarvis.ps1') -Raw -Encoding UTF8; $run = Get-Content (Join-Path $Root 'veille-train.ps1') -Raw -Encoding UTF8
 Verifier ($js -match "lib\\veille-mail\.ps1" -and $js -match 'Update-VeilleMail' -and $js -match "'gmail-autoriser'" -and $run -match 'param\(\[switch\]\$Mail\)' -and $run -match 'Invoke-VeilleMail') 'jarvis.ps1 charge le module, appelle Update-VeilleMail, offre gmail-autoriser ; le passage séparé accepte -Mail'
-Verifier ((Get-Content (Join-Path $Root '.env.example') -Raw -Encoding UTF8) -match 'GMAIL_CLIENT_ID=xxx' -and (Get-Content (Join-Path $Root 'README.md') -Raw -Encoding UTF8) -match 'gmail-autoriser') '.env.example et README documentent la configuration (sans secret)'
+Verifier ((Get-Content (Join-Path $Root '.env.example') -Raw -Encoding UTF8) -match 'GMAIL_CLIENT_ID=xxx' -and ((Get-Content (Join-Path $Root 'README.md') -Raw -Encoding UTF8) + (Get-Content (Join-Path $Root 'README-DETAIL.md') -Raw -Encoding UTF8)) -match 'gmail-autoriser') '.env.example et README documentent la configuration (sans secret)'
 Remove-Item Env:GMAIL_CLIENT_ID, Env:GMAIL_CLIENT_SECRET -ErrorAction SilentlyContinue
 Verifier ((Get-FileHash (Join-Path $Root 'config.json')).Hash -eq $hashConfig) 'config.json réel inchangé par le test'
 
