@@ -19,13 +19,11 @@ _Mise à jour : 23 nov. 2026, 15 h (le fait est supprimé ; l'historique est dan
 - [ ] Test de cohérence : étendre aux notes docs\decisions et docs\agents (la note « Offre 595 + 49 » avait encore 990–1 490 € et « lien à créer », hors du périmètre du test) ; vérifier aussi les 3 autres notes de décision
 
 ## Liam
-- [ ] URGENT Sid : aucun appel depuis ~1 semaine ; message envoyé le 23/11 (pourquoi + création de son entreprise) ; sans réponse mercredi, chercher un autre appelant
-- [ ] Mar. 24/11 : appeler toutes les boîtes d'intérim de Rouen pour s'inscrire + envoyer les CV
+- [ ] URGENT Sid : aucun appel depuis ~1 semaine ; il a répondu le 23/11 : OK pour lui, son entreprise est encore en cours de création ; lui demander une date précise de reprise, sans date mercredi chercher un autre appelant
 - [ ] Serveur : mise en veille « Jamais » + capot « ne rien faire » (arrêté 22/11 23:51 → 23/11 10:56 et 22/11 09:28 → 17:00)
 - [ ] Stock de Sid : limite de durée prospection faite (d557e44) ; rendre à Sid les 11 fiches « préparé » (coiffeur/plombier/électricien) ; zone limitée aux départements 76, 27, 14, 50, 61 (décision 14/11) : à relever seulement si le stock manque
 - [ ] Dashboard (01b8143) : ouvrir la page et vérifier à l'œil colonnes par superviseur, ~6 agents passés aujourd'hui, clic = note + journal ; reste : bouton corbeille sur les leads chauds
-- [ ] Recrutement appelants : annonce Facebook postée le 23/11 dans 5 groupes (Téléprospection freelance, 100 % Télétravail, Teleconseiller, Suisse/France, Freelancer-Télétravail ; Télévendeur non vérifié) ; formulaire https://forms.gle/5G8FEigjU5Ks6Z2G6 ; lire les réponses le 24/11
-- [ ] TikTok = personal brand IA/automatisation seulement (pas de vente, pas d'automatisation) : 1 vidéo longue face caméra le 24/11 ; acheteurs = téléphone + LinkedIn
+- [ ] Recrutement appelants : annonce Facebook postée le 23/11 dans 5 groupes (Téléprospection freelance, 100 % Télétravail, Teleconseiller, Suisse/France, Freelancer-Télétravail ; Télévendeur non vérifié) ; formulaire https://forms.gle/5G8FEigjU5Ks6Z2G6 ; 0 réponse au soir du 23/11 ; relire le 24/11 matin, sinon reposter avec un angle plus direct
 - [ ] Graphe Obsidian : dire si « 📞 Appels Liam » (pôle Prospection) et « 🔁 Relances » (pôle Vente, pas encore construit) doivent passer sous leur superviseur — ils restent liés au CEO car ils ne sont pas dans AGENTS_SUIVIS ; si oui, les ajouter à la liste du superviseur concerné
 - [ ] Vidéos : ajouter videos-nettoyage, videos-veille, videos-scripts, videos-marketing et videos-creation à agents_actifs (3 vidéos par jour dès le 17/11, tout reste dans a-valider ; chaque agent écrit alors une trace et le surveillant le suit)
 - [ ] Vidéos ligne A puis ligne B : dire « go publier » sur la première vidéo de la ligne, puis suivre Videos\README.md (playwright, connexion toi-même, essai, go_publier dans la config locale) ; rien n'est publié avant
@@ -48,7 +46,6 @@ _Mise à jour : 23 nov. 2026, 15 h (le fait est supprimé ; l'historique est dan
 - [ ] Donner un Drive à Claude pour le prompt d'un site classique (modèle à réutiliser)
 
 ## Agents (ensuite, une étape à la fois)
-- [ ] LinkedIn, chaque jour : poster 1 à 2 posts du lot (B2B\linkedin\lot-2026-11-23.md) ou demander « post LinkedIn : <idée> » dans une conversation neuve ; closers à 15 % : relancer tests\b2b-rapide.ps1 ; agent Discord (« go linkedin ») en pause tant qu'il n'y a pas de salon LinkedIn
 - [ ] Vérifier dans Drive que « Appels Sid 2026-11-23 » existe avec 100 lignes (sinon appels-sid est encore en simulation)
 - [ ] Vidéos : regarder les sketchs test de la ligne B (Videos-valider6-11-17-1400 T03, 2026-11-18-1400 L01, 2026-11-19-1400 série épisode 1 avec Nadia, 2026-11-20-1400 N01 avec M. Bernard) ; pour un nouveau lot de 20 sketches, le demander à Claude dans le chat (Codex absent du serveur) puis « python Videosgents\sketches.py lot Videos\idees-nouvelles\AAAA-MM-JJ.json »
 - [ ] Vidéos : faire un « publier --essai » sur chaque ligne avant le go publier, pour voir où TikTok place la case « contenu généré par IA » (le dry-run le dit)
