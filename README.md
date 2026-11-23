@@ -65,6 +65,9 @@ Toutes les touches sont configurables (`"activer": "Alt+Add"`…). **Ctrl + « +
 ## Vider la mémoire
 Dites **« Jarvis, oublie tout »** (niveau 2). Résumés, notes, rappels et conversation partent à la corbeille ; la to-do et le **journal** sont conservés.
 
+## Serveur 24/7
+Jarvis peut tourner sans écran ni micro sur un vieux PC Windows, mis à jour depuis GitHub : installation avec `installer-serveur.ps1`, mise à jour automatique avec `maj-auto.ps1` (elle refuse une version dont les tests échouent). Détail : `README-DETAIL.md`, section « Serveur 24/7 ».
+
 ## Tests
 - **Tout, en silence** : `tests\tout.ps1` (aucun son/voix/fenêtre/micro réel, copies temporaires, tout remis en place à la fin). Couvre le module sauf ce qui exige une vraie fenêtre ou une vraie touche.
 - **Clés chiffrées + audit git** : `tests\serveur.ps1` (sections 6 et 8).

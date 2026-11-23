@@ -1,5 +1,6 @@
 # JOURNAL-B2B — une phrase par fait (entrées de plus de 30 jours supprimées chaque jour ; détail dans git)
 
+- 2026-11-23 (soir) : diagnostic dashboard (prospection, reponses, rendez-vous = journal .log non alimenté, tâches saines ; nettoyage = cycle de 10:56 abandonné, verrou occupé), README.md : section « Serveur 24/7 » rétablie pour tests\serveur.ps1.
 - 2026-11-10 : salon Discord « 📋-candidatures » créé dans la catégorie B2B, branché dans config.local.json, test ajouté dans tests\candidatures.ps1.
 - 2026-11-10 : un README.md court ajouté dans chaque dossier utile, INDEX.md pointe vers chacun, 57 liens relatifs vérifiés.
 - 2026-11-10 : adresse iCal du rendez-vous déplacée dans rendez-vous-config.local.json (hors git), aucune adresse réelle dans l'historique, garde-fou ajouté au test.
