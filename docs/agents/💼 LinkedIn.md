@@ -37,7 +37,7 @@ Chaque jour ouvré à 07:45, poste sur Discord 1 à 2 posts LinkedIn pour Liam, 
 - republier seul un post proposé et non validé (il est signalé, jamais reproposé)
 - proposer un post qui contient un emoji, une image, un lien, un e-mail, un téléphone ou plus de 3 hashtags
 - tutoyer, inventer un témoignage, un client ou un chiffre, promettre un résultat ou un gain
-- écrire un prix ou une commission autre que ceux de OFFRE-REFERENCE.json (pack 595 €, site complet 994 €, 49 €/mois) et des commissions 15 % appelants et 10 % closers
+- écrire un prix ou une commission autre que ceux de OFFRE-REFERENCE.json (pack 595 €, site complet 994 €, 49 €/mois) et des commissions 15 % appelants et 15 % closers
 - utiliser une phrase interdite de OFFRE-REFERENCE.json ou un appel à l'action autre que « écrivez-moi en message privé »
 - proposer de passer sur place ou de rencontrer un prospect (appels seulement)
 - présenter une page exemple comme un client

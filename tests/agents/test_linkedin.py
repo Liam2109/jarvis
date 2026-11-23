@@ -13,7 +13,7 @@ JOUR1, JOUR2, JOUR3, SAMEDI = "2026-11-23", "2026-11-24", "2026-11-25", "2026-11
 MOTS = ["alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf", "hotel", "india", "juliet", "kilo", "lima", "mike", "november", "oscar", "papa", "quebec", "romeo", "sierra", "tango"]
 RECRUT = ("Je cherche des appelants et des closers pour vendre des sites web à des artisans et des commerçants locaux.\n\n"
           "Le travail se fait par téléphone, depuis chez vous, à vos horaires. Je vous fournis la liste des entreprises à appeler et le discours de présentation. Cette semaine : {m}.\n\n"
-          "La rémunération est une commission : 15 % pour les appelants, 10 % pour les closers. Aucune formation n'est exigée, mais il faut aimer parler au téléphone "
+          "La rémunération est une commission : 15 % pour les appelants, 15 % pour les closers. Aucune formation n'est exigée, mais il faut aimer parler au téléphone "
           "et rester poli quand on vous dit non.\n\nSi ce type de mission vous parle, écrivez-moi en message privé.")
 PROSPECT = ("Vous êtes artisan ou commerçant et vous n'avez pas de site web, ou un site qui date ? Sujet du jour : {m}.\n\n"
             "Je crée des sites web pour les artisans et les commerçants locaux : une page claire, qui présente votre activité, vos horaires et la façon de vous joindre. "
@@ -137,11 +137,11 @@ class Regles(Base):
         self.refuse(p.replace("994 €", "595 €"), "pas du site complet"); self.refuse(p.replace("à 595 €", "à 994 €"), "pas du pack")   # prix du pack et du site complet inversés
         self.refuse(p.replace("49 € par mois", "49 €"), "par mois")
         self.refuse(p.replace("Je crée", "Depuis 20 ans, je crée"), "chiffre non vérifié"); self.refuse(p.replace("Je crée", "Je crée en 48 heures"), "chiffre non vérifié")
-        self.refuse(r.replace("15 % pour les appelants, 10 % pour les closers", "10 % pour les appelants, 15 % pour les closers"), "commission", "recrutement")   # commissions inversées
+        self.refuse(r.replace("15 % pour les appelants, 15 % pour les closers", "10 % pour les appelants, 15 % pour les closers"), "commission", "recrutement")   # commissions inversées
         self.refuse(r.replace("15 % pour les appelants", "20 % pour les appelants"), "commission", "recrutement")
-        self.refuse(r.replace("15 % pour les appelants, 10 % pour les closers", "15 % de commission"), "sans « appelant »", "recrutement")
-        self.assertEqual(self.pb(r.replace("15 % pour les appelants, 10 % pour les closers", "les closers touchent 10 %, les appelants 15 %"), "recrutement"), [])
-        self.assertEqual(self.pb(r.replace("15 % pour les appelants, 10 % pour les closers", "15 % pour les appelants et 10 % pour les closers"), "recrutement"), [])
+        self.refuse(r.replace("15 % pour les appelants, 15 % pour les closers", "15 % de commission"), "sans « appelant »", "recrutement")
+        self.assertEqual(self.pb(r.replace("15 % pour les appelants, 15 % pour les closers", "les closers touchent 15 %, les appelants 15 %"), "recrutement"), [])
+        self.assertEqual(self.pb(r.replace("15 % pour les appelants, 15 % pour les closers", "15 % pour les appelants et 15 % pour les closers"), "recrutement"), [])
 
     def test_offre_garde_et_types(self):
         p, r = prospect(0), recrut(0)

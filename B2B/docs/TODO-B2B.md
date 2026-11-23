@@ -41,7 +41,7 @@ _Mise à jour : 23 nov. 2026, 15 h (le fait est supprimé ; l'historique est dan
 - [ ] Donner un Drive à Claude pour le prompt d'un site classique (modèle à réutiliser)
 
 ## Agents (ensuite, une étape à la fois)
-- [ ] Agent LinkedIn (construit, en simulation) : demander à Claude un 1er lot de ~14 posts, le coller dans B2B\linkedin\lot-AAAA-MM-JJ.md, essayer `python B2B\agents\linkedin.py importer --essai` puis `jour --essai` ; ensuite dire « go linkedin » (retirer « desactive » de sa tâche, l'ajouter à agents_actifs sur le serveur, envoi_automatique à true dans linkedin-config.local.json)
+- [ ] Agent LinkedIn (construit, en simulation) : lot 1 déjà écrit (B2B\linkedin\lot-2026-11-23.md, 14 posts contrôlés) : lire les posts, retirer les posts closer (posts 3 et 9) si tu ne recrutes pas de closers, puis essayer `python B2B\agents\linkedin.py importer --essai` puis `jour --essai` ; ensuite dire « go linkedin » (retirer « desactive » de sa tâche, l'ajouter à agents_actifs sur le serveur, envoi_automatique à true dans linkedin-config.local.json)
 - [ ] Vérifier dans Drive que « Appels Sid 2026-11-23 » existe avec 100 lignes (sinon appels-sid est encore en simulation)
 - [ ] Vidéos : regarder les sketchs test de la ligne B (Videos-valider6-11-17-1400 T03, 2026-11-18-1400 L01, 2026-11-19-1400 série épisode 1 avec Nadia, 2026-11-20-1400 N01 avec M. Bernard) ; pour un nouveau lot de 20 sketches, le demander à Claude dans le chat (Codex absent du serveur) puis « python Videosgents\sketches.py lot Videos\idees-nouvelles\AAAA-MM-JJ.json »
 - [ ] Vidéos : faire un « publier --essai » sur chaque ligne avant le go publier, pour voir où TikTok place la case « contenu généré par IA » (le dry-run le dit)

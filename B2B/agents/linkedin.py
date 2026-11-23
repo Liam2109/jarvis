@@ -17,10 +17,10 @@ Format d'un lot (un bloc « ## » par post ; ce qui précède le premier « ## �
   Le texte du post, sur plusieurs lignes...
   Écrivez-moi en message privé.
 
-Alternance : un post recrutement (appelants à 15 %, closers à 10 %), puis un post recherche de prospects (site web pour artisans et commerçants locaux). Avec posts_par_jour = 2 :
+Alternance : un post recrutement (appelants à 15 %, closers à 15 %), puis un post recherche de prospects (site web pour artisans et commerçants locaux). Avec posts_par_jour = 2 :
 un de chaque par jour (créneaux conseillés 08:30 et 12:30). Un post proposé et non validé n'est JAMAIS republié : il passe « non validé », signalé une fois. Stock < 3 jours de posts :
 code de sortie 5 (trace en erreur, le surveillant la signale) et message « demande un nouveau lot à Claude ».
-Règles de contenu (controle) : ni emoji, ni image, hashtags limités, vouvoiement, aucun témoignage, aucun chiffre hors prix de OFFRE-REFERENCE.json et commissions 15 % / 10 %,
+Règles de contenu (controle) : ni emoji, ni image, hashtags limités, vouvoiement, aucun témoignage, aucun chiffre hors prix de OFFRE-REFERENCE.json et commissions 15 % / 15 %,
 aucune promesse de résultat, aucun lien, appel à l'action unique « écrivez-moi en message privé », rien de présentiel, aucune phrase interdite, aucun secret.
 envoi_automatique: false (défaut versionné) = SIMULATION : `jour` affiche ce qu'il posterait, n'écrit rien, n'appelle pas Discord. Rien n'engage Liam : il copie, colle et décide."""
 import argparse, copy, hashlib, json, re, sys, time, unicodedata
@@ -38,7 +38,7 @@ FILE = lambda: DOSSIER / "file.json"
 TYPES = ("recrutement", "prospect")
 LIB = {"en_file": "en file", "propose": "proposé", "pret": "prêt", "rejete": "rejeté", "non_valide": "non validé", "publie": "publié"}
 CTA = "ecrivez-moi en message prive"
-COMMISSIONS = {"appelant": 15, "closer": 10}   # décision de Liam (appelants 15 %, closers 10 %) ; les prix viennent de OFFRE-REFERENCE.json
+COMMISSIONS = {"appelant": 15, "closer": 15}   # décision de Liam (appelants 15 %, closers 15 % depuis le 23/11/2026) ; les prix viennent de OFFRE-REFERENCE.json
 SUIVI_JOURS = 7   # réactions relues pendant 7 jours après la proposition
 OK, KO, PIN = "%E2%9C%85", "%E2%9D%8C", "%F0%9F%93%8C"   # ✅ ❌ 📌 (encodés pour l'URL Discord)
 DEFAUT = {"envoi_automatique": False, "salon_nom": "", "posts_par_jour": 2, "stock_min_jours": 3, "max_hashtags": 3, "max_caracteres": 1500, "min_caracteres": 150,
@@ -89,7 +89,7 @@ def _phrases(n): return [x for x in re.split(r"[.!?\n]+", n) if x.strip()]
 def _prix_et_commissions(n, prix):
     """Contrôle chaque nombre du texte : euros = prix de l'offre, % = commission du bon rôle dans la même phrase, tout autre chiffre = non vérifié."""
     pb = []; pack, site, mensuel = prix["pack"], prix["site_complet"], prix["mensuel"]
-    for s in (c for ph in _phrases(n) for c in re.split(r"[;,]| et ", ph)):   # chaque proposition séparément : « 15 % pour les appelants, 10 % pour les closers »
+    for s in (c for ph in _phrases(n) for c in re.split(r"[;,]| et ", ph)):   # chaque proposition séparément : « 15 % pour les appelants, 15 % pour les closers »
         for m in NOMBRE.finditer(s):
             v, suite = _entier(m.group()), s[m.end():m.end() + 12].lstrip()
             if suite.startswith("%"):
