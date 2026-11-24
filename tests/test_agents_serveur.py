@@ -59,8 +59,7 @@ verifier(v(etat_liste="en place", dernier_passage="2026-11-23 08:30:01") == "ver
 verifier(v(etat_liste="en place", dernier_passage="2026-11-22 19:30:00") == "orange", "passé avant aujourd'hui : orange")
 verifier(all(a["voyant"] in ("gris", "vert", "orange", "rouge") and a["categorie"] in AJ.SUPERVISEURS for a in sans["agents"]), "chaque agent a un voyant à quatre couleurs et une catégorie connue")
 cat = {a["nom"]: a["categorie"] for a in sans["agents"]}
-verifier(cat.get("superviseur-vente") == "Vente" and cat.get("appels-sid") == "Prospection" and cat.get("superviseur-sites") == "Sites" and cat.get("superviseur-mail") == "Mail"
-         and cat.get("superviseur-videos") == "Vidéos" and cat.get("panne-alerte") == "Jarvis (CEO)", "catégories : un superviseur par domaine, le reste sous Jarvis (CEO)")
+verifier(cat.get("superviseur-vente") == "Vente" and cat.get("appels-sid") == "Prospection" and cat.get("superviseur-prospection") == "Prospection" and not {"superviseur-sites", "superviseur-mail", "superviseur-videos"} & set(cat) and cat.get("panne-alerte") == "Jarvis (CEO)", "catégories : un superviseur par domaine, le reste sous Jarvis (CEO)")
 ex = AJ.extrait_note("relances")
 verifier(bool(ex) and "GENERE" not in ex and "---" not in ex and "Contrat" not in ex and len(ex) <= 905, "extrait de note : mission et étapes, sans en-tête ni commentaire généré")
 verifier(AJ.extrait_note("agent-qui-n-existe-pas") is None, "note absente : None")

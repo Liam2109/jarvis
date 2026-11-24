@@ -6,7 +6,7 @@ Rien n'est supprimé : tout l'historique est dans git. Les fiches Obsidian rang�
 - **facebook** : jamais construit, aucun script ni fiche ; une idée sans vente à court terme.
 - **superviseur-sites** : fermé jusqu'au « go superviseurs », jamais activé ; peu de pages à surveiller avant les premières ventes.
 - **superviseur-mail** : fermé, jamais activé ; surveillait l'agent intérim, lui-même pas encore construit.
-- **superviseur-videos** : fermé, jamais activé ; la chaîne vidéo reste suivie par le surveillant du harness.
+- **superviseur-videos** et toute l'équipe vidéo/TikTok : rangés dans `docs/archives/video-tiktok` (voir son `LISEZMOI.md`).
 - **jarvis-vue** : fermé, jamais activé ; ne servait que si les cinq superviseurs tournaient, le tableau de bord remplit ce rôle.
 - **linkedin** : remplacé par `linkedin-equipe` (lot du jour dans le tableau de bord, Liam envoie lui-même).
 - **vente-relances** : doublon de `relances` (le rappel « À rappeler aujourd'hui » à 08:00), jamais construit.

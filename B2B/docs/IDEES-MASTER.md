@@ -23,7 +23,7 @@ Chaque idée est notée à la date où Liam la dit. Une idée pas encore faite r
 - 14/11 — Signaux d'achat : entreprises nouvellement immatriculées dans la zone (API Sirene, gratuite).
 - 14/11 — Demander à Sid les phrases exactes qui ont fait dire non.
 - 15/11 — Onglet « relances » dans la feuille de Liam, avec l'historique des essais de chaque entreprise.
-- 16/11 — Vidéos TikTok gratuites en bonhomme bâton (Qwen local + stickfigure-pipeline-v2), 3 par jour : ligne A stickman explications → planning 15 min ; ligne B recrutement de call callers → lien en bio. Construit (Videos\, 6 agents dont marketing et nettoyage), publication en attente du « go publier » de chaque ligne.
+- 16/11 — Vidéos TikTok gratuites en bonhomme bâton : construites puis RETIRÉES le 24/11/2026 (aucune vente directe) ; tout est dans `docsrchivesideo-tiktok`.
 - 16/11 — Vidéos : voix Kokoro locale en secours si edge-tts échoue (réalisée le 16/11) ; sous-titres qui évitent les personnages (pas encore faite).
 - 16/11 — Vidéos : relier chaque formule d'accroche (colonne hook de journal-videos.csv) aux réservations de 15 min une fois la ligne A publiée, et garder les formules qui amènent des rendez-vous.
 - 16/11 — Vidéos : Kokoro n'a qu'une voix française féminine ; si la bascule sert souvent, essayer Piper (déjà utilisé par Jarvis) pour garder une voix masculine en secours.
@@ -31,7 +31,6 @@ Chaque idée est notée à la date où Liam la dit. Une idée pas encore faite r
 - 17/11 — Vidéos : faire marcher Gérard d'un point à un autre et varier les décors par histoire (stick-stage le place à une marque fixe, les 2 vidéos test sont au bureau).
 - 17/11 — Vidéos : raccourcir de quelques mots les sketches les plus longs (T03 a dû être accéléré de quelques % pour tenir en 35 s) ; le monteur le fait seul, mais une voix au débit naturel sonne mieux.
 - 17/11 — Vidéos : écrire la série suivante (3 à 5 épisodes) dans le prochain lot ; ajouter une pièce « voiture » à stick-stage si Liam veut ce décor (aucune n'existe).
-- 17/11 — Vidéos au niveau des agents B2B (contrat, garde du contenu, trace par exécution, test, skill détaillé, fiche en 4 rubriques, fiche Chaîne vidéo) : réalisée le 17/11. Suite possible : une alerte du surveillant si aucune vidéo n'arrive dans a-valider deux passages de suite.
 
 ## Agents
 - 27/10 — Chaîne automatique entre agents (prospection → réponse positive → rendez-vous → devis → Stripe → site → mise en ligne → maintenance), validation de Liam seulement aux points à risque.

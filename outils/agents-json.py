@@ -35,7 +35,7 @@ def lire_json(p, defaut=None):
 
 
 # Agents retirés de la grille (24/11/2026) : leurs scripts restent dans B2B/agents (des tests les citent), leurs fiches sont rangées dans docs/archives/agents-retires.
-RETIRES = {"appels-liam", "facebook", "superviseur-sites", "superviseur-mail", "superviseur-videos", "jarvis-vue", "linkedin", "vente-relances", "registre"}
+RETIRES = {"appels-liam", "facebook", "superviseur-sites", "superviseur-mail", "jarvis-vue", "linkedin", "vente-relances", "registre"}
 
 
 def est_archive(p):
@@ -115,11 +115,11 @@ def journal(nom):
 
 POLES = {"prospection": "Trouver", "page-exemple": "Trouver", "appels-sid": "Vendre", "appels-liam": "Vendre", "rendez-vous": "Vendre", "reponses": "Vendre", "devis": "Vendre",
          "stripe-alerte": "Encaisser", "resume-sid": "Communiquer", "vente-relances": "Vendre", "relances": "Vendre", "interim": "Autres", "facebook": "Trouver"}     # tout nouvel agent : « Autres »
-# Catégories = un superviseur par domaine (23/11/2026) ; tout agent non listé reste sous Jarvis (CEO). Les agents vidéo vivent dans Videos\agents, leur superviseur est ici.
-SUPERVISEURS = ["Vente", "Prospection", "Sites", "Mail", "Vidéos", "Jarvis (CEO)"]
+# Catégories = un superviseur par domaine (23/11/2026) ; tout agent non listé reste sous Jarvis (CEO).
+SUPERVISEURS = ["Vente", "Prospection", "Sites", "Mail", "Jarvis (CEO)"]
 CATEGORIE = {"devis": "Vente", "relances": "Vente", "rendez-vous": "Vente", "reponses": "Vente", "chiffres-serveur": "Vente", "stripe-alerte": "Vente", "superviseur-vente": "Vente", "vente-relances": "Vente",
              "prospection": "Prospection", "appels-sid": "Prospection", "appels-liam": "Prospection", "superviseur-prospection": "Prospection", "facebook": "Prospection",
-             "page-exemple": "Sites", "superviseur-sites": "Sites", "interim": "Mail", "superviseur-mail": "Mail", "superviseur-videos": "Vidéos"}
+             "page-exemple": "Sites", "superviseur-sites": "Sites", "interim": "Mail", "superviseur-mail": "Mail"}
 
 
 def avertissement(nom, en_erreur):

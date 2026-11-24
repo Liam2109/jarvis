@@ -26,9 +26,6 @@ _Mise à jour : 24 nov. 2026 (le fait est supprimé ; l'historique est dans le j
 - [ ] Stock de Sid : limite de durée prospection faite (d557e44) ; rendre à Sid les 11 fiches « préparé » (coiffeur/plombier/électricien) ; zone limitée aux départements 76, 27, 14, 50, 61 (décision 14/11) : à relever seulement si le stock manque
 - [ ] Dashboard (01b8143) : ouvrir la page et vérifier à l'œil colonnes par superviseur, ~6 agents passés aujourd'hui, clic = note + journal ; reste : bouton corbeille sur les leads chauds
 - [ ] Recrutement appelants : annonce Facebook postée le 23/11 dans 5 groupes (Téléprospection freelance, 100 % Télétravail, Teleconseiller, Suisse/France, Freelancer-Télétravail ; Télévendeur non vérifié) ; formulaire https://forms.gle/5G8FEigjU5Ks6Z2G6 ; 0 réponse au soir du 23/11 ; relire le 24/11 matin, sinon reposter avec un angle plus direct
-- [ ] Vidéos : ajouter videos-nettoyage, videos-veille, videos-scripts, videos-marketing et videos-creation à agents_actifs (3 vidéos par jour dès le 17/11, tout reste dans a-valider ; chaque agent écrit alors une trace et le surveillant le suit)
-- [ ] Vidéos ligne A puis ligne B : dire « go publier » sur la première vidéo de la ligne, puis suivre Videos\README.md (playwright, connexion toi-même, essai, go_publier dans la config locale) ; rien n'est publié avant
-- [ ] Vidéos ligne B : créer le compte TikTok séparé, mettre le formulaire Google en bio, renseigner `lignes.B.taux_commission` si tu veux un taux dans les vidéos (vide = « à la commission »)
 - [ ] Valider la liste des idées supprimées d'IDEES-MASTER.md (sauvegarde dans B2B\donnees\sauvegardes\) et trancher la section « À trancher »
 - [ ] Lundi 16 : prendre les ~15 dernières lignes de la feuille de Sid (ta propre liste « Appels Liam » commence mardi 17)
 - [ ] Serveur : ajouter « nettoyage-fichiers » aux agents actifs (tâche chaque jour à 03:00)
@@ -49,9 +46,6 @@ _Mise à jour : 24 nov. 2026 (le fait est supprimé ; l'historique est dans le j
 
 ## Agents (ensuite, une étape à la fois)
 - [ ] Vérifier dans Drive que « Appels Sid 2026-11-23 » existe avec 100 lignes (sinon appels-sid est encore en simulation)
-- [ ] Vidéos : regarder les sketchs test de la ligne B (Videos-valider6-11-17-1400 T03, 2026-11-18-1400 L01, 2026-11-19-1400 série épisode 1 avec Nadia, 2026-11-20-1400 N01 avec M. Bernard) ; pour un nouveau lot de 20 sketches, le demander à Claude dans le chat (Codex absent du serveur) puis « python Videosgents\sketches.py lot Videos\idees-nouvelles\AAAA-MM-JJ.json »
-- [ ] Vidéos : faire un « publier --essai » sur chaque ligne avant le go publier, pour voir où TikTok place la case « contenu généré par IA » (le dry-run le dit)
-- [ ] Vidéos : avant le « go publier », faire relever l'adresse TikTok par l'agent publication (colonne url_tiktok de journal-videos.csv, vide pour l'instant)
 - [ ] Les tests laissent des dossiers dans %TEMP% : les faire se nettoyer eux-mêmes ; 6 mentions « Répondu / Refus » gardées exprès (anciennes feuilles de Sid)
 - [ ] Terminer l'étape Vente (réparer reponses.py, puis Réponses, Rendez-vous, Devis, relances des devis J+3 et J+7 ; relances des leads chauds faites le 18/11), chacun avec contrat + garde + test + fiche avant activation
 - [ ] Fiches agents : 19 « à compléter par Liam » (production, vente-relances, responsables Vente / Argent / Production) à remplir avec l'étape Vente ; agents sur le serveur : relancer generer-fiches.py là-bas pour avoir les traces

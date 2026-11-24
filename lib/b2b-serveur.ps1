@@ -29,7 +29,7 @@ function Register-TacheB2B($t) {
     $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $t.arguments -WorkingDirectory $t.racine
     $trigger = $(if ($t.heure) { New-ScheduledTaskTrigger -Daily -At $t.heure } else { New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(2) -RepetitionInterval (New-TimeSpan -Minutes $t.minutes) -RepetitionDuration (New-TimeSpan -Days 3650) })
     if ($t.PSObject.Properties['lundi'] -and $t.lundi) { $trigger = @($trigger, (New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday -At $t.lundi)) }   # harness : déclencheur du lundi en plus (surveillant 07:50)
-    if ($t.heure -and $t.PSObject.Properties['heures_en_plus']) { foreach ($h in @($t.heures_en_plus | Where-Object { $_ })) { $trigger = @($trigger) + (New-ScheduledTaskTrigger -Daily -At $h) } }   # vidéos (16/11/2026) : 06:00 + 14:00 + 22:00
+    if ($t.heure -and $t.PSObject.Properties['heures_en_plus']) { foreach ($h in @($t.heures_en_plus | Where-Object { $_ })) { $trigger = @($trigger) + (New-ScheduledTaskTrigger -Daily -At $h) } }   # plusieurs heures par jour + 22:00
     $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours 2) -StartWhenAvailable -MultipleInstances IgnoreNew
     Register-ScheduledTask -TaskName $t.nom -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Description "Agent B2B « $($t.agent) » sur le serveur (créée par maj-auto.ps1 ; un seul agent à la fois)" -Force | Out-Null
 }

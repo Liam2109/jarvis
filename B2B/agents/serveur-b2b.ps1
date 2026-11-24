@@ -62,7 +62,7 @@ try {
     Log "début du cycle ($($commandes.Count) commande(s))"
     foreach ($c in $commandes) {
         $args2 = ('"{0}" {1}' -f $script, ($c -join ' ')).TrimEnd()
-        if ($estPs1) { $args2 = ('-NoProfile -ExecutionPolicy Bypass -File "{0}" {1}' -f $script, ($c -join ' ')).TrimEnd() }   # agent PowerShell (videos-nettoyage, 16/11/2026)
+        if ($estPs1) { $args2 = ('-NoProfile -ExecutionPolicy Bypass -File "{0}" {1}' -f $script, ($c -join ' ')).TrimEnd() }  
         $psi = New-Object System.Diagnostics.ProcessStartInfo; $psi.FileName = $(if ($estPs1) { 'powershell.exe' } else { $py }); $psi.Arguments = $args2; $psi.UseShellExecute = $false; $psi.CreateNoWindow = $true; $psi.WorkingDirectory = $B2B
         $psi.EnvironmentVariables['JARVIS_B2B_SERVEUR'] = '1'; $psi.EnvironmentVariables['PYTHONIOENCODING'] = 'utf-8'; $psi.EnvironmentVariables['PYTHONDONTWRITEBYTECODE'] = '1'
         $p = [System.Diagnostics.Process]::Start($psi); $t0 = Get-Date; $dec = ($c -join ' ')

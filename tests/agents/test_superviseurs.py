@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Harness - superviseurs de domaine (21/11/2026, Vidéos le 22/11) : les cinq superviseurs (Vente, Prospection, Sites, Mail, Vidéos) et la vue Jarvis, sur des cas SIMULÉS
+"""Harness - superviseurs de domaine (21/11/2026) : les quatre superviseurs (Vente, Prospection, Sites, Mail) et la vue Jarvis, sur des cas SIMULÉS
 dans un dossier temporaire. Aucun réseau, aucun Discord, aucun agent lancé (la relance est une doublure), aucun vrai fichier de données touché.
 
 Trois familles de cas, pour chaque domaine : un agent planté ou silencieux (il doit être relancé UNE fois, pas deux) ; un doublon ou une clé manquante
@@ -15,9 +15,8 @@ V = C.agent("superviseur-vente")
 P = C.agent("superviseur-prospection")
 ST = C.agent("superviseur-sites")
 ML = C.agent("superviseur-mail")
-VD = C.agent("superviseur-videos")
 JV = C.agent("jarvis-vue")
-S = V.S                      # le moteur commun, partagé par les six scripts
+S = V.S                      # le moteur commun, partagé par les cinq scripts
 G = C.harness("garde")
 LUNDI = datetime(2026, 11, 23, 10, 0)      # lundi 23/11/2026 à 10 h, dans la plage d'envoi (07:00-22:00)
 JOUR = f"{LUNDI:%Y-%m-%d}"
@@ -438,198 +437,6 @@ class Mail(Base):
 
 
 # =====================================================================================================================
-class Videos(Base):
-    """Domaine Vidéos (22/11/2026) : sept agents, un verrou PROPRE en plus du verrou commun, et rien qui puisse faire repartir une vidéo sur TikTok."""
-
-    AGENT, DOMAINE, SUIVIS = "superviseur-videos", "Vidéos", ["videos-scripts", "videos-creation"]
-    TACHES = {"videos-scripts": {"script": "scripts.py", "commandes": [["jour"]], "heure": "05:45"},
-              "videos-creation": {"script": "creation.py", "commandes": [["passage"]], "heure": "06:00"}}
-    ENTETE_CSV = "date;agent;video;ligne;compte;statut;hook;detail;tts\n"
-    LIGNE_CSV = "2026-11-23;videos-creation;2026-11-23-0600;A;;rendu;accroche;;edge\n"
-    LEGENDE = "Gérard découvre son site.\n\n#artisan #site\n\nContenu généré par IA."
-
-    def setUp(self):
-        super().setUp()
-        VD.RACINE, VD.VIDEOS = self.tmp, self.tmp / "Videos"
-        VD.VIDEOS.mkdir(parents=True, exist_ok=True)
-        VD.JOURNAL_CSV = VD.VIDEOS / "journal-videos.csv"
-        VD.SUJETS = VD.VIDEOS / "scripts" / "sujets.json"
-        VD.PUBLICATION_ETAT = VD.VIDEOS / "videos-publication-etat.json"
-        VD.VERROU_PUBLICATION = VD.VIDEOS / "publication.verrou"
-        VD.A_VALIDER_VIDEOS = VD.VIDEOS / "a-valider"
-        self.trace("videos-scripts", heure="05:46"); self.trace("videos-creation", heure="06:01")
-        self.CONTROLES = VD.controles(conf(), LUNDI, self.traces)
-
-    def publication(self, data):
-        VD.PUBLICATION_ETAT.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8"); return VD.PUBLICATION_ETAT
-
-    def legende(self, texte, nom="2026-11-23-0600.txt"):
-        VD.A_VALIDER_VIDEOS.mkdir(parents=True, exist_ok=True)
-        f = VD.A_VALIDER_VIDEOS / nom; f.write_text(texte, encoding="utf-8"); return f
-
-    def journal(self, lignes=2):
-        VD.JOURNAL_CSV.write_text(self.ENTETE_CSV + self.LIGNE_CSV * lignes, encoding="utf-8"); return VD.JOURNAL_CSV
-
-    # --- rien à dire ----------------------------------------------------------------------------------------------
-    def test_sans_donnees_video_aucun_souci(self):
-        _texte, soucis = self.passer()
-        self.assertEqual([s.ligne() for s in soucis], [], "sur le gros PC les données vidéo sont absentes : ce n'est pas un problème")
-
-    # --- agent planté ---------------------------------------------------------------------------------------------
-    def test_agent_plante_relance_une_seule_fois(self):
-        self.trace("videos-creation", ok=False, heure="06:02", erreur="RuntimeError")
-        self.passer()
-        self.assertEqual(self.relances, ["videos-creation"])
-        _texte2, soucis2 = self.passer()
-        self.assertEqual(self.relances, ["videos-creation"], "jamais deux relances le même jour")
-        self.assertTrue(any("toujours erreur après une relance" in s.quoi for s in self.bloques(soucis2)))
-
-    def test_maillon_silencieux_a_son_heure_est_relance(self):
-        shutil.rmtree(self.traces / "videos-scripts")      # 05:45 + délai de grâce dépassés, aucun passage
-        _texte, soucis = self.passer()
-        self.assertEqual(self.relances, ["videos-scripts"])
-        self.assertIn("aucun passage aujourd'hui", " ".join(s.detail for s in soucis))
-
-    # --- corrections sûres ----------------------------------------------------------------------------------------
-    def test_ligne_en_double_du_journal_retiree(self):
-        self.journal(2)
-        _texte, soucis = self.passer()
-        self.assertEqual(len(VD.JOURNAL_CSV.read_text(encoding="utf-8").strip().splitlines()), 2, "la ligne en double part, l'en-tête reste")
-        self.assertTrue(any("en double" in s.quoi for s in self.corriges(soucis)))
-
-    def test_sujet_en_double_retire(self):
-        VD.SUJETS.parent.mkdir(parents=True, exist_ok=True)
-        a = {"jour": "2026-11-23", "passage": "06:00", "sujet": "le devis qui ne vient jamais", "titre": "Le devis fantôme"}
-        b = {"jour": "2026-11-23", "passage": "14:00", "sujet": "le site jamais fini", "titre": "Le site fantôme"}
-        VD.SUJETS.write_text(json.dumps([a, b, a], ensure_ascii=False), encoding="utf-8")
-        _texte, soucis = self.passer()
-        self.assertEqual(json.loads(VD.SUJETS.read_text(encoding="utf-8")), [a, b], "le doublon part, l'ordre et la première occurrence restent")
-        self.assertTrue(any("doublon" in s.quoi for s in self.corriges(soucis)))
-
-    # --- cas risqués : alerte, rien touché ------------------------------------------------------------------------
-    def test_etat_de_publication_jamais_complete_tout_seul(self):
-        p = self.publication({"publications": {}})      # « arrets » et « essais » absents
-        avant = p.read_text(encoding="utf-8")
-        _texte, soucis = self.passer()
-        quoi = " | ".join(s.quoi for s in self.bloques(soucis))
-        self.assertIn("clé « arrets » absente", quoi); self.assertIn("clé « essais » absente", quoi)
-        self.assertEqual(p.read_text(encoding="utf-8"), avant, "l'état de publication n'a pas bougé : une vidéo publiée ne doit pas repartir")
-        self.assertEqual(self.corriges(soucis), [])
-
-    def test_plafond_de_publications_depasse_alerte(self):
-        faites = [{"ligne": "A", "passage": h, "video": f"v{i}.mp4"} for i, h in enumerate(("06:00", "14:00", "22:00", "23:00"))]
-        p = self.publication({"publications": {"2026-11-22": faites}, "arrets": {}, "essais": {}})
-        avant = p.read_text(encoding="utf-8")
-        _texte, soucis = self.passer()
-        self.assertTrue(any("4 publications le 2026-11-22 sur la ligne A" in s.quoi for s in self.bloques(soucis)))
-        self.assertEqual(p.read_text(encoding="utf-8"), avant, "aucune ligne retirée : elle ferait republier la vidéo")
-
-    def test_meme_video_publiee_deux_fois_alerte(self):
-        deux = [{"ligne": "A", "passage": "06:00", "video": "v1.mp4"}, {"ligne": "A", "passage": "06:00", "video": "v1.mp4"}]
-        self.publication({"publications": {"2026-11-22": deux}, "arrets": {}, "essais": {}})
-        _texte, soucis = self.passer()
-        self.assertTrue(any("deux fois la même vidéo publiée" in s.quoi for s in self.bloques(soucis)))
-
-    def test_jour_de_publication_dans_le_futur_alerte(self):
-        self.publication({"publications": {"2030-01-01": []}, "arrets": {}, "essais": {}})
-        _texte, soucis = self.passer()
-        self.assertTrue(self.bloques(soucis), "une date de publication dans le futur doit alerter")
-        self.assertIn("futur", " ".join(s.quoi + " " + s.detail for s in self.bloques(soucis)))
-
-    def test_verrou_de_publication_oublie_alerte_sans_etre_retire(self):
-        VD.VERROU_PUBLICATION.write_text("1234", encoding="utf-8")
-        vieux = datetime(2026, 11, 22, 1, 0).timestamp()
-        os.utime(VD.VERROU_PUBLICATION, (vieux, vieux))
-        _texte, soucis = self.passer()
-        self.assertTrue(any("verrou de publication en place depuis" in s.quoi for s in self.bloques(soucis)))
-        self.assertTrue(VD.VERROU_PUBLICATION.is_file(), "le verrou n'est jamais retiré : ce serait deux publications en même temps")
-
-    def test_verrou_de_publication_recent_nest_pas_un_souci(self):
-        VD.VERROU_PUBLICATION.write_text("1234", encoding="utf-8")
-        _texte, soucis = self.passer()
-        self.assertEqual([s.ligne() for s in soucis], [], "une publication en cours est normale")
-
-    def test_legende_sans_mention_ia_alerte_sans_la_reecrire(self):
-        f = self.legende("Gérard découvre son site.\n\n#artisan")
-        avant = f.read_text(encoding="utf-8")
-        _texte, soucis = self.passer()
-        self.assertTrue(any("sans la mention" in s.quoi for s in self.bloques(soucis)))
-        self.assertEqual(f.read_text(encoding="utf-8"), avant, "une légende destinée au public n'est jamais réécrite")
-
-    def test_legende_avec_phrase_interdite_alerte(self):
-        phrase = S.ref_offre()["phrases_interdites"][0]
-        self.legende(self.LEGENDE + "\n\n" + phrase)
-        _texte, soucis = self.passer()
-        self.assertTrue(any("phrase interdite" in s.quoi for s in self.bloques(soucis)))
-
-    def test_legende_conforme_aucun_souci(self):
-        self.legende(self.LEGENDE)
-        _texte, soucis = self.passer()
-        self.assertEqual([s.ligne() for s in soucis], [])
-
-    def test_chaine_dans_le_desordre_alerte(self):
-        shutil.rmtree(self.traces / "videos-scripts")      # la création a tourné, les scripts jamais
-        _texte, soucis = self.passer()
-        quoi = " | ".join(s.quoi for s in self.bloques(soucis))
-        self.assertIn("videos-creation a tourné aujourd'hui, videos-scripts jamais", quoi)   # marketing n'est pas planifié ici : il sort de la chaîne
-        self.assertTrue(all(s.risque for s in self.bloques(soucis) if "désordre" in s.detail), "une chaîne en désordre n'est jamais relancée")
-
-    # --- verrou propre au domaine ---------------------------------------------------------------------------------
-    def test_verrou_propre_ferme_meme_quand_le_verrou_commun_est_ouvert(self):
-        commun = self.tmp / "superviseurs-config.json"
-        commun.write_text(json.dumps({"go_superviseurs": True, "envoi_automatique": True}), encoding="utf-8")
-        self.ecrire("superviseur-videos-config.json", {"go_superviseur_videos": False})
-        ancien = S.COMMUN; S.COMMUN = commun
-        try:
-            c = S.cfg("superviseur-videos", VD.DEFAUT)
-            self.assertEqual(c["verrou_propre"], "go_superviseur_videos")
-            self.assertFalse(c["go_superviseurs"], "« go superviseurs » ouvert ne suffit pas : ce domaine a son propre verrou")
-            self.ecrire("superviseur-videos-config.json", {"go_superviseur_videos": True})
-            self.assertTrue(S.cfg("superviseur-videos", VD.DEFAUT)["go_superviseurs"], "les deux verrous ouverts : le domaine tourne")
-            self.ecrire("superviseur-vente-config.json", {})
-            cv = S.cfg("superviseur-vente")
-            self.assertIsNone(cv.get("verrou_propre"), "les quatre premiers superviseurs n'ont pas de verrou propre")
-            self.assertTrue(cv["go_superviseurs"], "et cette nouveauté ne les referme pas")
-        finally:
-            S.COMMUN = ancien
-
-    def test_verrou_ferme_ne_corrige_rien_et_nomme_son_verrou(self):
-        avant = self.journal(2).read_text(encoding="utf-8")
-        texte, soucis = self.passer(c=conf(go_superviseurs=False, verrou_propre="go_superviseur_videos"))
-        self.assertEqual(VD.JOURNAL_CSV.read_text(encoding="utf-8"), avant, "verrou fermé : aucune correction")
-        self.assertEqual(self.corriges(soucis), []); self.assertEqual(self.envois, [])
-        self.assertIn("verrou « go_superviseur_videos » fermé", texte)
-        self.assertFalse((self.tmp / "superviseur-videos-etat.json").exists())
-
-    # --- essai, fiche, garde --------------------------------------------------------------------------------------
-    def test_essai_n_ecrit_rien_et_ne_relance_rien(self):
-        self.trace("videos-creation", ok=False, heure="06:02", erreur="RuntimeError")
-        avant = self.journal(2).read_text(encoding="utf-8")
-        self.passer(essai=True)
-        self.assertEqual(self.relances, []); self.assertEqual(self.envois, [])
-        self.assertEqual(VD.JOURNAL_CSV.read_text(encoding="utf-8"), avant)
-        self.assertFalse((self.tmp / "superviseur-videos-etat.json").exists())
-        self.assertFalse((self.tmp / "superviseur-videos-journal.log").exists())
-        self.assertFalse((self.tmp / "a-valider").exists())
-
-    def test_fiche_a_valider_ecrite_une_fois(self):
-        self.publication({"publications": {}})
-        self.passer()
-        f = self.tmp / "a-valider" / (JOUR + "-superviseur-videos.md")
-        self.assertTrue(f.is_file(), "ce qui attend un « go » est écrit dans B2B\\a-valider")
-        t1 = f.read_text(encoding="utf-8")
-        self.passer()
-        self.assertEqual(f.read_text(encoding="utf-8"), t1, "le même souci n'est jamais écrit deux fois")
-        self.assertEqual(len(self.envois), 1, "ni annoncé deux fois sur Discord")
-
-    def test_le_message_passe_la_garde_du_harness(self):
-        self.publication({"publications": {}})
-        texte, _ = self.passer()
-        ok, raisons = G.verifier_envoi("superviseur-videos", "discord", texte, maintenant=G.heure_paris(), ctx=CTX_GARDE, tracer=False)
-        self.assertTrue(ok, raisons)
-
-
-# =====================================================================================================================
 class VueJarvis(Base):
     AGENT, DOMAINE, SUIVIS = "jarvis-vue", "Jarvis", []
     TACHES = {}
@@ -651,10 +458,10 @@ class VueJarvis(Base):
                                   envoyer=lambda t: self.envois.append(t) or True)
         return code
 
-    def test_les_cinq_domaines_sont_remontes(self):
+    def test_les_quatre_domaines_sont_remontes(self):
         self.assertEqual(self.passer_vue(), 0)
         t = JV.SORTIE.read_text(encoding="utf-8")
-        for x in ("Vente", "Prospection", "Sites", "Mail", "Vidéos", "BLOQUÉ", "corrigé", "jamais passé"):
+        for x in ("Vente", "Prospection", "Sites", "Mail", "BLOQUÉ", "corrigé", "jamais passé"):
             self.assertIn(x, t)
         self.assertIn("la lecture Gmail n'est plus en lecture seule", t)
         self.assertEqual(len(self.envois), 1, "un seul message Discord groupé")

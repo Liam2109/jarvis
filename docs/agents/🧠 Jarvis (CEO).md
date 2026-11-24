@@ -78,7 +78,7 @@ Lire l'état des responsables, décider, déléguer et prévenir Liam ; ne produ
 
 Liam décide ; Jarvis (CEO) pilote ; chaque responsable pilote ses agents et rend compte à Jarvis.
 
-- **Rattachés directement à Jarvis (CEO) :** 🙋 Alerte candidatures (arrêté), 🧠 Cerveau (arrêté), 🧹 Nettoyage fichiers (actif), 🚨 Alerte pannes (actif), 📝 Résumé Sid (actif), 💾 Sauvegarde leads (actif), 🛡️ Surveillant (actif), 🎬 Création vidéos (actif), 📣 Marketing vidéos (actif), ✂️ Monteur vidéos (actif), 🧽 Nettoyage vidéos (actif), 📤 Publication TikTok (arrêté), ✍️ Scripts vidéos (actif), 🎞️ Veille vidéos (actif).
+- **Rattachés directement à Jarvis (CEO) :** 🙋 Alerte candidatures (arrêté), 🧠 Cerveau (arrêté), 🧹 Nettoyage fichiers (actif), 🚨 Alerte pannes (actif), 📝 Résumé Sid (actif), 💾 Sauvegarde leads (actif), 🛡️ Surveillant (actif).
 - **Prospection :** Remplir chaque jour ouvré la journée de vente : entreprises trouvées, lots d'e-mails validés par Liam, liste d'appels prête pour Sid à 7 h 30. Agents : 📞 Appels Sid (actif), 🤝 Équipe LinkedIn (actif), 🔎 Prospection (actif), 🧭 Superviseur Prospection (arrêté).
 - **Vente :** Transformer réponses et rendez-vous en devis montrés à Liam, puis relancer, sans jamais rien envoyer au client sans son accord. Agents : 🧾 Devis (actif), ☎️ Relances leads (actif), 📅 Rendez-vous (actif), 💬 Réponses (actif), 🛒 Superviseur Vente (arrêté).
 - **Argent :** Suivre les paiements Stripe en lecture seule et prévenir Liam de chaque encaissement. Agents : 📊 Chiffres serveur (arrêté), 💶 Alerte Stripe (actif).
@@ -98,13 +98,6 @@ flowchart TD
   ceo --> resume_sid["📝 Résumé Sid (actif)"]
   ceo --> sauvegarde_leads["💾 Sauvegarde leads (actif)"]
   ceo --> surveillant["🛡️ Surveillant (actif)"]
-  ceo --> videos_creation["🎬 Création vidéos (actif)"]
-  ceo --> videos_marketing["📣 Marketing vidéos (actif)"]
-  ceo --> videos_monteur["✂️ Monteur vidéos (actif)"]
-  ceo --> videos_nettoyage["🧽 Nettoyage vidéos (actif)"]
-  ceo --> videos_publication["📤 Publication TikTok (arrêté)"]
-  ceo --> videos_scripts["✍️ Scripts vidéos (actif)"]
-  ceo --> videos_veille["🎞️ Veille vidéos (actif)"]
   ceo --> r_prospection["Responsable Prospection"]
   r_prospection --> appels_sid["📞 Appels Sid (actif)"]
   r_prospection --> linkedin_equipe["🤝 Équipe LinkedIn (actif)"]
@@ -130,7 +123,7 @@ flowchart TD
 _Zone conservée à chaque régénération : liens vers docs\decisions et docs clés seulement._
 
 Au centre : il lance, surveille et arrête les agents. « Jarvis stop » = arrêt d'urgence.
-Liens : [[docs/agents/🧠 Cerveau|🧠 Cerveau]] · [[docs/agents/🤝 Équipe LinkedIn|🤝 Équipe LinkedIn]] · [[docs/agents/🙋 Alerte candidatures|🙋 Alerte candidatures]] · [[docs/agents/📝 Résumé Sid|📝 Résumé Sid]] · [[docs/agents/🚨 Alerte pannes|🚨 Alerte pannes]] · [[docs/agents/💾 Sauvegarde leads|💾 Sauvegarde leads]] · [[docs/agents/🛡️ Surveillant|🛡️ Surveillant]] · [[docs/agents/🧹 Nettoyage fichiers|🧹 Nettoyage fichiers]] · [[docs/agents/🏭 Production|🏭 Production]] · [[docs/agents/⛓️ Chaîne vidéo|⛓️ Chaîne vidéo]] · [[docs/agents/🌙 Intérim nuit|🌙 Intérim nuit]] · [[docs/agents/🌐 Page exemple|🌐 Page exemple]] · [[docs/agents/🎞️ Veille vidéos|🎞️ Veille vidéos]] · [[docs/agents/✍️ Scripts vidéos|✍️ Scripts vidéos]] · [[docs/agents/📣 Marketing vidéos|📣 Marketing vidéos]] · [[docs/agents/🎬 Création vidéos|🎬 Création vidéos]] · [[docs/agents/✂️ Monteur vidéos|✂️ Monteur vidéos]] · [[docs/agents/📤 Publication TikTok|📤 Publication TikTok]] · [[docs/agents/🧽 Nettoyage vidéos|🧽 Nettoyage vidéos]] · [[docs/agents/🛒 Superviseur Vente|🛒 Superviseur Vente]] · [[docs/agents/🧭 Superviseur Prospection|🧭 Superviseur Prospection]] · [[docs/agents/CARTE-RELAIS|Carte des relais]]
+Liens : [[docs/agents/🧠 Cerveau|🧠 Cerveau]] · [[docs/agents/🤝 Équipe LinkedIn|🤝 Équipe LinkedIn]] · [[docs/agents/🙋 Alerte candidatures|🙋 Alerte candidatures]] · [[docs/agents/📝 Résumé Sid|📝 Résumé Sid]] · [[docs/agents/🚨 Alerte pannes|🚨 Alerte pannes]] · [[docs/agents/💾 Sauvegarde leads|💾 Sauvegarde leads]] · [[docs/agents/🛡️ Surveillant|🛡️ Surveillant]] · [[docs/agents/🧹 Nettoyage fichiers|🧹 Nettoyage fichiers]] · [[docs/agents/🏭 Production|🏭 Production]] · [[docs/agents/🌙 Intérim nuit|🌙 Intérim nuit]] · [[docs/agents/🌐 Page exemple|🌐 Page exemple]] · [[docs/agents/🛒 Superviseur Vente|🛒 Superviseur Vente]] · [[docs/agents/🧭 Superviseur Prospection|🧭 Superviseur Prospection]] · [[docs/agents/CARTE-RELAIS|Carte des relais]]
 Décisions qui le cadrent : [[docs/decisions/📌 Offre 500 + 29|📌 Offre 500 + 29]] · [[docs/decisions/📌 Sans acompte|📌 Sans acompte]] · [[docs/decisions/📌 Serveur|📌 Serveur]] · [[docs/decisions/📌 Validation à la main|📌 Validation à la main]] · [[docs/decisions/📌 INDEX d'abord|📌 INDEX d'abord]] · [[docs/decisions/📌 Instagram retiré|📌 Instagram retiré]]
 
 ## Notes de Liam

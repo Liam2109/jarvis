@@ -197,17 +197,6 @@
       "actif_le": "2026-11-21",
       "desactive": "2026-11-21 : le domaine ne tourne pas encore pour de vrai, décision de Liam (fichiers gardés ; retirer cette clé pour l'ouvrir)"
     },
-    "superviseur-videos": {
-      "script": "superviseur-videos.py",
-      "commandes": [
-        [
-          "passage"
-        ]
-      ],
-      "toutes_minutes": 30,
-      "actif_le": "2026-11-22",
-      "desactive": "2026-11-22 : nouveau domaine, fermé jusqu'au « go superviseur-videos » de Liam (verrou propre go_superviseur_videos ; retirer cette clé pour le planifier)"
-    },
     "linkedin": {
       "script": "linkedin.py",
       "commandes": [
@@ -241,43 +230,6 @@
       "toutes_minutes": 30,
       "actif_le": "2026-11-21",
       "desactive": "2026-11-21 : deux domaines sur quatre seulement, le message groupé n'apporterait rien (retirer cette clé quand Sites et Mail tourneront)"
-    },
-    "videos-veille": {
-      "script": "..\\..\\Videos\\agents\\veille.py",
-      "commandes": [["jour"]],
-      "heure": "04:30",
-      "actif_le": "2026-11-17"
-    },
-    "videos-scripts": {
-      "script": "..\\..\\Videos\\agents\\scripts.py",
-      "commandes": [["jour"]],
-      "heure": "05:00",
-      "actif_le": "2026-11-17"
-    },
-    "videos-marketing": {
-      "script": "..\\..\\Videos\\agents\\marketing.py",
-      "commandes": [["jour"]],
-      "heure": "05:30",
-      "actif_le": "2026-11-17"
-    },
-    "videos-nettoyage": {
-      "script": "..\\..\\Videos\\agents\\nettoyage.ps1",
-      "commandes": [[]],
-      "heure": "03:30",
-      "actif_le": "2026-11-17"
-    },
-    "videos-creation": {
-      "script": "..\\..\\Videos\\agents\\creation.py",
-      "commandes": [["passage"]],
-      "heure": "06:00",
-      "heures_en_plus": ["14:00", "22:00"],
-      "actif_le": "2026-11-17"
-    },
-    "videos-publication": {
-      "script": "..\\..\\Videos\\agents\\publication.py",
-      "commandes": [["publier"]],
-      "heure": "06:20",
-      "heures_en_plus": ["14:20", "22:20"]
     }
   }
 }

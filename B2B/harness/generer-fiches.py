@@ -24,7 +24,7 @@ from domaines import domaines   # noqa: E402  agents de chaque superviseur de do
 CONTRATS, SKILLS = ICI / "contrats", RACINE / ".claude" / "skills"
 SORTIE = RACINE / "docs" / "agents"; COPIES = SORTIE / "skills"; NOMS_JSON = ICI / "fiches-noms.json"
 ARCHIVES = RACINE / "docs" / "archives" / "agents-retires"   # fiches ET copies de skills des agents retirés (dossier ignoré du coffre Obsidian)
-RETIRES = ("appels-liam", "vente-relances", "linkedin", "superviseur-sites", "superviseur-mail", "superviseur-videos", "jarvis-vue")   # copies de skills rangées dans ARCHIVES le 24/11/2026 (sources .claude\\skills gardées)
+RETIRES = ("appels-liam", "vente-relances", "linkedin", "superviseur-sites", "superviseur-mail", "jarvis-vue")   # copies de skills rangées dans ARCHIVES le 24/11/2026 (sources .claude\\skills gardées)
 TACHES = RACINE / "B2B" / "agents" / "serveur-taches.json"
 DEBUT, FIN = "<!-- GENERE:DEBUT (régénéré par python B2B\\harness\\generer-fiches.py : ne pas modifier) -->", "<!-- GENERE:FIN -->"
 DYN_D, DYN_F = "<!-- DYNAMIQUE:DEBUT -->", "<!-- DYNAMIQUE:FIN -->"
@@ -90,63 +90,10 @@ def etapes(c):
 def puces(xs, vide=AC): return "\n".join(f"- {x}" for x in xs) if xs else f"- {vide}"
 
 
-# Chaîne vidéo (17/11/2026) : ordre d'un passage, de bout en bout. (agent ou None pour l'étape de Liam, libellé, ce qui passe à l'étape suivante)
-CHAINE_VIDEO = [("videos-veille", "Veille", "note du jour (Videos/veille) + formules d'accroche (hooks.md)"),
-                ("videos-scripts", "Scripts", "script + légende (Videos/scripts/AAAA-MM-JJ-HHMM.json)"),
-                ("videos-marketing", "Marketing", "script enrichi : accroche gardée, rythme, sous-titres"),
-                ("videos-creation", "Création", "vidéo rendue (ligne A : directement dans Videos/a-valider)"),
-                ("videos-monteur", "Monteur (ligne B)", "sketch monté et contrôlé, rangé dans Videos/a-valider (sinon Videos/a-part)"),
-                (None, "Ton OK de Liam (« go publier », une fois par ligne)", "ligne ouverte : go_publier = true dans la config locale"),
-                ("videos-publication", "Publication (verrouillée)", "vidéo publiée, déplacée dans Videos/publiees"),
-                ("videos-nettoyage", "Nettoyage", "vieux fichiers supprimés après une ligne de journal-videos.csv")]
-NOTE_CHAINE = "⛓️ Chaîne vidéo"
-REGLES_VIDEO = "Videos/SKILL-VIDEOS.md (règles communes de l'équipe Vidéos, relues avant chaque exécution ; absentes ou incomplètes = refus, code 3)"
-
-
-def chaine_txt(nom):
-    """Place d'un agent vidéo dans la chaîne (texte simple, sans lien) ; vide pour les autres agents."""
-    ids = [a for a, _, _ in CHAINE_VIDEO]
-    if nom not in ids: return ""
-    i = ids.index(nom); lib = lambda j: CHAINE_VIDEO[j][1]
-    amont = f"{lib(i - 1)} : {CHAINE_VIDEO[i - 1][2]}" if i > 0 else "aucun (premier maillon)"
-    aval = lib(i + 1) if i + 1 < len(CHAINE_VIDEO) else "aucun (dernier maillon)"
-    sens = " → ".join(("**" + l + "**") if a == nom else l for a, l, _ in CHAINE_VIDEO)
-    return (f"**Chaîne vidéo :** {sens} (fiche « {NOTE_CHAINE} »)\n- **Reçoit de :** {amont}\n- **Produit :** {CHAINE_VIDEO[i][2]}\n- **Passe à :** {aval}\n\n")
-
-
-def regles_txt(nom): return f"- Règles : {REGLES_VIDEO}\n" if nom.startswith("videos-") else ""
-
-
 def tache_txt(nom, t):
-    if not t: return "aucune (appelé par un autre agent ou lancé à la main)" if nom == "videos-monteur" else "aucune dans serveur-taches.json"
+    if not t: return "aucune dans serveur-taches.json"
     return (f"entrée dans `B2B/agents/serveur-taches.json`" + (f", active à partir du {t['actif_le']}" if t.get("actif_le") else "") +
             " ; tourne seulement si l'agent est dans `agents_actifs` (choix de Liam)")
-
-
-def note_chaine(cs, ts, ancien):
-    """Note « ⛓️ Chaîne vidéo » : sens des flèches de bout en bout (Mermaid) et tableau des maillons ; aucun lien [[...]] (reliée par la note de Jarvis (CEO))."""
-    par = {c["nom"]: c for c in cs}; n = noms()
-    m = ["```mermaid", "flowchart LR", '  ceo["Jarvis (CEO)"] -.-> veille']
-    ids = []
-    for a, l, _ in CHAINE_VIDEO:
-        i = (a or "ton_ok").replace("videos-", "").replace("-", "_"); ids.append(i)
-        st = f" ({STATUT[par[a]['statut']]})" if a in par else ""
-        m.append(f'  {i}["{(n.get(a) or l) if a else "✅ " + l}{st}"]')
-    m += [f'  {ids[k]} -->|"{CHAINE_VIDEO[k][2].split(" (")[0]}"| {ids[k + 1]}' for k in range(len(ids) - 1)] + ["```"]
-    lignes = ["| Étape | Agent | Horaire | Statut | Produit |", "|---|---|---|---|---|"]
-    for k, (a, l, prod) in enumerate(CHAINE_VIDEO, 1):
-        if a in par: lignes.append(f"| {k} | {n.get(a) or a} (`{a}`) | {horaire(par[a], ts.get(a))} | {STATUT[par[a]['statut']]} | {prod} |")
-        else: lignes.append(f"| {k} | {l} | quand Liam a vu la première vidéo de la ligne | décision de Liam | {prod} |")
-    corps = (f"# {NOTE_CHAINE}\n\nSens d'un passage, de bout en bout (06:00, 14:00, 22:00). Rattachée à Jarvis (CEO). Généré depuis les contrats `B2B/harness/contrats/videos-*.json` et `B2B/agents/serveur-taches.json`.\n\n"
-             + "\n".join(m) + "\n\n" + "\n".join(lignes) + "\n\n"
-             "- Le Monteur est appelé par la Création pour chaque sketch de la ligne B (aucune tâche à lui) ; la ligne A passe directement de la Création au ton OK.\n"
-             "- Rien n'est publié avant le « go publier » de Liam pour la ligne ; la Publication reste verrouillée (contrat `inactif`).\n"
-             "- Aucun agent vidéo ne tourne tant que Liam ne l'a pas ajouté à `agents_actifs` (`B2B/agents/b2b.local.json`).\n"
-             f"- Règles communes : {REGLES_VIDEO}.\n"
-             "- Pas de preuve = pas de fait : l'état de chaque maillon se lit dans sa fiche (rubrique « Horaire et état ») et dans `B2B/logs/agents/<agent>/`.\n")
-    fm, reste = decouper(ancien)
-    entete = "---\n" + "\n".join(fm or ["aliases: [⛓️ Chaîne vidéo]", "tags: [chaine-video]"]) + "\n---\n"
-    return entete + DEBUT + "\n" + sans_liens(corps) + FIN + "\n" + "\n" + zone_conservee(reste)
 
 
 def garde_mode(c):
@@ -273,7 +220,7 @@ def fiche(c, schema, t, titre, cs, n):
 - Engager Liam (envoyer au client, encaisser, publier, signer) : `peut_engager: false`, tout passe par `B2B/a-valider/`.
 
 ## Entrées et sorties
-{chaine_txt(nom)}**Lit :**
+**Lit :**
 {puces(c['fichiers_lus'])}
 
 **Écrit :**
@@ -294,7 +241,7 @@ def fiche(c, schema, t, titre, cs, n):
 
 ## Skill et règles
 {puces(sk)}
-{regles_txt(nom)}- Pas de preuve = pas de fait : « il a tourné » = une trace du jour `ok: true` ci-dessus ; « c'est corrigé » = ses tests puis `tests\\b2b-rapide.ps1` en vert.
+- Pas de preuve = pas de fait : « il a tourné » = une trace du jour `ok: true` ci-dessus ; « c'est corrigé » = ses tests puis `tests\\b2b-rapide.ps1` en vert.
 """
     if nom == "jarvis-ceo": corps += "\n" + responsables(cs, n) + "\n\n" + organigramme(cs, n) + "\n"
     return DEBUT + "\n" + sans_liens(corps) + FIN + "\n"
@@ -366,8 +313,6 @@ def verifier(cs):
         if (COPIES / f"{s}.md").exists(): pb.append(f"copie de skill d'un agent retiré à ranger dans {ARCHIVES.relative_to(RACINE)} : docs/agents/skills/{s}.md")
         if not (ARCHIVES / f"{s}.md").is_file(): pb.append(f"copie archivée absente : {ARCHIVES.relative_to(RACINE)}/{s}.md")
     pb += [f"« {r} » est dans RETIRES mais a encore une note dans fiches-noms.json" for r in RETIRES if n.get(r)]
-    pc = SORTIE / f"{NOTE_CHAINE}.md"; a = lire(pc)
-    if a is None or FIN not in a or a.split(FIN, 1)[0] != note_chaine(cs, ts, a).split(FIN, 1)[0]: pb.append(f"note de la chaîne vidéo absente ou pas à jour : {pc.relative_to(RACINE)}")
     pb += liens_arbre(n)
     for c in cs:
         if c["statut"] in ("actif", "simulation"):
@@ -391,7 +336,6 @@ def main(argv=None):
     if a.tests: lancer_tests(cs)
     schema = json.loads((ICI / "contrat.schema.json").read_text(encoding="utf-8")); ts = taches(); n, cb = cibles(cs); copies = copies_skills()
     for c, p in cb: ecrire(p, note(c, schema, ts.get(c["nom"]), p.stem, lire(p), cs, n))   # relue juste avant d'être écrite (Obsidian peut être ouvert)
-    pc = SORTIE / f"{NOTE_CHAINE}.md"; ecrire(pc, note_chaine(cs, ts, lire(pc)))
     for p in (COPIES.glob("*.md") if COPIES.is_dir() else []):
         if p not in copies: p.unlink()   # dossier entièrement généré : une copie sans source est retirée
     for p, t in copies.items(): ecrire(p, t)

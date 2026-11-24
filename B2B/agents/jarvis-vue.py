@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Vue Jarvis des superviseurs (21/11/2026) : le seul endroit où Liam voit l'état des cinq domaines d'un coup d'œil (Vente, Prospection, Sites, Mail, Vidéos).
+"""Vue Jarvis des superviseurs (21/11/2026) : le seul endroit où Liam voit l'état des quatre domaines d'un coup d'œil (Vente, Prospection, Sites, Mail).
 Elle NE CORRIGE RIEN et ne relance rien : elle lit l'état et le journal que chaque superviseur a déjà écrits, et les remet en un fichier court
 (B2B\\logs\\superviseurs\\ETAT-SUPERVISEURS.md, hors git, réécrit à chaque passage, sans historique) plus UN seul message Discord groupé par jour.
 
@@ -24,8 +24,7 @@ import traces as T
 
 AGENT, DOMAINE = "jarvis-vue", "Jarvis"
 DEFAUT = {"heure_resume": "19:40"}
-DOMAINES = [("superviseur-vente", "Vente"), ("superviseur-prospection", "Prospection"), ("superviseur-sites", "Sites"), ("superviseur-mail", "Mail"),
-            ("superviseur-videos", "Vidéos")]
+DOMAINES = [("superviseur-vente", "Vente"), ("superviseur-prospection", "Prospection"), ("superviseur-sites", "Sites"), ("superviseur-mail", "Mail")]
 SORTIE = ICI.parent / "logs" / "superviseurs" / "ETAT-SUPERVISEURS.md"
 SIGNES = {"ok": "OK", "corrigé": "corrigé", "bloqué": "BLOQUÉ (attend « go »)", "jamais passé": "jamais passé", "inconnu": "état illisible"}
 
