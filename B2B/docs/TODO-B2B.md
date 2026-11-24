@@ -3,6 +3,7 @@
 _Mise à jour : 24 nov. 2026 (le fait est supprimé ; l'historique est dans le journal et dans git)_
 
 ## Équipe LinkedIn (à activer par Liam)
+- [ ] LinkedIn automatique, avant le « go linkedin auto » : `pip install playwright` + `playwright install msedge` sur le serveur, `python B2Bgents\linkedin-equipe.py auto connexion` (tu te connectes toi-même), puis `go_linkedin_auto: true`. Surveille le premier jour : les sélecteurs de LinkedIn n'ont pu être testés qu'en simulation.
 - [ ] Ajouter `linkedin-equipe` à agents_actifs du serveur, redémarrer le service du tableau de bord (nouvelle écriture POST /api/linkedin), puis ouvrir la rubrique LinkedIn depuis http://serveur:8080 (les cases ne s'enregistrent pas depuis le fichier du gros PC)
 
 ## Lundi 16 nov. (appels d'abord)

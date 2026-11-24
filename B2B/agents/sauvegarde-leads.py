@@ -27,7 +27,7 @@ GARDE_JOURS = 30
 # chemins relatifs à B2B\ : leads (registre, file des leads chauds, suivi), appels (états, historique, listes de Sid), résultats d'appels (registre + feuilles notées), relances, archive des suppressions
 FICHIERS = ["donnees/registre-entreprises.json", "donnees/leads-chauds.json", "donnees/archive/archive.jsonl",
             "donnees/historique-appels.json", "agents/relances-etat.json", "agents/appels-sid-etat.json", "agents/appels-sid-historique.json", "agents/appels-liam-etat.json",
-            "suivi-prospects.csv", "prospection-trouves.csv"]
+            "suivi-prospects.csv", "prospection-trouves.csv", "linkedin/equipe.json", "linkedin/auto-journal.jsonl"]
 DOSSIERS = [("docs/sid", "*.csv")]
 NOM_JOUR = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 

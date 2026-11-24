@@ -103,3 +103,4 @@ Chaque idée est notée à la date où Liam la dit. Une idée pas encore faite r
 - 23/11 — Catégorie « Social media » tout à gauche du dashboard : stats TikTok et YouTube (YouTube via API gratuite, TikTok à la main), Instagram plus tard. TikTok perso : conversation « TikTok » (écrire « idée » : sujet + début, milieu, fin), vidéos faites par Liam lui-même (IA surtout, aussi soin de soi et personal brand ; ni son business ni sa vie).
 - 23/11 — Chaque vidéo : un titre et une description avec les liens YouTube, TikTok et Instagram de Liam (liens à donner, dans la description) ; à ajouter à la fiche idees-tiktok.
 - 23/11 — Agent type Claude Cowork (agent qui travaille seul sur le PC à partir d'un objectif), côté biz, plus tard.
+- 25/11 — LinkedIn automatique prêt mais fermé : après 2 semaines de journal, comparer taux d'acceptation et de réponse entre messages avec et sans prix, garder le meilleur.

@@ -22,6 +22,17 @@ import machine as M
 import registre as RG
 import linkedin as LI   # règles de contenu (regex) et file des posts de l'agent linkedin (lecture seule ici)
 
+import linkedin_auto as LA   # mode automatique (go_linkedin_auto), fermé par défaut
+
+
+class _Moi:
+    """Donne à linkedin_auto l'accès vivant aux globals de ce module (même chargé sans nom de module)."""
+    def __getattr__(self, k):
+        try: return globals()[k]
+        except KeyError: raise AttributeError(k)
+
+
+LA.lier(_Moi())
 AGENT = "linkedin-equipe"
 RACINE = ICI.parent
 CONFIG, JOURNAL = ICI / "linkedin-equipe-config.json", ICI / "linkedin-equipe-journal.log"
@@ -32,6 +43,7 @@ SUIVI = RACINE / "suivi-prospects.csv"
 if os.environ.get("JARVIS_TEST") == "1":   # tests : jamais le vrai état ni le vrai tableau de bord
     import tempfile; _t = Path(tempfile.mkdtemp(prefix="linkedin-equipe-test-")); ETAT = _t / "equipe.json"; SORTIE = _t / "data"; JOURNAL = _t / "journal.log"
 DEFAUT = {"demandes_par_jour": 20, "plafond_semaine": 100, "part_entreprises": 0.7, "commerces_locaux": False, "commentaires": 10, "relance_jours": 3,
+          "go_linkedin_auto": False, "auto_demandes_semaine1": 10, "auto_commentaires_par_jour": 3, "auto_dm_max_jour": 25, "auto_debut": "08:00", "auto_fin": "18:00", "auto_ecart_minutes": 7, "auto_profil": "", "auto_navigateur": "msedge",
           "zones": [["76"], ["27", "14", "50", "61"]], "zone_niveau": 1, "effectif_max": 9,
           "intitules_closers": ["closer", "téléconseiller", "téléprospecteur", "conseiller commercial sédentaire", "commercial indépendant", "agent commercial", "apporteur d'affaires"],
           "zones_closers": ["Rouen", "Seine-Maritime", "Normandie", "France"],
@@ -41,7 +53,7 @@ DEFAUT = {"demandes_par_jour": 20, "plafond_semaine": 100, "part_entreprises": 0
 BATIMENT = ("electricien", "plombier chauffagiste", "peintre", "menuisier", "macon", "couvreur", "platrier", "paysagiste", "couvreur zingueur", "carreleur", "chauffagiste")
 SOCIETE = re.compile(r"\b(sarl|sas|sasu|eurl|sci|sa|snc|selarl|holding|groupe|ste|societe|entreprise|ets|etablissements?|batiment|renovation|services?|construction|plomberie|electricite|peinture|menuiserie|"
                      r"maconnerie|couverture|platrerie|chauffage|travaux|artisan|artisans|habitat|isolation|fermetures?|decoration|thermique|multi|express|pro|concept|energie|energies|bat|agencement|agencements|installation|installations|fibre|fast|depannage|bois|metal|sol|sols|toiture|toitures|deco|confort|eco|home|design|plus|tech|technique)\b")
-ACTIONS = ("demande_envoyee", "accepte", "dm_envoye", "repondu_positif", "repondu_autre", "relance_envoyee", "ignorer", "annuler", "commente")
+ACTIONS = ("demande_envoyee", "accepte", "dm_envoye", "repondu_positif", "repondu_autre", "relance_envoyee", "repondu_negatif", "ignorer", "annuler", "commente")
 ETAPES = ("repondu_le", "relance_envoyee_le", "dm_envoye_le", "accepte_le", "demande_envoyee_le")   # de la plus avancée à la première (annuler retire la plus avancée)
 RAISON = None
 
@@ -59,10 +71,10 @@ def cfg():
     try:
         if CONFIG.exists(): c.update({k: v for k, v in json.loads(CONFIG.read_text(encoding="utf-8-sig")).items() if not k.startswith("_")})
     except (OSError, ValueError): raise ErreurAgent(f"réglages illisibles : {CONFIG.name}")
-    for k in ("demandes_par_jour", "plafond_semaine", "commentaires", "relance_jours", "zone_niveau", "effectif_max"):
+    for k in ("demandes_par_jour", "plafond_semaine", "commentaires", "relance_jours", "zone_niveau", "effectif_max", "auto_demandes_semaine1", "auto_commentaires_par_jour", "auto_dm_max_jour", "auto_ecart_minutes"):
         if not isinstance(c[k], int) or isinstance(c[k], bool) or c[k] < 0: raise ErreurAgent(f"réglage « {k} » invalide dans {CONFIG.name}")
     if not isinstance(c["part_entreprises"], (int, float)) or not 0 <= c["part_entreprises"] <= 1: raise ErreurAgent("part_entreprises : un nombre entre 0 et 1")
-    c["commerces_locaux"] = c.get("commerces_locaux") is True
+    c["commerces_locaux"] = c.get("commerces_locaux") is True; c["go_linkedin_auto"] = c.get("go_linkedin_auto") is True
     return c
 
 
@@ -159,6 +171,15 @@ def rediger(liste_ouv, liste_cor, liste_fin, graine, deja, remplir):
         o, c, f = combos[(d + i) % len(combos)]; t = " ".join(remplir(x) for x in (o, c, f))
         if t not in deja and not controle_message(t, 420): return t
     o, c, f = combos[d]; return " ".join(remplir(x) for x in (o, c, f))   # toutes les combinaisons sont prises : un message se répète plutôt que d'arrêter le lot (ajouter des variantes ci-dessus)
+
+
+def rediger_prix(liste_ouv, liste_cor, liste_fin, graine, deja, remplir):
+    """Comme rediger, pour le DM du mode automatique (le prix y est admis : contrôlé par linkedin_auto.verifier_texte)."""
+    combos = [(o, c, f) for o in liste_ouv for c in liste_cor for f in liste_fin]; d = _h(graine) % len(combos)
+    for i in range(len(combos)):
+        o, c, f = combos[(d + i) % len(combos)]; t = " ".join(remplir(x) for x in (o, c, f))
+        if t not in deja and not LA.verifier_texte(t): return t
+    o, c, f = combos[d]; return " ".join(remplir(x) for x in (o, c, f))
 
 
 def dm_pour(c, deja):
@@ -420,6 +441,9 @@ def appliquer(etat, ident, action, jour, conf):
     if action == "relance_envoyee":
         if not c.get("dm_envoye_le"): raise ErreurAgent("pas de DM envoyé : pas de relance")
         c["relance_envoyee_le"] = c.get("relance_envoyee_le") or jour; return "relance notée (une seule par personne)"
+    if action == "repondu_negatif":
+        if not c.get("accepte_le"): raise ErreurAgent("la personne n'a pas encore accepté")
+        c["repondu_le"] = c.get("repondu_le") or jour; c["reponse"] = "negative"; c["ignore"] = True; c.pop("relance", None); return "réponse négative ou STOP : personne exclue, plus aucun message"
     if action in ("repondu_positif", "repondu_autre"):
         if not c.get("accepte_le"): raise ErreurAgent("la personne n'a pas encore accepté")
         c["repondu_le"] = c.get("repondu_le") or jour; c["reponse"] = "positive" if action == "repondu_positif" else "autre"
@@ -485,12 +509,18 @@ def main(argv=None):
     sp = p.add_subparsers(dest="cmd", required=True)
     j = sp.add_parser("jour"); j.add_argument("--jour", default=None); j.add_argument("--refaire", action="store_true"); j.add_argument("--essai", "--a-blanc", dest="essai", action="store_true")
     c = sp.add_parser("coche"); c.add_argument("id"); c.add_argument("action", choices=ACTIONS); c.add_argument("--jour", default=None)
+    au = sp.add_parser("auto"); au.add_argument("sous", nargs="?", default="passage", choices=("passage", "connexion", "reprendre", "etat")); au.add_argument("--jour", default=None)
     sp.add_parser("etat"); sp.add_parser("exporter")
     a = p.parse_args(argv); M.exiger(AGENT, a.cmd, getattr(a, "essai", False))
     try:
         conf = cfg()
         if a.cmd == "etat": return cmd_etat(conf)
         jour = getattr(a, "jour", None) or datetime.now().date().isoformat()
+        if a.cmd == "auto":
+            if a.sous == "reprendre": return LA.reprendre()
+            if a.sous == "connexion": return LA.connexion(conf)
+            if a.sous == "etat": return LA.etat_auto(conf, etat_lire(), jour)
+            return LA.tick(conf, jour, datetime.now())
         if a.cmd == "jour": return cmd_jour(conf, jour, a.essai, a.refaire)
         if a.cmd == "coche": return cmd_coche(conf, a.id, a.action, jour)
         exporter(etat_lire(), conf, jour); print("tableau de bord mis à jour."); return 0

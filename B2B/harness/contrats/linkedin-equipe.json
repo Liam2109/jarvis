@@ -1,7 +1,7 @@
 {
  "nom": "linkedin-equipe",
  "responsable": "Prospection",
- "mission": "Chaque jour ouvré à 08:00, prépare le lot LinkedIn du jour pour le tableau de bord (post, commentaires, demandes de connexion, DM, relances) ; Liam envoie tout lui-même.",
+ "mission": "Prépare le lot LinkedIn du jour (08:00). Mode automatique fermé tant que go_linkedin_auto est false : un geste par passage, arrêt et alerte au moindre avertissement de LinkedIn.",
  "statut": "actif",
  "script": "B2B/agents/linkedin-equipe.py",
  "jours": [
@@ -19,19 +19,28 @@
   "B2B/prospects_rouen.csv, B2B/prospects.csv, B2B/prospection-trouves.csv (cibles déjà trouvées)",
   "B2B/suivi-prospects.csv et B2B/donnees/registre-entreprises.json (déjà contactés : exclus)",
   "B2B/linkedin/lot-AAAA-MM-JJ.md et file.json (posts de l'agent linkedin, lecture seule)",
-  "B2B/agents/linkedin-equipe-config.json"
+  "B2B/agents/linkedin-equipe-config.json",
+  "profil navigateur dédié (hors dépôt) : jamais lu par le code, Liam s'y connecte lui-même"
  ],
  "fichiers_ecrits": [
   "B2B/linkedin/equipe.json (cibles, suivi, textes)",
   "dashboard/data/linkedin.json et linkedin.js (rubrique LinkedIn)",
   "B2B/donnees/registre-entreprises.json (seulement une réponse positive cochée par Liam : lead chaud)",
-  "B2B/agents/linkedin-equipe-journal.log"
+  "B2B/agents/linkedin-equipe-journal.log",
+  "B2B/linkedin/auto-journal.jsonl (tout ce qui est envoyé, hors git, dans la sauvegarde de 03:30)",
+  "B2B/linkedin/AUTO-STOP (arrêt d'urgence, levé par `auto reprendre`)"
  ],
- "canaux_discord": [],
+ "canaux_discord": [
+  "alertes"
+ ],
  "envoi_client": false,
  "actions_interdites": [
-  "envoyer une demande de connexion ou un message sur LinkedIn (Liam copie et envoie lui-même)",
-  "scraper ou automatiser LinkedIn, utiliser son API ou se connecter à un compte",
+  "agir tant que go_linkedin_auto n'est pas true (Liam dit « go linkedin auto »)",
+  "stocker, lire ou demander un mot de passe ou un cookie LinkedIn ; se connecter à la place de Liam",
+  "contourner ou simuler quoi que ce soit après un avertissement, une limite, une vérification, un CAPTCHA ou une restriction : arrêt immédiat et alerte",
+  "technique d'évitement de détection (falsification d'empreinte, faux gestes, comptes multiples)",
+  "agir si le fichier B2B/STOP existe ou si B2B/linkedin/AUTO-STOP existe",
+  "ajouter une note à une demande de connexion ou envoyer à un profil dont le nom ne correspond pas à la cible",
   "modifier la file des posts de l'agent linkedin ou l'activer",
   "dépasser 100 demandes de connexion par semaine (plafond_semaine) ou 20 par jour ouvré (demandes_par_jour)",
   "écrire un DM ou une relance avec emoji, tutoiement, promesse, chiffre non vérifié, lien, coordonnées ou présentiel",
@@ -42,11 +51,14 @@
   "encaisser, publier ou signer"
  ],
  "plafonds": {
-  "messages_par_jour": 0
+  "messages_par_jour": 0,
+  "demandes_connexion_par_semaine": 100,
+  "demandes_connexion_par_jour": 20
  },
  "peut_engager": false,
  "alerte_si_silence": "09:00",
  "tests": [
-  "tests/agents/test_linkedin_equipe.py"
+  "tests/agents/test_linkedin_equipe.py",
+  "tests/agents/test_linkedin_auto.py"
  ]
 }

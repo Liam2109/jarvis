@@ -220,9 +220,10 @@
     },
     "linkedin-equipe": {
       "script": "linkedin-equipe.py",
-      "commandes": [["jour"]],
-      "heure": "08:00",
-      "jours": [0, 1, 2, 3, 4]
+      "commandes": [["jour"], ["auto"]],
+      "toutes_minutes": 10,
+      "jours": [0, 1, 2, 3, 4],
+      "_auto": "24/11/2026 : auto ne fait rien tant que go_linkedin_auto est false (linkedin-equipe-config.json) ; il agit de 08:00 a 18:00 seulement, une action par passage ; jour ne genere le lot qu une fois par jour"
     },
     "cerveau": {
       "script": "cerveau.py",

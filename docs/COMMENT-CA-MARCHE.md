@@ -159,9 +159,9 @@ Légende : **Auto** = tourne seul à heure fixe ou à cadence fixe ; **Humain** 
 - Lit : todo-b2b.md · écrit : aaaa-mm-jj-jarvis-ceo.md · utilisé par : rien
 
 **linkedin-equipe**
-- Chaque jour ouvré à 08:00, prépare le lot LinkedIn du jour pour le tableau de bord (post, commentaires, demandes de connexion, DM, relances) ; Liam envoie tout lui-même.
-- Déclencheur : chaque jour à 08:00, plage lundi-vendredi 08:00-19:00 · auto · statut actif
-- Lit : file.json, linkedin-equipe-config.json, lot-aaaa-mm-jj.md, prospection-trouves.csv (+4) · écrit : equipe.json, linkedin.json, registre-entreprises.json · utilisé par : appels-sid, prospection, sauvegarde-leads
+- Prépare le lot LinkedIn du jour (08:00). Mode automatique fermé tant que go_linkedin_auto est false : un geste par passage, arrêt et alerte au moindre avertissement de LinkedIn.
+- Déclencheur : toutes les 10 min, plage lundi-vendredi 08:00-19:00 · auto · statut actif
+- Lit : file.json, linkedin-equipe-config.json, lot-aaaa-mm-jj.md, prospection-trouves.csv (+4) · écrit : auto-journal.json, equipe.json, linkedin.json, registre-entreprises.json · utilisé par : appels-sid, prospection, sauvegarde-leads
 
 **nettoyage-fichiers**
 - Chaque nuit, supprimer traces et journal B2B (30 j), tests de %TEMP% (2 j), sauvegardes (30 j), __pycache__ ; lister le reste (60 j, hors INDEX.md) dans B2B/a-valider.

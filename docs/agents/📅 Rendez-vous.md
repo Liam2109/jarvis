@@ -69,14 +69,14 @@ Annoncer sur Discord chaque rendez-vous de 15 minutes nouveau, déplacé, annul�
 - `B2B/agents/test_rendez_vous.py` : pas encore lancé par `generer-fiches.py --tests`
 - `tests/agents/test_rendez_vous.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** 2026-11-24 23:46 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
+**Dernière trace :** 2026-11-25 00:01 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
 
 ### Historique (5 dernières traces, sans données client)
+- 2026-11-25 00:01 | jour | ok | 0.47 s
+- 2026-11-24 23:56 | jour | ok | 0.47 s
+- 2026-11-24 23:51 | jour | ok | 0.44 s
 - 2026-11-24 23:46 | jour | ok | 0.42 s
 - 2026-11-24 23:41 | jour | ok | 0.39 s
-- 2026-11-24 23:36 | jour | ok | 0.46 s
-- 2026-11-24 23:31 | jour | ok | 0.59 s
-- 2026-11-24 23:26 | jour | ok | 0.45 s
 <!-- DYNAMIQUE:FIN -->
 
 ## Skill et règles
