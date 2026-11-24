@@ -230,6 +230,8 @@ def composer_photo(img_bgr, boite, cote=None):
     """Photo : recadrage direct en 16:9 (pas de fond flou), visage à ~ un tiers du cadre.
     Renvoie (image RGB 1280x720, cote, visage_connu). Le cadre est toujours rempli par la photo."""
     h0, l0 = img_bgr.shape[:2]
+    if l0 / float(h0) < 1.3:  # portrait ou presque carré : un recadrage 16:9 couperait la tête -> fond flou, rien de coupé
+        return composer_image(img_bgr, boite, cote)
     connu = boite is not None
     if boite is None:
         hh = int(0.22 * h0)
@@ -385,22 +387,22 @@ def traiter_photos(photos, nom, a, sorties):
     if not a.texte:
         raise Erreur("--texte est obligatoire pour composer la miniature")
     mots, i_cle = valider_texte(a.texte, a.cle)
-    boite_forcee = None
+    forcees = []  # --visage : une seule boîte pour toutes les photos, ou une par photo séparées par « ; »
     if a.visage:
         try:
-            boite_forcee = [float(v) for v in a.visage.split(",")]
-            if len(boite_forcee) != 4:
+            forcees = [[float(v) for v in b.split(",")] for b in a.visage.split(";")]
+            if any(len(b) != 4 for b in forcees) or len(forcees) not in (1, len(photos)):
                 raise ValueError
         except ValueError:
-            raise Erreur("--visage attend X,Y,L,H (4 nombres entre 0 et 1)")
+            raise Erreur("--visage attend X,Y,L,H (4 nombres entre 0 et 1), une fois ou une par photo séparées par « ; »")
     dossier = sorties / nom
     dossier.mkdir(parents=True, exist_ok=True)
     pris = set()
-    for photo in photos:
+    for i, photo in enumerate(photos):
         img = lire_photo(photo)
         h0, l0 = img.shape[:2]
-        if boite_forcee:
-            fx, fy, fl, fh = boite_forcee
+        if forcees:
+            fx, fy, fl, fh = forcees[i if len(forcees) > 1 else 0]
             boite = (int(fx * l0), int(fy * h0), int(fl * l0), int(fh * h0))
         else:
             visages = detecter_visages(img)
