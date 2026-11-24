@@ -32,7 +32,7 @@ ICI = Path(__file__).resolve().parent
 RACINE = ICI.parent
 sys.path.insert(0, str(ICI))
 import machine as M   # config locale (<agent>-config.local.json) et machine active (b2b.local.json)
-import prospection as P, redaction as R, suivi as S, zone as ZN
+import prospection as P, redaction as R, suivi as S, zone as ZN, nouvelles_entreprises as NE
 
 SORTIE = RACINE / "docs" / "sid"
 MAPS = RACINE / "prospects_maps.csv"
@@ -65,7 +65,8 @@ DEFAUT = {"envoi_automatique": False, "alerte_leads_envoi": False, "par_liste": 
           "repartition": {m: 5 for m in NAF_SID},   # ~20 métiers, environ 5 par métier dans une liste de 100 (règle fixe de Liam, 10 nov. 2026)
           "cible_reserve": 400, "seuil_alerte": 200, "sourcing_requetes_max": 6, "pause_overpass_s": 15, "sourcing_refaire_jours": 30,
           "zone": "Normandie", "departements": list(NORMANDIE), "sirene_actif": True, "sirene_requetes_max": 12, "sirene_pages_max": 4, "sirene_sites_max": 30, "pause_sirene_s": 1, "pause_site_s": 2,
-          "avec_site": False, "partager_avec": "", "compte_google": "contact.lmsites@gmail.com", "heure_tache": "07:30", "jours_appel": list(JOURS_SEMAINE), "dossier_sid_id": "", "jours_sans_rappel": 365, "max_par_metier": 20}
+          "avec_site": False, "partager_avec": "", "compte_google": "contact.lmsites@gmail.com", "heure_tache": "07:30", "jours_appel": list(JOURS_SEMAINE), "dossier_sid_id": "", "jours_sans_rappel": 365, "max_par_metier": 20,
+          "nouvelles_actif": True, "nouvelles_jours": 90, "nouvelles_rayon_km": 40, "insee_cle": ""}   # source « nouvelles entreprises » (24/11/2026) ; insee_cle : jamais dans le fichier versionné (voir appels-sid.md)
 MIN_LISTE, MAX_LISTE = 100, 130   # règle fixe de Liam (10 nov. 2026) : au moins 100 appels par jour
 VERROU_MAX_S = 3 * 3600   # un verrou plus vieux est celui d'un processus bloqué : repris
 TACHE = "Jarvis-AppelsSid"
@@ -144,6 +145,7 @@ I_RESULTAT = COLONNES.index("Résultat")
 # Non catégorique / Trop cher / Déjà un site -> oubliée 1 an ; case vide -> la liste suivante.
 TENTATIVES_SANS_REPONSE = 3
 UNE_FOIS_7_JOURS = ("Je dois réfléchir", "Pas le temps")
+NOUVELLE = "Nouvelle entreprise"   # début du « Détail fiche » d'une entreprise créée depuis moins de 3 mois : « Nouvelle entreprise, créée le 12/10/2026 » (le script de Sid s'appuie dessus)
 TITRE_FEUILLE = "Appels Sid {}"   # un seul tableur par jour, posé directement dans le dossier Drive de Sid (aucun sous-dossier) ; « Appels AAAA-MM-JJ » avant le 17/11/2026
 EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$")
 CONSTAT_NEUTRE = "Aucun site trouvé lors de mes recherches, à confirmer avec vous"   # constat par défaut (rien de vérifié par note_besoin) : n'affirme jamais l'absence d'un site, seulement
@@ -247,6 +249,7 @@ def cfg():
     _entier(c, "pause_overpass_s", 5, 600); _entier(c, "sourcing_refaire_jours", 1, 365)
     _entier(c, "sirene_requetes_max", 0, 200); _entier(c, "sirene_pages_max", 1, 40); _entier(c, "sirene_sites_max", 0, 300); _entier(c, "pause_sirene_s", 0, 60); _entier(c, "pause_site_s", 0, 60)
     c["sirene_actif"] = c.get("sirene_actif") is not False
+    _entier(c, "nouvelles_jours", 7, 180); _entier(c, "nouvelles_rayon_km", 5, 80); c["nouvelles_actif"] = c.get("nouvelles_actif") is not False; c["insee_cle"] = str(c.get("insee_cle") or "").strip()
     deps = [str(d).strip() for d in c.get("departements") or [] if str(d).strip() in NORMANDIE and str(d).strip() in ZN.DEPTS_AUTORISES]
     c["departements"] = [d for d in NORMANDIE if d in deps] or list(NORMANDIE); ZONE["departements"] = list(c["departements"])
     c["envoi_automatique"] = c.get("envoi_automatique") is True; c["avec_site"] = c.get("avec_site") is True
@@ -480,7 +483,7 @@ def candidats(etat, extra=(), jour=None, historique=None, jours_sans_rappel=365)
         out.append({"cle": cle, "nom": l["nom"], "ville": l.get("ville", ""), "tel": tel, "metier": metier, "brut": l["metier"], "constat": (l.get("note_besoin") or "").strip(),
                     "cp": str(l.get("cp", "")), "site_actuel": (l.get("site_actuel") or "").strip(),
                     "dept": ZN.dept_de_cp(str(l.get("cp", ""))) or "", "prox": ZN.cle_proximite(l.get("cp", ""), l.get("ville", ""))})
-    return sorted(out, key=lambda c: c["prox"])
+    return sorted(out, key=lambda c: (not c["constat"].startswith(NOUVELLE), c["prox"]))   # les nouvelles entreprises passent d'abord dans leur métier (accroche « félicitations »)
 
 
 def reserve(etat, extra=(), jour=None, historique=None, jours_sans_rappel=365):
@@ -1312,6 +1315,74 @@ def _alerte_sourcing(conf, etat, jour, e, a_blanc):
     alerter(etat, "sourcing", f"Sourcing échoué ({e}) : aucune nouvelle entreprise avec téléphone ajoutée aujourd'hui. Les listes continuent avec la réserve existante.", conf, jour, a_blanc)
 
 
+# --- Nouvelles entreprises (24/11/2026) : créées depuis moins de 3 mois, à moins de 40 km de Rouen, API Sirene de l'INSEE (clé gratuite) -----------------------------
+def _trace(decision, resultat, ok=True, erreur=None):
+    """Une ligne dans B2B\\logs\\agents\\appels-sid\\AAAA-MM-JJ.jsonl (harness\\traces.py : jamais de téléphone ni d'e-mail) ; une trace qui échoue ne casse rien."""
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "harness")); import traces as T
+        T.ecrire("appels-sid", decision, resultat, ok=ok, erreur=erreur)
+    except Exception: pass
+
+
+def _nouvelles(conf, etat, jour, a_blanc):
+    """Ajoute à prospection-trouves.csv (donc à la réserve de la liste de Sid) les entreprises neuves avec téléphone : Détail fiche « Nouvelle entreprise, créée le JJ/MM/AAAA ».
+    L'API Sirene ne donne pas de téléphone : il est cherché sur le site public de l'entreprise (même méthode que _sirene) ; sans numéro, l'entreprise est notée « sans téléphone » (nouvel essai après
+    sourcing_refaire_jours) et n'est PAS ajoutée. Même déduplication que le reste (nom|ville, numéro, SIREN, STOP, déjà appelée). Rien n'est envoyé. -> dict de chiffres, ou None (source coupée / sans clé)."""
+    if not conf["nouvelles_actif"]: return None
+    cle_api = os.environ.get("INSEE_CLE", "").strip() or conf["insee_cle"]
+    if not cle_api:
+        print("  Nouvelles entreprises : clé INSEE absente (variable INSEE_CLE ou insee_cle dans le réglage local) : source inactive, voir agents\\appels-sid.md")
+        if not a_blanc: _trace("nouvelles-entreprises", "clé INSEE absente : source inactive")
+        return None
+    nv = etat.setdefault("nouvelles", {}); nv.setdefault("vus", {}); nv.setdefault("jours", {})
+    depuis = (date.fromisoformat(jour) - timedelta(days=conf["nouvelles_jours"])).isoformat()
+    naf_metier = {naf: m for m, nafs in NAF_SID.items() for naf in nafs}
+    depts = [d for d in ("76", "27") if d in conf["departements"]]
+    t0 = time.time()
+    try:
+        communes = NE.communes_proches(depts, conf["nouvelles_rayon_km"])
+        trouvees = NE.chercher(cle_api, depuis, jour, communes, naf_metier, depts)
+    except NE.ErreurInsee as e:
+        _trace("nouvelles-entreprises", "recherche impossible", ok=False, erreur=str(e)); raise ErreurAgent(f"nouvelles entreprises : {e}")
+    cles, tels, ids = _connu(); sirens = {l.get("siren") for l in P.lire_trouves() + S.lire() if l.get("siren")}
+    stat = {"sites": 0, "sans_tel": 0, "deja": 0}; out = []; vus = dict(nv["vus"]) if a_blanc else nv["vus"]   # à blanc : on travaille sur une copie, l'état ne bouge pas
+    for c in trouvees:
+        ancien = vus.get(c["siret"]); cl = S.cle({"nom": c["nom"], "ville": c["ville"]})
+        if c["siren"] in sirens or cl in cles: stat["deja"] += 1; continue
+        if ancien and (not ancien.endswith("sans téléphone") or _jours_ecoules(jour, ancien.split("|")[0]) < conf["sourcing_refaire_jours"]): continue
+        tel = url = texte = ""
+        for d in P.domaines(c["nom"])[:2]:
+            if stat["sites"] >= conf["sirene_sites_max"]: break
+            if stat["sites"]: dormir(conf["pause_site_s"])
+            stat["sites"] += 1; pg = lire_site("https://" + d)
+            if pg and P.verifie_osm(pg[2], {"nom": c["nom"], "ville": c["ville"], "cp": c["cp"], "siren": c["siren"], "metier": LABELS[c["metier"]]}):
+                tl = telephones_page(pg[2])
+                if tl: tel, url, texte = tl[0], pg[0], pg[2]; break
+        if not tel: vus[c["siret"]] = f"{jour}|sans téléphone"; stat["sans_tel"] += 1; continue
+        if tel in tels: vus[c["siret"]] = f"{jour}|numéro déjà connu"; continue
+        if texte and not evaluer_site(url, texte)[0]: vus[c["siret"]] = f"{jour}|site correct"; continue   # un site déjà bon : pas d'appel (même règle que SIRENE)
+        cree = date.fromisoformat(c["cree"]).strftime("%d/%m/%Y"); ligne = {k: "" for k in P.COLS}
+        ligne.update(nom=c["nom"], metier=LABELS[c["metier"]], ville=c["ville"], cp=c["cp"], telephone=tel, siren=c["siren"], date_collecte=jour, statut="téléphone seulement" if url else "sans site, téléphone",
+                     modele="" if url else "sans-site", site_actuel=url, note_besoin=f"{NOUVELLE}, créée le {cree}", source="INSEE Sirene (API officielle), nouvelle entreprise ; téléphone : site public")
+        out.append(ligne); cles.add(cl); tels.add(tel); sirens.add(c["siren"]); vus[c["siret"]] = f"{jour}|ajoutée"
+    res = {"trouvees": len(trouvees), "ajoutees": len(out), **stat}
+    if not a_blanc:
+        if out: _ajouter_trouves(out)
+        nv["jours"][jour] = nv["jours"].get(jour, 0) + len(out)
+        nv["jours"] = dict(sorted(nv["jours"].items())[-30:]); etat_ecrire(etat)
+        journaliser("nouvelles", f"{jour} : {len(trouvees)} entreprise(s) neuve(s) dans {conf['nouvelles_rayon_km']} km, {len(out)} ajoutée(s), {stat['sans_tel']} sans téléphone, {stat['deja']} déjà connue(s)")
+    resume = f"{len(trouvees)} neuve(s) à moins de {conf['nouvelles_rayon_km']} km depuis le {depuis}, {len(out)} ajoutée(s) avec téléphone, {stat['sans_tel']} sans téléphone, {stat['deja']} déjà connue(s)"
+    print(f"  Nouvelles entreprises{' [à blanc : rien écrit]' if a_blanc else ''} : {resume}")
+    if not a_blanc: _trace("nouvelles-entreprises", resume, erreur=None)
+    return res
+
+
+def cmd_nouvelles(conf, jour, a_blanc):
+    if ARRET.exists(): raise ErreurAgent(f"arrêt de secours présent ({ARRET.name}) : rien n'est fait")
+    with sous_verrou(a_blanc):
+        etat = etat_lire(); _nouvelles(conf, etat, jour, a_blanc); return 0
+
+
 def cmd_sourcer(conf, jour, a_blanc, depts=None):
     if ARRET.exists(): raise ErreurAgent(f"arrêt de secours présent ({ARRET.name}) : rien n'est fait")
     with sous_verrou(a_blanc):
@@ -1412,6 +1483,8 @@ def cmd_jour(conf, jour, a_blanc):
         drive = None if (a_blanc or not conf["envoi_automatique"]) else ouvrir_drive(conf)
         if a_blanc: print("  1. sourcing : serait lancé ici (jusqu'à %d requête(s) Overpass, %d appel(s) SIRENE) ; `sourcer --a-blanc` montre ce qu'il trouverait" % (conf["sourcing_requetes_max"], conf["sirene_requetes_max"]))
         else: _etape("sourcing", lambda: _sourcer(conf, etat, jour, False), conf, etat, jour, False)
+        if a_blanc: print("  1 bis. nouvelles entreprises (INSEE Sirene, créées depuis %d jours, %d km autour de Rouen) : serait lancé ici ; `nouvelles --a-blanc` montre ce qu'il trouverait" % (conf["nouvelles_jours"], conf["nouvelles_rayon_km"]))
+        else: _etape("nouvelles", lambda: _nouvelles(conf, etat, jour, False), conf, etat, jour, False)
         if jour in etat["listes"] or chemin(jour).exists(): print(f"  2. liste du {jour} : déjà préparée"); liste = True
         else: liste = _etape("liste", lambda: _preparer(conf, etat, jour, a_blanc, drive, complet=False), conf, etat, jour, a_blanc) is not None
         if liste: _etape("google", lambda: exporter_google(conf, etat, jour, drive, a_blanc), conf, etat, jour, a_blanc)
@@ -1566,7 +1639,7 @@ def main(argv=None):
     p = argparse.ArgumentParser(prog="appels-sid", description="Liste d'appels du matin pour Sid (aucun envoi).")
     base = argparse.ArgumentParser(add_help=False); base.add_argument("--a-blanc", action="store_true", help="aucune écriture")
     sp = p.add_subparsers(dest="cmd", required=True)
-    for nom in ("preparer", "sourcer", "jour"): sp.add_parser(nom, parents=[base]).add_argument("--jour", default=None)
+    for nom in ("preparer", "sourcer", "jour", "nouvelles"): sp.add_parser(nom, parents=[base]).add_argument("--jour", default=None)
     sc = sp.choices["sourcer"]; sc.add_argument("--dept", default=None, choices=list(NORMANDIE), help="limite le sourcing à un département"); sc.add_argument("--simulation", action="store_true", help="aucun réseau, données fictives, rien n'est écrit")
     sp.choices["preparer"].add_argument("--hors-ligne", action="store_true", help="aucune requête réseau, vérification de site simulée (implique --a-blanc)")
     for nom in ("etat", "google-autoriser", "rediriger-liste", "rendre-liste", "alerter-leads"): sp.add_parser(nom, parents=[base])
@@ -1574,7 +1647,8 @@ def main(argv=None):
     for nom in ("installer-tache", "retirer-tache"): sp.add_parser(nom, parents=[base]).add_argument("--oui", action="store_true")
     args = p.parse_args(argv); M.exiger("appels-sid", args.cmd, getattr(args, "a_blanc", False) or getattr(args, "simulation", False) or getattr(args, "hors_ligne", False))      # --simulation et --hors-ligne n'écrivent rien et n'ouvrent aucun réseau : permises sur toute machine, comme --a-blanc
     try:
-        conf = cfg(); jour = date_valide(getattr(args, "jour", None) or date.today().isoformat()) if args.cmd in ("preparer", "sourcer", "jour") else None
+        conf = cfg(); jour = date_valide(getattr(args, "jour", None) or date.today().isoformat()) if args.cmd in ("preparer", "sourcer", "jour", "nouvelles") else None
+        if args.cmd == "nouvelles": return cmd_nouvelles(conf, jour, args.a_blanc)
         if args.cmd == "preparer": return cmd_preparer(conf, jour, args.a_blanc, getattr(args, "hors_ligne", False))
         if args.cmd == "sourcer":
             if args.simulation: _simulation()

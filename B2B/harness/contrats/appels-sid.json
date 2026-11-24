@@ -19,6 +19,7 @@
   "B2B/prospects_maps.csv",
   "B2B/agents/appels-sid-historique.json",
   "B2B/agents/appels-sid-config.json",
+  "API Sirene INSEE (lecture seule, clé gratuite hors dépôt) : entreprises créées depuis moins de 3 mois",
   "B2B/donnees/registre-entreprises.json",
   "Google Drive : 3 dernières feuilles Appels Sid AAAA-MM-JJ (relecture du Résultat, lecture seule)"
  ],
@@ -52,6 +53,7 @@
  "alerte_si_pas_de_feuille": "08:15",
  "tests": [
   "B2B/agents/test_appels_sid.py",
+  "B2B/agents/test_nouvelles_entreprises.py",
   "tests/agents/test_appels_sid.py",
   "tests/agents/test_appels_registre.py"
  ]

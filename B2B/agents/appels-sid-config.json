@@ -50,5 +50,8 @@
   "sirene_sites_max": 40,
   "pause_sirene_s": 1,
   "pause_site_s": 2,
-  "partager_avec": ""
+  "partager_avec": "",
+  "nouvelles_actif": true,
+  "nouvelles_jours": 90,
+  "nouvelles_rayon_km": 40
 }

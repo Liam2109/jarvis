@@ -9,6 +9,8 @@ Trois phrases, dans cet ordre :
 1. **Eux** (≤ 20 mots) : « Bonjour, j'ai vu la fiche Google de [NOM] en cherchant un [métier] à [VILLE]. »
    - Avec un détail fourni, l'ajouter à cette phrase ou juste après : « … et j'ai vu qu'il n'y a pas de site relié à votre fiche. » / « … vous avez de très bons avis. » (seulement si la note fournie est d'au moins 4,5) / « … avec de belles photos de [ce qu'on voit]. »
    - Sans détail fourni : ne rien ajouter.
+   - Accroche complète d'une nouvelle entreprise (environ 31 mots avant la question, sous les 45) : « Bonjour, félicitations pour la création de [NOM] ! Je vous prends 30 secondes, vous me dites si ça tombe mal. Je m'appelle Sid, j'aide les [métiers] du coin à être trouvés sur internet. »
+   - **Nouvelle entreprise** (le détail fiche commence par « Nouvelle entreprise, créée le … ») : on n'a pas vu de fiche Google, on ne dit donc pas « j'ai vu la fiche ». Phrase 1 : « Bonjour, félicitations pour la création de [NOM] ! » (+ « en [mois de la date fournie] » seulement si la date est fournie). Ne rien ajouter d'autre : pas de chiffre, pas de promesse, pas de supposition sur leur activité. Question de découverte : « Pour démarrer, vos premiers clients vous trouvent comment ? »
 2. **On dérange** (12 mots) : « Je vous prends 30 secondes, vous me dites si ça tombe mal. »
 3. **Qui je suis** (≤ 15 mots) : « Je m'appelle Sid, j'aide les [métiers] du coin à être trouvés sur internet. »
 

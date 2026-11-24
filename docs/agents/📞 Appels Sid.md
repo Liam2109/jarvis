@@ -66,6 +66,7 @@ Créer chaque jour ouvré à 07:30 le tableur « Appels Sid AAAA-MM-JJ » de Sid
 - B2B/prospects_maps.csv
 - B2B/agents/appels-sid-historique.json
 - B2B/agents/appels-sid-config.json
+- API Sirene INSEE (lecture seule, clé gratuite hors dépôt) : entreprises créées depuis moins de 3 mois
 - B2B/donnees/registre-entreprises.json
 - Google Drive : 3 dernières feuilles Appels Sid AAAA-MM-JJ (relecture du Résultat, lecture seule)
 
@@ -84,23 +85,20 @@ Créer chaque jour ouvré à 07:30 le tableur « Appels Sid AAAA-MM-JJ » de Sid
 - **Garde branchée :** oui
 - Bloque : kill-switch `B2B\STOP`, lien Stripe non autorisé, phrase interdite (OFFRE-REFERENCE.json), secret dans le texte.
 - Avertit : machine non active, envoi_automatique = false (simulation), hors horaires du contrat (07:00-19:00), plafond de 5 messages par jour.
-- **Tests :** `B2B/agents/test_appels_sid.py`, `tests/agents/test_appels_sid.py`, `tests/agents/test_appels_registre.py`
+- **Tests :** `B2B/agents/test_appels_sid.py`, `B2B/agents/test_nouvelles_entreprises.py`, `tests/agents/test_appels_sid.py`, `tests/agents/test_appels_registre.py`
 - **Alerte si silence :** après 07:45 (surveillant)
 
 <!-- DYNAMIQUE:DEBUT -->
 **Derniers résultats de test (cette machine) :**
-- `B2B/agents/test_appels_sid.py` : pas encore lancé par `generer-fiches.py --tests`
-- `tests/agents/test_appels_sid.py` : pas encore lancé par `generer-fiches.py --tests`
+- `B2B/agents/test_appels_sid.py` : réussi le 2026-11-15 19:34
+- `B2B/agents/test_nouvelles_entreprises.py` : pas encore lancé par `generer-fiches.py --tests`
+- `tests/agents/test_appels_sid.py` : réussi le 2026-11-15 19:35
 - `tests/agents/test_appels_registre.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** 2026-11-22 07:30 ok · **Dernière erreur :** 2026-11-20 07:39 stock (stock bas : 331 entreprise(s) neuve(s), moins de 3 jours de listes (seuil 345)) · **Dans agents_actifs (cette machine) :** oui
+**Dernière trace :** aucune · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** non (Liam l'ajoute s'il veut le planifier)
 
 ### Historique (5 dernières traces, sans données client)
-- 2026-11-22 07:30 | jour | ok | 0.35 s
-- 2026-11-21 07:30 | jour | ok | 0.29 s
-- 2026-11-20 07:39 | jour | ok | 565.49 s
-- 2026-11-20 07:39 | stock | ERREUR (stock bas : 331 entreprise(s) neuve(s), moins de 3 jours de listes (seuil 345)) | 0.0 s
-- 2026-11-19 07:45 | jour | ok | 938.23 s
+- aucune trace sur cette machine
 <!-- DYNAMIQUE:FIN -->
 
 ## Skill et règles

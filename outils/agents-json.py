@@ -218,6 +218,7 @@ def chiffres_du_jour(jour):
     c["devis_payes"] = sum(1 for v in d.values() if v.get("statut") == "payé")
     listes = (lire_json(AGENTS / "appels-sid-etat.json", {}) or {}).get("listes", {})
     c["fiches_sid_preparees_aujourdhui"] = int((listes.get(j) or {}).get("nombre", 0) or 0)
+    c["nouvelles_entreprises_aujourdhui"] = int(((lire_json(AGENTS / "appels-sid-etat.json", {}) or {}).get("nouvelles") or {}).get("jours", {}).get(j, 0) or 0)   # source INSEE Sirene (24/11/2026)
     return c
 
 
@@ -295,7 +296,7 @@ def construire(maintenant=None, photo_serveur=None):
         a["categorie"] = CATEGORIE.get(a["nom"], "Jarvis (CEO)")
         a["voyant"], a["voyant_raison"] = voyant(a, j)
         a["note_extrait"] = extrait_note(a["nom"]) if a.get("note") else None
-    du_jour = {"prospection": ("prospects trouvés", c["prospects_trouves_aujourdhui"]), "appels-sid": ("fiches Sid préparées", c["fiches_sid_preparees_aujourdhui"]),
+    du_jour = {"prospection": ("prospects trouvés", c["prospects_trouves_aujourdhui"]), "appels-sid": ("fiches Sid préparées" + (f" · {c['nouvelles_entreprises_aujourdhui']} nouvelle(s) entreprise(s) en réserve" if c["nouvelles_entreprises_aujourdhui"] else ""), c["fiches_sid_preparees_aujourdhui"]),
                "rendez-vous": ("rendez-vous", c["rendez_vous_aujourdhui"]), "devis": ("devis préparés", c["devis_prepares_aujourdhui"])}
     for a in agents:
         if a.get("vu_sur_serveur"): continue      # le chiffre du jour du serveur (journaux et états locaux de ce PC absents) est déjà en place
