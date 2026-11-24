@@ -94,7 +94,7 @@ Toutes les 30 min : le tri du courrier des agences tourne-t-il, reste-t-il en le
 <!-- DYNAMIQUE:FIN -->
 
 ## Skill et règles
-- `.claude/skills/agent-superviseur-mail/SKILL.md` (copie : `docs/agents/skills/agent-superviseur-mail.md`)
+- `.claude/skills/agent-superviseur-mail/SKILL.md` (copie : `docs/archives/agents-retires/agent-superviseur-mail.md`)
 - Pas de preuve = pas de fait : « il a tourné » = une trace du jour `ok: true` ci-dessus ; « c'est corrigé » = ses tests puis `tests\b2b-rapide.ps1` en vert.
 <!-- GENERE:FIN -->
 

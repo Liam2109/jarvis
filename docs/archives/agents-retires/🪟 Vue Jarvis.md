@@ -82,7 +82,7 @@ Toutes les 30 min : remet l'etat des quatre superviseurs (ok, corrige, bloque) d
 <!-- DYNAMIQUE:FIN -->
 
 ## Skill et règles
-- `.claude/skills/agent-jarvis-vue/SKILL.md` (copie : `docs/agents/skills/agent-jarvis-vue.md`)
+- `.claude/skills/agent-jarvis-vue/SKILL.md` (copie : `docs/archives/agents-retires/agent-jarvis-vue.md`)
 - Pas de preuve = pas de fait : « il a tourné » = une trace du jour `ok: true` ci-dessus ; « c'est corrigé » = ses tests puis `tests\b2b-rapide.ps1` en vert.
 <!-- GENERE:FIN -->
 

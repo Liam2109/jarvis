@@ -66,7 +66,7 @@ Relancer à J+3 et J+7 les prospects qui ont reçu un devis, brouillons écrits 
 <!-- DYNAMIQUE:FIN -->
 
 ## Skill et règles
-- `.claude/skills/agent-vente-relances/SKILL.md` (copie : `docs/agents/skills/agent-vente-relances.md`)
+- `.claude/skills/agent-vente-relances/SKILL.md` (copie : `docs/archives/agents-retires/agent-vente-relances.md`)
 - Pas de preuve = pas de fait : « il a tourné » = une trace du jour `ok: true` ci-dessus ; « c'est corrigé » = ses tests puis `tests\b2b-rapide.ps1` en vert.
 <!-- GENERE:FIN -->
 

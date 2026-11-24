@@ -97,7 +97,7 @@ Toutes les 30 min : les sept agents de la chaine video ont-ils tourne, dans l'or
 <!-- DYNAMIQUE:FIN -->
 
 ## Skill et règles
-- `.claude/skills/agent-superviseur-videos/SKILL.md` (copie : `docs/agents/skills/agent-superviseur-videos.md`)
+- `.claude/skills/agent-superviseur-videos/SKILL.md` (copie : `docs/archives/agents-retires/agent-superviseur-videos.md`)
 - Pas de preuve = pas de fait : « il a tourné » = une trace du jour `ok: true` ci-dessus ; « c'est corrigé » = ses tests puis `tests\b2b-rapide.ps1` en vert.
 <!-- GENERE:FIN -->
 

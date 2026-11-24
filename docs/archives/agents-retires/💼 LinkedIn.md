@@ -83,7 +83,7 @@ Chaque jour ouvré à 07:45, poste sur Discord 1 à 2 posts LinkedIn pour Liam, 
 <!-- DYNAMIQUE:FIN -->
 
 ## Skill et règles
-- `.claude/skills/agent-linkedin/SKILL.md` (copie : `docs/agents/skills/agent-linkedin.md`)
+- `.claude/skills/agent-linkedin/SKILL.md` (copie : `docs/archives/agents-retires/agent-linkedin.md`)
 - Pas de preuve = pas de fait : « il a tourné » = une trace du jour `ok: true` ci-dessus ; « c'est corrigé » = ses tests puis `tests\b2b-rapide.ps1` en vert.
 <!-- GENERE:FIN -->
 

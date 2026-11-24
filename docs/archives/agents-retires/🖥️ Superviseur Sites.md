@@ -95,7 +95,7 @@ Toutes les 30 min : relit les fichiers de sites presents dans le depot (liens ca
 <!-- DYNAMIQUE:FIN -->
 
 ## Skill et règles
-- `.claude/skills/agent-superviseur-sites/SKILL.md` (copie : `docs/agents/skills/agent-superviseur-sites.md`)
+- `.claude/skills/agent-superviseur-sites/SKILL.md` (copie : `docs/archives/agents-retires/agent-superviseur-sites.md`)
 - Pas de preuve = pas de fait : « il a tourné » = une trace du jour `ok: true` ci-dessus ; « c'est corrigé » = ses tests puis `tests\b2b-rapide.ps1` en vert.
 <!-- GENERE:FIN -->
 

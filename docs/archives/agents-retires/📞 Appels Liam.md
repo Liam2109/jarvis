@@ -84,7 +84,7 @@ Créer chaque jour ouvré à 07:30 le tableur « Appels Liam AAAA-MM-JJ » : rel
 <!-- DYNAMIQUE:FIN -->
 
 ## Skill et règles
-- `.claude/skills/agent-appels-liam/SKILL.md` (copie : `docs/agents/skills/agent-appels-liam.md`)
+- `.claude/skills/agent-appels-liam/SKILL.md` (copie : `docs/archives/agents-retires/agent-appels-liam.md`)
 - Pas de preuve = pas de fait : « il a tourné » = une trace du jour `ok: true` ci-dessus ; « c'est corrigé » = ses tests puis `tests\b2b-rapide.ps1` en vert.
 <!-- GENERE:FIN -->
 

@@ -23,6 +23,8 @@ from domaines import domaines   # noqa: E402  agents de chaque superviseur de do
 
 CONTRATS, SKILLS = ICI / "contrats", RACINE / ".claude" / "skills"
 SORTIE = RACINE / "docs" / "agents"; COPIES = SORTIE / "skills"; NOMS_JSON = ICI / "fiches-noms.json"
+ARCHIVES = RACINE / "docs" / "archives" / "agents-retires"   # fiches ET copies de skills des agents retirés (dossier ignoré du coffre Obsidian)
+RETIRES = ("appels-liam", "vente-relances", "linkedin", "superviseur-sites", "superviseur-mail", "superviseur-videos", "jarvis-vue")   # copies de skills rangées dans ARCHIVES le 24/11/2026 (sources .claude\\skills gardées)
 TACHES = RACINE / "B2B" / "agents" / "serveur-taches.json"
 DEBUT, FIN = "<!-- GENERE:DEBUT (régénéré par python B2B\\harness\\generer-fiches.py : ne pas modifier) -->", "<!-- GENERE:FIN -->"
 DYN_D, DYN_F = "<!-- DYNAMIQUE:DEBUT -->", "<!-- DYNAMIQUE:FIN -->"
@@ -324,7 +326,10 @@ def cibles(cs):
     n = noms(); return n, [(c, SORTIE / f"{n[c['nom']]}.md") for c in cs if n.get(c["nom"])]
 
 
-def copies_skills(): return {COPIES / f"{p.parent.name}.md": sans_liens(p.read_text(encoding="utf-8")) for p in sorted(SKILLS.glob("*/SKILL.md"))}
+def skills_retires(): return {s for r in RETIRES for s in skills_de(r)}
+
+
+def copies_skills(): return {COPIES / f"{p.parent.name}.md": sans_liens(p.read_text(encoding="utf-8")) for p in sorted(SKILLS.glob("*/SKILL.md")) if p.parent.name not in skills_retires()}
 
 
 def lire(p): return p.read_text(encoding="utf-8") if p.is_file() else None
@@ -357,6 +362,10 @@ def verifier(cs):
         if FIN not in a or sans_dynamique(a.split(FIN, 1)[0]) != sans_dynamique(t.split(FIN, 1)[0]): pb.append(f"bloc GENERE pas à jour : {p.relative_to(RACINE)}")
     for p, t in copies.items():
         if lire(p) != t: pb.append(f"copie de skill absente ou pas à jour : {p.relative_to(RACINE)}")
+    for s in sorted(skills_retires()):   # une copie d'agent retiré vit dans l'archive, jamais dans le coffre ; un agent retiré n'a plus de note
+        if (COPIES / f"{s}.md").exists(): pb.append(f"copie de skill d'un agent retiré à ranger dans {ARCHIVES.relative_to(RACINE)} : docs/agents/skills/{s}.md")
+        if not (ARCHIVES / f"{s}.md").is_file(): pb.append(f"copie archivée absente : {ARCHIVES.relative_to(RACINE)}/{s}.md")
+    pb += [f"« {r} » est dans RETIRES mais a encore une note dans fiches-noms.json" for r in RETIRES if n.get(r)]
     pc = SORTIE / f"{NOTE_CHAINE}.md"; a = lire(pc)
     if a is None or FIN not in a or a.split(FIN, 1)[0] != note_chaine(cs, ts, a).split(FIN, 1)[0]: pb.append(f"note de la chaîne vidéo absente ou pas à jour : {pc.relative_to(RACINE)}")
     pb += liens_arbre(n)
