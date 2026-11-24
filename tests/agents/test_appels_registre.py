@@ -204,6 +204,9 @@ class FauxDrive:
     def lister_feuilles(self, parent): return [(i, n) for i, (n, p) in self.feuilles.items() if p == parent and i not in self.corbeille]
     def lister_dossiers(self, parent): return [(i, n) for i, (n, p) in self.dossiers.items() if p == parent and i not in self.corbeille]
     def mettre_corbeille(self, i): self.corbeille.add(i)
+    def lire_feuille_csv(self, i):   # historique des appels (24/11/2026) : la feuille est copiée AVANT la corbeille ; lecture impossible = pas de corbeille
+        if i in getattr(self, 'illisibles', ()): raise OSError('panne simulée')
+        return 'Entreprise,Résultat\n'
 
 
 class Corbeille(unittest.TestCase):
@@ -217,6 +220,8 @@ class Corbeille(unittest.TestCase):
         n = muet(A.nettoyer_feuilles_lues, RG.SID, "SID", "2026-11-17", d, False, True) + muet(A.nettoyer_feuilles_lues, RG.LIAM, "root", "2026-11-17", d, False, True)
         self.assertEqual(d.corbeille, {"a", "f"}, "plus de 7 jours ET déjà lue : corbeille ; jamais non lue, récente, autre fichier ni dossier"); self.assertEqual(n, 2)
         self.assertEqual(muet(A.nettoyer_feuilles_lues, RG.SID, "SID", "2026-11-17", d, False, False), 0, "simulation : rien")
+        d.corbeille.clear(); d.illisibles = {"a"}; muet(A.nettoyer_feuilles_lues, RG.SID, "SID", "2026-11-17", d, False, True)
+        self.assertNotIn("a", d.corbeille, "copie dans l'historique impossible : la feuille reste sur le Drive")
 
     def test_aucun_dossier_cree(self):
         src = (C.AGENTS / "appels-liam.py").read_text(encoding="utf-8") + (C.AGENTS / "registre.py").read_text(encoding="utf-8")

@@ -69,14 +69,14 @@ Alerter Liam sur Discord quand un agent planifié à heure fixe n'a pas tourné 
 **Derniers résultats de test (cette machine) :**
 - `tests/agents/test_panne_alerte.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** 2026-11-24 23:31 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
+**Dernière trace :** 2026-11-24 23:46 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
 
 ### Historique (5 dernières traces, sans données client)
+- 2026-11-24 23:46 | verifier | ok | 2.05 s
+- 2026-11-24 23:41 | verifier | ok | 1.86 s
+- 2026-11-24 23:36 | verifier | ok | 2.01 s
 - 2026-11-24 23:31 | verifier | ok | 2.06 s
 - 2026-11-24 23:26 | verifier | ok | 1.99 s
-- 2026-11-24 23:21 | verifier | ok | 1.84 s
-- 2026-11-24 23:16 | verifier | ok | 1.8 s
-- 2026-11-24 23:11 | verifier | ok | 2.03 s
 <!-- DYNAMIQUE:FIN -->
 
 ## Skill et règles

@@ -16,10 +16,11 @@
   "fin": "23:00"
  },
  "fichiers_lus": [
-  "Google Sheets : toutes les feuilles Appels Sid AAAA-MM-JJ modifiées le jour (lecture)",
+  "Google Sheets : toutes les feuilles Appels Sid AAAA-MM-JJ modifiées le jour, et Appels Liam AAAA-MM-JJ (lecture)",
   "Stripe charges (lecture)"
  ],
  "fichiers_ecrits": [
+  "B2B/donnees/historique-appels.json (ajout seulement : relevé des feuilles Appels Sid / Appels Liam encore sur le Drive)",
   "B2B/agents/resume-sid-etat.json",
   "B2B/agents/resume-sid-journal.log"
  ],

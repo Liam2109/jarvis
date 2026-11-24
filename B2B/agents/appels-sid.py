@@ -33,6 +33,7 @@ RACINE = ICI.parent
 sys.path.insert(0, str(ICI))
 import machine as M   # config locale (<agent>-config.local.json) et machine active (b2b.local.json)
 import prospection as P, redaction as R, suivi as S, zone as ZN, nouvelles_entreprises as NE
+import historique_appels as HA   # historique permanent des appels : copie d'une feuille avant sa mise à la corbeille
 
 SORTIE = RACINE / "docs" / "sid"
 MAPS = RACINE / "prospects_maps.csv"
@@ -1064,6 +1065,9 @@ def nettoyer_feuilles_lues(qui, racine, jour, drive, a_blanc, envoi, fichier_reg
     for i, nom in drive.lister_feuilles(racine):
         m = re.fullmatch(motif, nom)
         if m and _jours_ecoules(jour, m.group(1)) > JOURS_DOSSIER_MAX and f"{qui}|{m.group(1)}" in reg["feuilles_lues"]: vieux.append((i, nom))
+    sauves = [(i, n) for i, n in vieux if HA.sauver_avant_corbeille(drive, i, n)]   # historique permanent des appels (24/11/2026) : copié AVANT la corbeille, sinon la feuille reste
+    if len(sauves) < len(vieux): print(f"  ! {len(vieux) - len(sauves)} feuille(s) non copiée(s) dans l'historique des appels : laissée(s) sur le Drive, réessai au prochain passage"); journaliser("erreur", f"{qui} {jour} : copie dans l'historique impossible, corbeille évitée")
+    vieux = sauves
     for i, _ in vieux: drive.mettre_corbeille(i)
     if vieux: journaliser("nettoyage", f"{qui} {jour} : {len(vieux)} feuille(s) lue(s) de plus de {JOURS_DOSSIER_MAX} jours mise(s) à la corbeille")
     print(f"  Google (nettoyage {qui}) : {len(vieux)} feuille(s) de plus de {JOURS_DOSSIER_MAX} jours, déjà lue(s), mise(s) à la corbeille" if vieux else f"  Google (nettoyage {qui}) : rien à mettre à la corbeille")
@@ -1470,6 +1474,7 @@ def nettoyer_dossiers_drive(conf, etat, jour, drive, a_blanc):
     racine = _racine(conf, etat, drive)
     date_de = lambda n: (re.fullmatch(r"(?:Appels (?:Sid )?)?(\d{4}-\d{2}-\d{2})", n) or [None, None])[1]
     vieux = [(i, n) for i, n in drive.lister_dossiers(racine) + drive.lister_feuilles(racine) if date_de(n) and _jours_ecoules(jour, date_de(n)) > JOURS_DOSSIER_MAX]
+    vieux = [(i, n) for i, n in vieux if HA.sauver_avant_corbeille(drive, i, n)]   # historique permanent des appels (24/11/2026) : copié AVANT la corbeille (les anciens dossiers n'ont pas de titre de feuille : rien à copier)
     for i, _ in vieux: drive.mettre_corbeille(i)
     if vieux: journaliser("nettoyage", f"{jour} : {len(vieux)} élément(s) mis à la corbeille ({', '.join(sorted(n for _, n in vieux))})")
     print(f"  Google (nettoyage) : {len(vieux)} élément(s) de plus de {JOURS_DOSSIER_MAX} jours mis à la corbeille" if vieux else "  Google (nettoyage) : rien de plus de 7 jours")

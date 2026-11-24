@@ -47,6 +47,7 @@ Chaque nuit à 03:30, copier leads, appels, résultats d'appels, leads chauds et
 - B2B/donnees/registre-entreprises.json
 - B2B/donnees/leads-chauds.json
 - B2B/donnees/archive/archive.jsonl
+- B2B/donnees/historique-appels.json
 - B2B/agents/relances-etat.json
 - B2B/agents/appels-sid-etat.json
 - B2B/agents/appels-sid-historique.json

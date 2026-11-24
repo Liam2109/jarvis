@@ -126,7 +126,7 @@ Légende : **Auto** = tourne seul à heure fixe ou à cadence fixe ; **Humain** 
 **appels-sid**
 - Créer chaque jour ouvré à 07:30 le tableur « Appels Sid AAAA-MM-JJ » de Sid, trié par créneau de 08:00 à 19:00.
 - Déclencheur : chaque jour à 07:30, plage lundi-vendredi 07:00-19:00 · auto · statut simulation
-- Lit : appels-sid-config.json, appels-sid-historique.json, prospects_maps.csv, registre-entreprises.json · écrit : appels-sid-etat.json, leads-chauds.json, registre-entreprises.json · utilisé par : linkedin-equipe, prospection, relances, sauvegarde-leads
+- Lit : appels-sid-config.json, appels-sid-historique.json, prospects_maps.csv, registre-entreprises.json · écrit : appels-sid-etat.json, historique-appels.json, leads-chauds.json, registre-entreprises.json · utilisé par : linkedin-equipe, prospection, relances, sauvegarde-leads
 
 **cerveau**
 - Veille gratuite la nuit (Ollama local), notes sur 10, une passe Claude par jour pour des propositions avant / après, essai sur petit lot avant de garder ; fermé jusqu'au « go cerveau ».
@@ -206,12 +206,12 @@ Légende : **Auto** = tourne seul à heure fixe ou à cadence fixe ; **Humain** 
 **resume-sid**
 - Poster à 19:30 (jours ouvrés) le résumé du soir : appels de Sid par valeur de Résultat et chiffre d'affaires Stripe du jour.
 - Déclencheur : chaque jour à 19:30, plage lundi-vendredi 18:00-23:00 · auto · statut simulation
-- Lit : rien · écrit : resume-sid-etat.json · utilisé par : rien
+- Lit : rien · écrit : historique-appels.json, resume-sid-etat.json · utilisé par : sauvegarde-leads
 
 **sauvegarde-leads**
 - Chaque nuit à 03:30, copier leads, appels, résultats d'appels, leads chauds et relances dans B2B/sauvegardes (30 jours) ; archive restaurable pour toute suppression ; sans token.
 - Déclencheur : chaque jour à 03:30, plage tous les jours 03:30-04:30 · auto · statut actif
-- Lit : appels-liam-etat.json, appels-sid-etat.json, appels-sid-historique.json, archive.json (+5) · écrit : archive.json · utilisé par : rien
+- Lit : appels-liam-etat.json, appels-sid-etat.json, appels-sid-historique.json, archive.json (+6) · écrit : archive.json · utilisé par : rien
 
 **stripe-alerte**
 - Alerter Liam sur Discord à chaque nouveau paiement Stripe réussi, en lecture seule.

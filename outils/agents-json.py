@@ -626,6 +626,10 @@ def main():
     leads = {"jour": jour, "genere_le": maintenant.strftime("%Y-%m-%d %H:%M:%S"), "critere": "file unique des leads chauds (registre) : « À rappeler » ou « Je dois réfléchir » noté par Sid, sans STOP ni refus ; rappel par Sid ou un closer",
              "leads": lds if dispo_l else [], "raison": "" if dispo_l else str(lds)}
     ecrire(construire(maintenant), v, historique(maintenant, v, fs if dispo else None), leads)
+    try:      # rubrique « Historique des appels » (24/11/2026) : lue dans B2B/donnees/historique-appels.json (comptes seulement), jamais sur Drive
+        if str(AGENTS) not in sys.path: sys.path.insert(0, str(AGENTS))
+        import historique_appels as HA; HA.ecrire_tableau_de_bord(SORTIE / "data", maintenant)
+    except Exception as e: print(f"historique des appels non écrit ({type(e).__name__})")
     if "--ouvrir" in sys.argv[1:] and os.name == "nt": os.startfile(str(SORTIE / "index.html"))
 
 

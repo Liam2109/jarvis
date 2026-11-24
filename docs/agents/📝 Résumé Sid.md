@@ -45,10 +45,11 @@ Poster à 19:30 (jours ouvrés) le résumé du soir : appels de Sid par valeur d
 
 ## Entrées et sorties
 **Lit :**
-- Google Sheets : toutes les feuilles Appels Sid AAAA-MM-JJ modifiées le jour (lecture)
+- Google Sheets : toutes les feuilles Appels Sid AAAA-MM-JJ modifiées le jour, et Appels Liam AAAA-MM-JJ (lecture)
 - Stripe charges (lecture)
 
 **Écrit :**
+- B2B/donnees/historique-appels.json (ajout seulement : relevé des feuilles Appels Sid / Appels Liam encore sur le Drive)
 - B2B/agents/resume-sid-etat.json
 - B2B/agents/resume-sid-journal.log
 

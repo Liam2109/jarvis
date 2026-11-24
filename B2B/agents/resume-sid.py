@@ -21,6 +21,7 @@ ICI = Path(__file__).resolve().parent
 RACINE = ICI.parent
 sys.path.insert(0, str(ICI))
 import machine as M   # config locale (resume-sid-config.local.json) et machine active (b2b.local.json)
+import historique_appels as HA   # historique permanent des appels (ajout seulement, B2B\donnees\historique-appels.json)
 import prospection as P, reponses as RP   # P.acces_discord / P.discord : salon Discord habituel ; RP.lire_env : lecture de Jarvis\.env
 
 CONFIG, ETAT, JOURNAL = ICI / "resume-sid-config.json", ICI / "resume-sid-etat.json", ICI / "resume-sid-journal.log"
@@ -267,6 +268,36 @@ def alerter_discord(texte):
     except Exception as ex: print(f"  alerte Discord impossible ({type(ex).__name__})"); return False
 
 
+APPELS_LIAM_CONFIG = ICI / "appels-liam-config.json"
+
+
+def historiser(conf, jour, etat, a_blanc, drive=None):
+    """Historique permanent des appels (24/11/2026) : copie les résultats de CHAQUE feuille « Appels Sid / Appels Liam » encore sur le Drive dans B2B\\donnees\\historique-appels.json (ajout
+    seulement, voir historique_appels.py), puis, si la feuille du jour créée ce matin a disparu du Drive, alerte Discord UNE fois (etat['disparues']). Lecture seule côté Google ; une panne ici
+    est journalisée et ne bloque jamais le résumé. -> texte d'une ligne pour la console."""
+    if a_blanc: return "[à blanc] historique des appels : serait relevé ici"
+    try:
+        racine_sid = str(M.lire_fusionnee(APPELS_SID_CONFIG).get("dossier_sid_id") or "").strip()
+        racine_liam = str(M.lire_fusionnee(APPELS_LIAM_CONFIG).get("dossier_liam_id") or "").strip() or "root"
+        d = drive or ouvrir_drive(conf["compte_google"])
+        if (d.compte() or "").lower() != conf["compte_google"].lower(): raise ValueError("jeton Google d'un autre compte")
+        n, lues, presentes = HA.releve_drive(d, {HA.SID: racine_sid, HA.LIAM: racine_liam})
+        feuille = None
+        try: feuille = ((json.loads(APPELS_SID_ETAT.read_text(encoding="utf-8")).get("google") or {}).get(jour) or {}).get("feuille") if APPELS_SID_ETAT.exists() else None
+        except (OSError, ValueError, AttributeError): feuille = None
+        if racine_sid and feuille and (HA.SID, jour) not in [HA.titre(x) for x in presentes] and not etat.setdefault("disparues", {}).get(jour):
+            etat["disparues"][jour] = True; etat_ecrire(etat)
+            if conf["envoi_automatique"]:
+                alerter_discord(f"Appels : la feuille « Appels Sid {jour} » n'est plus sur le Drive (corbeille ou suppression). Les résultats déjà relevés sont gardés dans l'historique des appels ; "
+                                "ceux notés depuis le dernier relevé peuvent manquer. Elle est peut-être récupérable dans la corbeille Google Drive (30 jours).")
+            journaliser("historique", f"{jour} : feuille du jour disparue du Drive, alerte " + ("envoyée" if conf["envoi_automatique"] else "simulée"))
+        journaliser("historique", f"{jour} : {lues} feuille(s) lue(s), {n} relevé(s) ajouté(s)")
+        return f"Historique des appels : {lues} feuille(s) lue(s), {n} relevé(s) ajouté(s)."
+    except Exception as ex:
+        journaliser("historique", f"{jour} : relevé impossible ({type(ex).__name__})")
+        return f"Historique des appels : relevé impossible ({type(ex).__name__}), le résumé continue."
+
+
 def cmd_resume(conf, jour, a_blanc, drive=None):
     nom_jour = JOURS_SEMAINE[maintenant_paris().weekday()]
     if nom_jour in ("samedi", "dimanche"):
@@ -274,6 +305,7 @@ def cmd_resume(conf, jour, a_blanc, drive=None):
         journaliser("resume", f"{jour} : jour hors planning, pas de résumé ({nom_jour})", a_blanc)
         print(f"Jour hors planning ({nom_jour}) : pas de résumé le week-end."); return 0
     etat = etat_lire()
+    print(historiser(conf, jour, etat, a_blanc, drive))   # AVANT tout le reste : même si le résumé est déjà parti, les résultats du soir entrent dans l'historique
     if not a_blanc and etat["envoyes"].get(jour):
         print(f"Résumé du {jour} déjà envoyé (ou simulé) aujourd'hui : rien de plus."); return 0
     dispo_a, appels = stats_appels(conf, jour, drive)

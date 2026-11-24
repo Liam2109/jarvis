@@ -74,6 +74,7 @@ Créer chaque jour ouvré à 07:30 le tableur « Appels Sid AAAA-MM-JJ » de Sid
 - Google Drive : Appels Sid AAAA-MM-JJ
 - B2B/donnees/registre-entreprises.json
 - B2B/donnees/leads-chauds.json
+- B2B/donnees/historique-appels.json (copie d'une feuille avant sa corbeille, ajout seulement)
 - B2B/agents/appels-sid-etat.json
 - B2B/agents/appels-sid-journal.log
 
