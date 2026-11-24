@@ -191,6 +191,28 @@ def main():
         cx = sombre[:, 1].mean() if len(sombre) else -1
         verifier("photo : visage à droite, centré à environ un tiers du bord",
                  cote == "droite" and abs(cx - 2 * 1280 / 3) < 40, f"x = {cx:.0f}")
+        # photo verticale : recadrage serré en 16:9, pas de fond flou ni de bande, visage au tiers, côté texte libre
+        vert = np.full((1920, 1080, 3), 255, np.uint8)
+        cv2.rectangle(vert, (440, 700), (640, 960), (0, 0, 0), -1)  # visage au centre de la photo
+        comp, cote, _ = ytmin.composer_photo(vert, (440, 700, 200, 260), "gauche")
+        arr = np.asarray(comp).astype(int)
+        sombre = np.argwhere(arr.sum(axis=2) < 30)
+        cx = sombre[:, 1].mean() if len(sombre) else -1
+        verifier("photo verticale : 1280x720, côté gauche", comp.size == (1280, 720) and cote == "gauche")
+        verifier("photo verticale : visage centré à environ un tiers", abs(cx - 1280 / 3) < 40, f"x = {cx:.0f}")
+        verifier("photo verticale : aucun fond flou, cadre rempli (pas de bande sombre à droite)",
+                 (arr[:, 1100:, :].sum(axis=2) > 300).mean() > 0.95)  # photo blanche + dégradé du texte
+        p = ytmin.plan_photo(1080, 1920, (440, 700, 200, 260), "gauche")
+        verifier("photo verticale : agrandissement limité", p["s"] <= ytmin.ZOOM_MAX and p["ecart"] < 5, f"s = {p['s']:.2f}")
+        # photo horizontale : tout le cadre rempli
+        p = ytmin.plan_photo(1920, 1080, (300, 300, 200, 260))
+        verifier("photo horizontale : cadre rempli", p["fw"] >= 1280 and p["fh"] >= 720 and p["ox"] <= 0 and p["oy"] <= 0)
+        # photo trop petite : l'agrandissement dépasse la limite, l'outil le signale
+        tiny = photos.parent / "tiny"
+        tiny.mkdir()
+        cv2.imwrite(str(tiny / "p.jpg"), image_factice(300, 400, True, False))
+        r = lancer([str(tiny / "p.jpg"), "--texte", "SITE WEB ZERO", "--sorties", str(so2), "--visage", "0.14,0.23,0.28,0.44"])
+        verifier("photo trop petite : avertissement", r.returncode == 0 and "ATTENTION" in r.stdout and "trop petite" in r.stdout, r.stdout[-200:])
 
     print()
     print("TOUT EST VERT" if not ECHECS else f"{len(ECHECS)} ECHEC(S) : {', '.join(ECHECS)}")

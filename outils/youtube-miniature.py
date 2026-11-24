@@ -17,6 +17,7 @@ Exemples :
   python outils\\youtube-miniature.py C:\\photos\\defi --texte "SITE WEB 0 EURO"      (dossier de photos et/ou vidéos)
 """
 import argparse
+import math
 import os
 import re
 import sys
@@ -34,6 +35,7 @@ NOIR = (0, 0, 0)
 MAX_OCTETS = 1_900_000  # sous 2 Mo avec marge
 EXT_VIDEO = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v", ".wmv"}
 EXT_PHOTO = {".jpg", ".jpeg", ".png"}
+ZOOM_MAX = 2.5  # agrandissement maximal d'une photo pour placer le visage (au-delà, l'image devient floue)
 RACINE = Path(__file__).resolve().parent.parent
 DOSSIER_ENTREES = RACINE / "youtube" / "entrees"
 DOSSIER_SORTIES = RACINE / "youtube" / "sorties"
@@ -226,12 +228,11 @@ def _finition(canvas, cote):
     return Image.fromarray(arr.astype(np.uint8))
 
 
-def composer_photo(img_bgr, boite, cote=None):
-    """Photo : recadrage direct en 16:9 (pas de fond flou), visage à ~ un tiers du cadre.
-    Renvoie (image RGB 1280x720, cote, visage_connu). Le cadre est toujours rempli par la photo."""
-    h0, l0 = img_bgr.shape[:2]
-    if l0 / float(h0) < 1.3:  # portrait ou presque carré : un recadrage 16:9 couperait la tête -> fond flou, rien de coupé
-        return composer_image(img_bgr, boite, cote)
+def plan_photo(l0, h0, boite, cote=None):
+    """Recadrage 16:9 d'une photo (horizontale ou verticale), sans fond flou ni bandes : la photo remplit tout le
+    cadre. Agrandit (au plus ZOOM_MAX fois, sauf si le cadre l'exige) pour que le visage tombe à un tiers du
+    cadre, côté libre de l'autre côté. Renvoie dict(s, ox, oy, cote, connu, ecart) ; ecart = distance en pixels
+    entre le centre du visage et son tiers cible (0 = parfait)."""
     connu = boite is not None
     if boite is None:
         hh = int(0.22 * h0)
@@ -240,15 +241,27 @@ def composer_photo(img_bgr, boite, cote=None):
     cx, cy = x + w / 2.0, y + h / 2.0
     if cote not in ("gauche", "droite"):
         cote = "gauche" if cx < l0 / 2 else "droite"
-    cible_x = LARG / 3.0 if cote == "gauche" else 2 * LARG / 3.0
-    cible_y = HAUT * 0.46
+    tx = LARG / 3.0 if cote == "gauche" else 2 * LARG / 3.0
+    ty = HAUT * 0.46
     couvre = max(LARG / float(l0), HAUT / float(h0))
-    s = max(couvre, min(3.0, 0.42 * HAUT / float(h)))
-    fw, fh = max(LARG, round(l0 * s)), max(HAUT, round(h0 * s))
-    rgb = Image.fromarray(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)).resize((fw, fh), Image.LANCZOS)
-    ox = min(0, max(LARG - fw, round(cible_x - cx * s)))
-    oy = min(0, max(HAUT - fh, round(cible_y - cy * s)))
-    return _finition(rgb.crop((-ox, -oy, -ox + LARG, -oy + HAUT)), cote), cote, connu
+    ideal = 0.42 * HAUT / float(h)  # visage ~ 42 % de la hauteur
+    # échelle minimale pour que le tiers cible soit atteignable sans sortir de la photo
+    faisable = max(tx / max(cx, 1.0), (LARG - tx) / max(l0 - cx, 1.0), ty / max(cy, 1.0), (HAUT - ty) / max(h0 - cy, 1.0))
+    s = max(couvre, min(ZOOM_MAX, max(ideal, faisable)))
+    fw, fh = max(LARG, math.ceil(l0 * s)), max(HAUT, math.ceil(h0 * s))
+    ox = min(0, max(LARG - fw, round(tx - cx * s)))
+    oy = min(0, max(HAUT - fh, round(ty - cy * s)))
+    return {"s": s, "ox": ox, "oy": oy, "cote": cote, "connu": connu, "fw": fw, "fh": fh,
+            "ecart": abs((cx * s + ox) - tx), "face_h": h * s}
+
+
+def composer_photo(img_bgr, boite, cote=None):
+    """Photo -> (image RGB 1280x720, cote, visage_connu), recadrée par plan_photo()."""
+    h0, l0 = img_bgr.shape[:2]
+    p = plan_photo(l0, h0, boite, cote)
+    rgb = Image.fromarray(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)).resize((p["fw"], p["fh"]), Image.LANCZOS)
+    img = rgb.crop((-p["ox"], -p["oy"], -p["ox"] + LARG, -p["oy"] + HAUT))
+    return _finition(img, p["cote"]), p["cote"], p["connu"]
 
 
 def lire_photo(chemin):
@@ -421,6 +434,13 @@ def traiter_photos(photos, nom, a, sorties):
         octets, q = exporter_jpg(comp, sortie)
         print(f"Photo : {photo} -> {sortie} ({LARG}x{HAUT}, {octets / 1e6:.2f} Mo, qualité {q}, police {taille} px, "
               f"visage à {cote}{'' if connu else ' ; ATTENTION visage non détecté, position supposée (utiliser --visage et --cote)'})")
+        p = plan_photo(l0, h0, boite, a.cote)
+        if p["s"] > ZOOM_MAX + 0.01:
+            print(f"  ATTENTION : photo trop petite pour remplir le cadre sans la flouter (agrandie {p['s']:.1f} fois) : "
+                  "utiliser une photo plus grande.")
+        if p["ecart"] > 60 or p["face_h"] > 0.75 * HAUT:
+            print(f"  ATTENTION : visage mal placé ou trop gros (écart {p['ecart']:.0f} px du tiers, hauteur "
+                  f"{p['face_h'] / HAUT:.0%} du cadre) : le texte peut le recouvrir ; prendre une photo moins serrée.")
     if a.titre:
         ecrire_textes(dossier, a.titre, a.resume)
         print(f"Textes : {dossier / 'titre.txt'}, {dossier / 'description.txt'}")
