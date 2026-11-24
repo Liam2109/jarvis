@@ -1,12 +1,12 @@
 {
   "_aide": "Référence unique de l'offre (15/11/2026). Lue par tests\\coherence-offre.py et B2B\\harness\\garde.py. Toute autre valeur dans les docs, skills ou agents est une contradiction.",
-  "_prix_24_11": "Tarification du 23/11 appliquée le 24/11/2026 : pack 500 €, abonnement 29 €/mois. ATTENTION : les 2 liens Stripe ci-dessous facturent ENCORE 595 € (pack) et 49 €/mois (les deux) : à recréer par Liam dans Stripe, puis à remplacer ici.",
+  "_prix_24_11": "Tarification du 23/11 appliquée le 24/11/2026 : pack 500 €, site complet 994 €, abonnement 29 €/mois ; liens Stripe recréés le 24/11/2026.",
   "offres": {
-    "pack": {"nom": "Pack landing page", "prix_unique_eur": 500, "lien_stripe": "https://buy.stripe.com/3cIbJ2diZ3kF9DF9W85EY0a"},
-    "site_complet": {"nom": "Site complet", "prix_unique_eur": 994, "lien_stripe": "https://buy.stripe.com/bJeaEY7YF4oJ035d8k5EY0b"}
+    "pack": {"nom": "Pack landing page", "prix_unique_eur": 500, "lien_stripe": "https://buy.stripe.com/14AfZifr7dZj7vxc4g5EY0c"},
+    "site_complet": {"nom": "Site complet", "prix_unique_eur": 994, "lien_stripe": "https://buy.stripe.com/8x23cwgvb1cx3fhgkw5EY0d"}
   },
   "abonnement": {"prix_mensuel_eur": 29, "inclus": ["hébergement", "maintenance", "support", "nom de domaine"], "premier_mois_offert": true, "arret_possible_a_tout_moment": true},
-  "liens_stripe_autorises": ["https://buy.stripe.com/3cIbJ2diZ3kF9DF9W85EY0a", "https://buy.stripe.com/bJeaEY7YF4oJ035d8k5EY0b"],
+  "liens_stripe_autorises": ["https://buy.stripe.com/14AfZifr7dZj7vxc4g5EY0c", "https://buy.stripe.com/8x23cwgvb1cx3fhgkw5EY0d"],
   "fichiers_liens_libres": ["liens-paiement.md", "OFFRE-REFERENCE.json"],
   "resultats_appel": ["Pas de réponse", "À rappeler", "RDV pris", "Non catégorique", "Je dois réfléchir", "Trop cher", "Déjà un site", "Pas le temps"],
   "resultats_anciens": ["Répondu", "Refus"],

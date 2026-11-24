@@ -14,7 +14,6 @@ _Mise à jour : 23 nov. 2026, 15 h (le fait est supprimé ; l'historique est dan
 - [ ] Droit de rétractation (vente à distance), formulation d'arrêt, transfert du domaine (code chez le bureau d'enregistrement) : à faire relire
 - [ ] Clause de rétractation de 14 jours dans le devis, à faire relire
 - [ ] Prévoir comment livrer un site complet multi-pages avant d'en vendre un
-- [ ] Tarification du 23/11 (500 € puis 29 €/mois, site complet 994 €) : docs, scripts et OFFRE-REFERENCE.json faits le 24/11 ; reste à recréer les liens Stripe (pack 500 € puis 29 €/mois ; site complet 994 € puis 29 €/mois, 1er mois offert) puis à les remplacer dans OFFRE-REFERENCE.json, liens-paiement.md et devis.py, et à aligner devis.py, test_devis.py, liens-paiement.md, skills et fiches (jarvis-ceo, agent-devis, agent-linkedin, agent-stripe-alerte), tableau de bord, LISEZ-MOI ; à confirmer : 29 €/mois aussi pour le site complet, commissions sur les 29 €/mois.
 - [ ] Commissions : appelant 15 %, closer 15 % (décidé le 23/11) ; à décider : sur le premier paiement seulement ou aussi sur les 29 €/mois ; aligner OFFRE-REFERENCE.json, scripts et TECHNIQUES-CLOSING si besoin
 - [ ] Décider : petit acompte (environ 100 €) pour le client sans confiance ? Contredit « sans acompte » ; pas dans les scripts avant décision
 - [ ] Test de cohérence : étendre aux notes docs\decisions et docs\agents (la note « Offre 595 + 49 » avait encore 990–1 490 € et « lien à créer », hors du périmètre du test) ; vérifier aussi les 3 autres notes de décision

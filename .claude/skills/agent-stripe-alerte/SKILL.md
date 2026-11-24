@@ -17,7 +17,7 @@ Alerter Liam sur Discord à chaque nouveau paiement Stripe réussi, en lecture s
 3. Lit la clé `STRIPE_RESTRICTED_KEY` dans `Jarvis\.env` (jamais affichée). Clé absente : « rien à vérifier », journalisé, code 0.
 4. Premier passage (aucun `dernier_ts`) : lit les 10 derniers paiements, les mémorise **sans alerte**, fixe le point de départ.
 5. Passages suivants : `GET charges?created[gte]=<dernier_ts>`, garde ceux `paid` + `succeeded` jamais vus, triés par date.
-6. Pour chacun : message « Nouveau paiement Stripe : 595 euros (description) » ; posté sur Discord si `envoi_automatique`, sinon affiché « [simulation] ».
+6. Pour chacun : message « Nouveau paiement Stripe : 500 euros (description) » ; posté sur Discord si `envoi_automatique`, sinon affiché « [simulation] ».
 7. Mémorise les identifiants vus (300 au plus, garde les 200 plus récents) et le dernier horodatage dans `stripe-alerte-etat.json`.
 8. Écrit une trace du harness (`B2B/logs/agents/stripe-alerte/AAAA-MM-JJ.jsonl`) à chaque `verifier` réel.
 

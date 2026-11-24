@@ -94,7 +94,7 @@ Chaque idée est notée à la date où Liam la dit. Une idée pas encore faite r
 23/11 — TikTok = personal brand IA/automatisation, face caméra, sans objectif de vente ; une vidéo longue par jour au début ; acheteurs = téléphone + LinkedIn.
 
 ## Prix et offre (décidé par Liam le 23/11, à aligner plus tard)
-- 23/11 — Prix pack environ 495 € (au lieu de 595 €) ; 29 €/mois (domaine, hébergement et petites modifications inclus) à la place de « 49 €/an + modifications payantes ». Reste à confirmer : 495 ou 500, prix du site complet, commissions sur le premier paiement seulement ou aussi sur les 29 €/mois. Scripts, devis, OFFRE-REFERENCE.json, TECHNIQUES-CLOSING et Stripe pas encore alignés. Abandonnés : offre fondateur 295 €, pages pré-générées avant l'appel, mesure des appels/clics.
+- 23/11 — Tarification : pack 500 €, site complet 994 €, abonnement 29 €/mois (domaine, hébergement et petites modifications inclus), appliquée partout le 24/11, liens Stripe recréés. Reste à confirmer : commissions sur le premier paiement seulement ou aussi sur les 29 €/mois. Abandonnés : offre fondateur 295 €, pages pré-générées avant l'appel, mesure des appels/clics.
 
 ## Social media
 - 23/11 — Catégorie « Social media » tout à gauche du dashboard : stats TikTok et YouTube (YouTube via API gratuite, TikTok à la main), Instagram plus tard. TikTok perso : conversation « TikTok » (écrire « idée » : sujet + début, milieu, fin), vidéos faites par Liam lui-même (IA surtout, aussi soin de soi et personal brand ; ni son business ni sa vie).

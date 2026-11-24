@@ -13,7 +13,7 @@ MARDI_10H = datetime(2026, 11, 17, 10, 0)      # heure de Paris (naïve)
 SAMEDI_10H = datetime(2026, 11, 21, 10, 0)
 MARDI_20H = datetime(2026, 11, 17, 20, 0)
 OK_CTX = {"machine_active": True, "envoi_automatique": True, "stop": False, "deja_envoyes": 0}
-PACK = "https://buy.stripe.com/3cIbJ2diZ3kF9DF9W85EY0a"
+PACK = "https://buy.stripe.com/14AfZifr7dZj7vxc4g5EY0c"
 
 
 def v(texte, canal="discord", agent="stripe-alerte", quand=MARDI_10H, **ctx):
@@ -36,7 +36,7 @@ class Garde(unittest.TestCase):
         for p in ("sans abonnement obligatoire", "maintenance facultative", "590 €", "de 10 h à 12 h"):
             self.assertTrue(bloque(v(f"Offre : {p}"), "phrase interdite"), p)
         self.assertTrue(bloque(v("La maintenance est facultative"), "facultative"))
-        self.assertTrue(v("595 € une fois, puis 49 €/mois, arrêt possible à tout moment")[0]); self.assertTrue(v("Visio de 15 minutes, caméra facultative")[0])
+        self.assertTrue(v("500 € une fois, puis 29 €/mois, arrêt possible à tout moment")[0]); self.assertTrue(v("Visio de 15 minutes, caméra facultative")[0])
 
     def test_secrets(self):
         jeton = "M" + "a" * 23 + "." + "b" * 6 + "." + "c" * 30

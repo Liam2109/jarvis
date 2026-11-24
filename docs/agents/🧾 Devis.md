@@ -27,7 +27,7 @@ Préparer le devis écrit (texte et PDF) à partir d'une fiche, le montrer à Li
 ### Ce qu'il fait étape par étape
 1. `preparer fiche.txt` ou `rapide "Nom | métier | ville | livrables | délai | oui/non | besoin"` (ou « devis : … » écrit par Liam dans le salon, mode réel).
 2. Lit la fiche et `identite.json`, attribue le numéro `DEV-AAAA-NNN`.
-3. Prix et liens : uniquement ceux de `OFFRE-REFERENCE.json` (page web 595 €, site complet 994 €, puis 49 €/mois, premier mois offert, lien Stripe qui comprend l'abonnement).
+3. Prix et liens : uniquement ceux de `OFFRE-REFERENCE.json` (page web 500 €, site complet 994 €, puis 29 €/mois, premier mois offert, lien Stripe qui comprend l'abonnement).
 4. Une information absente (délai, livrables, option sans prix, lien sur mesure) : listée « À COMPLÉTER », l'agent s'arrête.
 5. Écrit texte, PDF et message d'accompagnement dans `B2B\devis\`, statut « préparé ».
 6. `jour` : en mode réel, poste l'aperçu « à valider » à Liam sur Discord puis cherche son « ok devis » ; en simulation, rien sur Discord (valider avec `marquer`).

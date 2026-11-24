@@ -53,7 +53,7 @@ Pas de 3D : la version « luxe » (Dubaï, WebGL) existe dans `sites/agence/luxe
 2. Le problème — client qui cherche, ne trouve pas
 3. La solution — ce que « être trouvé » veut dire, écran épinglé (3 phrases + photo téléphone)
 4. Exemples — 3 pages réelles (plombier, électricien, coiffeur), liens cliquables
-5. L'offre — 595 €, puis 49 €/mois, tout compris
+5. L'offre — 500 €, puis 29 €/mois, tout compris
 6. Comment ça se passe — 4 étapes, appel → devis → paiement → mise en ligne
 7. Questions fréquentes — 8 questions
 8. Phrase géante (transition) puis clôture — appel très visible, Messenger, e-mail, formulaire court

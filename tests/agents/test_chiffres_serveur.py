@@ -60,8 +60,8 @@ class ChiffresServeur(unittest.TestCase):
 
     def devis(self, *jours):
         """devis-etat.json factice : un devis marqué « envoyé » par jour donné (plus un devis seulement préparé, qui ne compte pas)."""
-        d = {f"DEV-{i}": {"statut": "envoyé", "historique": {"préparé": j, "envoyé": j}, "entreprise": "Envog Coiffure", "prix": 595} for i, j in enumerate(jours)}
-        d["DEV-prepare"] = {"statut": "préparé", "historique": {"préparé": JOUR}, "entreprise": "Garage du Rond Point", "prix": 595}
+        d = {f"DEV-{i}": {"statut": "envoyé", "historique": {"préparé": j, "envoyé": j}, "entreprise": "Envog Coiffure", "prix": 500} for i, j in enumerate(jours)}
+        d["DEV-prepare"] = {"statut": "préparé", "historique": {"préparé": JOUR}, "entreprise": "Garage du Rond Point", "prix": 500}
         A.DEVIS_ETAT.write_text(json.dumps({"devis": d}, ensure_ascii=False), encoding="utf-8")
 
     def lignes(self, titre=None): return self.drive.f[titre or self.conf["feuille"]]
@@ -100,7 +100,7 @@ class ChiffresServeur(unittest.TestCase):
         texte = "\n".join(",".join(l) for l in self.lignes())
         self.assertEqual(A.ENTETE, ["Date", "Devis envoyés", "Paiements reçus"])
         for l in self.lignes(): self.assertEqual(len(l), 3, l)
-        for interdit in ("595", "€", "Envog", "Garage", "@", "02 35"):
+        for interdit in ("500", "€", "Envog", "Garage", "@", "02 35"):
             self.assertNotIn(interdit, texte, f"« {interdit} » ne doit jamais entrer dans la feuille")
 
     def test_seuls_les_devis_envoyes_du_jour_comptent(self):

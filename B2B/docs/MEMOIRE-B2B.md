@@ -6,9 +6,9 @@ Seulement l'état présent ; le récit du passé est dans git et dans `JOURNAL-B
 - Site vitrine : https://lmlsmulti-services.com (version luxe2, Netlify, en production depuis le 12/11). Sources dans `sites/agence/`.
 
 ## Offre (référence unique : `docs\OFFRE-REFERENCE.json`)
-- Pack landing page 595 € ou site complet 994 €, payés en une fois, puis 49 €/mois (hébergement, maintenance, support, nom de domaine au nom du client), premier mois offert, arrêt possible à tout moment.
+- Pack landing page 500 € ou site complet 994 €, payés en une fois, puis 29 €/mois (hébergement, maintenance, support, nom de domaine au nom du client), premier mois offert, arrêt possible à tout moment.
 - Sans acompte : le lien Stripe du prix complet part avec le devis (2 liens seulement, voir `liens-paiement.md`).
-- À l'arrêt des 49 €/mois : le site reste en ligne tel quel, le client garde son domaine, plus de modification ni de support.
+- À l'arrêt des 29 €/mois : le site reste en ligne tel quel, le client garde son domaine, plus de modification ni de support.
 - Hébergement des pages : Vercel (plan Pro). Aucune offre gratuite.
 
 ## Parcours de vente

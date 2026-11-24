@@ -49,8 +49,8 @@ Le devis contient directement le lien : prix unique à la commande, puis 29 €/
 
 | Offre | Lien |
 |---|---|
-| Page web 500 €, puis 29 €/mois (« Pack page web ») | https://buy.stripe.com/3cIbJ2diZ3kF9DF9W85EY0a (⚠ facture encore 595 € puis 49 €/mois : à recréer dans Stripe avant envoi) |
-| Site complet 994 €, puis 29 €/mois | https://buy.stripe.com/bJeaEY7YF4oJ035d8k5EY0b (⚠ facture encore 49 €/mois : à recréer dans Stripe avant envoi) |
+| Page web 500 €, puis 29 €/mois (« Pack page web ») | https://buy.stripe.com/14AfZifr7dZj7vxc4g5EY0c (⚠ facture encore 500 € puis 29 €/mois : à recréer dans Stripe avant envoi) |
+| Site complet 994 €, puis 29 €/mois | https://buy.stripe.com/8x23cwgvb1cx3fhgkw5EY0d (⚠ facture encore 29 €/mois : à recréer dans Stripe avant envoi) |
 
 N'envoyer aucun autre lien. Site complet à un autre prix que 994 € : Liam crée d'abord le lien Stripe de ce montant (Claude ne crée rien dans Stripe). Historique complet des liens : `docs\liens-paiement.md`.
 

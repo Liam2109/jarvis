@@ -17,13 +17,13 @@ HISTORIQUES = {"IDEES-MASTER.md", "JOURNAL-B2B.md", "IDEES-CLAUDE-CHAT.md", "TOD
 EXTS = {".md", ".py", ".json", ".html", ".js", ".txt"}
 LIEN = re.compile(r"https://buy\.stripe\.com/[A-Za-z0-9]+")
 # Phrases interdites propres à ce test (15/11/2026), en plus de OFFRE-REFERENCE.json : interdites quand la ligne parle de l'offre
-# (l'abonnement de 49 €/mois est compris dans le lien Stripe : jamais « pas obligatoire »). La garde n'est pas concernée.
+# (l'abonnement de 29 €/mois est compris dans le lien Stripe : jamais « pas obligatoire »). La garde n'est pas concernée.
 INTERDITES_OFFRE = ["pas obligatoire"]
 OFFRE_MOTS = re.compile(r"maintenance|abonnement|h[ée]bergement|€|euros?\b|mois")
-# Contradictions supplémentaires trouvées dans B2B le 15/11/2026 (offre de référence : 595 / 994 une fois, 49 €/mois inclus, sans acompte)
+# Contradictions supplémentaires trouvées dans B2B le 15/11/2026 (offre de référence : 500 / 994 une fois, 29 €/mois inclus, sans acompte)
 AUTRES = [(re.compile(r"990\s*(?:€\s*)?à\s*1\s?490"), "ancien prix du site (990 à 1 490 €) : 994 €"),
-          (re.compile(r"29\s*à\s*49\s*€"), "ancienne maintenance 29 à 49 € : 49 €/mois"),
-          (re.compile(r"\b20\s*€\s*/\s*mois|\b20-29\s*€"), "ancienne maintenance 20 €/mois : 49 €/mois"),
+          (re.compile(r"29\s*à\s*49\s*€"), "ancienne maintenance 29 à 49 € : 29 €/mois"),
+          (re.compile(r"\b20\s*€\s*/\s*mois|\b20-29\s*€"), "ancienne maintenance 20 €/mois : 29 €/mois"),
           (re.compile(r"acompte\s*30|lien d.acompte", re.I), "acompte : supprimé le 14/11 (paiement complet)")]
 
 
@@ -60,7 +60,7 @@ def fautes_ligne(ligne, ref, nom, suffixe):
             if any("facultati" in s and re.search(r"maintenance|abonnement|h[ée]bergement|€|mois", s) for s in re.split(r"[.;|!?]", bas)): f.append(("phrase", "« facultative » à propos de l'offre"))   # même phrase ou même champ
         elif ph.lower() in bas and not (ph == "facultative"): f.append(("phrase", f"phrase interdite « {ph} »"))
     if "maintenance facultative" in bas: f = [x for x in f if x[1] != "« facultative » à propos de l'offre"]
-    f += [("phrase", f"phrase interdite « {ph} » à propos de l'offre") for ph in INTERDITES_OFFRE if ph in bas and OFFRE_MOTS.search(bas)]   # toute la ligne (« … 49 euros par mois … ; ce n'est pas obligatoire »)
+    f += [("phrase", f"phrase interdite « {ph} » à propos de l'offre") for ph in INTERDITES_OFFRE if ph in bas and OFFRE_MOTS.search(bas)]   # toute la ligne (« … 29 euros par mois … ; ce n'est pas obligatoire »)
     if suffixe == ".md":   # anciennes valeurs de Résultat, quand elles sont citées comme valeurs (liste, guillemets, tableau)
         for v in ref["resultats_anciens"]:
             if re.search(rf"(?:[«\"`|]\s*|^\s*[-*]\s*){v}(?:\s*[»\"`|:]|\s*$)", ligne): f.append(("resultat", f"ancienne valeur de Résultat « {v} »"))

@@ -4,7 +4,7 @@ puis montre un aperçu « à valider » à Liam sur Discord. RIEN ne part vers l
 Même architecture que prospection.py et instagram.py : script autonome, réglages, état, verrou, arrêt de secours, alerte Discord, journal.
 
   python agents\\devis.py preparer fiche.txt [--a-blanc]   crée le devis (simulation par défaut : fichiers écrits, rien sur Discord) ; --a-blanc : aucune écriture
-  python agents\\devis.py rapide "Nom | métier | ville | livrables, séparés, par des virgules | délai | oui/non | besoin"   idem à partir d'UNE ligne (page web 595 €) ; aussi « devis : … » dans le salon Discord (mode réel)
+  python agents\\devis.py rapide "Nom | métier | ville | livrables, séparés, par des virgules | délai | oui/non | besoin"   idem à partir d'UNE ligne (page web 500 €) ; aussi « devis : … » dans le salon Discord (mode réel)
   python agents\\devis.py jour [--a-blanc]               un passage : poste l'aperçu « à valider » (mode réel) ou lit le « ok devis » de Liam
   python agents\\devis.py continu [--pid N]                boucle (lancée par Jarvis, lib\\devis.ps1) : un passage toutes les cycle_minutes
   python agents\\devis.py etat                             liste des devis et de leur statut
@@ -12,7 +12,7 @@ Même architecture que prospection.py et instagram.py : script autonome, réglag
   python agents\\devis.py annuler DEV-AAAA-NNN             libère la place d'un devis préparé ou validé (jamais d'un devis envoyé)
   python agents\\devis.py arreter | reprendre              arrêt de secours de la boucle | lève la suspension après une erreur
 
-Prix et liens de paiement : UNIQUEMENT ceux de docs\\OFFRE-REFERENCE.json (page web 595 € ou site complet 994 €, une fois, puis 49 €/mois avec hébergement, maintenance, support et nom de domaine,
+Prix et liens de paiement : UNIQUEMENT ceux de docs\\OFFRE-REFERENCE.json (page web 500 € ou site complet 994 €, une fois, puis 29 €/mois avec hébergement, maintenance, support et nom de domaine,
 premier mois offert, arrêt à tout moment ; le lien Stripe comprend l'abonnement, 15/11/2026). Le devis donne directement ce lien. Une information absente de la fiche ou des sources (délai, livrables, option sans prix,
 lien de paiement sur mesure) est SIGNALÉE et l'agent s'arrête : rien n'est inventé.
 Statut de paiement : l'agent n'accède ni à la banque ni à Stripe ; Liam coche « payé » à la main (`marquer`). Un seul devis à la fois « préparé » (en cours de validation).
@@ -32,10 +32,10 @@ ARRET, VERROU, JOURNAL = ICI / "devis.arret", ICI / "devis-continu.verrou", ICI 
 DEFAUT = {"envoi_automatique": False, "cycle_minutes": 3, "salon_nom": ""}
 STATUTS = ["préparé", "validé", "envoyé", "accepté", "payé"]
 
-# Source : docs\OFFRE-REFERENCE.json (= liens-paiement.md, 15/11/2026). Rien d'autre n'est un prix. Un lien = le prix unique + l'abonnement de 49 €/mois (premier mois offert).
-PRIX_PAGE, PRIX_SITE_LIEN, MAINTENANCE, VALIDITE_JOURS = 595, 994, 49, 15
-LIEN_PAGE = "https://buy.stripe.com/3cIbJ2diZ3kF9DF9W85EY0a"      # « Pack page web » 595 € puis 49 €/mois, 1er mois offert (OFFRE-REFERENCE.json)
-LIEN_SITE = "https://buy.stripe.com/bJeaEY7YF4oJ035d8k5EY0b"      # « Site complet » 994 € puis 49 €/mois, 1er mois offert (OFFRE-REFERENCE.json)
+# Source : docs\OFFRE-REFERENCE.json (= liens-paiement.md, 15/11/2026). Rien d'autre n'est un prix. Un lien = le prix unique + l'abonnement de 29 €/mois (premier mois offert).
+PRIX_PAGE, PRIX_SITE_LIEN, MAINTENANCE, VALIDITE_JOURS = 500, 994, 29, 15
+LIEN_PAGE = "https://buy.stripe.com/14AfZifr7dZj7vxc4g5EY0c"      # « Pack page web » 500 € puis 29 €/mois, 1er mois offert (OFFRE-REFERENCE.json)
+LIEN_SITE = "https://buy.stripe.com/8x23cwgvb1cx3fhgkw5EY0d"      # « Site complet » 994 € puis 29 €/mois, 1er mois offert (OFFRE-REFERENCE.json)
 ABONNEMENT = f"Ensuite {MAINTENANCE} € par mois (hébergement, maintenance, support et nom de domaine compris), premier mois offert, arrêt possible à tout moment ; cet abonnement est inclus dans le lien de paiement."
 OFFRES = {"page": "Page web", "site": "Site complet"}
 ALIAS = {"entreprise": "entreprise", "nomdelentreprise": "entreprise", "societe": "entreprise", "metier": "metier", "ville": "ville", "contact": "contact", "nom": "contact", "nomducontact": "contact",

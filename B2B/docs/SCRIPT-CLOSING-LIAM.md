@@ -20,8 +20,8 @@ Règles : aucun chiffre inventé, aucune promesse de résultat Google, aucun dé
 « Je comprends. [500 ou 994] euros une seule fois pour la création, puis 29 euros par mois que vous pouvez arrêter quand vous voulez. Si un seul chantier obtenu grâce à la page rembourse, ça vaut le coup. Je ne peux pas vous promettre ce chiffre. Qu'est-ce qui vous gêne le plus : le montant ou le mensuel ? »
 
 ## Liens (vérifiés actifs le 15 nov. 2026)
-- Pack page 500 € : https://buy.stripe.com/3cIbJ2diZ3kF9DF9W85EY0a (⚠ ce lien facture encore 595 € puis 49 €/mois : ne pas l'envoyer avant d'avoir recréé le lien à 500 € puis 29 €/mois dans Stripe)
-- Site complet 994 € : https://buy.stripe.com/bJeaEY7YF4oJ035d8k5EY0b
+- Pack page 500 € : https://buy.stripe.com/14AfZifr7dZj7vxc4g5EY0c (⚠ ce lien facture encore 500 € puis 29 €/mois : ne pas l'envoyer avant d'avoir recréé le lien à 500 € puis 29 €/mois dans Stripe)
+- Site complet 994 € : https://buy.stripe.com/8x23cwgvb1cx3fhgkw5EY0d
 
 ## Points à ne pas oublier
 - Je n'ai jamais livré de site de plusieurs pages : pour le site complet, je confirme le contenu précis par écrit dans le devis avant de prendre le paiement.

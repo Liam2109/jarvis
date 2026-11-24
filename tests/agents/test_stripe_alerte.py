@@ -20,12 +20,12 @@ class StripeAlerte(unittest.TestCase):
         self.envois = []; S.alerter_discord = lambda t: self.envois.append(t) or True
 
     def test_message_paiement(self):
-        self.assertEqual(S.message_paiement(CHARGES["data"][0]), "Nouveau paiement Stripe : 595 euros (Pack landing page)")
+        self.assertEqual(S.message_paiement(CHARGES["data"][0]), "Nouveau paiement Stripe : 500 euros (Pack landing page)")
 
     def test_paiement_simule_seulement_les_reussis(self):
         f = io.StringIO()
         with redirect_stdout(f): code = S.cmd_verifier({"envoi_automatique": True}, False)
-        self.assertEqual(code, 0); self.assertEqual(self.envois, ["Nouveau paiement Stripe : 595 euros (Pack landing page)"])
+        self.assertEqual(code, 0); self.assertEqual(self.envois, ["Nouveau paiement Stripe : 500 euros (Pack landing page)"])
         with redirect_stdout(io.StringIO()): S.cmd_verifier({"envoi_automatique": True}, False)
         self.assertEqual(len(self.envois), 1, "jamais deux fois le même paiement")
 

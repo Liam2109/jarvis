@@ -1,4 +1,4 @@
 {"data": [
- {"id": "ch_fixture_1", "amount": 59500, "currency": "eur", "paid": true, "status": "succeeded", "created": 1763370000, "description": "Pack landing page"},
+ {"id": "ch_fixture_1", "amount": 50000, "currency": "eur", "paid": true, "status": "succeeded", "created": 1763370000, "description": "Pack landing page"},
  {"id": "ch_fixture_2", "amount": 99400, "currency": "eur", "paid": false, "status": "failed", "created": 1763370100, "description": "Site complet"}
 ], "has_more": false}

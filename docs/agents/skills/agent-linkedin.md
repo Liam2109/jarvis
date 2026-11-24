@@ -30,7 +30,7 @@ Le texte du post, sur plusieurs lignes.
 Un lot de 14 = 7 `recrutement` + 7 `prospect`. Règles que la garde fait respecter (un post qui les viole est **refusé à l'import** avec sa raison, les autres sont gardés) :
 - **Ton** : vouvoiement, oral et direct. Jamais de tutoiement.
 - **Ni emoji, ni image, ni lien, ni e-mail, ni téléphone, ni `@`, ni accent grave.** Au plus 3 hashtags (le mieux : aucun). Entre 150 et 1 500 caractères.
-- **Aucun chiffre** hors : pack **595 €**, site complet **994 €**, **49 € par mois** (le mot « mois » dans la même proposition), commissions **15 %** pour les appelants et **10 %** pour les closers (le bon rôle dans la même proposition). Pas de date, pas de « 3 clients », pas de « en 48 h ». Le pack ne coûte pas 994 €, le site complet ne coûte pas 595 €.
+- **Aucun chiffre** hors : pack **500 €**, site complet **994 €**, **29 € par mois** (le mot « mois » dans la même proposition), commissions **15 %** pour les appelants et **10 %** pour les closers (le bon rôle dans la même proposition). Pas de date, pas de « 3 clients », pas de « en 48 h ». Le pack ne coûte pas 994 €, le site complet ne coûte pas 500 €.
 - **Aucun témoignage inventé**, aucune citation, pas de « nos clients » / « mes clients » ; **aucune page exemple présentée comme un client**.
 - **Aucune promesse de résultat ni de gain** (« garanti », « gagnez », « plus de clients », « revenu passif », « doubler »…).
 - **Aucune phrase interdite** : la liste `phrases_interdites` de `OFFRE-REFERENCE.json` (lue par la garde, jamais recopiée ici).

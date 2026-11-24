@@ -30,10 +30,10 @@ class ResumeSid(unittest.TestCase):
 
     def test_message_sans_anciennes_valeurs(self):
         ok, a = S.stats_appels(self.conf, "2026-11-17", FauxDrive(FEUILLE))
-        t = S.message_resume("2026-11-17", ok, a, True, {"montants": {"EUR": 59500}, "paiements": 1, "partiel": False})
+        t = S.message_resume("2026-11-17", ok, a, True, {"montants": {"EUR": 50000}, "paiements": 1, "partiel": False})
         for v in REF["resultats_appel"]: self.assertIn(v, t)
         for v in REF["resultats_anciens"]: self.assertNotIn(v, t)
-        self.assertIn("595 euros", t)
+        self.assertIn("500 euros", t)
 
     def test_aucun_chiffre_invente(self):
         S.APPELS_SID_ETAT.write_text("{}", encoding="utf-8")

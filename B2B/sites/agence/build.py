@@ -203,8 +203,8 @@ def accueil():
       <p class="intro">Le prix est annoncé ici, avant tout paiement. La TVA applicable est précisée au moment du paiement.</p>
       <div class="card offre">
         <h3>Pack tout compris</h3>
-        <p class="prix">595 €</p>
-        <p class="sous">Une fois, puis 49 €/mois.</p>
+        <p class="prix">500 €</p>
+        <p class="sous">Une fois, puis 29 €/mois.</p>
         <ul class="checks">
           <li>{ICO["ok"]}<span>Le site : 1 page adaptée au téléphone, votre métier, votre ville, vos services, votre zone</span></li>
           <li>{ICO["ok"]}<span>Le nom de domaine, réservé avec vous, à votre nom</span></li>

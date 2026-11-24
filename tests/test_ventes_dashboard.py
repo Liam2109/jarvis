@@ -27,12 +27,12 @@ class Doublure:
 
 res = {"Pas de réponse": 5, "À rappeler": 2, "RDV pris": 1, "Je dois réfléchir": 3}
 v = AJ.ventes(QUAND, Doublure((True, {"multi": True, "feuilles": [{}, {}], "resultats": res, "Appelé": 11, "a_rappeler": [{"entreprise": "Boulangerie Secrète", "note": "x"}]}),
-                              (True, {"montants": {"EUR": 59500}, "paiements": 1, "partiel": False})))
+                              (True, {"montants": {"EUR": 50000}, "paiements": 1, "partiel": False})))
 c = {x["cle"]: x for x in v["chiffres"]}
 verifier(c["appels"]["valeur"] == 11 and "2 feuilles" in c["appels"]["detail"], "appels notés par Sid : 11 sur 2 feuilles")
 verifier(c["chauds"]["valeur"] == 5, "leads chauds = À rappeler + Je dois réfléchir")
 verifier(c["rdv"]["valeur"] == 1, "rendez-vous pris")
-verifier(c["paiements"]["valeur"] == 1 and "595 euros" in c["paiements"]["detail"], "paiements Stripe du jour")
+verifier(c["paiements"]["valeur"] == 1 and "500 euros" in c["paiements"]["detail"], "paiements Stripe du jour")
 verifier("Boulangerie Secrète" not in json.dumps(v, ensure_ascii=False), "aucun nom d'entreprise dans ventes.json")
 verifier(("candidatures" in c) == (AJ.AGENTS / "alerte-candidatures.py").exists() and c.get("candidatures", {"valeur": None})["valeur"] is None, "candidatures : ligne seulement si l'agent existe, jamais un chiffre inventé")
 

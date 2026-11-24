@@ -1,5 +1,5 @@
 # Devis type, appel de 15 minutes et objections
-Brouillon du 26 oct. 2026, mis à jour le 24 nov. 2026 (offre 500 € ou 994 € puis 29 €/mois, tarification du 23/11 ; les liens Stripe facturent encore 595 € / 49 €/mois, premier mois offert, domaine inclus). Aucun lien de paiement Stripe n'est créé. Les points marqués **[à confirmer]** sont des propositions, pas des faits.
+Brouillon du 26 oct. 2026, mis à jour le 24 nov. 2026 (offre 500 € ou 994 € puis 29 €/mois, tarification du 23/11 , premier mois offert, domaine inclus). Aucun lien de paiement Stripe n'est créé. Les points marqués **[à confirmer]** sont des propositions, pas des faits.
 
 ## 1. Devis type : Landing page pro, 500 €
 **Émetteur :** Liam Emo, LM MULTI-SERVICES, SIRET [à compléter], téléphone [à compléter], e-mail [à compléter].
@@ -75,7 +75,7 @@ Principe : écouter, reconnaître l'objection, répondre avec des faits vérifia
 - Relancer quelqu'un qui a dit STOP ou « non » clairement.
 
 ## 4. À valider par Liam (ordre)
-1. ~~Prix et contenu des options : e-mail pro, différence 29 € / 49 €~~ : résolu le 10 nov. 2026, pack unique 49 €/mois tout compris (site, domaine, e-mail pro, hébergement, maintenance).
+1. ~~Prix et contenu des options (e-mail pro)~~ : résolu le 23/11/2026, abonnement unique 29 €/mois tout compris (site, domaine, e-mail pro, hébergement, maintenance).
 2. Délai de livraison et durée d'engagement de la maintenance.
 3. ~~Schéma de paiement~~ : résolu le 14/11/2026, paiement en une fois avec le lien du prix complet.
 4. Mention de TVA et texte juridique de rétractation (relecture).

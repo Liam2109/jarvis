@@ -16,7 +16,7 @@ def sortie(**k):
 
 VALIDES = [
     sortie(),
-    sortie(constat="1 paiement de 595 € encaissé aujourd'hui.", agent_cible="jarvis-ceo", decision="Prévenir Liam.", action="Poster le résumé du soir sur Discord.",
+    sortie(constat="1 paiement de 500 € encaissé aujourd'hui.", agent_cible="jarvis-ceo", decision="Prévenir Liam.", action="Poster le résumé du soir sur Discord.",
            justification="Un paiement est arrivé."),
     sortie(constat="4 « Trop cher » et 3 RDV pris.", decision="Proposer à Liam d'envoyer le devis aux 3 RDV.", agent_cible="devis",
            action="Écrire les brouillons de devis dans B2B/a-valider pour validation.", engage_liam=True, justification="Les devis engagent Liam."),
