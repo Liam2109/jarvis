@@ -156,6 +156,42 @@ def main():
         verifier("écriture dans entrees refusée", r.returncode == 2 and "entrees" in r.stderr)
         verifier("vidéo d'origine toujours intacte", sha(video) == h_avant)
 
+        # 8. photos JPG/PNG : recadrage direct, une miniature par photo, dossier accepté, originaux intacts
+        photos = tmp / "photos"
+        photos.mkdir()
+        cv2.imwrite(str(photos / "a.jpg"), image_factice(1920, 1080, True, False))
+        cv2.imwrite(str(photos / "b.png"), image_factice(1000, 1500, True, False))  # portrait
+        h_photos = {p.name: sha(p) for p in photos.iterdir()}
+        so2 = tmp / "sorties-photos"
+        base = ["--texte", "SITE WEB ZERO", "--sorties", str(so2), "--visage", "0.14,0.23,0.28,0.44", "--cote", "gauche"]
+        r = lancer([str(photos / "a.jpg")] + base)
+        verifier("une photo : miniature.jpg", r.returncode == 0 and (so2 / "a" / "miniature.jpg").is_file(), r.stderr.strip()[:200])
+        r = lancer([str(photos)] + base + ["--nom", "lot"])
+        lot = so2 / "lot"
+        verifier("dossier de photos : une miniature par photo",
+                 r.returncode == 0 and (lot / "miniature-a.jpg").is_file() and (lot / "miniature-b.jpg").is_file()
+                 and not (lot / "miniature.jpg").exists(), r.stderr.strip()[:200])
+        for f in (so2 / "a" / "miniature.jpg", lot / "miniature-a.jpg", lot / "miniature-b.jpg"):
+            if f.is_file():
+                with Image.open(f) as im:
+                    ok_im = im.size == (1280, 720) and im.format == "JPEG"
+                verifier(f"{f.name} 1280x720 JPEG sous 2 Mo", ok_im and f.stat().st_size < 2_000_000)
+        r = lancer([str(photos / "a.jpg"), str(photos / "b.png")] + base + ["--nom", "deux", "--titre", "Je CRÉE un SITE WEB"])
+        verifier("deux fichiers + titre : miniatures et textes dans le même dossier",
+                 r.returncode == 0 and (so2 / "deux" / "miniature-b.jpg").is_file() and (so2 / "deux" / "titre.txt").is_file())
+        r = lancer([str(photos / "a.jpg"), "--texte", "SITE WEB ZERO", "--sorties", str(photos)])
+        verifier("écriture dans le dossier des photos refusée", r.returncode == 2)
+        verifier("photos d'origine intactes", {p.name: sha(p) for p in photos.iterdir()} == h_photos)
+        # géométrie : visage (boîte noire) à droite -> centre à 2/3, photo non étirée, rien de blanc hors cadre
+        cadre = np.full((1080, 1920, 3), 255, np.uint8)
+        cv2.rectangle(cadre, (1300, 300), (1500, 560), (0, 0, 0), -1)
+        comp, cote, _ = ytmin.composer_photo(cadre, (1300, 300, 200, 260))
+        arr = np.asarray(comp).astype(int)
+        sombre = np.argwhere(arr.sum(axis=2) < 30)
+        cx = sombre[:, 1].mean() if len(sombre) else -1
+        verifier("photo : visage à droite, centré à environ un tiers du bord",
+                 cote == "droite" and abs(cx - 2 * 1280 / 3) < 40, f"x = {cx:.0f}")
+
     print()
     print("TOUT EST VERT" if not ECHECS else f"{len(ECHECS)} ECHEC(S) : {', '.join(ECHECS)}")
     return 1 if ECHECS else 0

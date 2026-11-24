@@ -3,12 +3,18 @@
 est visible, choisit la meilleure (ou celle que Liam indique), compose la miniature 1280x720 et écrit
 titre.txt, description.txt, miniature.jpg dans un dossier par vidéo.
 
+Accepte aussi des photos JPG/PNG (un ou plusieurs fichiers, ou un dossier) : pas d'extraction d'images,
+recadrage direct en 16:9, visage à environ un tiers du cadre. Une seule photo = miniature.jpg ; plusieurs =
+miniature-<nom de la photo>.jpg, toutes dans le même dossier de sortie.
+
 Dépendances (gratuites) : Pillow, opencv-python-headless (version 4.x : la 5.x n'a plus de détecteur de visage).
-Ne modifie jamais la vidéo ni les images d'origine : la vidéo est seulement lue.
+Ne modifie jamais la vidéo ni les photos d'origine : elles sont seulement lues.
 
 Exemples :
   python outils\\youtube-miniature.py --candidats-seulement                    (dernière vidéo de youtube\\entrees)
   python outils\\youtube-miniature.py ma-video.mp4 --texte "SITE WEB 0 EURO" --cle SITE --titre "..." [--choix 2]
+  python outils\\youtube-miniature.py photo1.jpg photo2.png --texte "SITE WEB 0 EURO" --nom defi
+  python outils\\youtube-miniature.py C:\\photos\\defi --texte "SITE WEB 0 EURO"      (dossier de photos et/ou vidéos)
 """
 import argparse
 import os
@@ -19,7 +25,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont, ImageOps
 
 LARG, HAUT = 1280, 720
 JAUNE = (255, 212, 0)
@@ -27,6 +33,7 @@ BLANC = (255, 255, 255)
 NOIR = (0, 0, 0)
 MAX_OCTETS = 1_900_000  # sous 2 Mo avec marge
 EXT_VIDEO = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v", ".wmv"}
+EXT_PHOTO = {".jpg", ".jpeg", ".png"}
 RACINE = Path(__file__).resolve().parent.parent
 DOSSIER_ENTREES = RACINE / "youtube" / "entrees"
 DOSSIER_SORTIES = RACINE / "youtube" / "sorties"
@@ -205,6 +212,10 @@ def composer_image(img_bgr, boite, cote=None):
     couche = Image.new("RGB", (LARG, HAUT))
     couche.paste(av, (ox, oy))
     canvas = Image.composite(couche, fond, masque)
+    return _finition(canvas, cote), cote, connu
+
+
+def _finition(canvas, cote):
     canvas = ImageEnhance.Contrast(canvas).enhance(1.08)
     canvas = ImageEnhance.Color(canvas).enhance(1.12)
     # dégradé sombre côté texte, pour la lisibilité
@@ -212,7 +223,40 @@ def composer_image(img_bgr, boite, cote=None):
     a = np.clip((xs - 0.35) / 0.65, 0, 1) if cote == "gauche" else np.clip((0.65 - xs) / 0.65, 0, 1)
     a = (a * 0.5)[None, :, None]
     arr = np.asarray(canvas, dtype=np.float32) * (1 - a)
-    return Image.fromarray(arr.astype(np.uint8)), cote, connu
+    return Image.fromarray(arr.astype(np.uint8))
+
+
+def composer_photo(img_bgr, boite, cote=None):
+    """Photo : recadrage direct en 16:9 (pas de fond flou), visage à ~ un tiers du cadre.
+    Renvoie (image RGB 1280x720, cote, visage_connu). Le cadre est toujours rempli par la photo."""
+    h0, l0 = img_bgr.shape[:2]
+    connu = boite is not None
+    if boite is None:
+        hh = int(0.22 * h0)
+        boite = (int(l0 / 2 - hh / 2), int(0.28 * h0), hh, hh)
+    x, y, w, h = boite
+    cx, cy = x + w / 2.0, y + h / 2.0
+    if cote not in ("gauche", "droite"):
+        cote = "gauche" if cx < l0 / 2 else "droite"
+    cible_x = LARG / 3.0 if cote == "gauche" else 2 * LARG / 3.0
+    cible_y = HAUT * 0.46
+    couvre = max(LARG / float(l0), HAUT / float(h0))
+    s = max(couvre, min(3.0, 0.42 * HAUT / float(h)))
+    fw, fh = max(LARG, round(l0 * s)), max(HAUT, round(h0 * s))
+    rgb = Image.fromarray(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)).resize((fw, fh), Image.LANCZOS)
+    ox = min(0, max(LARG - fw, round(cible_x - cx * s)))
+    oy = min(0, max(HAUT - fh, round(cible_y - cy * s)))
+    return _finition(rgb.crop((-ox, -oy, -ox + LARG, -oy + HAUT)), cote), cote, connu
+
+
+def lire_photo(chemin):
+    """Photo JPG/PNG -> tableau BGR (orientation EXIF respectée). Le fichier n'est que lu."""
+    try:
+        with Image.open(chemin) as im:
+            im = ImageOps.exif_transpose(im).convert("RGB")
+            return cv2.cvtColor(np.asarray(im), cv2.COLOR_RGB2BGR)
+    except Exception as e:
+        raise Erreur(f"photo illisible : {chemin} ({e})")
 
 
 def valider_texte(texte, cle):
@@ -308,9 +352,82 @@ def _dans(chemin, parent):
         return False
 
 
+def collecter(entrees):
+    """Fichiers vidéo/photo à traiter : fichiers donnés et contenu (non récursif) des dossiers donnés."""
+    fichiers = []
+    for e in entrees:
+        p = Path(e)
+        if p.is_dir():
+            sous = sorted(f for f in p.iterdir() if f.is_file() and f.suffix.lower() in EXT_VIDEO | EXT_PHOTO)
+            if not sous:
+                raise Erreur(f"aucune photo ni vidéo dans le dossier : {p}")
+            fichiers += sous
+        elif p.is_file():
+            if p.suffix.lower() not in EXT_VIDEO | EXT_PHOTO:
+                raise Erreur(f"format non pris en charge : {p.name} (photos JPG/PNG ou vidéos)")
+            fichiers.append(p)
+        else:
+            raise Erreur(f"fichier ou dossier introuvable : {p}")
+    vus, uniques = set(), []
+    for f in fichiers:
+        r = f.resolve()
+        if r not in vus:
+            vus.add(r)
+            uniques.append(f)
+    return uniques
+
+
+def traiter_photos(photos, nom, a, sorties):
+    """Une miniature par photo dans sorties\\<nom> : miniature.jpg si une seule, sinon miniature-<photo>.jpg."""
+    if a.candidats_seulement:
+        print("Photos : pas de candidats à extraire (rien à faire avec --candidats-seulement).")
+        return
+    if not a.texte:
+        raise Erreur("--texte est obligatoire pour composer la miniature")
+    mots, i_cle = valider_texte(a.texte, a.cle)
+    boite_forcee = None
+    if a.visage:
+        try:
+            boite_forcee = [float(v) for v in a.visage.split(",")]
+            if len(boite_forcee) != 4:
+                raise ValueError
+        except ValueError:
+            raise Erreur("--visage attend X,Y,L,H (4 nombres entre 0 et 1)")
+    dossier = sorties / nom
+    dossier.mkdir(parents=True, exist_ok=True)
+    pris = set()
+    for photo in photos:
+        img = lire_photo(photo)
+        h0, l0 = img.shape[:2]
+        if boite_forcee:
+            fx, fy, fl, fh = boite_forcee
+            boite = (int(fx * l0), int(fy * h0), int(fl * l0), int(fh * h0))
+        else:
+            visages = detecter_visages(img)
+            boite = visages[0] if visages else None
+        comp, cote, connu = composer_photo(img, boite, a.cote)
+        taille = dessiner_texte(comp, mots, i_cle, cote)
+        if len(photos) == 1:
+            sortie = dossier / "miniature.jpg"
+        else:
+            base, n = f"miniature-{_slug(photo.stem)}", 2
+            fichier = base
+            while fichier in pris:
+                fichier, n = f"{base}-{n}", n + 1
+            pris.add(fichier)
+            sortie = dossier / f"{fichier}.jpg"
+        octets, q = exporter_jpg(comp, sortie)
+        print(f"Photo : {photo} -> {sortie} ({LARG}x{HAUT}, {octets / 1e6:.2f} Mo, qualité {q}, police {taille} px, "
+              f"visage à {cote}{'' if connu else ' ; ATTENTION visage non détecté, position supposée (utiliser --visage et --cote)'})")
+    if a.titre:
+        ecrire_textes(dossier, a.titre, a.resume)
+        print(f"Textes : {dossier / 'titre.txt'}, {dossier / 'description.txt'}")
+
+
 def principal(argv=None):
     ap = argparse.ArgumentParser(description="Miniature YouTube de Liam")
-    ap.add_argument("video", nargs="?", help="chemin de la vidéo (sinon : la plus récente de youtube\\entrees)")
+    ap.add_argument("entrees", nargs="*", help="vidéos et/ou photos JPG/PNG, ou dossiers (sinon : la vidéo la plus "
+                                               "récente de youtube\\entrees)")
     ap.add_argument("--texte", help="3 ou 4 mots pour la miniature")
     ap.add_argument("--cle", help="le mot du texte à mettre en jaune (sinon : le plus long)")
     ap.add_argument("--titre", help="titre de la vidéo (écrit dans titre.txt)")
@@ -325,17 +442,34 @@ def principal(argv=None):
     ap.add_argument("--dossier-candidats", help="dossier parent des candidats (défaut : youtube\\candidats)")
     a = ap.parse_args(argv)
 
-    video = Path(a.video) if a.video else _derniere_video()
-    if not video.is_file():
-        raise Erreur(f"vidéo introuvable : {video}")
-    nom = _slug(a.nom or video.stem)
+    fichiers = collecter(a.entrees) if a.entrees else [_derniere_video()]
+    videos = [f for f in fichiers if f.suffix.lower() in EXT_VIDEO]
+    photos = [f for f in fichiers if f.suffix.lower() in EXT_PHOTO]
     sorties = Path(a.sorties) if a.sorties else DOSSIER_SORTIES
     cands = Path(a.dossier_candidats) if a.dossier_candidats else DOSSIER_CANDIDATS
-    for d in (sorties, cands):
-        if _dans(d, video.parent) or _dans(d, DOSSIER_ENTREES):
-            raise Erreur("jamais d'écriture dans le dossier de la vidéo ni dans youtube\\entrees (entrees) : "
-                         "choisir un autre dossier de sortie")
+    for f in fichiers:
+        for d in (sorties, cands):
+            if _dans(d, f.parent) or _dans(d, DOSSIER_ENTREES):
+                raise Erreur("jamais d'écriture dans le dossier d'une vidéo ou d'une photo ni dans youtube\\entrees "
+                             "(entrees) : choisir un autre dossier de sortie")
 
+    for video in videos:
+        seule = len(videos) == 1 and not photos
+        traiter_video(video, _slug(a.nom or video.stem) if seule else _slug(video.stem), a, sorties, cands)
+    if photos:
+        if a.nom:
+            nom = _slug(a.nom)
+        elif len(photos) == 1:
+            nom = _slug(photos[0].stem)
+        elif len(a.entrees) == 1 and Path(a.entrees[0]).is_dir():
+            nom = _slug(Path(a.entrees[0]).resolve().name)
+        else:
+            nom = "photos"
+        traiter_photos(photos, nom, a, sorties)
+    return 0
+
+
+def traiter_video(video, nom, a, sorties, cands):
     print(f"Vidéo : {video}")
     candidats, trouve = extraire_candidats(video, nb=max(1, a.nb))
     chemins = enregistrer_candidats(candidats, cands / nom)
