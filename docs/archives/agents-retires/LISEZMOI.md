@@ -11,3 +11,9 @@ Rien n'est supprimé : tout l'historique est dans git. Les fiches Obsidian rang�
 - **linkedin** : remplacé par `linkedin-equipe` (lot du jour dans le tableau de bord, Liam envoie lui-même).
 - **vente-relances** : doublon de `relances` (le rappel « À rappeler aujourd'hui » à 08:00), jamais construit.
 - **registre** : fichier de données du registre des entreprises (`B2B/agents/registre.py`), pas un agent ; il n'a pas de fiche.
+
+## Agents rangés par le gardien (hebdomadaire) : restauration en 3 lignes
+1. `python B2B\agents\gardien.py restaurer <agent>` remet la fiche, la copie de skill et le lien (la liste est dans `gardien-archives.json`, `python B2B\agents\gardien.py etat`).
+2. Le contrat n'a jamais bougé : l'agent revient dans la page Architecture au prochain `python B2B\harness\architecture.py`.
+3. Pour qu'il tourne de nouveau : le remettre dans `agents_actifs` (réglage local) puis `tests\b2b-rapide.ps1`.
+

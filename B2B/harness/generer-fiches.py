@@ -25,6 +25,8 @@ CONTRATS, SKILLS = ICI / "contrats", RACINE / ".claude" / "skills"
 SORTIE = RACINE / "docs" / "agents"; COPIES = SORTIE / "skills"; NOMS_JSON = ICI / "fiches-noms.json"
 ARCHIVES = RACINE / "docs" / "archives" / "agents-retires"   # fiches ET copies de skills des agents retirés (dossier ignoré du coffre Obsidian)
 RETIRES = ("appels-liam", "vente-relances", "linkedin", "superviseur-sites", "superviseur-mail", "jarvis-vue")   # copies de skills rangées dans ARCHIVES le 24/11/2026 (sources .claude\\skills gardées)
+try: RETIRES += tuple(json.loads((RACINE / "docs" / "archives" / "agents-retires" / "gardien-archives.json").read_text(encoding="utf-8")))   # agents rangés par le gardien (restaurables)
+except (OSError, ValueError): pass
 TACHES = RACINE / "B2B" / "agents" / "serveur-taches.json"
 DEBUT, FIN = "<!-- GENERE:DEBUT (régénéré par python B2B\\harness\\generer-fiches.py : ne pas modifier) -->", "<!-- GENERE:FIN -->"
 DYN_D, DYN_F = "<!-- DYNAMIQUE:DEBUT -->", "<!-- DYNAMIQUE:FIN -->"

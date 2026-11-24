@@ -112,7 +112,7 @@ assert not re.search(r"^\s*(import|from)\s+(selenium|playwright|pyppeteer)", src
 
 # ---------- 6) tâches du serveur (serveur-taches.json) : cohérence ----------
 T = json.loads((ICI / "serveur-taches.json").read_text(encoding="utf-8"))["agents"]
-assert set(T) == {"appels-sid", "appels-liam", "devis", "rendez-vous", "reponses", "prospection", "resume-sid", "stripe-alerte", "panne-alerte", "surveillant", "nettoyage-fichiers", "sauvegarde-leads",
+assert set(T) == {"appels-sid", "appels-liam", "devis", "rendez-vous", "reponses", "prospection", "resume-sid", "stripe-alerte", "panne-alerte", "surveillant", "nettoyage-fichiers", "gardien", "sauvegarde-leads",
                   "alerte-candidatures", "relances", "interim", "chiffres-serveur",
                   "superviseur-vente", "superviseur-prospection", "superviseur-sites", "superviseur-mail", "jarvis-vue", "linkedin", "linkedin-equipe", "cerveau"}, sorted(T)   # équipe Vidéos TikTok archivée le 24/11/2026 (docsrchivesideo-tiktok)
 assert T["nettoyage-fichiers"]["heure"] == "03:00" and T["nettoyage-fichiers"]["commandes"] == [["nettoyer"]]   # nettoyage des traces et du journal de plus de 30 jours (15/11/2026)

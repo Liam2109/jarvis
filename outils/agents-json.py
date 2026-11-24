@@ -189,7 +189,11 @@ def documents():
         t = re.sub(r"^---.*?---\s*", "", p.read_text(encoding="utf-8-sig"), flags=re.S)
         titre = next((l.lstrip("# ").strip() for l in t.splitlines() if l.startswith("#")), p.stem)
         decisions.append({"titre": titre, "texte": "\n".join(l for l in t.splitlines() if not l.startswith("#")).strip()})
-    return {"a_faire": sections_md(b2b / "TODO-B2B.md"), "journal": journal_b2b, "decisions": decisions, "idees": sections_md(b2b / "IDEES-MASTER.md")}
+    try:      # page Architecture (24/11/2026) : générée depuis les contrats, tâches et traces par B2B\harness\architecture.py ; aucune donnée de prospect
+        sys.path.insert(0, str(RACINE / "B2B" / "harness")); import architecture as _ar
+        archi = _ar.construire(); archi.pop("mermaid", None)
+    except Exception: archi = None
+    return {"a_faire": sections_md(b2b / "TODO-B2B.md"), "journal": journal_b2b, "decisions": decisions, "idees": sections_md(b2b / "IDEES-MASTER.md"), "architecture": archi}
 
 
 def taches_windows():

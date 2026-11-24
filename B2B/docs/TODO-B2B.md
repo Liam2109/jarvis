@@ -68,5 +68,9 @@ _Mise à jour : 24 nov. 2026 (le fait est supprimé ; l'historique est dans le j
 - [ ] Connecteur d'écoute de réunions : nom à donner par Liam, vérifier gratuité et accord des participants
 - [ ] Skills du catalogue Claude : Liam colle les noms
 
+## Gardien de l'architecture
+- [ ] Dire « go gardien » : mettre `go_gardien` à true dans `B2B\agents\gardien-config.local.json`, ajouter `gardien` à agents_actifs, puis `envoi_automatique` à true si le rapport doit partir sur Discord (la tâche est dimanche 21:00)
+- [ ] Premier rapport : retirer `appels-liam` de agents_actifs s'il y est encore, décider pour `linkedin-equipe` (planifié, jamais passé) et le contrat de `sauvegarde-leads` (lit appels-liam-etat.json, retiré)
+
 ## Pas prioritaire
 - [ ] Désactiver dans Stripe les anciens liens de paiement (pack 595 € et site complet à 49 €/mois), à faire par Liam ; ne pas les envoyer. Déployer les vitrines avec le nouveau prix (500 € + 29 €/mois), seulement quand un prospect visite le site agence.

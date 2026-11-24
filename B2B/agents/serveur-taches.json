@@ -146,6 +146,16 @@
       ],
       "heure": "03:30"
     },
+    "gardien": {
+      "script": "gardien.py",
+      "commandes": [
+        [
+          "passage"
+        ]
+      ],
+      "heure": "21:00",
+      "jours": [6]
+    },
     "nettoyage-fichiers": {
       "script": "nettoyage-fichiers.py",
       "commandes": [

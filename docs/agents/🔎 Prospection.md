@@ -76,14 +76,14 @@ Trouver des entreprises locales, préparer les lots d'e-mails, les soumettre à 
 **Derniers résultats de test (cette machine) :**
 - `B2B/agents/test_prospection.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** 2026-11-24 21:46 ok · **Dernière erreur :** 2026-11-24 17:41 jour (délai de 35 min dépassé) · **Dans agents_actifs (cette machine) :** oui
+**Dernière trace :** 2026-11-24 23:26 ok · **Dernière erreur :** 2026-11-24 17:41 jour (délai de 35 min dépassé) · **Dans agents_actifs (cette machine) :** oui
 
 ### Historique (5 dernières traces, sans données client)
-- 2026-11-24 21:46 | jour | ok | 11.9 s
-- 2026-11-24 21:36 | jour | ok | 11.67 s
-- 2026-11-24 21:26 | jour | ok | 12.19 s
-- 2026-11-24 21:16 | jour | ok | 12.65 s
-- 2026-11-24 21:07 | jour | ok | 12.86 s
+- 2026-11-24 23:26 | jour | ok | 11.94 s
+- 2026-11-24 23:16 | jour | ok | 12.23 s
+- 2026-11-24 23:06 | jour | ok | 14.37 s
+- 2026-11-24 22:56 | jour | ok | 11.75 s
+- 2026-11-24 22:46 | jour | ok | 11.78 s
 <!-- DYNAMIQUE:FIN -->
 
 ## Skill et règles

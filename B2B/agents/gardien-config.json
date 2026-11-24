@@ -1,0 +1,7 @@
+{
+  "go_gardien": false,
+  "envoi_automatique": false,
+  "jours_silence": 14,
+  "jours_archive": 30,
+  "_aide": "Gardien : go_gardien reste false ici ; il passe à true dans la variante LOCALE (gardien-config.local.json, hors git) après le « go gardien » de Liam, EN PLUS du verrou commun superviseurs-config. envoi_automatique : false = rapport affiché, pas posté. Pour l'activer : ajouter « gardien » à agents_actifs."
+}

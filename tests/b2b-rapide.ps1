@@ -14,6 +14,8 @@ Write-Host '6) Fiches Obsidian des agents : chaque contrat a sa note dans docs\a
 & $py.Source (Join-Path $Root 'B2B\harness\generer-fiches.py') --verifier; if ($LASTEXITCODE -ne 0) { $rouge++ }
 Write-Host '7) Graphe Obsidian : aucun lien cassé, liens vers les décisions identiques à git, une seule composante'
 & $py.Source (Join-Path $Root 'B2B\harness\graphe.py'); if ($LASTEXITCODE -ne 0) { $rouge++ }
+Write-Host '8) Architecture : agents, contrats, fiches, tâches serveur et carte du trajet du client à jour (règle d''ajout d''un agent)'
+& $py.Source (Join-Path $Root 'B2B\harness\architecture.py') --verifier; if ($LASTEXITCODE -ne 0) { $rouge++ }
 Write-Host ("Durée : {0:N0} s" -f $sw.Elapsed.TotalSeconds)
 if ($rouge) { Write-Host "ROUGE : $rouge série(s) en échec." -ForegroundColor Red; exit 1 }
 Write-Host 'VERT : passe rapide B2B réussie.' -ForegroundColor Green; exit 0

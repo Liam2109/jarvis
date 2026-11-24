@@ -16,6 +16,9 @@ try {
     Write-Host '2) Contrats d''agents (contrat.schema.json)'
     $r = Py @((Join-Path $Root 'B2B\harness\valider.py'))
     Verifier ($r.code -eq 0) (($r.sortie -split "`n" | Where-Object { $_ -match 'contrats :|ECHEC' }) -join ' ').Trim()
+    Write-Host '2b) Architecture (règle d''ajout : contrat, fiche, tâche, carte à jour)'
+    $r = Py @((Join-Path $Root 'B2B\harness\architecture.py'), '--verifier')
+    Verifier ($r.code -eq 0) (($r.sortie -split "`n" | Where-Object { $_ -match 'architecture :|ECHEC' }) -join ' ').Trim()
     Write-Host '3) Tests d''agents (garde, appels-sid, résumé du soir, stripe-alerte, alertes de panne, rendez-vous, sorties de Jarvis CEO)'
     foreach ($t in Get-ChildItem (Join-Path $PSScriptRoot 'agents') -Filter 'test_*.py' | Sort-Object Name) {
         $sw = [Diagnostics.Stopwatch]::StartNew(); $r = Py @($t.FullName)

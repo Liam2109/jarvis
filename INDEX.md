@@ -17,6 +17,7 @@ Lire ce fichier, puis **seulement** la note du sujet en cours (jamais tous les d
 | Journal du jour / mémoire de Jarvis | `logs\journal-AAAA-MM-JJ.md` · `memoire\todo.md`, `notes.md`, `resume.md` |
 | Agence B2B : règles permanentes, style des sites, ressources PC | B2B/CLAUDE |
 | Agence B2B : comment les agents s'enchaînent (trajet client, maillons manquants) | `docs\COMMENT-CA-MARCHE.md` |
+| Agence B2B : carte générée du trajet client, fiches de 3 lignes, gardien hebdomadaire | `docs\COMMENT-CA-MARCHE.md` (blocs générés) · `B2B\harness\architecture.py` · `B2B\agents\gardien.py` · page « Architecture » du tableau de bord |
 | Agence B2B : architecture des agents | ARCHITECTURE-AGENT-B2B |
 | Agence B2B : contexte, offres, prix, décisions | MEMOIRE-B2B · à faire : TODO-B2B · journal : JOURNAL-B2B · idées : IDEES-MASTER |
 | Rendez-vous, devis, objections, liens de paiement | KIT-RDV-15MIN · DEVIS-ET-OBJECTIONS · liens-paiement |

@@ -1,0 +1,50 @@
+{
+ "_aide": "Contrat du gardien de l'architecture (24/11/2026).",
+ "nom": "gardien",
+ "responsable": "Jarvis (CEO)",
+ "mission": "Chaque dimanche 21:00 : vérifie agents, fiches, liens et échanges de fichiers ; corrige seul le réversible, archive l'inutile, attend le « go » pour tout envoi.",
+ "statut": "inactif",
+ "script": "B2B/agents/gardien.py",
+ "jours": [
+  6
+ ],
+ "heures": {
+  "debut": "21:00",
+  "fin": "23:59"
+ },
+ "fichiers_lus": [
+  "B2B/harness/contrats/*.json",
+  "B2B/agents/serveur-taches.json",
+  "B2B/logs/agents (traces)",
+  "docs/agents/*.md (liens)",
+  "B2B/harness/fiches-noms.json"
+ ],
+ "fichiers_ecrits": [
+  "B2B/agents/gardien-etat.json",
+  "B2B/agents/gardien-journal.log",
+  "docs/COMMENT-CA-MARCHE.md",
+  "docs/agents/*.md (fiches générées, liens cassés)",
+  "docs/archives/agents-retires/gardien-archives.json",
+  "B2B/a-valider/AAAA-MM-JJ-gardien.md"
+ ],
+ "canaux_discord": [
+  "alertes"
+ ],
+ "envoi_client": false,
+ "actions_interdites": [
+  "écrire à un prospect, publier, encaisser ou signer",
+  "modifier envoi_automatique ou un réglage d'envoi (aucun fichier de réglages n'est écrit)",
+  "relancer ou archiver un agent qui envoie à un prospect",
+  "réécrire un lien vers docs/decisions",
+  "supprimer définitivement un agent (archive seulement)",
+  "afficher un secret"
+ ],
+ "plafonds": {
+  "messages_par_jour": 1
+ },
+ "peut_engager": false,
+ "alerte_si_silence": null,
+ "tests": [
+  "tests/agents/test_gardien.py"
+ ]
+}

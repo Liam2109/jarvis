@@ -213,6 +213,12 @@
   .rang .qui b { display: block; font-weight: 500; } .rang .qui span { display: block; color: var(--faible); font-size: 13px; line-height: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .etat { font-size: 13px; } .etat.place { color: var(--bleu); font-weight: 500; } .etat.desactive { color: var(--faible); } .etat.construire { color: var(--doux); text-decoration: underline dotted; text-underline-offset: 3px; }
   .lien-fichier { display: inline-flex; margin: 0 0 16px; }
+  .archi-chaine { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 0; padding: 16px 8px; }
+  .archi-noeud { padding: 8px 12px; border: 1.5px solid var(--bleu); border-radius: 10px; font-size: 13px; line-height: 18px; text-align: center; max-width: 120px; }
+  .archi-noeud.manque { border-style: dashed; border-color: var(--ocre); color: var(--ocre); }
+  .archi-lien { width: 28px; border-top: 2px solid var(--bleu); } .archi-lien.manque { border-top: 2px dashed var(--ocre); }
+  .archi-ag { padding: 12px 8px; border-top: 1px solid var(--ligne); } .archi-ag h3 { font-size: 15px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .archi-ag ul { margin: 4px 0 0 18px; color: var(--doux); font-size: 13px; line-height: 20px; } .archi-ag .e-erreur, .archi-ag .e-silencieux { color: #B3261E; } .archi-ag .e-jamais { color: var(--ocre); }
 
   @media (max-width: 1180px) { .chiffres { grid-template-columns: repeat(2, minmax(0, 1fr)); } .chiffre:last-child:nth-child(odd) { grid-column: span 2; } .trois { grid-template-columns: 1fr 1fr; } .stat-ligne { grid-template-columns: repeat(2, minmax(0, 1fr)); } .stat-ligne li:last-child:nth-child(odd) { grid-column: span 2; } }
   @media (max-width: 760px) {
@@ -285,10 +291,11 @@
     candidatures: '<circle cx="8" cy="5" r="2.5"/><path d="M3 14a5 5 0 0 1 10 0"/>',
     stats: '<path d="M2.5 13.5h11M4.5 11V8M8 11V4M11.5 11V6.5"/>',
     linkedin: '<rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5 7v4M5 5v.01M8 11V7m0 2a2 2 0 0 1 4 0v2"/>',
+    architecture: '<rect x="1.5" y="2" width="4" height="4" rx="1"/><rect x="10.5" y="2" width="4" height="4" rx="1"/><rect x="6" y="10" width="4" height="4" rx="1"/><path d="M5.5 4h5M3.5 6v2.5h4.5V10M12.5 6v2.5H8V10"/>',
     cerveau: '<path d="M6 2.5a2.5 2.5 0 0 0-2.5 2.5A2.5 2.5 0 0 0 2 7.5 2.5 2.5 0 0 0 3.5 10 2.5 2.5 0 0 0 6 13.5h4a2.5 2.5 0 0 0 2.5-3.5A2.5 2.5 0 0 0 14 7.5 2.5 2.5 0 0 0 12.5 5 2.5 2.5 0 0 0 10 2.5H6zM8 3v10"/>',
     potentiel: '<ellipse cx="8" cy="4.5" rx="5" ry="2"/><path d="M3 4.5v3.5c0 1.1 2.2 2 5 2s5-.9 5-2V4.5M3 8v3.5c0 1.1 2.2 2 5 2s5-.9 5-2V8"/>'
   };
-  var VUES = [["jour", "Aujourd'hui"], ["stats", "Statistiques"], ["agents", "Agents"], ["docs", "Documents"], ["linkedin", "LinkedIn"], ["cerveau", "Cerveau"]];
+  var VUES = [["jour", "Aujourd'hui"], ["stats", "Statistiques"], ["agents", "Agents"], ["architecture", "Architecture"], ["docs", "Documents"], ["linkedin", "LinkedIn"], ["cerveau", "Cerveau"]];
   var FICHIERS = { a_faire: "../B2B/docs/TODO-B2B.md", journal: "../B2B/docs/JOURNAL-B2B.md", idees: "../B2B/docs/IDEES-MASTER.md" };   // liens en lecture seule (le fichier tel quel, dans un nouvel onglet)
   var H = null, periode = "semaine", COCHES = { appels: true, chauds: true, devis: true, paiements: true };
   var DOCS = [["pipeline", "Pipeline"], ["sources", "Sources des chiffres"], ["a_faire", "À faire"], ["journal", "Journal"], ["decisions", "Décisions"], ["idees", "Idées"]];
@@ -657,6 +664,20 @@
     return h;
   }
   function cvBloc(t, meta, corps) { return '<section class="bloc verre lk-bloc"><div class="tete"><h2>' + t + '</h2><span class="meta">' + meta + "</span></div>" + corps + "</section>"; }
+  function vueArchitecture() {   // générée par architecture.py (docs.js) : contrats, tâches, traces ; rien n'est écrit à la main
+    var h = '<div class="tete"><h1>Architecture</h1>' + (D && D.architecture ? '<span class="meta">générée le ' + esc(D.architecture.genere_le) + " depuis les contrats, les tâches serveur et les traces</span>" : "") + "</div>";
+    var X = D && D.architecture;
+    if (!X) return h + '<div class="verre accueil-vide"><h2>Pas encore de données</h2><p>Double-cliquez sur l\'icône « Jarvis - Mon entreprise » du bureau pour générer la page.</p></div>';
+    var noeuds = X.noeuds || [], liens = X.liens || [];
+    h += '<section class="table-ag verre"><h2>Trajet d\'un client<span class="meta">trait plein = un fichier passe d\'un agent au suivant · pointillé = maillon manquant</span></h2><div class="archi-chaine">';
+    noeuds.forEach(function (n, i) { h += '<div class="archi-noeud' + (n.manque ? " manque" : "") + '">' + esc(n.label) + '<br><span class="meta">' + esc(n.agent ? n.statut : "aucun agent") + "</span></div>" + (i < liens.length ? '<span class="archi-lien' + (liens[i].plein ? "" : " manque") + '"></span>' : ""); });
+    h += "</div>" + ((X.manquants || []).length ? '<p class="meta">Maillons manquants : ' + esc(X.manquants.join(" ; ")) + "</p>" : "") + "</section>";
+    h += '<section class="table-ag verre"><h2>Agents<span class="num">' + (X.agents || []).length + "</span></h2>";
+    (X.agents || []).forEach(function (a) {
+      h += '<div class="archi-ag"><h3>' + esc(a.nom) + '<span class="meta e-' + esc(a.etat) + '">' + esc(a.etat_libelle) + '</span><span class="meta">' + esc(a.mode) + "</span></h3><ul>" + (a.fiche || []).map(function (l) { return "<li>" + esc(l) + "</li>"; }).join("") + "</ul></div>";
+    });
+    return h + "</section>";
+  }
   function vueCerveau() {
     var h = '<div class="tete"><h1>Cerveau</h1>' + (CV ? '<span class="meta">veille du ' + esc(dateLongue(CV.jour)) + " · il propose, vous décidez : rien ne remplace un script qui marche</span>" : "") + "</div>";
     if (!CV) return h + '<div class="verre accueil-vide"><h2>Pas encore de veille</h2><p>Le cerveau est fermé tant que vous n\'avez pas dit « go cerveau ». Une fois ouvert, il cherche chaque nuit sur le serveur (gratuit), puis Claude fait une seule passe par jour sur les 5 meilleures trouvailles. Depuis un autre PC, saisissez le secret du serveur une fois.</p><div class="boutons"><button class="bouton" data-secret="1">Saisir le secret du serveur</button></div></div>';
@@ -711,7 +732,7 @@
     $("nav").innerHTML = VUES.map(function (o) { return '<button data-vue="' + o[0] + '" aria-label="' + o[1] + '"' + (o[0] === vue ? ' aria-current="page"' : "") + ">" + svg(o[0]) + "<span>" + o[1] + "</span></button>"; }).join("");
     $("pied").textContent = V && V.genere_le ? "Données du " + V.genere_le.slice(8, 10) + "/" + V.genere_le.slice(5, 7) + " à " + V.genere_le.slice(11, 16) + ", relues toutes les 5 min" + retard() : "";
     var foc = document.activeElement && document.activeElement.id === "recherche", pos = foc ? document.activeElement.selectionStart : 0;
-    $("contenu").innerHTML = vue === "agents" ? vueAgents() : vue === "docs" ? vueDocs() : vue === "stats" ? vueStats() : vue === "linkedin" ? vueLinkedin() : vue === "cerveau" ? vueCerveau() : vueJour();
+    $("contenu").innerHTML = vue === "agents" ? vueAgents() : vue === "docs" ? vueDocs() : vue === "stats" ? vueStats() : vue === "linkedin" ? vueLinkedin() : vue === "cerveau" ? vueCerveau() : vue === "architecture" ? vueArchitecture() : vueJour();
     bulle(null); if (vue === "stats") graphes();
     var s = $("recherche");
     if (s) { s.oninput = function () { recherche = s.value; rendre(); }; if (foc) { s.focus(); s.setSelectionRange(pos, pos); } }

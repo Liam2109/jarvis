@@ -4,6 +4,34 @@
 
 **Deux règles valables partout** : (1) un agent ne tourne sur le serveur que s'il a une ligne dans `B2B\agents\serveur-taches.json` *et* que Liam l'a mis dans `agents_actifs` (réglage propre à la machine, que je n'affiche jamais) ; la colonne « État » ci-dessous donne ce que dit le contrat du harness (`actif` / `simulation` = écrit mais n'envoie rien pour de vrai / `inactif` = fermé ou en attente d'un « go »). (2) Ce qui engage Liam (écrire à un client, encaisser, publier) n'est jamais fait par un agent sans son accord : message à valider sur Discord, ou fichier dans `B2B\a-valider\`.
 
+<!-- CARTE:DEBUT (généré par python B2B\harness\architecture.py : ne pas modifier) -->
+## Carte du trajet d'un client (générée)
+
+Trait plein = un fichier passe d'un agent au suivant ; **pointillé = maillon manquant** (aucun fichier échangé, ou agent seulement prévu).
+
+```mermaid
+flowchart LR
+  prospection["Prospection"]
+  appels["Appels"]
+  chauds["Leads chauds"]
+  rdv["Rendez-vous"]
+  devis["Devis"]
+  paiement["Paiement"]
+  production["Production du site"]:::manque
+  validation["Validation et mise en ligne"]:::manque
+  prospection --> appels
+  appels --> chauds
+  chauds -.-> rdv
+  rdv -.-> devis
+  devis -.-> paiement
+  paiement -.-> production
+  production -.-> validation
+  classDef manque stroke-dasharray: 5 5,stroke:#b45309,color:#b45309
+```
+
+Maillons manquants : Production du site : agent seulement prévu (contrat sans script) ; Validation et mise en ligne : aucun agent ; Leads chauds → Rendez-vous : aucun fichier échangé entre les deux ; Rendez-vous → Devis : aucun fichier échangé entre les deux ; Devis → Paiement : aucun fichier échangé entre les deux ; Paiement → Production du site : aucun fichier échangé entre les deux ; Production du site → Validation et mise en ligne : aucun fichier échangé entre les deux.
+<!-- CARTE:FIN -->
+
 ## Le trajet d'un client
 
 ```
@@ -86,6 +114,125 @@ Légende : **Auto** = tourne seul à heure fixe ou à cadence fixe ; **Humain** 
 | [[docs/agents/🧠 Jarvis (CEO)\|🧠 Jarvis (CEO)]] | Centre du graphe, valide les sorties des agents (`jarvis_sortie.py`) | Pas de script planifié |
 
 **Retirés (24/11/2026), rien n'est supprimé** : l'équipe vidéo / TikTok (superviseur, veille, scripts, marketing, création, monteur, publication, nettoyage, chaîne) est dans `docs\archives\video-tiktok` ; les autres dans `docs\archives\agents-retires` (voir son `LISEZMOI.md`). L'historique complet reste dans git.
+
+<!-- FICHES:DEBUT (généré par python B2B\harness\architecture.py : ne pas modifier) -->
+## Fiches de 3 lignes (générées)
+
+**alerte-candidatures**
+- Alerter Liam sur Discord à chaque candidature de call caller (brouillon de réponse joint, une relance à 2 h si non contacté) ; fermé jusqu'au « go alerte ».
+- Déclencheur : toutes les 5 min, plage tous les jours 00:00-24:00 · auto, puis humain · statut inactif
+- Lit : alerte-candidatures-config.json, google-candidatures-token.json · écrit : alerte-candidatures-etat.json · utilisé par : rien
+
+**appels-sid**
+- Créer chaque jour ouvré à 07:30 le tableur « Appels Sid AAAA-MM-JJ » de Sid, trié par créneau de 08:00 à 19:00.
+- Déclencheur : chaque jour à 07:30, plage lundi-vendredi 07:00-19:00 · auto · statut simulation
+- Lit : appels-sid-config.json, appels-sid-historique.json, prospects_maps.csv, registre-entreprises.json · écrit : appels-sid-etat.json, leads-chauds.json, registre-entreprises.json · utilisé par : linkedin-equipe, prospection, relances, sauvegarde-leads
+
+**cerveau**
+- Veille gratuite la nuit (Ollama local), notes sur 10, une passe Claude par jour pour des propositions avant / après, essai sur petit lot avant de garder ; fermé jusqu'au « go cerveau ».
+- Déclencheur : chaque jour à 01:30, plage tous les jours 01:30-03:00 · auto, puis humain · statut inactif
+- Lit : cerveau-config.json, idees-master.md, kit-rdv-15min.md, script-appel-sid.md (+4) · écrit : aaaa-mm-jj-cerveau.md, aaaa-mm-jj.md, cerveau.json, etat.json (+1) · utilisé par : rien
+
+**chiffres-serveur**
+- Tous les soirs à 19:30, une ligne dans la feuille Google « Chiffres serveur Jarvis » : date, devis envoyés, paiements reçus. Aucun montant, aucune donnée client.
+- Déclencheur : chaque jour à 19:30, plage tous les jours 19:00-23:59 · auto · statut inactif
+- Lit : chiffres-serveur-config.json, devis-etat.json · écrit : chiffres-serveur-etat.json · utilisé par : rien
+
+**devis**
+- Préparer le devis écrit (texte et PDF) à partir d'une fiche, le montrer à Liam et attendre « ok devis » ; rien ne part au client.
+- Déclencheur : toutes les 3 min, plage tous les jours 07:00-22:00 · auto, puis humain · statut simulation
+- Lit : identite.json · écrit : devis-etat.json · utilisé par : rien
+
+**gardien**
+- Chaque dimanche 21:00 : vérifie agents, fiches, liens et échanges de fichiers ; corrige seul le réversible, archive l'inutile, attend le « go » pour tout envoi.
+- Déclencheur : chaque jour à 21:00, plage dim 21:00-23:59 · auto, puis humain · statut inactif
+- Lit : fiches-noms.json, serveur-taches.json · écrit : aaaa-mm-jj-gardien.md, comment-ca-marche.md, gardien-archives.json, gardien-etat.json · utilisé par : rien
+
+**interim**
+- Intérim de nuit / 3x8 autour de Rouen : résumé Discord du matin des alertes d'agences reçues, rappel du lundi par agence ; rien envoyé, aucun compte, aucun document.
+- Déclencheur : chaque jour à 07:30 + lundi 09:00, plage tous les jours 07:00-12:00 · auto · statut inactif
+- Lit : interim-config.json, interim-suivi.csv · écrit : interim-etat.json, interim-suivi.csv · utilisé par : rien
+
+**jarvis-ceo**
+- Lire l'état des responsables, décider, déléguer et prévenir Liam ; ne produit que des décisions structurées (jarvis-sortie.schema.json).
+- Déclencheur : à la demande (aucune tâche serveur), plage tous les jours 07:30-21:00 · humain / à la demande · statut simulation
+- Lit : todo-b2b.md · écrit : aaaa-mm-jj-jarvis-ceo.md · utilisé par : rien
+
+**linkedin-equipe**
+- Chaque jour ouvré à 08:00, prépare le lot LinkedIn du jour pour le tableau de bord (post, commentaires, demandes de connexion, DM, relances) ; Liam envoie tout lui-même.
+- Déclencheur : chaque jour à 08:00, plage lundi-vendredi 08:00-19:00 · auto · statut actif
+- Lit : file.json, linkedin-equipe-config.json, lot-aaaa-mm-jj.md, prospection-trouves.csv (+4) · écrit : equipe.json, linkedin.json, registre-entreprises.json · utilisé par : appels-sid, prospection, sauvegarde-leads
+
+**nettoyage-fichiers**
+- Chaque nuit, supprimer traces et journal B2B (30 j), tests de %TEMP% (2 j), sauvegardes (30 j), __pycache__ ; lister le reste (60 j, hors INDEX.md) dans B2B/a-valider.
+- Déclencheur : chaque jour à 03:00, plage tous les jours 03:00-04:00 · auto, puis humain · statut actif
+- Lit : index.md, journal-b2b.md · écrit : journal-b2b.md, nettoyage-aaaa-mm-jj.md · utilisé par : rien
+
+**page-exemple**
+- Générer et déployer une page exemple personnalisée à la demande de Liam sur Discord, depuis un modèle validé.
+- Déclencheur : à la demande (aucune tâche serveur), plage tous les jours 08:00-22:00 · humain / à la demande · statut inactif
+- Lit : rien · écrit : page-exemple-etat.json · utilisé par : rien
+
+**panne-alerte**
+- Alerter Liam sur Discord quand un agent planifié à heure fixe n'a pas tourné après son délai de grâce, une seule fois par jour.
+- Déclencheur : toutes les 5 min, plage tous les jours 00:00-24:00 · auto · statut simulation
+- Lit : -config.json, b2b.local.json, serveur-taches.json · écrit : panne-alerte-etat.json · utilisé par : rien
+
+**production**
+- Produire le site du client après paiement, le faire valider par Liam avant toute mise en ligne.
+- Déclencheur : à compléter par Liam · à construire · statut prevu
+- Lit : rien · écrit : aaaa-mm-jj-production.md · utilisé par : rien
+
+**prospection**
+- Trouver des entreprises locales, préparer les lots d'e-mails, les soumettre à Liam et n'envoyer que les lots approuvés.
+- Déclencheur : toutes les 10 min, plage lundi-vendredi 08:00-19:00 · auto · statut simulation
+- Lit : prospection-etat.json, registre-entreprises.json · écrit : messages-a-valider.md, prospection-etat.json, registre-entreprises.json · utilisé par : appels-sid, linkedin-equipe, sauvegarde-leads, superviseur-vente
+
+**relances**
+- Jours ouvrés à 08:00 : les leads dus ou en retard (file), puis ceux datés d'aujourd'hui (J+3, J+7, J+15), en « À rappeler aujourd'hui » ; ne contacte que Liam.
+- Déclencheur : chaque jour à 08:00, plage lundi-vendredi 08:00-19:00 · auto · statut actif
+- Lit : appels-sid-config.json, leads-chauds.json, relances-config.json · écrit : relances-etat.json · utilisé par : rien
+
+**rendez-vous**
+- Annoncer sur Discord chaque rendez-vous de 15 minutes nouveau, déplacé, annulé ou proche, lu dans l'agenda iCal.
+- Déclencheur : toutes les 5 min, plage tous les jours 00:00-24:00 · auto · statut actif
+- Lit : rendez-vous-config.local.json · écrit : rendez-vous-etat.json · utilisé par : rien
+
+**reponses**
+- Lire les réponses des prospects, les classer et prévenir Liam sur Discord avec deux créneaux proposés ; aucun envoi au prospect.
+- Déclencheur : toutes les 15 min, plage tous les jours 00:00-24:00 · auto · statut actif
+- Lit : suivi-prospects.csv · écrit : exclus-emails.json, reponses-traitees.json, suivi-prospects.csv · utilisé par : linkedin-equipe, sauvegarde-leads
+
+**resume-sid**
+- Poster à 19:30 (jours ouvrés) le résumé du soir : appels de Sid par valeur de Résultat et chiffre d'affaires Stripe du jour.
+- Déclencheur : chaque jour à 19:30, plage lundi-vendredi 18:00-23:00 · auto · statut simulation
+- Lit : rien · écrit : resume-sid-etat.json · utilisé par : rien
+
+**sauvegarde-leads**
+- Chaque nuit à 03:30, copier leads, appels, résultats d'appels, leads chauds et relances dans B2B/sauvegardes (30 jours) ; archive restaurable pour toute suppression ; sans token.
+- Déclencheur : chaque jour à 03:30, plage tous les jours 03:30-04:30 · auto · statut actif
+- Lit : appels-liam-etat.json, appels-sid-etat.json, appels-sid-historique.json, archive.json (+5) · écrit : archive.json · utilisé par : rien
+
+**stripe-alerte**
+- Alerter Liam sur Discord à chaque nouveau paiement Stripe réussi, en lecture seule.
+- Déclencheur : toutes les 5 min, plage tous les jours 00:00-24:00 · auto · statut simulation
+- Lit : rien · écrit : stripe-alerte-etat.json · utilisé par : rien
+
+**superviseur-prospection**
+- Toutes les 30 min : les agents de la prospection ont-ils tourne, un prospect est-il compte deux fois, une date est-elle illogique ? Corrige le sans risque, alerte pour le reste.
+- Déclencheur : toutes les 30 min, plage tous les jours 07:00-22:00 · auto · statut inactif
+- Lit : appels-sid-etat.json, appels-sid-historique.json, historique.json, prospection-etat.json (+2) · écrit : aaaa-mm-jj-superviseur-prospection.md, appels-sid-etat.json, historique.json, prospection-etat.json (+2) · utilisé par : prospection, sauvegarde-leads
+
+**superviseur-vente**
+- Toutes les 30 min : les agents de la vente ont-ils tourne, leurs donnees se contredisent-elles ? Corrige le sans risque, alerte et attend « go » pour tout ce qui touche a l'argent.
+- Déclencheur : toutes les 30 min, plage tous les jours 07:00-22:00 · auto, puis humain · statut inactif
+- Lit : chiffres-serveur-etat.json, devis-etat.json, messages-a-valider.md, offre-reference.json (+5) · écrit : aaaa-mm-jj-superviseur-vente.md, devis-etat.json, reponses-traitees.json, superviseur-vente-etat.json · utilisé par : chiffres-serveur
+
+**surveillant**
+- Lire contrats et traces et signaler sur Discord chaque agent en défaut ; une ligne « harness OK » le lundi.
+- Déclencheur : chaque jour à 19:45 + lundi 07:50, plage tous les jours 07:00-20:30 · auto · statut simulation
+- Lit : rien · écrit : rien · utilisé par : rien
+<!-- FICHES:FIN -->
 
 ## Maillons manquants, par effet sur les ventes
 
