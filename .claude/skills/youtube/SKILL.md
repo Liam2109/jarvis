@@ -22,7 +22,11 @@ Pas d'idées de vidéo, pas de conseils, pas d'analyse : si Liam n'a pas donné 
 3. Lancer : `python outils\youtube-miniature.py "<video>" --texte "MOT MOT MOT" --cle MOT --titre "<titre>" --resume "<résumé>" --nom <nom>`
    (l'outil enregistre aussi les images candidates dans `youtube\candidats\<nom>\` et choisit la meilleure ; `--choix N` pour un autre candidat, `--cote gauche|droite` et `--visage X,Y,L,H` si le visage n'est pas détecté).
 4. Ouvrir `miniature.jpg` (outil Read) et vérifier : visage visible d'un côté, texte lisible de l'autre, rien de coupé. Sinon relancer avec un autre `--choix`.
-5. Répondre court : le titre, la miniature (chemin + quel candidat a été choisi et pourquoi, en une phrase), le chemin du dossier. Rien d'autre.
+5. **Réponse (chaque demande « youtube : sujet »)**, dans cet ordre :
+   - le **titre complet** puis la **description complète** (titre.txt et description.txt relus tels quels, bloc fixe compris), chacun dans un bloc de code, prêts à copier ;
+   - le **chemin exact** de la miniature (`youtube\sorties\<nom>\miniature.jpg`) ou de chaque miniature (`miniature-<nom>.jpg`), en une phrase pourquoi tel candidat/photo est le meilleur ;
+   - puis **ouvrir le dossier de sortie dans l'Explorateur Windows** : `explorer.exe "<chemin absolu du dossier>"` (PowerShell : `Start-Process explorer.exe -ArgumentList '"<dossier>"'`). `titre.txt` et `description.txt` restent dans ce dossier, avec les miniatures.
+   Rien d'autre (ni idée, ni conseil).
 
 ## Photos (JPG/PNG) au lieu d'une vidéo
 - L'outil accepte un ou plusieurs fichiers photo, un dossier (photos et/ou vidéos), ou un mélange : `python outils\youtube-miniature.py photo1.jpg photo2.png --texte "MOT MOT MOT" --nom <nom>` (ou `<dossier>`).

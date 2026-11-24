@@ -17,7 +17,7 @@ RECRUT = ("Je cherche des appelants et des closers pour vendre des sites web à 
           "et rester poli quand on vous dit non.\n\nSi ce type de mission vous parle, écrivez-moi en message privé.")
 PROSPECT = ("Vous êtes artisan ou commerçant et vous n'avez pas de site web, ou un site qui date ? Sujet du jour : {m}.\n\n"
             "Je crée des sites web pour les artisans et les commerçants locaux : une page claire, qui présente votre activité, vos horaires et la façon de vous joindre. "
-            "Le pack landing page est à 595 €, le site complet à 994 €, puis 49 € par mois avec l'hébergement, la maintenance et le support.\n\n"
+            "Le pack landing page est à 500 €, le site complet à 994 €, puis 29 € par mois avec l'hébergement, la maintenance et le support.\n\n"
             "Je préfère vous expliquer par téléphone ce qui vous conviendrait. Écrivez-moi en message privé.")
 
 
@@ -133,9 +133,9 @@ class Regles(Base):
 
     def test_chiffres_prix_commissions(self):
         p, r = prospect(0), recrut(0)
-        self.refuse(p.replace("994 €", "1200 €"), "prix"); self.refuse(p.replace("595 €", "590 €"), "prix"); self.refuse(p.replace("49 € par mois", "29 € par mois"), "prix")
-        self.refuse(p.replace("994 €", "595 €"), "pas du site complet"); self.refuse(p.replace("à 595 €", "à 994 €"), "pas du pack")   # prix du pack et du site complet inversés
-        self.refuse(p.replace("49 € par mois", "49 €"), "par mois")
+        self.refuse(p.replace("994 €", "1200 €"), "prix"); self.refuse(p.replace("500 €", "590 €"), "prix"); self.refuse(p.replace("29 € par mois", "49 € par mois"), "prix")
+        self.refuse(p.replace("994 €", "500 €"), "pas du site complet"); self.refuse(p.replace("à 500 €", "à 994 €"), "pas du pack")   # prix du pack et du site complet inversés
+        self.refuse(p.replace("29 € par mois", "29 €"), "par mois")
         self.refuse(p.replace("Je crée", "Depuis 20 ans, je crée"), "chiffre non vérifié"); self.refuse(p.replace("Je crée", "Je crée en 48 heures"), "chiffre non vérifié")
         self.refuse(r.replace("15 % pour les appelants, 15 % pour les closers", "10 % pour les appelants, 15 % pour les closers"), "commission", "recrutement")   # commissions inversées
         self.refuse(r.replace("15 % pour les appelants", "20 % pour les appelants"), "commission", "recrutement")
@@ -145,7 +145,7 @@ class Regles(Base):
 
     def test_offre_garde_et_types(self):
         p, r = prospect(0), recrut(0)
-        for ph in ("sans abonnement obligatoire", "maintenance facultative", "590 €", "29 €/mois"): self.refuse(p.replace("Je crée", ph + ". Je crée"), "phrase interdite")
+        for ph in ("sans abonnement obligatoire", "maintenance facultative", "590 €"): self.refuse(p.replace("Je crée", ph + ". Je crée"), "phrase interdite")
         self.refuse(p.replace("Je crée", "https://buy.stripe.com/inconnu123. Je crée"), "lien Stripe")
         faux = "sk_" + "live_" + "abcdefghijklmnop"   # faux secret assemblé à l'exécution : jamais écrit en toutes lettres dans un fichier (hook pre-commit)
         self.refuse(p.replace("Je crée", faux + ". Je crée"), "secret")

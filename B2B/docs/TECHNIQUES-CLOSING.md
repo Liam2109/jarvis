@@ -28,7 +28,7 @@ Attention : plus je laisse de temps, plus il oublie. J'accorde l'espace pour le 
 ## 3. « C'est trop cher » (en plus du script de closing)
 - Miroir : « Trop cher ? » Puis silence.
 - « Trop cher par rapport à quoi ? »
-- Isoler : « Si le prix n'était pas un sujet, est-ce que vous le feriez ? » S'il dit oui, le prix est le seul blocage : proposer la page à 595 euros au lieu du site complet, ou rappeler que les 49 euros par mois s'arrêtent quand il veut.
+- Isoler : « Si le prix n'était pas un sujet, est-ce que vous le feriez ? » S'il dit oui, le prix est le seul blocage : proposer la page à 500 euros au lieu du site complet, ou rappeler que les 29 euros par mois s'arrêtent quand il veut.
 
 ## 4. Boîte à outils (à glisser n'importe où)
 - **Miroir** : je répète ses deux ou trois derniers mots, avec une voix qui monte, puis silence (« Pas tout de suite ? »).

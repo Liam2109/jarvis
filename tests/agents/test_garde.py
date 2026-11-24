@@ -33,7 +33,7 @@ class Garde(unittest.TestCase):
         self.assertTrue(v(f"Payer : {PACK}")[0])
 
     def test_phrases_interdites(self):
-        for p in ("sans abonnement obligatoire", "maintenance facultative", "29 €/mois", "590 €", "de 10 h à 12 h"):
+        for p in ("sans abonnement obligatoire", "maintenance facultative", "590 €", "de 10 h à 12 h"):
             self.assertTrue(bloque(v(f"Offre : {p}"), "phrase interdite"), p)
         self.assertTrue(bloque(v("La maintenance est facultative"), "facultative"))
         self.assertTrue(v("595 € une fois, puis 49 €/mois, arrêt possible à tout moment")[0]); self.assertTrue(v("Visio de 15 minutes, caméra facultative")[0])

@@ -28,9 +28,9 @@ Partage d'écran sur la page exemple du métier. Dis toujours : « C'est un exem
 Puis : « Pour vous, ce serait avec vos photos, vos tarifs et votre adresse. »
 
 **9 à 12 min : proposer une offre (une seule)**
-- Un seul besoin simple, une vitrine : **Page web 595 €**, réglée en une fois.
+- Un seul besoin simple, une vitrine : **Page web 500 €**, réglée en une fois.
 - Plusieurs services, plusieurs pages : **Site complet 994 €**, réglé en une fois.
-- Ensuite, pour les deux : **49 € par mois** (hébergement, maintenance, support et nom de domaine compris), **premier mois offert**, arrêt possible à tout moment. C'est compris dans le lien de paiement.
+- Ensuite, pour les deux : **29 € par mois** (hébergement, maintenance, support et nom de domaine compris), **premier mois offert**, arrêt possible à tout moment. C'est compris dans le lien de paiement.
 Dis le prix franchement, sans t'excuser. Puis tais-toi et laisse-le réagir.
 
 **12 à 15 min : conclure**
@@ -38,19 +38,19 @@ Dis le prix franchement, sans t'excuser. Puis tais-toi et laisse-le réagir.
 S'il hésite : « Prenez le temps. Je vous rappelle jeudi, ça vous va ? » Fixe une date précise.
 
 ## 3. Réponses aux objections (courtes, honnêtes)
-- « C'est trop cher » : « Je comprends. La page web à 595 € est la plus simple. Combien de clients en plus par mois la rembourseraient ? » Ne baisse pas le prix le jour même.
+- « C'est trop cher » : « Je comprends. La page web à 500 € est la plus simple. Combien de clients en plus par mois la rembourseraient ? » Ne baisse pas le prix le jour même.
 - « J'ai déjà quelqu'un / un neveu » : « Très bien. Si vous voulez, je vous montre ce que je ferais en plus, vous comparez. »
 - « J'ai pas le temps » : « Vous n'avez rien à faire : vous m'envoyez vos photos et vos horaires, je m'occupe du reste. »
 - « Vous avez des références ? » : « Je démarre : voici mes exemples de pages par métier. Vous voyez un aperçu privé de votre page, et la mise en ligne n'a lieu qu'après votre validation. » Ne jamais inventer de client ni d'avis.
 - « Je réfléchis » : « Bien sûr. Je vous renvoie le devis, valable 15 jours. »
 
 ## 4. Liens de paiement (compte Stripe LM MULTI-SERVICES)
-Le devis contient directement le lien : prix unique à la commande, puis 49 €/mois (premier mois offert, arrêt à tout moment), tout dans le même lien (référence : `docs\OFFRE-REFERENCE.json`, 15/11/2026).
+Le devis contient directement le lien : prix unique à la commande, puis 29 €/mois (premier mois offert, arrêt à tout moment), tout dans le même lien (référence : `docs\OFFRE-REFERENCE.json`, 15/11/2026).
 
 | Offre | Lien |
 |---|---|
-| Page web 595 €, puis 49 €/mois (« Pack page web ») | https://buy.stripe.com/3cIbJ2diZ3kF9DF9W85EY0a |
-| Site complet 994 €, puis 49 €/mois | https://buy.stripe.com/bJeaEY7YF4oJ035d8k5EY0b |
+| Page web 500 €, puis 29 €/mois (« Pack page web ») | https://buy.stripe.com/3cIbJ2diZ3kF9DF9W85EY0a (⚠ facture encore 595 € puis 49 €/mois : à recréer dans Stripe avant envoi) |
+| Site complet 994 €, puis 29 €/mois | https://buy.stripe.com/bJeaEY7YF4oJ035d8k5EY0b (⚠ facture encore 49 €/mois : à recréer dans Stripe avant envoi) |
 
 N'envoyer aucun autre lien. Site complet à un autre prix que 994 € : Liam crée d'abord le lien Stripe de ce montant (Claude ne crée rien dans Stripe). Historique complet des liens : `docs\liens-paiement.md`.
 
@@ -63,8 +63,8 @@ N'envoyer aucun autre lien. Site complet à un autre prix que 994 € : Liam cr�
 > **Ce que vous voulez** (vos mots) : [reprendre ce qu'il a dit].
 > **Ce que je réalise** : [page web / site complet], [liste de 3 à 5 éléments : photos, horaires, bouton d'appel, carte, formulaire].
 > **Délai** : [X jours ouvrés] après réception du paiement et de vos photos.
-> **Prix** : [595 € / 994 €], réglé en une fois à la commande. Je vous montre un aperçu privé ; la mise en ligne a lieu après votre validation.
-> **Ensuite** : 49 € par mois (hébergement, maintenance, support et nom de domaine compris), premier mois offert, arrêt possible à tout moment. C'est inclus dans le lien de paiement.
+> **Prix** : [500 € / 994 €], réglé en une fois à la commande. Je vous montre un aperçu privé ; la mise en ligne a lieu après votre validation.
+> **Ensuite** : 29 € par mois (hébergement, maintenance, support et nom de domaine compris), premier mois offert, arrêt possible à tout moment. C'est inclus dans le lien de paiement.
 > **Lien de paiement** : [lien Stripe du prix complet]
 > Devis valable 15 jours.
 >

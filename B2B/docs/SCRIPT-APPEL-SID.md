@@ -50,4 +50,4 @@ Dans Note, écris la phrase exacte du client : celle qui a mené au « non », o
 - Signer ou engager LM Multi-Services : c'est Liam qui présente l'offre et qui conclut.
 
 ## Ce que Liam présentera au rendez-vous (pour ta culture, tu ne le dis pas)
-Page web 595 € ou site complet 994 €, une seule fois. Ensuite 49 € par mois (hébergement, maintenance, support, nom de domaine), premier mois offert, arrêt possible à tout moment. Devis écrit avant de commencer, avec un lien de paiement direct.
+Page web 500 € ou site complet 994 €, une seule fois. Ensuite 29 € par mois (hébergement, maintenance, support, nom de domaine), premier mois offert, arrêt possible à tout moment. Devis écrit avant de commencer, avec un lien de paiement direct.

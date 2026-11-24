@@ -6,11 +6,11 @@ Ville :
 Contact :
 E-mail :
 Téléphone :
-# Offre : page web (595 €) ou site complet
+# Offre : page web (500 €) ou site complet
 Offre :
-# Prix : site complet seulement. 994 € a un lien de paiement prêt ; un autre montant (990 à 1 490 €) demande de créer d'abord le lien de paiement de ce montant
+# Prix : site complet seulement. 994 € a un lien de paiement prêt ; un autre montant demande de créer d'abord le lien de paiement de ce montant
 Prix :
-# Options : aucune, ou maintenance (49 € par mois). Toute autre option n'a pas de prix connu : elle bloque le devis
+# Options : aucune, ou maintenance (29 € par mois). Toute autre option n'a pas de prix connu : elle bloque le devis
 Options : aucune
 # Délai : nombre de jours ouvrés, décidé par Liam (ex. 8 jours ouvrés)
 Délai :

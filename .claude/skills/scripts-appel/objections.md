@@ -16,7 +16,7 @@ Principe : écouter jusqu'au bout, reconnaître, répondre en une ou deux phrase
 
 ## « C'est combien ? »
 - **Sid** : « Ça dépend de ce dont vous avez besoin, c'est Liam qui s'en occupe. Tout est écrit à l'avance et rien ne démarre sans votre accord. Les 15 minutes servent justement à ça. » (Sid ne donne jamais de chiffre.)
-- **Liam** : « Pour une page comme celle-là, c'est 595 euros, payés une fois. Le site complet, avec plusieurs pages, c'est 994 euros. Ensuite, 49 euros par mois pour l'hébergement, la maintenance, le support et le nom de domaine, le premier mois est offert, et vous pouvez arrêter quand vous voulez. » Puis se taire. Pas de remise improvisée.
+- **Liam** : « Pour une page comme celle-là, c'est 500 euros, payés une fois. Le site complet, avec plusieurs pages, c'est 994 euros. Ensuite, 29 euros par mois pour l'hébergement, la maintenance, le support et le nom de domaine, le premier mois est offert, et vous pouvez arrêter quand vous voulez. » Puis se taire. Pas de remise improvisée.
 
 ## « Je dois réfléchir »
 - **Sid** : « Bien sûr. Je vous envoie le lien par e-mail, et vous réservez si ça vous dit. » Pas de relance de plus. Noter dans Note la phrase exacte du client (sa douleur ou sa raison) : Liam s'en sert pour la question de blocage.
