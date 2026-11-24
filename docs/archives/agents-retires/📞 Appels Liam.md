@@ -94,7 +94,7 @@ _Zone conservée à chaque régénération : liens vers docs\decisions et docs c
 
 Liste d'appels de Liam (à partir du 17/11/2026) : relances « Je dois réfléchir » puis entreprises neuves, registre commun avec Sid et les lots d'e-mails (`B2B/agents/registre.py`).
 Détail : `.claude/skills/agent-appels-liam/SKILL.md` · scripts : script d'appel (version Liam)
-Liens : [[docs/decisions/📌 Offre 595 + 49|📌 Offre 595 + 49]]
+Liens : [[docs/decisions/📌 Offre 500 + 29|📌 Offre 500 + 29]]
 
 ## Notes de Liam
 

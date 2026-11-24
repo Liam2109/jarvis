@@ -17,7 +17,7 @@ _Mise à jour : 24 nov. 2026 (le fait est supprimé ; l'historique est dans le j
 - [ ] Prévoir comment livrer un site complet multi-pages avant d'en vendre un
 - [ ] Commissions : appelant 15 %, closer 15 % (décidé le 23/11) ; à décider : sur le premier paiement seulement ou aussi sur les 29 €/mois ; aligner OFFRE-REFERENCE.json, scripts et TECHNIQUES-CLOSING si besoin
 - [ ] Décider : petit acompte (environ 100 €) pour le client sans confiance ? Contredit « sans acompte » ; pas dans les scripts avant décision
-- [ ] Test de cohérence : étendre aux notes docs\decisions et docs\agents (la note « Offre 595 + 49 » avait encore 990–1 490 € et « lien à créer », hors du périmètre du test) ; vérifier aussi les 3 autres notes de décision
+- [ ] Test de cohérence : étendre aux notes docs\decisions et docs\agents (la note « Offre 500 + 29 » est corrigée à la main, mais le test ne la couvre pas) ; vérifier aussi les 3 autres notes de décision
 
 ## Liam
 - [ ] Cerveau (fermé) : dire « go cerveau » quand tu veux l'ouvrir, puis go_cerveau à true dans les réglages locaux, retirer la clé « desactive » de la tâche cerveau dans serveur-taches.json et ajouter cerveau à agents_actifs ; avant : valider des sources (sites, chaînes YouTube, subreddits, forums) dans B2B\cerveau\sujets.md, sans quoi il ne lit que la recherche par sujet (titres seulement) ; ensuite, redémarrer le service du tableau de bord (POST /api/cerveau) et saisir les chiffres des essais avec `cerveau.py resultat`

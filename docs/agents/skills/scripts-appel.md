@@ -43,7 +43,7 @@ Les premiers scripts faisaient trop vendeur : Sid a reçu un non catégorique à
 - LM MULTI-SERVICES, près de Rouen. Sid prend le rendez-vous (commission 15 %) ; Liam conclut.
 - Lien de réservation (Sid) : https://calendar.app.google/kmCmw8PKKkK7pjMn6
 - Version Liam seulement, à la demande : page web 500 € ou site complet 994 €, une fois ; puis 29 €/mois (hébergement, maintenance, support, nom de domaine), premier mois offert, arrêt possible à tout moment (tout est dans le lien Stripe, `B2B/docs/OFFRE-REFERENCE.json`). Pas d'acompte : le devis écrit contient le lien de paiement du prix complet, réglé en une fois ; aperçu privé validé par le client avant toute mise en ligne.
-- Sources : `B2B/docs/KIT-RDV-15MIN.md` (déroulé du rendez-vous, liens de paiement), `B2B/docs/DEVIS-ET-OBJECTIONS.md` (devis, objections), décisions `docs/decisions/📌 Offre 595 + 49.md` et `📌 Sans acompte.md`. Si elles changent, elles priment sur ce skill.
+- Sources : `B2B/docs/KIT-RDV-15MIN.md` (déroulé du rendez-vous, liens de paiement), `B2B/docs/DEVIS-ET-OBJECTIONS.md` (devis, objections), décisions `docs/decisions/📌 Offre 500 + 29.md` et `📌 Sans acompte.md`. Si elles changent, elles priment sur ce skill.
 
 ## Format de sortie
 ```
