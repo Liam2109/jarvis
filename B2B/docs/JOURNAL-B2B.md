@@ -1,5 +1,6 @@
 # JOURNAL-B2B — une phrase par fait (entrées de plus de 30 jours supprimées chaque jour ; détail dans git)
 
+- 2026-11-24 (serveur) : clé INSEE branchée pour « nouvelles entreprises » (B2B\config\insee.local, gitignoré, une ou plusieurs clés séparées par une virgule, la première est lue) ; un appel Sirene (76) OK, `appels-sid.py nouvelles --a-blanc` : 272 neuves à moins de 40 km, 0 avec téléphone pour l'instant.
 - 2026-11-23 (nuit) : maillon 1, la réponse automatique ne propose plus de créneaux (un membre de l'équipe rappelle, on demande numéro + jour + matin/après-midi, plus d'agenda lu), reponse_auto_envoi reste faux ; carte « Relais » du dashboard lue dans relais.jsonl.
 - 2026-11-23 (soir) : diagnostic dashboard (prospection, reponses, rendez-vous = journal .log non alimenté, tâches saines ; nettoyage = cycle de 10:56 abandonné, verrou occupé), README.md : section « Serveur 24/7 » rétablie pour tests\serveur.ps1.
 - 2026-11-10 : salon Discord « 📋-candidatures » créé dans la catégorie B2B, branché dans config.local.json, test ajouté dans tests\candidatures.ps1.

@@ -61,7 +61,7 @@ A.lire_site = lambda url: (url, {}, SITES[url]) if url in SITES else None
 A.evaluer_site = lambda url, texte: (True, 5)
 P.domaines = lambda nom: ["dupont-plomberie.fr"] if "Dupont" in nom else []
 P.verifie_osm = lambda texte, c: True
-conf = A.cfg(); conf["insee_cle"] = "CLE-FAUSSE"; os.environ.pop("INSEE_CLE", None)
+conf = A.cfg(); conf["insee_cle"] = "CLE-FAUSSE"; os.environ.pop("INSEE_CLE", None); os.environ["INSEE_FICHIER"] = os.path.join(os.environ.get("TEMP", "."), "insee-absent.local")
 etat = A.etat_lire()
 
 r = A._nouvelles({**conf, "insee_cle": ""}, etat, JOUR, False)

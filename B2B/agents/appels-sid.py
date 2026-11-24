@@ -1324,12 +1324,30 @@ def _trace(decision, resultat, ok=True, erreur=None):
     except Exception: pass
 
 
+def cles_insee(conf):
+    """Clés INSEE possibles (jamais affichées) : variable INSEE_CLE, sinon B2B\config\insee.local (ligne INSEE_CLE=a,b), sinon insee_cle du réglage. Séparées par une virgule."""
+    brut = os.environ.get("INSEE_CLE", "").strip()
+    if not brut:
+        f = os.environ.get("INSEE_FICHIER") or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config", "insee.local")
+        try:
+            for l in open(f, encoding="utf-8-sig").read().splitlines():
+                if l.strip().startswith("INSEE_CLE="): brut = l.split("=", 1)[1].strip().strip("\"'"); break
+        except OSError: pass
+    brut = brut or conf["insee_cle"]
+    return [k.strip() for k in brut.split(",") if k.strip()]
+
+
+def cle_insee(conf):
+    """Première clé de cles_insee(conf) (la clé retenue après essai est mémorisée dans nouvelles_entreprises.cle_valide)."""
+    ks = cles_insee(conf); return ks[0] if ks else ""
+
+
 def _nouvelles(conf, etat, jour, a_blanc):
     """Ajoute à prospection-trouves.csv (donc à la réserve de la liste de Sid) les entreprises neuves avec téléphone : Détail fiche « Nouvelle entreprise, créée le JJ/MM/AAAA ».
     L'API Sirene ne donne pas de téléphone : il est cherché sur le site public de l'entreprise (même méthode que _sirene) ; sans numéro, l'entreprise est notée « sans téléphone » (nouvel essai après
     sourcing_refaire_jours) et n'est PAS ajoutée. Même déduplication que le reste (nom|ville, numéro, SIREN, STOP, déjà appelée). Rien n'est envoyé. -> dict de chiffres, ou None (source coupée / sans clé)."""
     if not conf["nouvelles_actif"]: return None
-    cle_api = os.environ.get("INSEE_CLE", "").strip() or conf["insee_cle"]
+    cle_api = cle_insee(conf)
     if not cle_api:
         print("  Nouvelles entreprises : clé INSEE absente (variable INSEE_CLE ou insee_cle dans le réglage local) : source inactive, voir agents\\appels-sid.md")
         if not a_blanc: _trace("nouvelles-entreprises", "clé INSEE absente : source inactive")
