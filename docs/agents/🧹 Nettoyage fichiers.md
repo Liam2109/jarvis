@@ -81,9 +81,11 @@ Chaque nuit, supprimer traces et journal B2B (30 j), tests de %TEMP% (2 j), sauv
 **Derniers résultats de test (cette machine) :**
 - `tests/agents/test_nettoyage_fichiers.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** 2026-11-22 17:56 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
+**Dernière trace :** 2026-11-24 03:00 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
 
 ### Historique (5 dernières traces, sans données client)
+- 2026-11-24 03:00 | nettoyer | ok | 0.98 s
+- 2026-11-24 03:00 | nettoyer | ok | 0.83 s
 - 2026-11-22 17:56 | nettoyer --a-blanc | ok | 2.11 s
 <!-- DYNAMIQUE:FIN -->
 
