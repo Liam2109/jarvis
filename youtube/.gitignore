@@ -1,0 +1,5 @@
+# Vidéos, images et résultats de l'agent YouTube : jamais sur GitHub (seuls le skill et l'outil sont suivis)
+entrees/*
+sorties/*
+candidats/*
+!.gitignore
