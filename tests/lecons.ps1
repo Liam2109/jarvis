@@ -244,7 +244,7 @@ $js = Get-Content (Join-Path $Root 'jarvis.ps1') -Raw -Encoding UTF8; $dc = Get-
 Verifier ($js -match 'lib\\lecons\.ps1' -and $js -match '\(Update-Lecons\)' -and $dc -match 'Resolve-LeconsOrdre' -and $cv -match 'Use-LeconsAvant' -and $cv -match 'Register-LeconAction') 'câblage : jarvis.ps1 (chargement + revue de nuit), discord.ps1 (commandes), cerveau.ps1 (avant / après une action)'
 $octets = [IO.File]::ReadAllBytes((Join-Path $Root 'lib\lecons.ps1'))
 Verifier ($octets[0] -eq 0xEF -and $octets[1] -eq 0xBB -and $octets[2] -eq 0xBF) 'lib\lecons.ps1 en UTF-8 avec BOM'
-Verifier ((Get-Content (Join-Path $Root 'README.md') -Raw -Encoding UTF8) -match 'lecons_actif') 'README : leçons décrites'
+Verifier (((Get-Content (Join-Path $Root 'README.md') -Raw -Encoding UTF8) + (Get-Content (Join-Path $Root 'README-DETAIL.md') -Raw -Encoding UTF8)) -match 'lecons_actif') 'README : leçons décrites'
 Verifier ((Get-FileHash (Join-Path $Root 'config.json')).Hash -eq $hashConfig) 'config.json réel inchangé par le test'
 
 Write-Host ''
