@@ -79,7 +79,7 @@ Lire l'état des responsables, décider, déléguer et prévenir Liam ; ne produ
 Liam décide ; Jarvis (CEO) pilote ; chaque responsable pilote ses agents et rend compte à Jarvis.
 
 - **Rattachés directement à Jarvis (CEO) :** 🙋 Alerte candidatures (arrêté), 🪟 Vue Jarvis (arrêté), 🧹 Nettoyage fichiers (actif), 🚨 Alerte pannes (actif), 📝 Résumé Sid (actif), 💾 Sauvegarde leads (actif), 📬 Superviseur Mail (arrêté), 🎥 Superviseur Vidéos (arrêté), 🛡️ Surveillant (actif), 🎬 Création vidéos (actif), 📣 Marketing vidéos (actif), ✂️ Monteur vidéos (actif), 🧽 Nettoyage vidéos (actif), 📤 Publication TikTok (arrêté), ✍️ Scripts vidéos (actif), 🎞️ Veille vidéos (actif).
-- **Prospection :** Remplir chaque jour ouvré la journée de vente : entreprises trouvées, lots d'e-mails validés par Liam, liste d'appels prête pour Sid à 7 h 30. Agents : 📞 Appels Liam (actif), 📞 Appels Sid (actif), instagram (arrêté), 💼 LinkedIn (actif), 🔎 Prospection (actif), 🧭 Superviseur Prospection (arrêté).
+- **Prospection :** Remplir chaque jour ouvré la journée de vente : entreprises trouvées, lots d'e-mails validés par Liam, liste d'appels prête pour Sid à 7 h 30. Agents : 📞 Appels Liam (actif), 📞 Appels Sid (actif), instagram (arrêté), 🤝 Équipe LinkedIn (actif), 💼 LinkedIn (actif), 🔎 Prospection (actif), 🧭 Superviseur Prospection (arrêté).
 - **Vente :** Transformer réponses et rendez-vous en devis montrés à Liam, puis relancer, sans jamais rien envoyer au client sans son accord. Agents : 🧾 Devis (actif), ☎️ Relances leads (actif), 📅 Rendez-vous (actif), 💬 Réponses (actif), 🛒 Superviseur Vente (arrêté), 🔁 Relances (prévu).
 - **Argent :** Suivre les paiements Stripe en lecture seule et prévenir Liam de chaque encaissement. Agents : 📊 Chiffres serveur (arrêté), 💶 Alerte Stripe (actif).
 - **Production :** Produire les pages et sites des clients, validés par Liam avant toute mise en ligne. Agents : 🌐 Page exemple (arrêté), 🏭 Production (prévu), 🖥️ Superviseur Sites (arrêté).
@@ -111,6 +111,7 @@ flowchart TD
   r_prospection --> appels_liam["📞 Appels Liam (actif)"]
   r_prospection --> appels_sid["📞 Appels Sid (actif)"]
   r_prospection --> instagram["instagram (arrêté)"]
+  r_prospection --> linkedin_equipe["🤝 Équipe LinkedIn (actif)"]
   r_prospection --> linkedin["💼 LinkedIn (actif)"]
   r_prospection --> prospection["🔎 Prospection (actif)"]
   r_prospection --> superviseur_prospection["🧭 Superviseur Prospection (arrêté)"]
@@ -136,7 +137,7 @@ flowchart TD
 _Zone conservée à chaque régénération : liens vers docs\decisions et docs clés seulement._
 
 Au centre : il lance, surveille et arrête les agents. « Jarvis stop » = arrêt d'urgence.
-Liens : [[docs/agents/📞 Appels Liam|📞 Appels Liam]] · [[docs/agents/🙋 Alerte candidatures|🙋 Alerte candidatures]] · [[docs/agents/📝 Résumé Sid|📝 Résumé Sid]] · [[docs/agents/🚨 Alerte pannes|🚨 Alerte pannes]] · [[docs/agents/💾 Sauvegarde leads|💾 Sauvegarde leads]] · [[docs/agents/🛡️ Surveillant|🛡️ Surveillant]] · [[docs/agents/🧹 Nettoyage fichiers|🧹 Nettoyage fichiers]] · [[docs/agents/🔁 Relances|🔁 Relances]] · [[docs/agents/🏭 Production|🏭 Production]] · [[docs/agents/⛓️ Chaîne vidéo|⛓️ Chaîne vidéo]] · [[docs/agents/🛒 Superviseur Vente|🛒 Superviseur Vente]] · [[docs/agents/🧭 Superviseur Prospection|🧭 Superviseur Prospection]] · [[docs/agents/🖥️ Superviseur Sites|🖥️ Superviseur Sites]] · [[docs/agents/📬 Superviseur Mail|📬 Superviseur Mail]] · [[docs/agents/🪟 Vue Jarvis|🪟 Vue Jarvis]] · [[docs/agents/🎥 Superviseur Vidéos|🎥 Superviseur Vidéos]] · [[docs/agents/💼 LinkedIn|💼 LinkedIn]] · [[docs/agents/CARTE-RELAIS|Carte des relais]]
+Liens : [[docs/agents/🤝 Équipe LinkedIn|🤝 Équipe LinkedIn]] · [[docs/agents/📞 Appels Liam|📞 Appels Liam]] · [[docs/agents/🙋 Alerte candidatures|🙋 Alerte candidatures]] · [[docs/agents/📝 Résumé Sid|📝 Résumé Sid]] · [[docs/agents/🚨 Alerte pannes|🚨 Alerte pannes]] · [[docs/agents/💾 Sauvegarde leads|💾 Sauvegarde leads]] · [[docs/agents/🛡️ Surveillant|🛡️ Surveillant]] · [[docs/agents/🧹 Nettoyage fichiers|🧹 Nettoyage fichiers]] · [[docs/agents/🔁 Relances|🔁 Relances]] · [[docs/agents/🏭 Production|🏭 Production]] · [[docs/agents/⛓️ Chaîne vidéo|⛓️ Chaîne vidéo]] · [[docs/agents/🛒 Superviseur Vente|🛒 Superviseur Vente]] · [[docs/agents/🧭 Superviseur Prospection|🧭 Superviseur Prospection]] · [[docs/agents/🖥️ Superviseur Sites|🖥️ Superviseur Sites]] · [[docs/agents/📬 Superviseur Mail|📬 Superviseur Mail]] · [[docs/agents/🪟 Vue Jarvis|🪟 Vue Jarvis]] · [[docs/agents/🎥 Superviseur Vidéos|🎥 Superviseur Vidéos]] · [[docs/agents/💼 LinkedIn|💼 LinkedIn]] · [[docs/agents/CARTE-RELAIS|Carte des relais]]
 Décisions qui le cadrent : [[docs/decisions/📌 Offre 595 + 49|📌 Offre 595 + 49]] · [[docs/decisions/📌 Sans acompte|📌 Sans acompte]] · [[docs/decisions/📌 Serveur HLQSTAU|📌 Serveur HLQSTAU]] · [[docs/decisions/📌 Validation à la main|📌 Validation à la main]] · [[docs/decisions/📌 INDEX d'abord|📌 INDEX d'abord]] · [[docs/decisions/📌 Instagram retiré|📌 Instagram retiré]]
 
 ## Notes de Liam

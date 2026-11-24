@@ -1,0 +1,52 @@
+{
+ "nom": "linkedin-equipe",
+ "responsable": "Prospection",
+ "mission": "Chaque jour ouvré à 08:00, prépare le lot LinkedIn du jour pour le tableau de bord (post, commentaires, demandes de connexion, DM, relances) ; Liam envoie tout lui-même.",
+ "statut": "actif",
+ "script": "B2B/agents/linkedin-equipe.py",
+ "jours": [
+  0,
+  1,
+  2,
+  3,
+  4
+ ],
+ "heures": {
+  "debut": "08:00",
+  "fin": "19:00"
+ },
+ "fichiers_lus": [
+  "B2B/prospects_rouen.csv, B2B/prospects.csv, B2B/prospection-trouves.csv (cibles déjà trouvées)",
+  "B2B/suivi-prospects.csv et B2B/donnees/registre-entreprises.json (déjà contactés : exclus)",
+  "B2B/linkedin/lot-AAAA-MM-JJ.md et file.json (posts de l'agent linkedin, lecture seule)",
+  "B2B/agents/linkedin-equipe-config.json"
+ ],
+ "fichiers_ecrits": [
+  "B2B/linkedin/equipe.json (cibles, suivi, textes)",
+  "dashboard/data/linkedin.json et linkedin.js (rubrique LinkedIn)",
+  "B2B/donnees/registre-entreprises.json (seulement une réponse positive cochée par Liam : lead chaud)",
+  "B2B/agents/linkedin-equipe-journal.log"
+ ],
+ "canaux_discord": [],
+ "envoi_client": false,
+ "actions_interdites": [
+  "envoyer une demande de connexion ou un message sur LinkedIn (Liam copie et envoie lui-même)",
+  "scraper ou automatiser LinkedIn, utiliser son API ou se connecter à un compte",
+  "modifier la file des posts de l'agent linkedin ou l'activer",
+  "dépasser 100 demandes de connexion par semaine (plafond_semaine) ou 20 par jour ouvré (demandes_par_jour)",
+  "écrire un DM ou une relance avec emoji, tutoiement, promesse, chiffre non vérifié, lien, coordonnées ou présentiel",
+  "relancer plus d'une fois la même personne",
+  "contacter une entreprise déjà contactée (e-mail, appel, registre)",
+  "donner un conseil d'achat ou de vente financier",
+  "afficher un secret (jeton, clé)",
+  "encaisser, publier ou signer"
+ ],
+ "plafonds": {
+  "messages_par_jour": 0
+ },
+ "peut_engager": false,
+ "alerte_si_silence": "09:00",
+ "tests": [
+  "tests/agents/test_linkedin_equipe.py"
+ ]
+}

@@ -1,0 +1,10 @@
+{
+  "demandes_par_jour": 20,
+  "plafond_semaine": 100,
+  "part_entreprises": 0.7,
+  "commerces_locaux": false,
+  "commentaires": 10,
+  "relance_jours": 3,
+  "zone_niveau": 1,
+  "_aide": "demandes_par_jour : demandes de connexion SANS note par jour ouvre ; plafond_semaine : plafond strict (monter par paliers : 100, puis 150...). part_entreprises : 0.7 = 70 % entreprises (decideurs de 1 a 9 personnes, batiment d'abord), le reste = appelants/closers. commerces_locaux : true = elargit aux commerces (un sur trois). zone_niveau : 1 = Seine-Maritime (76) seulement, 2 = + Eure, Calvados, Manche, Orne (elargissement progressif ; si le niveau est epuise, le suivant est utilise). relance_jours : delai de la relance unique apres un DM sans reponse. L'equipe PREPARE, Liam ENVOIE : aucun envoi, aucune API ni scraping de LinkedIn. Voir B2B/agents/linkedin-equipe.py."
+}

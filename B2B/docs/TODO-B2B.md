@@ -2,6 +2,9 @@
 
 _Mise à jour : 24 nov. 2026 (le fait est supprimé ; l'historique est dans le journal et dans git)_
 
+## Équipe LinkedIn (à activer par Liam)
+- [ ] Ajouter `linkedin-equipe` à agents_actifs du serveur, redémarrer le service du tableau de bord (nouvelle écriture POST /api/linkedin), puis ouvrir la rubrique LinkedIn depuis http://serveur:8080 (les cases ne s'enregistrent pas depuis le fichier du gros PC)
+
 ## Lundi 16 nov. (appels d'abord)
 - [ ] 19 h 30 : le résumé Discord compte bien les 8 valeurs de Résultat
 - [ ] Sid : lire l'accroche à voix haute, noter les phrases exactes qui ont fait dire non ; bilan Sid du 13 nov. à lui envoyer

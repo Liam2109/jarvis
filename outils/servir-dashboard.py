@@ -5,14 +5,14 @@
 Sur le serveur, lancé par la tâche « Jarvis-Tableau-Service » (voir outils\\taches-dashboard-serveur.ps1). Ouvrir http://<serveur>:8080/ depuis le réseau local.
 À l'ouverture de la page, les données sont régénérées si elles ont plus d'une minute (outils\\agents-json.py, comptes seulement).
 """
-import argparse, subprocess, sys, time
+import argparse, importlib.util, json, subprocess, sys, time
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 RACINE = Path(__file__).resolve().parent.parent
 DOSSIER = RACINE / "dashboard"
-PERMIS = {"index.html", "agents.js", "agents.json", "docs.js"}
+PERMIS = {"index.html", "agents.js", "agents.json", "docs.js", "data/linkedin.js"}
 
 
 class LectureSeule(SimpleHTTPRequestHandler):
@@ -33,12 +33,24 @@ class LectureSeule(SimpleHTTPRequestHandler):
         if not self._permis(): return self.send_error(404)
         return super().do_HEAD()
 
-    def do_POST(self): self.send_error(405)
-    do_PUT = do_DELETE = do_PATCH = do_POST
+    def do_POST(self):
+        if self.path.split("?", 1)[0] != "/api/linkedin" or self.headers.get("X-Jarvis") != "1": return self.send_error(405)
+        try:
+            taille = int(self.headers.get("Content-Length") or 0)
+            if not 0 < taille <= 1024: return self.send_error(400)
+            d = json.loads(self.rfile.read(taille).decode("utf-8")); ident, action = str(d["id"]), str(d["action"])
+            s = importlib.util.spec_from_file_location("linkedin_equipe", RACINE / "B2B" / "agents" / "linkedin-equipe.py"); m = importlib.util.module_from_spec(s); s.loader.exec_module(m)
+            conf = m.cfg(); jour = time.strftime("%Y-%m-%d")
+            try: msg = m.appliquer_et_exporter(conf, ident, action, jour); code = 200
+            except m.ErreurAgent as e: msg, code = str(e), 409
+        except (ValueError, KeyError, OSError): return self.send_error(400)
+        corps = json.dumps({"message": msg}, ensure_ascii=False).encode("utf-8")
+        self.send_response(code); self.send_header("Content-Type", "application/json; charset=utf-8"); self.send_header("Content-Length", str(len(corps))); self.end_headers(); self.wfile.write(corps)
+    do_PUT = do_DELETE = do_PATCH = lambda self: self.send_error(405)
     def list_directory(self, path): self.send_error(404)
     def end_headers(self):
         self.send_header("Cache-Control", "no-store"); self.send_header("X-Content-Type-Options", "nosniff")
-        self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; frame-ancestors 'none'")
+        self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'")
         super().end_headers()
     def log_message(self, *a): pass   # aucun journal d'accès
 

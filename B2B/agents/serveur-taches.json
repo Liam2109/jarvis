@@ -219,6 +219,12 @@
       "jours": [0, 1, 2, 3, 4],
       "desactive": "2026-11-23 : nouvel agent, fermé jusqu'au « go linkedin » de Liam (en simulation : envoi_automatique=false ; retirer cette clé, ajouter linkedin à agents_actifs puis passer envoi_automatique à true dans le fichier local)"
     },
+    "linkedin-equipe": {
+      "script": "linkedin-equipe.py",
+      "commandes": [["jour"]],
+      "heure": "08:00",
+      "jours": [0, 1, 2, 3, 4]
+    },
     "jarvis-vue": {
       "script": "jarvis-vue.py",
       "commandes": [
