@@ -9,6 +9,7 @@ import json
 import os
 import re
 import sys
+import threading
 import time
 import unicodedata
 import uuid
@@ -222,9 +223,19 @@ class Echange:
         for d in (self.entrant, self.sortant):
             d.mkdir(parents=True, exist_ok=True)
 
-    @staticmethod
-    def _ecrire(dossier, objet):
-        nom = "%019d-%s.json" % (time.time_ns(), uuid.uuid4().hex[:6])
+    _dernier_ns = 0
+    _verrou_ns = threading.Lock()
+
+    @classmethod
+    def _horodatage(cls):
+        # Strictement croissant : sous Windows l'horloge ne change que toutes les ~15 ms ; deux fichiers du même instant étaient triés au hasard (suffixe aléatoire).
+        with cls._verrou_ns:
+            cls._dernier_ns = max(time.time_ns(), cls._dernier_ns + 1)
+            return cls._dernier_ns
+
+    @classmethod
+    def _ecrire(cls, dossier, objet):
+        nom = "%019d-%s.json" % (cls._horodatage(), uuid.uuid4().hex[:6])
         tmp = dossier / (nom + ".tmp")
         tmp.write_text(json.dumps(objet, ensure_ascii=False), encoding="utf-8")
         os.replace(tmp, dossier / nom)
