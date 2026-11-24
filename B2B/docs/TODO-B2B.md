@@ -29,6 +29,7 @@ _Mise à jour : 24 nov. 2026 (le fait est supprimé ; l'historique est dans le j
 - [ ] Valider la liste des idées supprimées d'IDEES-MASTER.md (sauvegarde dans B2B\donnees\sauvegardes\) et trancher la section « À trancher »
 - [ ] Lundi 16 : prendre les ~15 dernières lignes de la feuille de Sid (ta propre liste « Appels Liam » commence mardi 17)
 - [ ] Serveur : ajouter « nettoyage-fichiers » aux agents actifs (tâche chaque jour à 03:00)
+- [ ] Serveur : ajouter « sauvegarde-leads » à agents_actifs (sauvegarde 03:30, première copie déjà faite le 24/11) ; pour recevoir le message de 08:00, `envoi_automatique` doit être à true dans relances-config.local.json, puis accepter la mise à jour (relances passe à 08:00)
 - [ ] Vérifier toi-même dans la config locale B2B\agents que agents_actifs contient surveillant, appels-liam et nettoyage-fichiers (lecture refusée à Claude par la garde des secrets)
 - [ ] superviseur-sites et superviseur-mail à activer quand ces domaines tourneront pour de vrai : retirer leur clé « desactive » de serveur-taches.json (la vue Jarvis ensuite, elle n'a de sens qu'avec les quatre domaines)
 - [ ] Si tu veux la double sécurité, retirer toi-même superviseur-sites, superviseur-mail et jarvis-vue de agents_actifs, et passer envoi_automatique à false dans le fichier local commun des superviseurs en le laissant à true pour Vente et Prospection seulement (écriture refusée à Claude par la garde des secrets)

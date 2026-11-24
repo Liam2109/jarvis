@@ -1,0 +1,55 @@
+{
+ "nom": "sauvegarde-leads",
+ "responsable": "Jarvis (CEO)",
+ "mission": "Chaque nuit à 03:30, copier leads, appels, résultats d'appels, leads chauds et relances dans B2B/sauvegardes (30 jours) ; archive restaurable pour toute suppression ; sans token.",
+ "statut": "actif",
+ "script": "B2B/agents/sauvegarde-leads.py",
+ "jours": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6
+ ],
+ "heures": {
+  "debut": "03:30",
+  "fin": "04:30"
+ },
+ "fichiers_lus": [
+  "B2B/donnees/registre-entreprises.json",
+  "B2B/donnees/leads-chauds.json",
+  "B2B/donnees/archive/archive.jsonl",
+  "B2B/agents/relances-etat.json",
+  "B2B/agents/appels-sid-etat.json",
+  "B2B/agents/appels-sid-historique.json",
+  "B2B/agents/appels-liam-etat.json",
+  "B2B/suivi-prospects.csv",
+  "B2B/prospection-trouves.csv",
+  "B2B/docs/sid/*.csv"
+ ],
+ "fichiers_ecrits": [
+  "B2B/sauvegardes/AAAA-MM-JJ (copies, suppression au-delà de 30 jours)",
+  "B2B/donnees/archive/archive.jsonl (archive des suppressions)",
+  "B2B/agents/sauvegarde-leads-journal.log"
+ ],
+ "canaux_discord": [],
+ "envoi_client": false,
+ "actions_interdites": [
+  "supprimer un lead ou un appel sans l'archiver d'abord",
+  "écraser une entrée existante en restaurant",
+  "toucher à .env, config.json ou un fichier *.local.json",
+  "supprimer autre chose que des dossiers AAAA-MM-JJ de B2B/sauvegardes de plus de 30 jours",
+  "envoyer un message, au client ou sur Discord",
+  "utiliser une IA ou un service payant"
+ ],
+ "plafonds": {
+  "messages_par_jour": 0
+ },
+ "peut_engager": false,
+ "alerte_si_silence": "05:00",
+ "tests": [
+  "tests/agents/test_sauvegarde_leads.py"
+ ]
+}

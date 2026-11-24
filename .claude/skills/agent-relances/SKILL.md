@@ -1,12 +1,12 @@
 ---
 name: agent-relances
-description: Fiche de rôle de l'agent Relances leads (pôle Vente, actif) — chaque jour ouvré à 08:30, un seul message Discord « À rappeler aujourd'hui » pour Liam avec les leads chauds notés par Sid (À rappeler, Je dois réfléchir) : relance 1 au 3e jour ouvré, relance 2 au 7e, une seule au 15e si la note dit « moyen terme » ou « semaines » ; ne contacte que Liam, sans IA ni token. À utiliser pour vérifier ou corriger relances.py (jour, --essai, etat).
+description: Fiche de rôle de l'agent Relances leads (pôle Vente, actif) — chaque jour ouvré à 08:00 (commande rappel : relance due ou en retard) et 08:30 (commande jour : relance datée exactement d'aujourd'hui), un seul message Discord « À rappeler aujourd'hui » pour Liam avec les leads chauds notés par Sid (À rappeler, Je dois réfléchir) : relance 1 au 3e jour ouvré, relance 2 au 7e, une seule au 15e si la note dit « moyen terme » ou « semaines » ; ne contacte que Liam, sans IA ni token. À utiliser pour vérifier ou corriger relances.py (jour, --essai, etat).
 ---
 
 # Agent Relances leads — Liam rappelle lui-même ses leads chauds
 
 **Responsable :** Vente. **Script :** `B2B/agents/relances.py`. **Contrat :** `B2B/harness/contrats/relances.json`.
-**Tâche serveur :** `jour` à 08:30, lundi-vendredi (`B2B/agents/serveur-taches.json`), dans `agents_actifs`.
+**Tâche serveur :** `rappel` puis `jour` à 08:00, lundi-vendredi (`B2B/agents/serveur-taches.json`), dans `agents_actifs`.
 Différent de l'agent prévu `vente-relances` (relance des devis envoyés, pas construit).
 
 ## Ordres pas à pas (lus dans le script)
@@ -18,6 +18,8 @@ Différent de l'agent prévu `vente-relances` (relance des devis envoyés, pas c
 6. Rythme : relance 1 au 3e jour ouvré après l'appel, relance 2 au 7e, puis classé. Note avec « moyen terme » ou « semaines » : une seule relance au 15e. Passage manqué : la relance la plus récente déjà due part le jour ouvré suivant (jamais une relance 1 après la 2). Nouvel appel chaud de Sid : nouveau cycle.
 7. Un seul message « À rappeler aujourd'hui » (nom, ville, téléphone, relance n, date d'appel, note de Sid) ; aucun message s'il n'y a rien. Découpé seulement s'il dépasse la taille Discord.
 8. `relances-etat.json` : chaque relance annoncée (numéro|date d'appel|n), jamais deux fois ; marquée seulement si Discord a bien reçu (sinon réessayée au prochain passage). Journal sans nom ni numéro, trace du harness.
+
+9. Commande `rappel` (08:00, 24/11/2026) : lit la file `B2B/donnees/leads-chauds.json` (pas les feuilles Google) et poste « À rappeler aujourd'hui » avec les leads dont la relance est due aujourd'hui ou en retard (retard en jours, date de dernière mise à jour) ; aucun état, refait chaque jour tant que le lead est en retard. Le message de la commande `jour` (08:30) ne liste plus que les leads dont la relance est datée exactement d'aujourd'hui (plus de rattrapage).
 
 ## Ce qu'il ne fait jamais
 Contacter un prospect, un client ou Sid ; écrire dans une feuille ; utiliser une IA ou un service payant ; afficher un jeton.

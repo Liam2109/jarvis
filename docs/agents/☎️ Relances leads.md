@@ -9,19 +9,19 @@ sorties: "B2B/agents/relances-etat.json, B2B/agents/relances-journal.log"
 responsable: Vente
 statut: actif
 mode: réel
-horaire: "chaque jour à 08:30, plage lundi-vendredi 08:00-19:00"
+horaire: "chaque jour à 08:00, plage lundi-vendredi 08:00-19:00"
 tags: [agent-b2b]
 ---
 <!-- GENERE:DEBUT (régénéré par python B2B\harness\generer-fiches.py : ne pas modifier) -->
 # ☎️ Relances leads
 
 **Agent :** `relances` · **Statut :** actif · **Responsable :** Vente (pôle) · **Machine :** serveur
-**Horaire :** chaque jour à 08:30, plage lundi-vendredi 08:00-19:00
+**Horaire :** chaque jour à 08:00, plage lundi-vendredi 08:00-19:00
 **Script :** `B2B/agents/relances.py` · **Contrat :** `B2B/harness/contrats/relances.json`
 
 ## Rôle et limites
 ### Mission
-Chaque jour ouvré à 08:30, un message Discord « À rappeler aujourd'hui » pour Liam : leads chauds de Sid à J+3 et J+7 ouvrés (J+15 si moyen terme) ; ne contacte que Liam.
+Jours ouvrés : 08:00 les leads dus ou en retard (file), 08:30 ceux datés d'aujourd'hui (J+3, J+7, J+15), en « À rappeler aujourd'hui » ; ne contacte que Liam.
 
 ### Ce qu'il fait étape par étape
 1. `M.exiger("relances", ...)` : refuse hors de la machine active (sauf `--essai`).
@@ -32,6 +32,8 @@ Chaque jour ouvré à 08:30, un message Discord « À rappeler aujourd'hui » po
 6. Rythme : relance 1 au 3e jour ouvré après l'appel, relance 2 au 7e, puis classé. Note avec « moyen terme » ou « semaines » : une seule relance au 15e. Passage manqué : la relance la plus récente déjà due part le jour ouvré suivant (jamais une relance 1 après la 2). Nouvel appel chaud de Sid : nouveau cycle.
 7. Un seul message « À rappeler aujourd'hui » (nom, ville, téléphone, relance n, date d'appel, note de Sid) ; aucun message s'il n'y a rien. Découpé seulement s'il dépasse la taille Discord.
 8. `relances-etat.json` : chaque relance annoncée (numéro|date d'appel|n), jamais deux fois ; marquée seulement si Discord a bien reçu (sinon réessayée au prochain passage). Journal sans nom ni numéro, trace du harness.
+
+9. Commande `rappel` (08:00, 24/11/2026) : lit la file `B2B/donnees/leads-chauds.json` (pas les feuilles Google) et poste « À rappeler aujourd'hui » avec les leads dont la relance est due aujourd'hui ou en retard (retard en jours, date de dernière mise à jour) ; aucun état, refait chaque jour tant que le lead est en retard. Le message de la commande `jour` (08:30) ne liste plus que les leads dont la relance est datée exactement d'aujourd'hui (plus de rattrapage).
 
 ### Ce qu'il n'a pas le droit de faire
 - contacter un prospect, un client ou Sid (seul Liam reçoit le message)
@@ -49,6 +51,7 @@ Chaque jour ouvré à 08:30, un message Discord « À rappeler aujourd'hui » po
 - feuilles Google « Appels Sid AAAA-MM-JJ » du dossier de Sid (lecture seule, jeton d'appels-sid)
 - B2B/agents/appels-sid-config.json (dossier_sid_id)
 - B2B/agents/relances-config.json
+- B2B/donnees/leads-chauds.json (commande rappel, lecture seule)
 
 **Écrit :**
 - B2B/agents/relances-etat.json
@@ -57,7 +60,7 @@ Chaque jour ouvré à 08:30, un message Discord « À rappeler aujourd'hui » po
 **Discord :** alertes · **Plafond :** 3 messages par jour · **Envoi au client :** non
 
 ## Horaire et état
-- **Horaire :** chaque jour à 08:30, plage lundi-vendredi 08:00-19:00
+- **Horaire :** chaque jour à 08:00, plage lundi-vendredi 08:00-19:00
 - **Tâche serveur :** entrée dans `B2B/agents/serveur-taches.json` ; tourne seulement si l'agent est dans `agents_actifs` (choix de Liam)
 - **Contrat :** valide (`python B2B\harness\valider.py`)
 - **Garde branchée :** oui
@@ -70,10 +73,11 @@ Chaque jour ouvré à 08:30, un message Discord « À rappeler aujourd'hui » po
 **Derniers résultats de test (cette machine) :**
 - `tests/agents/test_relances.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** aucune · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
+**Dernière trace :** 2026-11-24 17:42 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
 
 ### Historique (5 dernières traces, sans données client)
-- aucune trace sur cette machine
+- 2026-11-24 17:42 | jour | ok | 5.54 s
+- 2026-11-23 12:12 | jour | ok | 5.79 s
 <!-- DYNAMIQUE:FIN -->
 
 ## Skill et règles

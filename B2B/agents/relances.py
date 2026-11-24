@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Agent relances (LM MULTI-SERVICES, 18/11/2026) : chaque jour ouvré à 08:30, UN message Discord « À rappeler aujourd'hui » pour Liam avec les leads chauds notés par Sid qu'il doit
+"""Agent relances (LM MULTI-SERVICES, 18/11/2026) : chaque jour ouvré à 08:00 (commande « rappel » : leads de la file dont la relance est due ou en retard) puis à 08:30 (commande « jour »), UN message Discord « À rappeler aujourd'hui » pour Liam avec les leads chauds notés par Sid qu'il doit
 rappeler lui-même. Il ne contacte personne d'autre que Liam. Aucune IA, aucun token : lecture des feuilles Google et calcul de dates.
 
   python agents\\relances.py jour [--jour AAAA-MM-JJ] [--essai]     le passage du jour (tâche serveur 08:30) ; --essai : lit les vraies feuilles, affiche le message, n'écrit et n'envoie rien
+  python agents\\relances.py rappel [--jour AAAA-MM-JJ] [--essai]   08:00 : leads de la file (donnees\\leads-chauds.json) dont la relance est due aujourd'hui ou en retard, avec leur dernière mise à jour
   python agents\\relances.py etat                                  nombre de relances déjà annoncées, dernier envoi
 
 Règles (décision de Liam du 18/11/2026) :
@@ -25,7 +26,7 @@ import prospection as P   # P.acces_discord / P.discord (garde du harness avant 
 AGENT = "relances"
 CONFIG, ETAT, JOURNAL = ICI / "relances-config.json", ICI / "relances-etat.json", ICI / "relances-journal.log"
 APPELS_SID_CONFIG = ICI / "appels-sid-config.json"
-DEFAUT = {"envoi_automatique": False, "compte_google": "contact.lmsites@gmail.com", "heure_tache": "08:30"}
+DEFAUT = {"envoi_automatique": False, "compte_google": "contact.lmsites@gmail.com", "heure_tache": "08:00"}
 CHAUDS = {"À rappeler", "Je dois réfléchir"}
 EXCLUS = {"RDV pris", "Non catégorique", "Trop cher", "Déjà un site", "Pas le temps"}
 RYTHME = [(1, 3), (2, 7)]          # (numéro de relance, n-ième jour ouvré après l'appel)
@@ -131,8 +132,8 @@ def a_rappeler(tous, jour, etat):
     """[(tel, lead, n)] à annoncer le `jour` : la relance la plus récente déjà due, si elle n'a jamais été annoncée et si aucune relance plus tardive ne l'a déjà été."""
     out = []
     for t, x in sorted(tous.items(), key=lambda kv: (kv[1]["appel"], kv[1]["nom"])):
-        n, _, due = etape(x, jour)
-        if not due: continue
+        n, prevue, due = etape(x, jour)
+        if not due or prevue != jour: continue   # 24/11/2026 : seulement les leads datés EXACTEMENT d'aujourd'hui ; le retard est dans le message de 08:00 (commande « rappel »)
         rythme = RYTHME_MOYEN_TERME if x["moyen_terme"] else RYTHME
         if any(cle_annonce(t, x, m) in etat["annonces"] for m, _ in rythme if m >= n): continue
         out.append((t, x, n))
@@ -144,6 +145,25 @@ def message(liste):
     for t, x, n in liste:
         l.append(f"- {x['nom'] or '(nom absent)'}" + (f" ({x['ville']})" if x["ville"] else "") + f" — {tel_lisible(t)} — relance {n}"
                  + (" (moyen terme)" if x["moyen_terme"] else "") + f" — appel du {date.fromisoformat(x['appel']):%d/%m} — note de Sid : {x['note'] or '(vide)'}")
+    return "\n".join(l)
+
+
+def leads_dus_file(jour, lire=None):
+    """[lead] de la file des leads chauds (leads_chauds.py) dont la relance est due le `jour` ou en retard : sans date de relance, rien (jamais deviné). Les plus en retard d'abord."""
+    if lire is None:
+        import leads_chauds as LC; lire = LC.lire
+    file = lire() or []
+    return sorted((l for l in file if l.get("jour") and l["jour"] <= jour), key=lambda l: (l["jour"], l.get("nom", "")))
+
+
+def message_rappel(dus, jour):
+    """Message de 08:00 : nom, téléphone, date de relance (retard en jours) et date de dernière mise à jour de chaque lead."""
+    l = [f"**À rappeler aujourd'hui** ({len(dus)} lead(s) dont la relance est due ou en retard) :"]
+    for x in dus:
+        retard = (date.fromisoformat(jour) - date.fromisoformat(x["jour"])).days
+        maj = f" — dernière mise à jour le {date.fromisoformat(x['resultat_le']):%d/%m}" if x.get("resultat_le") else " — dernière mise à jour inconnue"
+        l.append(f"- {x.get('nom') or '(nom absent)'}" + (f" ({x['ville']})" if x.get("ville") else "") + f" — {tel_lisible(x.get('tel', ''))} — "
+                 + ("relance prévue aujourd'hui" if retard == 0 else f"en retard de {retard} j (prévue le {date.fromisoformat(x['jour']):%d/%m})") + maj)
     return "\n".join(l)
 
 
@@ -242,6 +262,29 @@ def cmd_jour(conf, jour, essai, drive=None):
     return 0
 
 
+def cmd_rappel(conf, jour, essai, lire=None):
+    """Passe de 08:00 : un message Discord « À rappeler aujourd'hui » avec les leads de la file dont la relance est due aujourd'hui ou en retard, avec leur date de dernière mise à jour.
+    Aucun contact client, aucune écriture (pas d'état : le message est refait chaque jour tant que le lead est en retard). Simulation tant que envoi_automatique est false."""
+    if not est_ouvre(date.fromisoformat(jour)):
+        print(f"{jour} : jour non ouvré, aucun rappel."); return 0
+    try: dus = leads_dus_file(jour, lire)
+    except (OSError, ValueError, ImportError) as ex:
+        print(f"  ! file des leads chauds illisible ({type(ex).__name__}) : rien envoyé")
+        if not essai: journaliser("rappel", "file illisible")
+        return 2
+    if not dus:
+        print(f"{jour} : aucun lead dû ni en retard : aucun message.")
+        if not essai: journaliser("rappel", f"{jour} : rien à rappeler")
+        return 0
+    texte = message_rappel(dus, jour)
+    if essai: print("[essai] message qui serait envoyé (rien envoyé) :\n" + texte); return 0
+    if conf["envoi_automatique"]:
+        ok = all(alerter_discord(m) for m in morceaux(texte)); print(texte); print("  (posté sur Discord)" if ok else "  ! Discord : non envoyé")
+        journaliser("rappel", f"{jour} : {len(dus)} lead(s) {'annoncé(s)' if ok else 'non annoncé(s), Discord indisponible'}")
+        return 0 if ok else 2
+    print("[simulation : envoi_automatique=false] " + texte); journaliser("rappel", f"{jour} : {len(dus)} lead(s) (simulation)"); return 0
+
+
 def cmd_etat():
     e = etat_lire()
     print(f"{len(e['annonces'])} relance(s) annoncée(s) mémorisée(s) ; dernier envoi : {max(e['envois']) if e['envois'] else 'aucun'}."); return 0
@@ -251,10 +294,12 @@ def main(argv=None):
     p = argparse.ArgumentParser(prog=AGENT, description="Liste quotidienne des leads chauds à rappeler par Liam (Discord, aucun contact client).")
     sp = p.add_subparsers(dest="cmd", required=True)
     j = sp.add_parser("jour"); j.add_argument("--jour", default=None); j.add_argument("--essai", "--a-blanc", dest="essai", action="store_true", help="lit, affiche, n'écrit et n'envoie rien")
+    r = sp.add_parser("rappel"); r.add_argument("--jour", default=None); r.add_argument("--essai", "--a-blanc", dest="essai", action="store_true", help="affiche, n'envoie rien")
     sp.add_parser("etat")
     args = p.parse_args(argv); M.exiger(AGENT, args.cmd, getattr(args, "essai", False))
     try:
         if args.cmd == "etat": return cmd_etat()
+        if args.cmd == "rappel": return cmd_rappel(cfg(), args.jour or P.heure_paris().date().isoformat(), args.essai)
         return cmd_jour(cfg(), args.jour or P.heure_paris().date().isoformat(), args.essai)
     except ErreurAgent as e:
         print(f"  ! {e}"); return 2
@@ -264,7 +309,7 @@ def main(argv=None):
 
 if __name__ == "__main__":
     _t0 = time.time(); _code = main()
-    if sys.argv[1:2] == ["jour"] and not {"--essai", "--a-blanc"} & set(sys.argv):   # trace du harness (B2B\logs\agents\relances), jamais bloquante
-        try: sys.path.insert(0, str(ICI.parent / "harness")); import traces; traces.ecrire(AGENT, "jour", "terminé" if _code == 0 else "échec", time.time() - _t0, ok=_code == 0, erreur=None if _code == 0 else f"code {_code}")
+    if sys.argv[1:2] in (["jour"], ["rappel"]) and not {"--essai", "--a-blanc"} & set(sys.argv):   # trace du harness (B2B\logs\agents\relances), jamais bloquante
+        try: sys.path.insert(0, str(ICI.parent / "harness")); import traces; traces.ecrire(AGENT, sys.argv[1], "terminé" if _code == 0 else "échec", time.time() - _t0, ok=_code == 0, erreur=None if _code == 0 else f"code {_code}")
         except Exception: pass
     sys.exit(_code)

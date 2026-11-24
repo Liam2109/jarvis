@@ -348,7 +348,7 @@
           '</b><span class="lib">' + esc(x.libelle) + '</span><span class="det"' + (manque ? ' title="' + esc(x.raison) + '">' + simple(x.raison) : ">" + esc(x.detail || "")) + "</span></li>";
       }).join("") + "</ol>";
     }
-    return h + carteLeads() + carteRelais() + carteAgents();
+    return h + carteARappeler() + carteLeads() + carteRelais() + carteAgents();
   }
   function carteRelais() {   // les relais automatiques (data/relais.js, lu depuis B2B\donnees\relais.jsonl) : un par ligne, le plus récent d'abord
     var t = '<section class="bloc verre" aria-labelledby="t-rel"><div class="tete"><h2 id="t-rel">Relais</h2>';
@@ -362,6 +362,17 @@
     }).join("") + "</ul></section>";
   }
   function jjmm(j) { return j && j.length === 10 ? j.slice(8, 10) + "/" + j.slice(5, 7) : esc(j || ""); }
+  function carteARappeler() {   // « À rappeler aujourd'hui » (24/11/2026) : leads dont la relance est due aujourd'hui ou en retard, avec la date de dernière mise à jour ; même source que le message Discord de 08:00
+    var t = '<section class="bloc verre" aria-labelledby="t-arap"><div class="tete"><h2 id="t-arap">' + "À rappeler aujourd'hui" + '</h2>';
+    if (!L) return t + "</div></section>";
+    var auj = aujourdhui(), l = (L.leads || []).filter(function (x) { return x.due && x.prevu; }).sort(function (a, b) { return a.prevu < b.prevu ? -1 : a.prevu > b.prevu ? 1 : 0; });
+    t += '<span class="meta">' + (l.length ? l.length + " lead" + (l.length > 1 ? "s" : "") + " dû" + (l.length > 1 ? "s" : "") + " ou en retard" : "rien à rappeler aujourd'hui") + "</span></div>";
+    if (!l.length) return t + "</section>";
+    return t + '<ul class="leads">' + l.map(function (x) {
+      return '<li class="due"><span class="qui"><b>' + esc(x.nom || "(nom absent)") + "</b>" + (x.ville ? " <span>· " + esc(x.ville) + "</span>" : "") + '</span><span class="num tel">' + esc(x.tel || "—") + "</span>" +
+        '<span class="meta quand">' + (x.prevu === auj ? "relance prévue aujourd'hui" : "relance due depuis le " + jjmm(x.prevu)) + " · dernière mise à jour le " + (x.appel ? jjmm(x.appel) : "date inconnue") + "</span></li>";
+    }).join("") + "</ul></section>";
+  }
   function carteLeads() {   // les leads chauds à rappeler (data/leads.js), avec la raison notée par Sid ; Liam appelle lui-même, Jarvis n'appelle personne
     var t = '<section class="bloc verre" aria-labelledby="t-leads"><div class="tete"><h2 id="t-leads">Leads chauds à appeler</h2>';
     if (!L) return t + '</div><p class="vide">data\\leads.js absent : double-cliquez sur l\'icône « Jarvis - Mon entreprise » du bureau.</p></section>';

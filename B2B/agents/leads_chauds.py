@@ -87,7 +87,10 @@ def synchroniser(reg, jour, envoyer=None, fichier=None, suivi=None, rappelle="Si
     f = Path(fichier or FICHIER); d = charger(f); avant = set(d["leads"]); cour = courants(reg, refus_reponses(suivi), rappelle)
     for k, l in cour.items(): d["leads"][k] = {**d["leads"].get(k, {}), **l}   # une clé = une entrée : jamais de doublon
     sortis = [k for k in avant if k not in cour]
-    for k in sortis: del d["leads"][k]
+    for k in sortis:
+        if ecrire:
+            import archive as AR; AR.archiver("leads-chauds", k, d["leads"][k], "sorti de la file (refus, résultat final ou retour du registre)")   # archive restaurable (26/11/2026)
+        del d["leads"][k]
     entres = [k for k in cour if k not in avant]; textes = []
     for k, l in cour.items():
         if k in d["alertes"]: continue

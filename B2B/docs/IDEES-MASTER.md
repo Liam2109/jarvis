@@ -46,6 +46,7 @@ Chaque idée est notée à la date où Liam la dit. Une idée pas encore faite r
 
 - 23/11 — Conversation LinkedIn dédiée : une conversation neuve à chaque fois (sans historique), écrire « post LinkedIn » ou « post LinkedIn : <idée> » et recevoir 2 posts à coller ; à faire chaque jour dans la to-do ; cibles élargies à tous ceux sans site (artisans, commerçants, agriculteurs) ; closers à 15 % comme les appelants ; Discord seulement si un salon LinkedIn existe.
 - 24/11 — Équipe LinkedIn de 3 agents + un responsable : (1) posts (1 à 2 par jour), (2) interactions (repère des posts, prépare des commentaires), (3) DM (trouve des cibles, rédige ~30 messages personnalisés par jour), responsable (suit les réponses, propose les relances). Les agents PRÉPARENT, Liam ENVOIE (LinkedIn interdit l'automatisation des DM et interactions : risque de blocage du profil). Cible principale : recruter appelants et closers.
+- 24/11 — Filet de sécurité, suite : bouton corbeille/restauration sur le dashboard (branché sur sauvegarde-leads.py supprimer/restaurer) et alerte Discord si la sauvegarde de 03:30 manque.
 - 24/11 — Agents Claude Code qui se transmettent des informations entre sessions (fichiers partagés, sous-agents), pour enchaîner les tâches sans copier-coller de prompts, et travailler depuis un autre dossier. À mettre en place après la première vente.
 ## Sites et pages exemples
 - 24/10 — Niveau « premium » avec 3D utile en option payante, après les pages standard.

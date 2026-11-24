@@ -212,7 +212,8 @@ def liberer(reg, feuille, jour):
     n = 0
     for k in [k for k, x in reg["entreprises"].items() if x.get("feuille") == feuille]:
         x = reg["entreprises"][k]
-        if x.get("date") == jour and not x.get("essais"): del reg["entreprises"][k]
+        if x.get("date") == jour and not x.get("essais"):
+            import archive as AR; AR.archiver("registre", k, x, f"liste annulée ({feuille})"); del reg["entreprises"][k]   # jamais de vraie suppression : archive restaurable (26/11/2026)
         else: x.update(statut="à reprendre", retour=jour, pour=x.get("a_qui", SID))
         n += 1
     return n
