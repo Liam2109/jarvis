@@ -264,7 +264,7 @@ def cmd_jour(conf, jour, essai, drive=None):
 
 def cmd_rappel(conf, jour, essai, lire=None):
     """Passe de 08:00 : un message Discord « À rappeler aujourd'hui » avec les leads de la file dont la relance est due aujourd'hui ou en retard, avec leur date de dernière mise à jour.
-    Aucun contact client, aucune écriture (pas d'état : le message est refait chaque jour tant que le lead est en retard). Simulation tant que envoi_automatique est false."""
+    Aucun contact client, aucune écriture (pas d'état : le message est refait chaque jour tant que le lead est en retard). Poste toujours sur Discord (message pour Liam), même si envoi_automatique est false."""
     if not est_ouvre(date.fromisoformat(jour)):
         print(f"{jour} : jour non ouvré, aucun rappel."); return 0
     try: dus = leads_dus_file(jour, lire)
@@ -278,11 +278,10 @@ def cmd_rappel(conf, jour, essai, lire=None):
         return 0
     texte = message_rappel(dus, jour)
     if essai: print("[essai] message qui serait envoyé (rien envoyé) :\n" + texte); return 0
-    if conf["envoi_automatique"]:
-        ok = all(alerter_discord(m) for m in morceaux(texte)); print(texte); print("  (posté sur Discord)" if ok else "  ! Discord : non envoyé")
-        journaliser("rappel", f"{jour} : {len(dus)} lead(s) {'annoncé(s)' if ok else 'non annoncé(s), Discord indisponible'}")
-        return 0 if ok else 2
-    print("[simulation : envoi_automatique=false] " + texte); journaliser("rappel", f"{jour} : {len(dus)} lead(s) (simulation)"); return 0
+    # Message pour Liam seulement (aucun prospect contacté) : il part toujours, indépendamment de envoi_automatique (qui ne règle que les relances aux prospects).
+    ok = all(alerter_discord(m) for m in morceaux(texte)); print(texte); print("  (posté sur Discord)" if ok else "  ! Discord : non envoyé")
+    journaliser("rappel", f"{jour} : {len(dus)} lead(s) {'annoncé(s)' if ok else 'non annoncé(s), Discord indisponible'}")
+    return 0 if ok else 2
 
 
 def cmd_etat():

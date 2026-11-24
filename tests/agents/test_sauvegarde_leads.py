@@ -103,5 +103,12 @@ class Rappel(unittest.TestCase):
             self.assertEqual(R.cmd_rappel({**conf, "envoi_automatique": False}, "2026-11-24", True, lambda: self.FILE), 0)   # essai : rien envoyé
         self.assertEqual(len(envois), 1)
 
+    def test_rappel_part_meme_en_simulation(self):
+        envois = []; R.alerter_discord = lambda t: envois.append(t) or True
+        conf = {**R.DEFAUT, "envoi_automatique": False}
+        with redirect_stdout(io.StringIO()):
+            self.assertEqual(R.cmd_rappel(conf, "2026-11-24", False, lambda: self.FILE), 0)
+        self.assertEqual(len(envois), 1, "le rappel pour Liam part toujours")
+
 
 if __name__ == "__main__": unittest.main()
