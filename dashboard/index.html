@@ -629,7 +629,7 @@
   }
   function vueLinkedin() {
     var h = '<div class="tete"><h1>LinkedIn</h1>' + (LK ? '<span class="meta">lot du ' + esc(dateLongue(LK.jour)) + " · préparé, jamais envoyé : vous envoyez vous-même</span>" : "") + "</div>";
-    if (!LK) return h + '<div class="verre accueil-vide"><h2>Pas encore de lot</h2><p>Le lot est préparé chaque jour ouvré à 08:00 sur le serveur (B2B\\agents\\linkedin-equipe.py). Cette rubrique se lit et se coche depuis le tableau de bord du serveur (http://serveur:8080).</p></div>';
+    if (!LK) return h + '<div class="verre accueil-vide"><h2>Pas encore de lot</h2><p>Le lot est préparé chaque jour ouvré à 08:00 sur le serveur (B2B\\agents\\linkedin-equipe.py). Cette rubrique se lit et se coche depuis le tableau de bord du serveur (http://serveur:8080). Depuis un autre PC, saisissez le secret du serveur une fois.</p><div class="boutons"><button class="bouton" data-secret="1">Saisir le secret du serveur</button></div></div>';
     LKTEXTES = [];
     var lien = location.protocol === "file:" ? '<p class="meta">Ouvert depuis un fichier : les cases ne peuvent pas être enregistrées. Ouvrez la page du serveur (http://…:8080).</p>' : "";
     h += lien + '<p class="meta lk-msg" id="lk-msg" role="status"></p>';
@@ -656,12 +656,18 @@
     var z = document.createElement("textarea"); z.value = texte; z.style.position = "fixed"; z.style.opacity = "0"; document.body.appendChild(z); z.select();
     try { document.execCommand("copy"); fait(); } catch (e) {} z.remove();
   }
-  function cocher(id, action) {
+  function secretLk() { try { return localStorage.getItem("jarvis-secret") || ""; } catch (e) { return ""; } }   // secret du serveur (B2B\\config\\dashboard.local), demandé une fois si la page n'est pas ouverte sur le serveur lui-même
+  function demanderSecret() {
+    var v = window.prompt("Secret du serveur (fichier B2B\\config\\dashboard.local sur le serveur) :", "");
+    if (v) { try { localStorage.setItem("jarvis-secret", v.trim()); } catch (e) {} }
+    return !!v;
+  }
+  function cocher(id, action, deuxieme) {
     var msg = function (t) { var m = $("lk-msg"); if (m) m.textContent = t; };
     if (location.protocol === "file:") { msg("Impossible depuis un fichier : ouvrez la page du serveur."); return; }
-    fetch("/api/linkedin", { method: "POST", headers: { "X-Jarvis": "1", "Content-Type": "application/json" }, body: JSON.stringify({ id: id, action: action }) })
-      .then(function (r) { return r.json().then(function (j) { return [r.ok, j.message]; }); })
-      .then(function (x) { if (!x[0]) { msg(x[1] || "Refusé."); rendre(); return; } recharger(function () { msg(x[1]); }); })
+    fetch("/api/linkedin", { method: "POST", headers: { "X-Jarvis": "1", "X-Jarvis-Secret": secretLk(), "Content-Type": "application/json" }, body: JSON.stringify({ id: id, action: action }) })
+      .then(function (r) { return r.json().then(function (j) { return [r.ok, j.message, r.status]; }, function () { return [false, "Refusé (" + r.status + ").", r.status]; }); })
+      .then(function (x) { if (x[2] === 403 && !deuxieme && demanderSecret()) { cocher(id, action, true); return; } if (!x[0]) { msg(x[1] || "Refusé."); rendre(); return; } recharger(function () { msg(x[1]); }); })
       .catch(function () { msg("Le serveur n'a pas répondu : rien n'a été enregistré."); rendre(); });
   }
   function rendre() {
@@ -684,6 +690,7 @@
     var d = e.target.closest("[data-doc]"); if (d) { doc = d.dataset.doc; memoriser(); rendre(); return; }
     var q = e.target.closest("[data-periode]"); if (q) { periode = q.dataset.periode; memoriser(); rendre(); return; }
     var k = e.target.closest("[data-courbe]"); if (k) { COCHES[k.dataset.courbe] = !COCHES[k.dataset.courbe]; memoriser(); rendre(); return; }
+    if (e.target.closest("[data-secret]")) { if (demanderSecret()) recharger(); return; }
     var cp = e.target.closest("[data-copie]"); if (cp) { copier(LKTEXTES[+cp.dataset.copie], cp); return; }
     var co = e.target.closest("[data-coche]"); if (co) { co.disabled = true; cocher(co.dataset.coche, co.dataset.action); return; }
     var c = e.target.closest(".agent, .rang:not(.entete)"); if (c) { panneau(c.dataset.nom); rendre(); }
@@ -692,7 +699,7 @@
   function recharger(fin) {   // toutes les 5 min : relit agents.js, ventes.js, docs.js et data/historique.js (réécrits par outils\agents-json.py)
     var f = ["agents.js", "ventes.js", "docs.js", "data/historique.js", "data/leads.js", "data/linkedin.js"], n = 0;
     f.forEach(function (x) {
-      var s = document.createElement("script"); s.src = x + "?t=" + Date.now();
+      var s = document.createElement("script"); s.src = x + "?t=" + Date.now() + (x === "data/linkedin.js" ? "&k=" + encodeURIComponent(secretLk()) : "");
       s.onload = s.onerror = function () { s.remove(); if (++n === f.length) { appliquer(); if (typeof fin === "function") fin(); } };
       document.body.appendChild(s);
     });
