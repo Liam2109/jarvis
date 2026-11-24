@@ -18,6 +18,7 @@
     "memoire/",
     "logs/",
     "quarantaine/",
+    "docs/archives/",
     "transfert-serveur/",
     "instagram/",
     "voix/models/"

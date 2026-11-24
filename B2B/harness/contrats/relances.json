@@ -1,7 +1,7 @@
 {
  "nom": "relances",
  "responsable": "Vente",
- "mission": "Jours ouvrés : 08:00 les leads dus ou en retard (file), 08:30 ceux datés d'aujourd'hui (J+3, J+7, J+15), en « À rappeler aujourd'hui » ; ne contacte que Liam.",
+ "mission": "Jours ouvrés à 08:00 : les leads dus ou en retard (file), puis ceux datés d'aujourd'hui (J+3, J+7, J+15), en « À rappeler aujourd'hui » ; ne contacte que Liam.",
  "statut": "actif",
  "script": "B2B/agents/relances.py",
  "jours": [0, 1, 2, 3, 4],

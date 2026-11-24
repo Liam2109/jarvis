@@ -21,7 +21,7 @@ tags: [agent-b2b]
 
 ## Rôle et limites
 ### Mission
-Jours ouvrés : 08:00 les leads dus ou en retard (file), 08:30 ceux datés d'aujourd'hui (J+3, J+7, J+15), en « À rappeler aujourd'hui » ; ne contacte que Liam.
+Jours ouvrés à 08:00 : les leads dus ou en retard (file), puis ceux datés d'aujourd'hui (J+3, J+7, J+15), en « À rappeler aujourd'hui » ; ne contacte que Liam.
 
 ### Ce qu'il fait étape par étape
 1. `M.exiger("relances", ...)` : refuse hors de la machine active (sauf `--essai`).

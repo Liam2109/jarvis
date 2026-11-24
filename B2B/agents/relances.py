@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Agent relances (LM MULTI-SERVICES, 18/11/2026) : chaque jour ouvré à 08:00 (commande « rappel » : leads de la file dont la relance est due ou en retard) puis à 08:30 (commande « jour »), UN message Discord « À rappeler aujourd'hui » pour Liam avec les leads chauds notés par Sid qu'il doit
+"""Agent relances (LM MULTI-SERVICES, 18/11/2026) : chaque jour ouvré à 08:00 (commande « rappel » : leads de la file dont la relance est due ou en retard) puis, dans la même tâche, la commande « jour », UN message Discord « À rappeler aujourd'hui » pour Liam avec les leads chauds notés par Sid qu'il doit
 rappeler lui-même. Il ne contacte personne d'autre que Liam. Aucune IA, aucun token : lecture des feuilles Google et calcul de dates.
 
-  python agents\\relances.py jour [--jour AAAA-MM-JJ] [--essai]     le passage du jour (tâche serveur 08:30) ; --essai : lit les vraies feuilles, affiche le message, n'écrit et n'envoie rien
+  python agents\\relances.py jour [--jour AAAA-MM-JJ] [--essai]     le passage du jour (tâche serveur 08:00, après « rappel ») ; --essai : lit les vraies feuilles, affiche le message, n'écrit et n'envoie rien
   python agents\\relances.py rappel [--jour AAAA-MM-JJ] [--essai]   08:00 : leads de la file (donnees\\leads-chauds.json) dont la relance est due aujourd'hui ou en retard, avec leur dernière mise à jour
   python agents\\relances.py etat                                  nombre de relances déjà annoncées, dernier envoi
 

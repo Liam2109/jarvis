@@ -288,7 +288,8 @@ class Cadre(unittest.TestCase):
         self.assertFalse(any(k in reg for k in ("token", "jeton", "cle", "salon_linkedin_id")))   # aucun secret ni identifiant dans le fichier suivi par git
         t = json.loads((C.AGENTS / "serveur-taches.json").read_text(encoding="utf-8"))["agents"]["linkedin"]
         self.assertEqual((t["script"], t["commandes"], t["heure"], t["jours"]), ("linkedin.py", [["jour"]], "07:45", [0, 1, 2, 3, 4])); self.assertTrue(t["desactive"])   # fermé jusqu'au « go linkedin »
-        self.assertEqual(json.loads((C.HARNESS / "fiches-noms.json").read_text(encoding="utf-8"))["linkedin"], "💼 LinkedIn")
+        self.assertEqual(json.loads((C.HARNESS / "fiches-noms.json").read_text(encoding="utf-8"))["linkedin"], None)   # agent archivé le 24/11/2026 (remplacé par linkedin-equipe) : fiche rangée dans docs/archives/agents-retires
+        self.assertTrue((C.RACINE / "docs" / "archives" / "agents-retires" / "💼 LinkedIn.md").is_file())
         self.assertTrue((C.RACINE / ".claude" / "skills" / "agent-linkedin" / "SKILL.md").is_file())
 
 

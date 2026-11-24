@@ -221,10 +221,14 @@ def entete(c, t, titre, ancien_fm):
     return "---\n" + "\n".join(l) + "\n---\n"
 
 
+def actifs_au_registre(cs, n): return [c for c in cs if n.get(c["nom"]) or c["nom"] not in n]   # agent archivé (null dans fiches-noms.json) : ni dans l'organigramme ni dans les responsables
+
+
 def libelle(c, n): return f"{n.get(c['nom']) or c['nom']} ({STATUT[c['statut']]})"
 
 
 def responsables(cs, n):
+    cs = actifs_au_registre(cs, n)
     l = ["## Responsables", "", "Liam décide ; Jarvis (CEO) pilote ; chaque responsable pilote ses agents et rend compte à Jarvis.", "",
          "- **Rattachés directement à Jarvis (CEO) :** " + (", ".join(libelle(c, n) for c in cs if c["responsable"] == "Jarvis (CEO)") or "aucun") + "."]
     for r in RESPONSABLES:
@@ -234,6 +238,7 @@ def responsables(cs, n):
 
 
 def organigramme(cs, n):
+    cs = actifs_au_registre(cs, n)
     ceo = [c for c in cs if c["responsable"] == "Jarvis (CEO)"]
     m = ["## Organigramme", "", "Généré depuis les contrats (`B2B/harness/contrats`).", "", "```mermaid", "flowchart TD", '  liam["Liam"] --> ceo["Jarvis (CEO)"]']
     for c in ceo: m.append(f'  ceo --> {c["nom"].replace("-", "_")}["{libelle(c, n)}"]')
@@ -330,7 +335,8 @@ def liens_arbre(n):
     Ces liens vivent dans la zone « Liens et décisions », conservée à chaque régénération (la partie générée n'a aucun lien) : écrits à la main, ce contrôle les garde justes."""
     pb = []; ceo_nom = n.get("jarvis-ceo"); ceo = lire(SORTIE / f"{ceo_nom}.md") or ""
     for sup, (d, agents) in domaines().items():
-        s = lire(SORTIE / f"{n[sup]}.md") if n.get(sup) else None
+        if not n.get(sup): continue      # superviseur archivé (null dans fiches-noms.json) : plus de note, plus de contrôle
+        s = lire(SORTIE / f"{n[sup]}.md")
         if s is None: pb.append(f"note du superviseur absente : {n.get(sup) or sup}"); continue
         if f"|{ceo_nom}]]" not in s: pb.append(f"{n[sup]} : aucun lien vers « {ceo_nom} » dans « Liens et décisions »")
         for a in agents:

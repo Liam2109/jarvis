@@ -34,6 +34,10 @@ def lire_json(p, defaut=None):
     except (OSError, ValueError): return defaut
 
 
+# Agents retirés de la grille (24/11/2026) : leurs scripts restent dans B2B/agents (des tests les citent), leurs fiches sont rangées dans docs/archives/agents-retires.
+RETIRES = {"appels-liam", "facebook", "superviseur-sites", "superviseur-mail", "superviseur-videos", "jarvis-vue", "linkedin", "vente-relances", "registre"}
+
+
 def est_archive(p):
     """Agent archivé : son .md commence par « Agent retiré … Archive. » (ex. instagram, retiré le 14/11/2026) : gardé sur disque, absent du tableau de bord."""
     try: return p.with_suffix(".md").read_text(encoding="utf-8-sig").lstrip().startswith("Agent retiré")
@@ -86,7 +90,7 @@ def derniere_trace(nom):
         for l in reversed(lignes):
             try: x = json.loads(l)
             except ValueError: continue
-            if isinstance(x, dict) and x.get("heure"): return {"quand": str(x["heure"]).replace("T", " ")[:19], "resultat": str(x.get("resultat") or "")[:60], "ok": x.get("ok")}
+            if isinstance(x, dict) and x.get("heure"): return {"quand": str(x["heure"]).replace("T", " ")[:19], "resultat": str(x.get("resultat") or "")[:60], "ok": x.get("ok"), "decision": str(x.get("decision") or ""), "erreur": str(x.get("erreur") or "")[:120]}
     return None
 
 
@@ -104,7 +108,7 @@ def journal(nom):
     tr = derniere_trace(nom)
     if tr:      # la trace du harness fait foi pour « passé aujourd'hui » (les agents n'écrivent pas tous dans leur .log) ; sans trace, l'ancien comportement
         dernier = tr["quand"]; resultat = resultat or tr["resultat"]
-        if tr["ok"] is False: erreur = {"date": dernier, "action": "erreur (trace)"}
+        if tr["ok"] is False and tr.get("decision") != "stock": erreur = {"date": dernier, "action": "erreur (trace)"}      # « stock » = alerte de stock de listes bas (appels-sid) : la liste du jour est faite, ce n'est pas une panne
         elif erreur is not None and erreur["date"] != dernier: erreur = None if erreur["date"] < dernier else erreur
     return dernier, resultat, erreur, liste[-30:]
 
@@ -118,10 +122,17 @@ CATEGORIE = {"devis": "Vente", "relances": "Vente", "rendez-vous": "Vente", "rep
              "page-exemple": "Sites", "superviseur-sites": "Sites", "interim": "Mail", "superviseur-mail": "Mail", "superviseur-videos": "Vidéos"}
 
 
+def avertissement(nom, en_erreur):
+    """Dernière trace = alerte de stock bas (decision « stock », ok=False) sans vraie panne : texte court, sinon None. L'agent a tourné ; le tableau de bord l'affiche en orange, jamais en rouge."""
+    tr = None if en_erreur else derniere_trace(nom)
+    return ("Stock bas : " + (tr["erreur"] or tr["resultat"]).replace("stock bas :", "").strip()[:100]) if tr and tr.get("decision") == "stock" and tr.get("ok") is False else None
+
+
 def voyant(a, jour):
     """Statut à quatre couleurs : rouge = erreur ou suspendu ; gris = désactivé, à construire ou jamais passé ; vert = passé aujourd'hui ; orange = déjà passé mais pas encore aujourd'hui. -> (couleur, raison)"""
     if a.get("statut") == "erreur" or a.get("suspendu"): return "rouge", "Suspendu" if a.get("suspendu") else "En erreur"
     if a.get("etat_liste") in ("désactivé", "à construire"): return "gris", "Désactivé" if a["etat_liste"] == "désactivé" else "À construire"
+    if a.get("avertissement"): return "orange", a["avertissement"]
     dp = a.get("dernier_passage")
     if not dp: return "gris", "Aucun passage visible"
     return ("vert", "Passé aujourd'hui") if str(dp)[:10] == jour else ("orange", "Pas encore passé aujourd'hui")
@@ -256,7 +267,7 @@ def construire(maintenant=None, photo_serveur=None):
     taches, procs = taches_windows(), processus_python()
     agents = []
     for py in sorted(AGENTS.glob("*.py")):
-        if not est_agent(py): continue
+        if not est_agent(py) or py.stem in RETIRES: continue
         nom = py.stem; s = serveur.get(nom, {})
         horaire = (f"chaque jour à {s['heure']}" if s.get("heure") else f"toutes les {s['toutes_minutes']} min" if s.get("toutes_minutes") else "")
         dernier, resultat, erreur, lignes_journal = journal(nom)
@@ -272,14 +283,14 @@ def construire(maintenant=None, photo_serveur=None):
             "machine": f"serveur {machine_active}" if s and machine_active and machine_active != ce_pc else (machine_active or "aucune machine active"),
             "planifie": bool(s), "horaire": horaire or "non planifié sur le serveur",
             "planifie_sur_ce_pc": planifie_ici, "tourne_sur_ce_pc": tourne,
-            "statut": statut, "suspendu": suspendu,
+            "statut": statut, "suspendu": suspendu, "avertissement": avertissement(nom, en_erreur),
             "dernier_passage": dernier, "dernier_resultat": resultat, "derniere_erreur": erreur,
             "pole": POLES.get(nom, "Autres"), "journal": lignes_journal,
             "responsable": frontmatter(note).get("responsable") or None,   # « responsable: prospection » dans l'en-tête de la note docs/agents (organigramme du 14/11/2026), None sinon
             "note": str(note.relative_to(RACINE)).replace("\\", "/") if note.exists() else None,
             "note_obsidian": ("obsidian://open?path=" + quote(str(note), safe="")) if note.exists() else None,
         })
-    for nom, phrase in SANS_SCRIPT.items():      # agents prévus sans script : une ligne « à construire » sur la page Agents (jamais planifiés)
+    for nom, phrase in ((n, f) for n, f in SANS_SCRIPT.items() if n not in RETIRES):      # agents prévus sans script : une ligne « à construire » sur la page Agents (jamais planifiés)
         if not any(a["nom"] == nom for a in agents):
             agents.append({"nom": nom, "role": phrase, "machine": "aucune", "planifie": False, "horaire": "non planifié", "planifie_sur_ce_pc": False, "tourne_sur_ce_pc": False,
                            "statut": "inactif", "suspendu": False, "dernier_passage": None, "dernier_resultat": None, "derniere_erreur": None, "pole": POLES.get(nom, "Autres"),

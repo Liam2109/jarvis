@@ -64,13 +64,14 @@ Lire contrats et traces et signaler sur Discord chaque agent en défaut ; une li
 **Derniers résultats de test (cette machine) :**
 - `tests/agents/test_panne_alerte.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** 2026-11-23 19:45 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
+**Dernière trace :** 2026-11-24 19:45 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
 
 ### Historique (5 dernières traces, sans données client)
+- 2026-11-24 19:45 | verifier | ok | 0.14 s
+- 2026-11-24 19:45 | verifier | ok | 0.03 s
 - 2026-11-23 19:45 | verifier | ok | 0.18 s
 - 2026-11-23 19:45 | verifier | ok | 0.02 s
 - 2026-11-22 19:45 | verifier | ok | 0.22 s
-- 2026-11-22 19:45 | verifier | ok | 0.07 s
 <!-- DYNAMIQUE:FIN -->
 
 ## Skill et règles

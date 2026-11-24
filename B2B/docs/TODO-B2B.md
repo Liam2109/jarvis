@@ -26,7 +26,6 @@ _Mise à jour : 24 nov. 2026 (le fait est supprimé ; l'historique est dans le j
 - [ ] Stock de Sid : limite de durée prospection faite (d557e44) ; rendre à Sid les 11 fiches « préparé » (coiffeur/plombier/électricien) ; zone limitée aux départements 76, 27, 14, 50, 61 (décision 14/11) : à relever seulement si le stock manque
 - [ ] Dashboard (01b8143) : ouvrir la page et vérifier à l'œil colonnes par superviseur, ~6 agents passés aujourd'hui, clic = note + journal ; reste : bouton corbeille sur les leads chauds
 - [ ] Recrutement appelants : annonce Facebook postée le 23/11 dans 5 groupes (Téléprospection freelance, 100 % Télétravail, Teleconseiller, Suisse/France, Freelancer-Télétravail ; Télévendeur non vérifié) ; formulaire https://forms.gle/5G8FEigjU5Ks6Z2G6 ; 0 réponse au soir du 23/11 ; relire le 24/11 matin, sinon reposter avec un angle plus direct
-- [ ] Graphe Obsidian : dire si « 📞 Appels Liam » (pôle Prospection) et « 🔁 Relances » (pôle Vente, pas encore construit) doivent passer sous leur superviseur — ils restent liés au CEO car ils ne sont pas dans AGENTS_SUIVIS ; si oui, les ajouter à la liste du superviseur concerné
 - [ ] Vidéos : ajouter videos-nettoyage, videos-veille, videos-scripts, videos-marketing et videos-creation à agents_actifs (3 vidéos par jour dès le 17/11, tout reste dans a-valider ; chaque agent écrit alors une trace et le surveillant le suit)
 - [ ] Vidéos ligne A puis ligne B : dire « go publier » sur la première vidéo de la ligne, puis suivre Videos\README.md (playwright, connexion toi-même, essai, go_publier dans la config locale) ; rien n'est publié avant
 - [ ] Vidéos ligne B : créer le compte TikTok séparé, mettre le formulaire Google en bio, renseigner `lignes.B.taux_commission` si tu veux un taux dans les vidéos (vide = « à la commission »)
@@ -65,6 +64,7 @@ _Mise à jour : 24 nov. 2026 (le fait est supprimé ; l'historique est dans le j
 - [ ] Recruter d'autres call callers (15 %, jamais de closers), dont un spécialiste restaurants
 - [ ] Intérim : créer les alertes sur l'espace candidat des agences, lancer `interim.py gmail-autoriser`, dire « go interim », répondre aux 4 questions du CV, déposer les 7 documents Samsic (toi-même)
 - [ ] Alerte candidatures : lier le formulaire à une feuille (Réponses > Lier à Sheets), lancer `alerte-candidatures.py google-autoriser`, puis écrire « go alerte »
+- [ ] Devis : à construire (hors du tableau de bord tant qu'il n'est pas livré ; tourne en simulation, reste les relances des devis J+3 et J+7)
 - [ ] Enrichir TECHNIQUES-CLOSING.md avec de bonnes phrases de vente
 - [ ] Liam s'entraîne au jeu de rôle des objections (« Je dois réfléchir », « C'est trop cher »)
 - [ ] Sid doit faire plus d'appels par jour

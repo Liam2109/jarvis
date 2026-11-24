@@ -90,14 +90,14 @@ Toutes les 30 min : les agents de la prospection ont-ils tourne, un prospect est
 **Derniers résultats de test (cette machine) :**
 - `tests/agents/test_superviseurs.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** 2026-11-24 19:07 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
+**Dernière trace :** 2026-11-24 21:37 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
 
 ### Historique (5 dernières traces, sans données client)
-- 2026-11-24 19:07 | passage | ok | 0.47 s
-- 2026-11-24 19:07 | passage | ok | 0.29 s
-- 2026-11-24 18:37 | passage | ok | 0.74 s
-- 2026-11-24 18:37 | passage | ok | 0.45 s
-- 2026-11-24 18:07 | passage | ok | 0.98 s
+- 2026-11-24 21:37 | passage | ok | 0.3 s
+- 2026-11-24 21:37 | passage | ok | 0.14 s
+- 2026-11-24 21:07 | passage | ok | 0.36 s
+- 2026-11-24 21:07 | passage | ok | 0.18 s
+- 2026-11-24 20:37 | passage | ok | 2.86 s
 <!-- DYNAMIQUE:FIN -->
 
 ## Skill et règles

@@ -88,14 +88,14 @@ Toutes les 30 min : les agents de la vente ont-ils tourne, leurs donnees se cont
 **Derniers résultats de test (cette machine) :**
 - `tests/agents/test_superviseurs.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** 2026-11-24 19:07 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
+**Dernière trace :** 2026-11-24 21:36 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
 
 ### Historique (5 dernières traces, sans données client)
-- 2026-11-24 19:07 | passage | ok | 0.43 s
-- 2026-11-24 19:07 | passage | ok | 0.27 s
-- 2026-11-24 18:37 | passage | ok | 0.73 s
-- 2026-11-24 18:37 | passage | ok | 0.41 s
-- 2026-11-24 18:07 | passage | ok | 0.56 s
+- 2026-11-24 21:36 | passage | ok | 0.38 s
+- 2026-11-24 21:36 | passage | ok | 0.25 s
+- 2026-11-24 21:07 | passage | ok | 0.48 s
+- 2026-11-24 21:07 | passage | ok | 0.31 s
+- 2026-11-24 20:37 | passage | ok | 0.88 s
 <!-- DYNAMIQUE:FIN -->
 
 ## Skill et règles

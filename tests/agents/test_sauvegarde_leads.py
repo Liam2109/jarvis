@@ -110,5 +110,29 @@ class Rappel(unittest.TestCase):
             self.assertEqual(R.cmd_rappel(conf, "2026-11-24", False, lambda: self.FILE), 0)
         self.assertEqual(len(envois), 1, "le rappel pour Liam part toujours")
 
+    def test_rappel_traverse_la_vraie_garde_et_le_vrai_post_en_simulation(self):
+        """Chaîne réelle (garde du harness + POST Discord), seul le réseau est simulé : envoi_automatique = false n'empêche pas le message pour Liam."""
+        import sys, urllib.request
+        envoyes = []
+
+        class Rep:
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+            def read(self): return b'{"id": "1"}'
+        R2 = C.agent("relances")      # copie fraîche : d'autres tests remplacent alerter_discord sur le module partagé
+        sauve = (R2.P.acces_discord, urllib.request.urlopen, sys.argv[0])
+        R2.P.acces_discord = lambda *a, **k: ("jeton-faux-de-test", "123456789012345678", "987654321098765432")
+        urllib.request.urlopen = lambda rq, timeout=0: (envoyes.append((rq.get_method(), rq.full_url, rq.data)), Rep())[1]
+        sys.argv[0] = "relances.py"
+        try:
+            with redirect_stdout(io.StringIO()):
+                code = R2.cmd_rappel({**R2.DEFAUT, "envoi_automatique": False}, "2026-11-24", False, lambda: self.FILE)
+        finally:
+            R2.P.acces_discord, urllib.request.urlopen, sys.argv[0] = sauve
+        self.assertEqual(code, 0)
+        self.assertEqual(len(envoyes), 1, "un seul message Discord, posté malgré envoi_automatique = false")
+        self.assertEqual(envoyes[0][0], "POST"); self.assertTrue(envoyes[0][1].endswith("/channels/123456789012345678/messages"))
+        self.assertIn("rappeler aujourd'hui", json.loads(envoyes[0][2])["content"])
+
 
 if __name__ == "__main__": unittest.main()

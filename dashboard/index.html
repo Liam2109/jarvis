@@ -92,6 +92,7 @@
   .colonnes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; align-items: start; }
   .colonne { padding: 12px 8px 8px; border-radius: 16px; background: rgba(255,255,255,.5); border: 1px solid var(--bord-verre); }
   .colonne h3 { display: flex; justify-content: space-between; align-items: baseline; font-size: 15px; line-height: 22px; font-weight: 600; padding: 4px 8px 10px; border-bottom: 1px solid var(--ligne); margin-bottom: 4px; }
+  .lien.petit { font-size: .78em; opacity: .75; margin-right: 12px; }
   .lien { border: 0; background: none; padding: 0; color: var(--bleu); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 
   /* Voyants : bleu plein = passé aujourd'hui, anneau bleu = passé avant, gris bleuté = aucun passage visible, losange bleu nuit = erreur */
@@ -293,7 +294,7 @@
   var DOCS = [["pipeline", "Pipeline"], ["sources", "Sources des chiffres"], ["a_faire", "À faire"], ["journal", "Journal"], ["decisions", "Décisions"], ["idees", "Idées"]];
   var JOURS = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"], MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
   var VEDETTE = "appels", CLE = "paiements";   // la carte du haut, et le chiffre qui garde l'ocre
-  var A = null, V = null, D = null, L = null, R = null, LK = null, CV = null, LKTEXTES = [], vue = "jour", doc = "a_faire", choisi = null, recherche = "";
+  var A = null, V = null, D = null, L = null, R = null, LK = null, CV = null, LKTEXTES = [], vue = "jour", doc = "a_faire", choisi = null, recherche = "", voirInactifs = false;
   try {
     vue = localStorage.getItem("jarvis-vue") || "jour"; periode = { mois: "mois", an: "an" }[localStorage.getItem("jarvis-periode")] || "semaine"; var cc = JSON.parse(localStorage.getItem("jarvis-courbes") || "null"); if (cc) for (var k in COCHES) if (typeof cc[k] === "boolean") COCHES[k] = cc[k]; doc = localStorage.getItem("jarvis-doc") || "a_faire";
     var ancien = localStorage.getItem("jarvis-onglet");   // ancienne page à onglets
@@ -317,6 +318,7 @@
   }
   function voyant(a) {
     if (a.statut === "erreur" || a.suspendu) return ["rouge", a.suspendu ? "Suspendu" : "En erreur"];
+    if (a.avertissement) return ["orange", a.avertissement];   // ex. stock de listes bas : l'agent a tourné, ce n'est pas une panne
     if (a.etat_liste === "désactivé" || a.etat_liste === "à construire") return ["gris", a.etat_liste === "désactivé" ? "Désactivé" : "À construire"];
     if (!a.dernier_passage) return ["gris", "Aucun passage visible"];
     return a.dernier_passage.slice(0, 10) === aujourdhui() ? ["vert", "Passé aujourd'hui"] : ["orange", "Pas encore passé aujourd'hui"];
@@ -397,27 +399,29 @@
     }).join("") + "</ul>";
     return t + '<p class="meta" style="margin:16px 0 0">' + esc(L.critere || "") + ". Liam rappelle lui-même : aucun agent n'appelle ces entreprises.</p></section>";
   }
-  function legende() { return '<p class="meta legende"><span><i class="pt vert"></i>passé aujourd\'hui</span><span><i class="pt orange"></i>pas encore passé aujourd\'hui</span><span><i class="pt gris"></i>désactivé, à construire ou jamais passé</span><span><i class="pt rouge"></i>erreur ou suspendu</span></p>'; }
+  function legende() { return '<p class="meta legende"><span><i class="pt vert"></i>passé aujourd\'hui</span><span><i class="pt orange"></i>pas encore passé aujourd\'hui</span><span><i class="pt rouge"></i>erreur ou suspendu</span></p>'; }
+  function estInactif(a) { return voyant(a)[0] === "gris"; }   // gris = désactivé, à construire ou jamais passé : caché de la grille ; un agent qui passe devient orange ou vert et apparaît tout seul
+  function lienInactifs(n) { return n ? '<button class="lien petit" data-inactifs aria-expanded="' + voirInactifs + '">' + n + (n > 1 ? " inactifs" : " inactif") + (voirInactifs ? " (masquer)" : "") + "</button>" : ""; }
   function carteAgents() {
     if (!A) return '<section class="bloc verre"><h2>Agents</h2><p class="vide">Pas encore de données sur les agents : double-cliquez sur l\'icône du bureau.</p></section>';
-    var ok = 0, err = 0;
+    var ok = 0, err = 0, vis = A.agents.filter(function (a) { return !estInactif(a) || voirInactifs; }), nIn = A.agents.filter(estInactif).length, nVis = A.agents.length - nIn;
     A.agents.forEach(function (a) { var v = voyant(a)[0]; if (v === "vert") ok++; if (v === "rouge") err++; });
-    var h = '<section class="bloc verre" aria-labelledby="t-ag"><div class="tete"><h2 id="t-ag">Agents</h2><span class="meta">' + ok + " sur " + A.agents.length + " passés aujourd'hui · " + err + " en erreur</span>" +
-      '<span class="droite"><button class="lien" data-vue="agents">Tout voir</button></span></div><div class="colonnes">';
+    var h = '<section class="bloc verre" aria-labelledby="t-ag"><div class="tete"><h2 id="t-ag">Agents</h2><span class="meta">' + ok + " sur " + nVis + " passés aujourd'hui · " + err + " en erreur</span>" +
+      '<span class="droite">' + lienInactifs(nIn) + ' <button class="lien" data-vue="agents">Tout voir</button></span></div><div class="colonnes">';
     POLES.forEach(function (p) {
-      var ag = A.agents.filter(function (a) { return (a.categorie || "Jarvis (CEO)") === p; });
+      var ag = vis.filter(function (a) { return (a.categorie || "Jarvis (CEO)") === p; });
       if (!ag.length && p === "Jarvis (CEO)") return;
       h += '<div class="colonne"><h3>' + p + '<span class="num">' + ag.length + "</span></h3>" + (ag.length ? ag.map(ligne).join("") : '<p class="vide" style="padding:0 8px">Aucun agent</p>') + "</div>";
     });
     return h + "</div>" + legende() + "</section>";
   }
   function vueAgents() {
-    var h = '<div class="tete"><h1>Agents</h1>' + (A ? '<span class="meta">' + A.agents.length + " agents</span>" : "") + '<span class="droite"><input type="search" id="recherche" placeholder="Rechercher" aria-label="Rechercher un agent" value="' + esc(recherche) + '"></span></div>';
+    var h = '<div class="tete"><h1>Agents</h1>' + (A ? '<span class="meta">' + A.agents.filter(function (a) { return !estInactif(a); }).length + " agents actifs</span> " + lienInactifs(A.agents.filter(estInactif).length) : "") + '<span class="droite"><input type="search" id="recherche" placeholder="Rechercher" aria-label="Rechercher un agent" value="' + esc(recherche) + '"></span></div>';
     if (!A) return h + '<p class="vide">Pas encore de données sur les agents : double-cliquez sur l\'icône « Jarvis - Mon entreprise » du bureau.</p>';
     if (A.source && A.source.indexOf("pas visible") >= 0) h += '<p class="note">Source : ' + esc(A.source) + ".</p>";
     var r = recherche.toLowerCase();
     POLES.forEach(function (p) {
-      var ag = A.agents.filter(function (a) { return (a.categorie || "Jarvis (CEO)") === p && (!r || (a.nom + " " + a.role).toLowerCase().indexOf(r) >= 0); });
+      var ag = A.agents.filter(function (a) { return (voirInactifs || !estInactif(a)) && (a.categorie || "Jarvis (CEO)") === p && (!r || (a.nom + " " + a.role).toLowerCase().indexOf(r) >= 0); });
       if (!ag.length && (p === "Jarvis (CEO)" || r)) return;
       h += '<section class="table-ag verre"><h2>' + p + '<span class="num">' + ag.length + '</span></h2><div class="rang entete meta" aria-hidden="true"><span></span><span>Agent et rôle</span><span>Prévu</span><span>Dernier passage</span><span>État</span></div>' +
         (ag.length ? ag.map(rang).join("") : '<p class="vide" style="padding:0 8px 12px">Aucun agent</p>') + "</section>";
@@ -717,6 +721,7 @@
     rendre(); if (choisi) panneau(choisi);
   }
   document.addEventListener("click", function (e) {
+    if (e.target.closest("[data-inactifs]")) { voirInactifs = !voirInactifs; rendre(); return; }
     var b = e.target.closest("[data-vue]"); if (b) { vue = b.dataset.vue; memoriser(); rendre(); window.scrollTo(0, 0); return; }
     var d = e.target.closest("[data-doc]"); if (d) { doc = d.dataset.doc; memoriser(); rendre(); return; }
     var q = e.target.closest("[data-periode]"); if (q) { periode = q.dataset.periode; memoriser(); rendre(); return; }
