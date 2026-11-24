@@ -43,7 +43,7 @@ SUIVI = RACINE / "suivi-prospects.csv"
 if os.environ.get("JARVIS_TEST") == "1":   # tests : jamais le vrai état ni le vrai tableau de bord
     import tempfile; _t = Path(tempfile.mkdtemp(prefix="linkedin-equipe-test-")); ETAT = _t / "equipe.json"; SORTIE = _t / "data"; JOURNAL = _t / "journal.log"
 DEFAUT = {"demandes_par_jour": 20, "plafond_semaine": 100, "part_entreprises": 0.7, "commerces_locaux": False, "commentaires": 10, "relance_jours": 3,
-          "go_linkedin_auto": False, "auto_demandes_semaine1": 10, "auto_commentaires_par_jour": 3, "auto_dm_max_jour": 25, "auto_debut": "08:00", "auto_fin": "18:00", "auto_ecart_minutes": 7, "auto_profil": "", "auto_navigateur": "msedge",
+          "go_linkedin_auto": False, "auto_commentaires_par_jour": 3, "auto_dm_max_jour": 25, "auto_debut": "08:00", "auto_fin": "18:00", "auto_ecart_minutes": 7, "auto_profil": "", "auto_navigateur": "msedge",
           "zones": [["76"], ["27", "14", "50", "61"]], "zone_niveau": 1, "effectif_max": 9,
           "intitules_closers": ["closer", "téléconseiller", "téléprospecteur", "conseiller commercial sédentaire", "commercial indépendant", "agent commercial", "apporteur d'affaires"],
           "zones_closers": ["Rouen", "Seine-Maritime", "Normandie", "France"],
@@ -71,7 +71,7 @@ def cfg():
     try:
         if CONFIG.exists(): c.update({k: v for k, v in json.loads(CONFIG.read_text(encoding="utf-8-sig")).items() if not k.startswith("_")})
     except (OSError, ValueError): raise ErreurAgent(f"réglages illisibles : {CONFIG.name}")
-    for k in ("demandes_par_jour", "plafond_semaine", "commentaires", "relance_jours", "zone_niveau", "effectif_max", "auto_demandes_semaine1", "auto_commentaires_par_jour", "auto_dm_max_jour", "auto_ecart_minutes"):
+    for k in ("demandes_par_jour", "plafond_semaine", "commentaires", "relance_jours", "zone_niveau", "effectif_max", "auto_commentaires_par_jour", "auto_dm_max_jour", "auto_ecart_minutes"):
         if not isinstance(c[k], int) or isinstance(c[k], bool) or c[k] < 0: raise ErreurAgent(f"réglage « {k} » invalide dans {CONFIG.name}")
     if not isinstance(c["part_entreprises"], (int, float)) or not 0 <= c["part_entreprises"] <= 1: raise ErreurAgent("part_entreprises : un nombre entre 0 et 1")
     c["commerces_locaux"] = c.get("commerces_locaux") is True; c["go_linkedin_auto"] = c.get("go_linkedin_auto") is True

@@ -104,3 +104,4 @@ Chaque idée est notée à la date où Liam la dit. Une idée pas encore faite r
 - 23/11 — Chaque vidéo : un titre et une description avec les liens YouTube, TikTok et Instagram de Liam (liens à donner, dans la description) ; à ajouter à la fiche idees-tiktok.
 - 23/11 — Agent type Claude Cowork (agent qui travaille seul sur le PC à partir d'un objectif), côté biz, plus tard.
 - 25/11 — LinkedIn automatique prêt mais fermé : après 2 semaines de journal, comparer taux d'acceptation et de réponse entre messages avec et sans prix, garder le meilleur.
+- 25/11 — LinkedIn auto à 20 demandes dès le jour 1 : si LinkedIn affiche un avertissement, l'arrêt est automatique ; au premier arrêt, repasser à 10 par jour dans linkedin-equipe-config.json avant de reprendre.
