@@ -69,14 +69,14 @@ Alerter Liam sur Discord à chaque nouveau paiement Stripe réussi, en lecture s
 - `B2B/agents/test_stripe_alerte.py` : pas encore lancé par `generer-fiches.py --tests`
 - `tests/agents/test_stripe_alerte.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** 2026-11-24 19:07 ok · **Dernière erreur :** 2026-11-19 21:09 verifier (code 2) · **Dans agents_actifs (cette machine) :** oui
+**Dernière trace :** 2026-11-24 19:31 ok · **Dernière erreur :** 2026-11-19 21:09 verifier (code 2) · **Dans agents_actifs (cette machine) :** oui
 
 ### Historique (5 dernières traces, sans données client)
-- 2026-11-24 19:07 | verifier | ok | 0.58 s
-- 2026-11-24 19:07 | verifier | ok | 0.34 s
-- 2026-11-24 19:01 | verifier | ok | 0.61 s
-- 2026-11-24 19:01 | verifier | ok | 0.32 s
-- 2026-11-24 18:56 | verifier | ok | 0.55 s
+- 2026-11-24 19:31 | verifier | ok | 0.55 s
+- 2026-11-24 19:31 | verifier | ok | 0.31 s
+- 2026-11-24 19:26 | verifier | ok | 0.53 s
+- 2026-11-24 19:26 | verifier | ok | 0.29 s
+- 2026-11-24 19:21 | verifier | ok | 0.68 s
 <!-- DYNAMIQUE:FIN -->
 
 ## Skill et règles

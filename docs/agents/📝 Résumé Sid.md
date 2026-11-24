@@ -69,14 +69,14 @@ Poster à 19:30 (jours ouvrés) le résumé du soir : appels de Sid par valeur d
 - `B2B/agents/test_resume_sid.py` : pas encore lancé par `generer-fiches.py --tests`
 - `tests/agents/test_resume_sid.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** 2026-11-23 19:30 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
+**Dernière trace :** 2026-11-24 19:30 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
 
 ### Historique (5 dernières traces, sans données client)
+- 2026-11-24 19:30 | resume | ok | 3.49 s
+- 2026-11-24 19:30 | resume | ok | 3.18 s
 - 2026-11-23 19:30 | resume | ok | 4.45 s
 - 2026-11-23 19:30 | resume | ok | 3.96 s
 - 2026-11-22 19:30 | resume | ok | 0.29 s
-- 2026-11-22 19:30 | resume | ok | 0.03 s
-- 2026-11-21 19:30 | resume | ok | 0.27 s
 <!-- DYNAMIQUE:FIN -->
 
 ## Skill et règles

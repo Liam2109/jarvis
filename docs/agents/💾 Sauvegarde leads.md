@@ -76,7 +76,7 @@ Chaque nuit à 03:30, copier leads, appels, résultats d'appels, leads chauds et
 **Derniers résultats de test (cette machine) :**
 - `tests/agents/test_sauvegarde_leads.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** 2026-11-24 18:56 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** non (Liam l'ajoute s'il veut le planifier)
+**Dernière trace :** 2026-11-24 18:56 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
 
 ### Historique (5 dernières traces, sans données client)
 - 2026-11-24 18:56 | sauvegarder | ok | 0.06 s

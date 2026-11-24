@@ -71,14 +71,14 @@ Lire les réponses des prospects, les classer et prévenir Liam sur Discord avec
 **Derniers résultats de test (cette machine) :**
 - `B2B/agents/test_reponses.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** 2026-11-24 19:06 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
+**Dernière trace :** 2026-11-24 19:21 ok · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
 
 ### Historique (5 dernières traces, sans données client)
+- 2026-11-24 19:21 | --jours 14 | ok | 9.38 s
 - 2026-11-24 19:06 | --jours 14 | ok | 9.05 s
 - 2026-11-24 18:51 | --jours 14 | ok | 10.1 s
 - 2026-11-24 18:37 | --jours 14 | ok | 11.73 s
 - 2026-11-24 18:21 | --jours 14 | ok | 11.73 s
-- 2026-11-24 18:07 | --jours 14 | ok | 9.57 s
 <!-- DYNAMIQUE:FIN -->
 
 ## Skill et règles
