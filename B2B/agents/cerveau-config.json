@@ -1,0 +1,13 @@
+{
+  "go_cerveau": false,
+  "modele": "qwen2.5:3b",
+  "requetes_par_jour": 6,
+  "resultats_par_requete": 3,
+  "max_analyses": 24,
+  "budget_minutes": 25,
+  "seuil_score": 5.0,
+  "jours_gardes": 30,
+  "claude": {"actif": true, "modele": "claude-sonnet-5-5", "meilleures": 5, "delai_secondes": 300},
+  "essai": {"lot_appels": 20, "min_decroches": 8},
+  "_aide": "AGENT FERME : go_cerveau doit rester false dans ce fichier suivi par git. Pour l'ouvrir (apres le « go cerveau » de Liam) : go_cerveau true dans le fichier de reglages local de cette machine (cerveau-config + .local.json, hors git), retirer la cle « desactive » de la tache cerveau dans serveur-taches.json, ajouter cerveau a agents_actifs. modele : qwen2.5:3b, le plus petit modele correct installe (CPU, 5,9 Go de RAM). seuil_score : une trouvaille doit valoir au moins ce score sur 10 pour partir chez Claude (aucune = zero token). essai : lot_appels par version, min_decroches par version avant de conclure. Voir B2B/agents/cerveau.py et B2B/cerveau/README.md."
+}

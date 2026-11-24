@@ -225,6 +225,12 @@
       "heure": "08:00",
       "jours": [0, 1, 2, 3, 4]
     },
+    "cerveau": {
+      "script": "cerveau.py",
+      "commandes": [["jour"], ["proposer"]],
+      "heure": "01:30",
+      "desactive": "24/11/2026 : fermé jusqu'au « go cerveau » de Liam (retirer cette clé, mettre go_cerveau à true dans les réglages locaux de la machine, ajouter cerveau à agents_actifs)"
+    },
     "jarvis-vue": {
       "script": "jarvis-vue.py",
       "commandes": [

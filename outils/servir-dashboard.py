@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Sert le tableau de bord en LECTURE SEULE : uniquement le dossier dashboard\\ (jamais le reste du dépôt), GET/HEAD, aucun listage de dossier.
-SEULE écriture (24/11/2026) : POST /api/linkedin {id, action} (cases cochées de la rubrique LinkedIn). Sécurité (audit du 24/11/2026) : réservée à la machine elle-même (127.0.0.1 / ::1) OU à un en-tête
+SEULES écritures (24/11/2026) : POST /api/linkedin {id, action} (cases cochées de la rubrique LinkedIn) et POST /api/cerveau {id, action} (accepter, refuser, garder, abandonner une proposition du cerveau). Sécurité (audit du 24/11/2026) : réservée à la machine elle-même (127.0.0.1 / ::1) OU à un en-tête
 X-Jarvis-Secret égal au secret du serveur (B2B/config/dashboard.local, hors git, créé au premier démarrage, jamais affiché) ; en-tête X-Jarvis et JSON obligatoires, corps limité à 512 octets, id de 8 caractères
-hexadécimaux et action d'une liste fermée vérifiés AVANT toute lecture de fichier ; aucun chemin ne vient de la requête (module et état fixes) ; une écriture à la fois. data/linkedin.js (noms de prospects)
-n'est servi qu'à la machine elle-même ou avec ?k=SECRET.
+hexadécimaux et action d'une liste fermée vérifiés AVANT toute lecture de fichier ; aucun chemin ne vient de la requête (module et état fixes) ; une écriture à la fois. data/linkedin.js (noms de prospects) et data/cerveau.js (extraits de scripts)
+ne sont servis qu'à la machine elle-même ou avec ?k=SECRET.
 
   python outils/servir-dashboard.py [--port 8080] [--hote 0.0.0.0]
 Sur le serveur, lancé par la tâche « Jarvis-Tableau-Service » (voir outils\\taches-dashboard-serveur.ps1). Ouvrir http://<serveur>:8080/ depuis le réseau local.
@@ -17,15 +17,17 @@ from pathlib import Path
 
 RACINE = Path(__file__).resolve().parent.parent
 DOSSIER = RACINE / "dashboard"
-PERMIS = {"index.html", "agents.js", "agents.json", "docs.js", "data/linkedin.js"}
-PROTEGES = {"data/linkedin.js"}   # noms de prospects : machine elle-même ou secret
+PERMIS = {"index.html", "agents.js", "agents.json", "docs.js", "data/linkedin.js", "data/cerveau.js"}
+PROTEGES = {"data/linkedin.js", "data/cerveau.js"}   # noms de prospects, extraits de scripts : machine elle-même ou secret
 SECRET_FICHIER = RACINE / "B2B" / "config" / "dashboard.local"
 TAILLE_MAX = 512
 ID_OK = re.compile(r"[0-9a-f]{8}\Z")
 ACTIONS_OK = ("demande_envoyee", "accepte", "dm_envoye", "repondu_positif", "repondu_autre", "relance_envoyee", "ignorer", "annuler", "commente")
+ACTIONS_CERVEAU = ("accepter", "refuser", "garder", "abandonner")
 LOOPBACK = ("127.0.0.1", "::1", "::ffff:127.0.0.1")
 VERROU = threading.Lock()   # une écriture à la fois (le serveur traite plusieurs requêtes en parallèle)
 _EQUIPE = None
+_CERVEAU = None
 
 
 def secret():
@@ -43,6 +45,14 @@ def equipe():
     if _EQUIPE is None:
         s = importlib.util.spec_from_file_location("linkedin_equipe", RACINE / "B2B" / "agents" / "linkedin-equipe.py"); m = importlib.util.module_from_spec(s); s.loader.exec_module(m); _EQUIPE = m
     return _EQUIPE
+
+
+def cerveau():
+    """Module cerveau.py (chemin fixe, chargé une seule fois)."""
+    global _CERVEAU
+    if _CERVEAU is None:
+        s = importlib.util.spec_from_file_location("cerveau", RACINE / "B2B" / "agents" / "cerveau.py"); m = importlib.util.module_from_spec(s); s.loader.exec_module(m); _CERVEAU = m
+    return _CERVEAU
 
 
 class LectureSeule(SimpleHTTPRequestHandler):
@@ -76,7 +86,9 @@ class LectureSeule(SimpleHTTPRequestHandler):
         self.send_response(code); self.send_header("Content-Type", "application/json; charset=utf-8"); self.send_header("Content-Length", str(len(corps))); self.end_headers(); self.wfile.write(corps)
 
     def do_POST(self):
-        if urlsplit(self.path).path != "/api/linkedin" or self.headers.get("X-Jarvis") != "1": return self.send_error(405)
+        route = urlsplit(self.path).path
+        if route not in ("/api/linkedin", "/api/cerveau") or self.headers.get("X-Jarvis") != "1": return self.send_error(405)
+        permises, charger = (ACTIONS_OK, equipe) if route == "/api/linkedin" else (ACTIONS_CERVEAU, cerveau)
         if not self._autorise(self.headers.get("X-Jarvis-Secret")): return self._repondre(403, "Accès refusé : secret du serveur absent ou faux.")
         if not (self.headers.get("Content-Type") or "").lower().startswith("application/json"): return self.send_error(415)
         try: taille = int(self.headers.get("Content-Length") or 0)
@@ -86,10 +98,10 @@ class LectureSeule(SimpleHTTPRequestHandler):
         try:
             d = json.loads(self.rfile.read(taille).decode("utf-8")); ident, action = d["id"], d["action"]
         except (ValueError, KeyError, TypeError, UnicodeDecodeError): return self.send_error(400)
-        if not (isinstance(ident, str) and ID_OK.match(ident) and isinstance(action, str) and action in ACTIONS_OK): return self._repondre(400, "Requête refusée (identifiant ou action inconnus).")
+        if not (isinstance(ident, str) and ID_OK.match(ident) and isinstance(action, str) and action in permises): return self._repondre(400, "Requête refusée (identifiant ou action inconnus).")
         try:
             with VERROU:
-                m = equipe(); msg = m.appliquer_et_exporter(m.cfg(), ident, action, time.strftime("%Y-%m-%d")); code = 200
+                m = charger(); msg = m.appliquer_et_exporter(m.cfg(), ident, action, time.strftime("%Y-%m-%d")); code = 200
         except Exception as e:
             if type(e).__name__ != "ErreurAgent": return self._repondre(500, "Erreur du serveur : rien n'a été enregistré.")   # jamais le détail technique (chemins, trace)
             msg, code = str(e), 409

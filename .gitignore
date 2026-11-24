@@ -40,6 +40,11 @@ B2B/docs/*
 !B2B/linkedin/
 B2B/linkedin/*
 !B2B/linkedin/lot-*.md
+# Cerveau (24/11/2026) : seuls les sujets (Liam et Claude) et le mode d'emploi partent sur GitHub ; veilles du jour, état, essais jamais
+!B2B/cerveau/
+B2B/cerveau/*
+!B2B/cerveau/sujets.md
+!B2B/cerveau/README.md
 !B2B/sites/
 B2B/sites/*
 !B2B/sites/moteur/

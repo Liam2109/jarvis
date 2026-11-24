@@ -20,6 +20,7 @@ _Mise à jour : 24 nov. 2026 (le fait est supprimé ; l'historique est dans le j
 - [ ] Test de cohérence : étendre aux notes docs\decisions et docs\agents (la note « Offre 595 + 49 » avait encore 990–1 490 € et « lien à créer », hors du périmètre du test) ; vérifier aussi les 3 autres notes de décision
 
 ## Liam
+- [ ] Cerveau (fermé) : dire « go cerveau » quand tu veux l'ouvrir, puis go_cerveau à true dans les réglages locaux, retirer la clé « desactive » de la tâche cerveau dans serveur-taches.json et ajouter cerveau à agents_actifs ; avant : valider des sources (sites, chaînes YouTube, subreddits, forums) dans B2B\cerveau\sujets.md, sans quoi il ne lit que la recherche par sujet (titres seulement) ; ensuite, redémarrer le service du tableau de bord (POST /api/cerveau) et saisir les chiffres des essais avec `cerveau.py resultat`
 - [ ] URGENT Sid : aucun appel depuis ~1 semaine ; il a répondu le 23/11 : OK pour lui, son entreprise est encore en cours de création ; lui demander une date précise de reprise, sans date mercredi chercher un autre appelant
 - [ ] Serveur : mise en veille « Jamais » + capot « ne rien faire » (arrêté 22/11 23:51 → 23/11 10:56 et 22/11 09:28 → 17:00)
 - [ ] Stock de Sid : limite de durée prospection faite (d557e44) ; rendre à Sid les 11 fiches « préparé » (coiffeur/plombier/électricien) ; zone limitée aux départements 76, 27, 14, 50, 61 (décision 14/11) : à relever seulement si le stock manque

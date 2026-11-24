@@ -68,7 +68,7 @@ Chaque jour ouvré à 08:00, prépare le lot LinkedIn du jour pour le tableau de
 **Derniers résultats de test (cette machine) :**
 - `tests/agents/test_linkedin_equipe.py` : pas encore lancé par `generer-fiches.py --tests`
 
-**Dernière trace :** aucune · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** non (Liam l'ajoute s'il veut le planifier)
+**Dernière trace :** aucune · **Dernière erreur :** aucune · **Dans agents_actifs (cette machine) :** oui
 
 ### Historique (5 dernières traces, sans données client)
 - aucune trace sur cette machine

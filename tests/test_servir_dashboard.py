@@ -158,5 +158,42 @@ class TestSimultane(Base):
         [t.start() for t in th]; [t.join() for t in th]; self.assertEqual(max_en_cours[0], 1)
 
 
+class TestCerveau(Base):
+    """POST /api/cerveau (24/11/2026) : mêmes garde-fous que LinkedIn, actions propres au cerveau, et rien d'autre ne passe."""
+    def setUp(self):
+        super().setUp(); (self.t / "data" / "cerveau.js").write_text("window.JARVIS_CERVEAU={x:1};", encoding="utf-8"); self.fc = Faux(); self.ancien = S._CERVEAU; S._CERVEAU = self.fc
+
+    def tearDown(self):
+        S._CERVEAU = self.ancien; super().tearDown()
+
+    def cpost(self, corps, secret=None):
+        h = {"Content-Type": "application/json", "X-Jarvis": "1"}
+        if secret is not None: h["X-Jarvis-Secret"] = secret
+        return self.req("POST", "/api/cerveau", corps, h)
+
+    def test_actions_du_cerveau_et_pas_celles_de_linkedin(self):
+        import commun; self.assertEqual(set(S.ACTIONS_CERVEAU), set(commun.agent("cerveau").ACTIONS))
+        for a in S.ACTIONS_CERVEAU: self.assertEqual(self.cpost({"id": OK_ID, "action": a})[0], 200, a)
+        self.assertEqual(self.fc.appels, [(OK_ID, a) for a in S.ACTIONS_CERVEAU]); self.assertEqual(self.faux.appels, [])   # le module LinkedIn n'est pas touché
+        self.assertEqual(self.cpost({"id": OK_ID, "action": "accepte"})[0], 400)   # action LinkedIn refusée sur la route cerveau
+        self.assertEqual(self.post({"id": OK_ID, "action": "accepter"})[0], 400)   # et l'inverse
+
+    def test_memes_garde_fous(self):
+        for corps in ({"id": "../../x", "action": "accepter"}, {"id": "0123ABCD", "action": "accepter"}, {"id": OK_ID, "action": "supprimer"}, {"id": 1, "action": "accepter"}): self.assertEqual(self.cpost(corps)[0], 400, corps)
+        self.a_distance(); self.assertEqual(self.cpost({"id": OK_ID, "action": "accepter"})[0], 403); self.assertEqual(self.cpost({"id": OK_ID, "action": "accepter"}, "faux")[0], 403)
+        self.assertEqual(self.cpost({"id": OK_ID, "action": "accepter"}, S.secret())[0], 200); self.assertEqual(self.fc.appels, [(OK_ID, "accepter")])
+        self.assertEqual(self.req("POST", "/api/cerveau", {"id": OK_ID, "action": "accepter"}, {"Content-Type": "application/json"})[0], 405)   # sans X-Jarvis
+
+    def test_erreur_metier_409_et_interne_sans_detail(self):
+        self.fc.panne = self.fc.ErreurAgent("proposition inconnue"); self.fc.ErreurAgent.__name__ = "ErreurAgent"
+        c, b = self.cpost({"id": OK_ID, "action": "accepter"}); self.assertEqual(c, 409); self.assertIn("proposition inconnue", b)
+        self.fc.panne = RuntimeError("C:/Users/x/B2B/cerveau/etat.json"); c, b = self.cpost({"id": OK_ID, "action": "accepter"}); self.assertEqual(c, 500); self.assertNotIn("etat.json", b)
+
+    def test_donnees_du_cerveau_protegees(self):
+        self.assertEqual(self.req("GET", "/data/cerveau.js")[0], 200); self.a_distance()
+        self.assertEqual(self.req("GET", "/data/cerveau.js")[0], 403); self.assertEqual(self.req("HEAD", "/data/cerveau.js")[0], 403); self.assertEqual(self.req("GET", "/data/cerveau.json")[0], 404)
+        c, b = self.req("GET", "/data/cerveau.js?t=1&k=" + S.secret()); self.assertEqual(c, 200); self.assertIn("JARVIS_CERVEAU", b)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)
