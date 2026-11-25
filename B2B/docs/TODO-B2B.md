@@ -25,7 +25,6 @@ _Mise à jour : 24 nov. 2026 (le fait est supprimé ; l'historique est dans le j
 - [ ] URGENT Sid : aucun appel depuis ~1 semaine ; il a répondu le 23/11 : OK pour lui, son entreprise est encore en cours de création ; lui demander une date précise de reprise, sans date mercredi chercher un autre appelant
 - [ ] Serveur : mise en veille « Jamais » + capot « ne rien faire » (arrêté 22/11 23:51 → 23/11 10:56 et 22/11 09:28 → 17:00)
 - [ ] Stock de Sid : limite de durée prospection faite (d557e44) ; rendre à Sid les 11 fiches « préparé » (coiffeur/plombier/électricien) ; zone limitée aux départements 76, 27, 14, 50, 61 (décision 14/11) : à relever seulement si le stock manque
-- [ ] Dashboard (01b8143) : ouvrir la page et vérifier à l'œil colonnes par superviseur, ~6 agents passés aujourd'hui, clic = note + journal ; reste : bouton corbeille sur les leads chauds
 - [ ] Recrutement appelants : annonce Facebook postée le 23/11 dans 5 groupes (Téléprospection freelance, 100 % Télétravail, Teleconseiller, Suisse/France, Freelancer-Télétravail ; Télévendeur non vérifié) ; formulaire https://forms.gle/5G8FEigjU5Ks6Z2G6 ; 0 réponse au soir du 23/11 ; relire le 24/11 matin, sinon reposter avec un angle plus direct
 - [ ] Valider la liste des idées supprimées d'IDEES-MASTER.md (sauvegarde dans B2B\donnees\sauvegardes\) et trancher la section « À trancher »
 - [ ] Lundi 16 : prendre les ~15 dernières lignes de la feuille de Sid (ta propre liste « Appels Liam » commence mardi 17)

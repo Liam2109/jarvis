@@ -220,6 +220,39 @@
   .archi-ag { padding: 12px 8px; border-top: 1px solid var(--ligne); } .archi-ag h3 { font-size: 15px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
   .archi-ag ul { margin: 4px 0 0 18px; color: var(--doux); font-size: 13px; line-height: 20px; } .archi-ag .e-erreur, .archi-ag .e-silencieux { color: #B3261E; } .archi-ag .e-jamais { color: var(--ocre); }
 
+  /* Cockpit (25/11/2026) : l'écran « Aujourd'hui » en 10 secondes : état global, 3 actions, chiffres, agents. Couleur = état. */
+  :root { --ok: #1F8A5B; --ok-fond: #E3F4EB; --mal: #C8372F; --mal-fond: #FBE6E4; --stop: #8A1F3C; --stop-fond: #F6DDE5; --att: #B8741A; --att-fond: #FBEFD9; --repos: #5B6B86; --repos-fond: #E6EBF3; }
+  .ck-etat { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 24px; padding: 0; list-style: none; }
+  .ck-etat li { display: flex; align-items: baseline; gap: 10px; padding: 14px 20px; border-radius: 20px; background: var(--repos-fond); color: var(--repos); font-size: 15px; }
+  .ck-etat b { font-size: 40px; line-height: 40px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+  .ck-etat li.ok { background: var(--ok-fond); color: var(--ok); } .ck-etat li.bloque { background: var(--mal-fond); color: var(--mal); } .ck-etat li.auto-stop { background: var(--stop-fond); color: var(--stop); } .ck-etat li.attente, .ck-etat li.attention { background: var(--att-fond); color: var(--att); }
+  .ck-etat li.zero { opacity: .45; }
+  .ck-bandeau { margin: 0 0 24px; padding: 14px 20px; border-radius: 16px; background: var(--stop-fond); color: var(--stop); font-weight: 500; }
+  .ck-actions { padding: 20px 24px; margin-bottom: 24px; }
+  .ck-actions h2, .ck-bloc h2 { font-size: 16px; line-height: 24px; margin-bottom: 8px; }
+  .ck-actions ol { margin: 0; padding: 0; list-style: none; counter-reset: a; display: grid; gap: 8px; }
+  .ck-actions li { counter-increment: a; display: grid; grid-template-columns: 32px minmax(0, 1fr); align-items: start; font-size: 16px; line-height: 24px; }
+  .ck-actions li::before { content: counter(a); display: grid; place-items: center; width: 24px; height: 24px; border-radius: 12px; background: var(--bleu-pale); color: var(--bleu); font-size: 13px; font-weight: 600; }
+  .ck-actions li.urgent::before { background: var(--mal); color: #fff; } .ck-actions li.urgent b { color: var(--mal); font-weight: 600; }
+  .ck-groupes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin-bottom: 24px; align-items: start; }
+  .ck-bloc { padding: 20px 24px 12px; min-width: 0; }
+  .ck-tete { display: grid; grid-template-columns: minmax(0, 1fr) 72px 72px; column-gap: 8px; align-items: baseline; padding-bottom: 8px; border-bottom: 1px solid var(--ligne); }
+  .ck-tete h2 { margin: 0; } .ck-tete span { text-align: right; }
+  .ck-l { display: grid; grid-template-columns: minmax(0, 1fr) 72px 72px; column-gap: 8px; align-items: baseline; padding: 8px 0; border-top: 1px solid var(--ligne); } .ck-tete + .ck-l { border-top: 0; }
+  .ck-l span { color: var(--doux); } .ck-l b { text-align: right; font-size: 32px; line-height: 40px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.02em; } .ck-l b.sept { font-size: 22px; color: var(--doux); font-weight: 500; } .ck-l b.zero { color: var(--faible); font-weight: 400; opacity: .6; } .ck-l b.manque { font-weight: 400; color: var(--faible); }
+  .ck-chauds { display: flex; align-items: baseline; gap: 12px; width: 100%; margin-top: 24px; padding: 20px 24px; border-radius: 24px; cursor: pointer; text-align: left; color: var(--texte); font: inherit; }
+  .ck-chauds b { font-size: 32px; line-height: 40px; font-weight: 600; color: var(--att); } .ck-chauds.rien b { color: var(--faible); font-weight: 400; }
+  .ck-ag { padding: 16px 24px 12px; }
+  .ck-r { display: grid; grid-template-columns: 112px minmax(0, 1.5fr) minmax(0, 1fr) 96px; column-gap: 16px; align-items: center; padding: 10px 0; border-top: 1px solid var(--ligne); min-height: 52px; }
+  .ck-r.entete { min-height: 28px; padding: 2px 0 6px; border-top: 0; }
+  .ck-r .qui b { display: block; font-weight: 600; } .ck-r .qui span { display: block; color: var(--faible); font-size: 13px; line-height: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ck-r .res { color: var(--texte); } .ck-r .res small { display: block; color: var(--faible); font-size: 12px; line-height: 16px; }
+  .ck-r .pass { text-align: right; }
+  .badge { display: inline-flex; align-items: center; justify-content: center; height: 28px; padding: 0 12px; border-radius: 14px; font-size: 13px; font-weight: 600; background: var(--repos-fond); color: var(--repos); white-space: nowrap; }
+  .badge.ok { background: var(--ok-fond); color: var(--ok); } .badge.bloque { background: var(--mal); color: #fff; } .badge.auto-stop { background: var(--stop); color: #fff; } .badge.attente, .badge.attention { background: var(--att-fond); color: var(--att); }
+  .ck-r.bloque, .ck-r.auto-stop { margin: 0 -12px; padding-left: 12px; padding-right: 12px; border-radius: 12px; border-top-color: transparent; }
+  .ck-r.bloque { background: var(--mal-fond); } .ck-r.auto-stop { background: var(--stop-fond); }
+  .ck-in { margin: 12px 0 4px; } .ck-in p { margin: 8px 0 0; color: var(--faible); }
   @media (max-width: 1180px) { .chiffres { grid-template-columns: repeat(2, minmax(0, 1fr)); } .chiffre:last-child:nth-child(odd) { grid-column: span 2; } .trois { grid-template-columns: 1fr 1fr; } .stat-ligne { grid-template-columns: repeat(2, minmax(0, 1fr)); } .stat-ligne li:last-child:nth-child(odd) { grid-column: span 2; } }
   @media (max-width: 760px) {
     /* La barre latérale devient une barre du bas */
@@ -254,6 +287,8 @@
     .rang { grid-template-columns: 16px minmax(0, 1fr) auto; row-gap: 2px; } .rang.entete { display: none; }
     .rang .prevu { grid-column: 2; color: var(--faible); font-size: 12px; } .rang .passe { grid-column: 3; grid-row: 1; justify-self: end; } .rang .etat { grid-column: 3; grid-row: 2; justify-self: end; }
   }
+  @media (max-width: 1180px) { .ck-groupes { grid-template-columns: 1fr; } }
+  @media (max-width: 760px) { .ck-r { grid-template-columns: minmax(0, 1fr) auto; row-gap: 4px; } .ck-r.entete { display: none; } .ck-r .res, .ck-r .pass { grid-column: 1 / 3; text-align: left; } .ck-r > span:first-child { grid-column: 2; grid-row: 1; } .ck-r .qui { grid-column: 1; grid-row: 1; } .ck-etat b { font-size: 32px; } }
   @media (hover: none) { .carte:hover { transform: none; } }
   @media (prefers-reduced-motion: reduce) { *, main { transition: none !important; animation: none !important; } .carte:hover { transform: none; } }
 </style>
@@ -276,6 +311,7 @@
 <script src="data/linkedin.js"></script>
 <script src="data/cerveau.js"></script>
 <script src="data/historique-appels.js"></script>
+<script src="data/cockpit.js"></script>
 <div id="bulle" role="status" aria-live="polite"></div>
 <script>
 (function () {
@@ -297,13 +333,13 @@
     cerveau: '<path d="M6 2.5a2.5 2.5 0 0 0-2.5 2.5A2.5 2.5 0 0 0 2 7.5 2.5 2.5 0 0 0 3.5 10 2.5 2.5 0 0 0 6 13.5h4a2.5 2.5 0 0 0 2.5-3.5A2.5 2.5 0 0 0 14 7.5 2.5 2.5 0 0 0 12.5 5 2.5 2.5 0 0 0 10 2.5H6zM8 3v10"/>',
     potentiel: '<ellipse cx="8" cy="4.5" rx="5" ry="2"/><path d="M3 4.5v3.5c0 1.1 2.2 2 5 2s5-.9 5-2V4.5M3 8v3.5c0 1.1 2.2 2 5 2s5-.9 5-2V8"/>'
   };
-  var VUES = [["jour", "Aujourd'hui"], ["stats", "Statistiques"], ["appels", "Historique des appels"], ["agents", "Agents"], ["architecture", "Architecture"], ["docs", "Documents"], ["linkedin", "LinkedIn"], ["cerveau", "Cerveau"]];
+  var VUES = [["jour", "Aujourd'hui"], ["chauds", "Leads chauds"], ["stats", "Statistiques"], ["appels", "Historique des appels"], ["agents", "Agents"], ["architecture", "Architecture"], ["docs", "Documents"], ["linkedin", "LinkedIn"], ["cerveau", "Cerveau"]];
   var FICHIERS = { a_faire: "../B2B/docs/TODO-B2B.md", journal: "../B2B/docs/JOURNAL-B2B.md", idees: "../B2B/docs/IDEES-MASTER.md" };   // liens en lecture seule (le fichier tel quel, dans un nouvel onglet)
   var H = null, periode = "semaine", COCHES = { appels: true, chauds: true, devis: true, paiements: true };
   var DOCS = [["pipeline", "Pipeline"], ["sources", "Sources des chiffres"], ["a_faire", "À faire"], ["journal", "Journal"], ["decisions", "Décisions"], ["idees", "Idées"]];
   var JOURS = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"], MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
   var VEDETTE = "appels", CLE = "paiements";   // la carte du haut, et le chiffre qui garde l'ocre
-  var A = null, V = null, D = null, L = null, R = null, LK = null, CV = null, AP = null, LKTEXTES = [], vue = "jour", doc = "a_faire", choisi = null, recherche = "", voirInactifs = false;
+  var CK = null, A = null, V = null, D = null, L = null, R = null, LK = null, CV = null, AP = null, LKTEXTES = [], vue = "jour", doc = "a_faire", choisi = null, recherche = "", voirInactifs = false;
   try {
     vue = localStorage.getItem("jarvis-vue") || "jour"; periode = { mois: "mois", an: "an" }[localStorage.getItem("jarvis-periode")] || "semaine"; var cc = JSON.parse(localStorage.getItem("jarvis-courbes") || "null"); if (cc) for (var k in COCHES) if (typeof cc[k] === "boolean") COCHES[k] = cc[k]; doc = localStorage.getItem("jarvis-doc") || "a_faire";
     var ancien = localStorage.getItem("jarvis-onglet");   // ancienne page à onglets
@@ -352,24 +388,42 @@
     var k = Object.keys(r).filter(function (n) { return typeof r[n] === "number" && r[n] > 0; }); if (!k.length) return "";
     return '<ul class="repartition" aria-label="Résultats notés par Sid">' + k.map(function (n) { return "<li>" + esc(n) + "<b>" + r[n] + "</b></li>"; }).join("") + "</ul>";
   }
-  function vueJour() {
-    var c = V && V.chiffres || [], ved = c.filter(function (x) { return x.cle === VEDETTE; })[0], autres = c.filter(function (x) { return x.cle !== VEDETTE; });
-    var h = '<div class="tete"><h1>Aujourd\'hui</h1></div>';
-    if (!c.length) h += '<div class="verre accueil-vide"><h2>Pas encore de chiffres pour aujourd\'hui</h2><p>Double-cliquez sur l\'icône « Jarvis - Mon entreprise » du bureau : elle recalcule les chiffres (fichier ventes.json, via outils\\agents-json.py) et rouvre cette page.</p></div>';
-    else {
-      if (ved) {
-        var m = ved.valeur == null;
-        h += '<section class="vedette" aria-label="' + esc(ved.libelle) + '"><div class="haut"><span>' + esc(dateLongue(aujourdhui())) + "</span>" + (V.genere_le ? '<span class="meta">calculé à ' + esc(V.genere_le.slice(11, 16)) + "</span>" : "") + "</div>" +
-          '<div><span class="lib">' + esc(ved.libelle) + " aujourd'hui</span><b" + (m ? ' class="manque"' : "") + ">" + esc(val(ved.valeur)) + '</b><span class="det"' + (m ? ' title="' + esc(ved.raison) + '">' + simple(ved.raison) : ">" + esc(ved.detail || "")) + "</span></div>" +
-          (m ? "" : '<div class="droite-v">' + repartition(ved) + courbe(ved.serie) + "</div>") + "</section>";
-      }
-      h += '<ol class="chiffres" style="--n:' + (autres.length > 5 ? 3 : autres.length) + '">' + autres.map(function (x) {
-        var manque = x.valeur == null;
-        return '<li class="chiffre carte verre' + (x.cle === CLE ? " cle" : "") + '"><span class="pastille">' + svg(x.cle, 18) + "</span><b" + (manque ? ' class="manque"' : "") + ">" + esc(montrer(x)) +
-          '</b><span class="lib">' + esc(x.libelle) + '</span><span class="det"' + (manque ? ' title="' + esc(x.raison) + '">' + simple(x.raison) : ">" + esc(x.detail || "")) + "</span></li>";
-      }).join("") + "</ol>";
-    }
-    return h + carteARappeler() + carteLeads() + carteRelais() + carteAgents();
+  var ETATS = { "bloque": "Bloqué", "auto-stop": "AUTO-STOP", "attention": "À surveiller", "attente": "En attente", "ok": "OK", "repos": "Repos" };
+  function nb(x, k) {   // « — » seulement si la donnée est inconnue sur ce PC ; un zéro est un vrai zéro
+    var n = x[k], sept = k === "sept" ? "sept" : "";
+    return n == null ? '<b class="' + sept + ' manque" title="Pas de donnée sur ce PC">—</b>' : '<b class="' + sept + (n === 0 ? " zero" : "") + '">' + fmt(n) + "</b>";
+  }
+  function groupe(titre, lignes) {
+    return '<section class="ck-bloc verre"><div class="ck-tete"><h2>' + titre + '</h2><span class="meta">aujourd\'hui</span><span class="meta">7 jours</span></div>' +
+      lignes.map(function (x) { return '<div class="ck-l"><span>' + esc(x.libelle) + "</span>" + nb(x, "auj") + nb(x, "sept") + "</div>"; }).join("") + "</section>";
+  }
+  function ligneCk(a) {
+    var cls = a.etat === "bloque" || a.etat === "auto-stop" ? " " + a.etat : "";
+    return '<div class="ck-r' + cls + '"><span><span class="badge ' + esc(a.etat) + '"' + (a.raison ? ' title="' + esc(a.raison) + '"' : "") + ">" + (ETATS[a.etat] || esc(a.etat)) + "</span></span>" +
+      '<span class="qui"><b>' + esc(a.nom) + '</b><span title="' + esc(a.phrase) + '">' + esc(a.phrase) + '</span></span><span class="res">' + esc(a.resultat || "—") + (a.raison ? "<small>" + esc(a.raison) + "</small>" : "") + "</span>" +
+      '<span class="pass num">' + esc(quand(a.dernier)) + "</span></div>";
+  }
+  function vueJour() {   // cockpit (25/11/2026) : tout vient de data/cockpit.js, écrit par outils\agents-json.py
+    var h = '<div class="tete"><h1>Aujourd\'hui</h1><span class="meta">' + esc(dateLongue(aujourdhui())) + (CK && CK.genere_le ? " · calculé à " + esc(CK.genere_le.slice(11, 16)) : "") + "</span></div>";
+    if (!CK) return h + '<div class="verre accueil-vide"><h2>Pas encore de données</h2><p>Les chiffres sont recalculés par outils\\agents-json.py (service du tableau de bord ou icône du bureau).</p></div>';
+    var c = CK.compte || {}, ordre = [["bloque", "bloqué"], ["auto-stop", "AUTO-STOP"], ["attention", "à surveiller"], ["attente", "en attente"], ["ok", "OK"]];
+    h += (CK.stop_global ? '<p class="ck-bandeau">STOP global actif (fichier B2B\\STOP) : aucun envoi.</p>' : "") +
+      '<ul class="ck-etat" aria-label="État des agents">' + ordre.map(function (o) { var n = c[o[0]] || 0; return '<li class="' + o[0] + (n ? "" : " zero") + '"><b>' + n + "</b>" + o[1] + "</li>"; }).join("") + "</ul>";
+    h += '<section class="ck-actions verre" aria-label="Prochaines actions"><h2>Prochaines actions</h2>' + ((CK.actions || []).length ?
+      "<ol>" + CK.actions.map(function (a) { return '<li class="' + (a.urgent ? "urgent" : "") + '" title="' + esc(a.complet) + '"><span>' + (a.urgent ? "<b>URGENT</b> " : "") + esc(a.texte) + "</span></li>"; }).join("") + "</ol>" : '<p class="vide">Rien d\'ouvert dans la to-do.</p>') + "</section>";
+    var s = CK.stats || {}, ch = CK.chauds || { total: 0, dus: 0 };
+    h += '<div class="ck-groupes">' + groupe("Appels", s.appels || []) +
+      "<div>" + groupe("Vente", s.vente || []) + '<button class="ck-chauds verre' + (ch.total ? "" : " rien") + '" data-vue="chauds"><b>' + ch.total + "</b><span>lead" + (ch.total > 1 ? "s" : "") + " chaud" + (ch.total > 1 ? "s" : "") + " en attente" +
+      (ch.dus ? " · <strong>" + ch.dus + " à rappeler aujourd'hui</strong>" : "") + "</span></button></div>" + groupe("LinkedIn", s.linkedin || []) + "</div>";
+    var ag = CK.agents || [], ina = CK.inactifs || [];
+    h += '<section class="ck-ag verre" aria-label="Agents"><div class="tete"><h2>Agents actifs</h2><span class="meta">' + ag.length + " en service</span></div>" +
+      '<div class="ck-r entete meta" aria-hidden="true"><span>État</span><span>Agent</span><span>Résultat du jour</span><span class="pass">Dernier passage</span></div>' + ag.map(ligneCk).join("") +
+      '<div class="ck-in"><button class="lien" data-inactifs aria-expanded="' + voirInactifs + '">' + ina.length + " inactif" + (ina.length > 1 ? "s" : "") + (voirInactifs ? " (replier)" : " (voir)") + "</button>" +
+      (voirInactifs ? "<p>" + ina.map(function (x) { return "<b>" + esc(x.nom) + "</b> (" + esc(x.raison) + ")"; }).join(" · ") + "</p>" : "") + "</div></section>";
+    return h;
+  }
+  function vueChauds() {   // les listes nominatives (noms, numéros) : plus sur l'écran d'accueil
+    return '<div class="tete"><h1>Leads chauds</h1></div>' + carteARappeler() + carteLeads() + carteRelais();
   }
   function carteRelais() {   // les relais automatiques (data/relais.js, lu depuis B2B\donnees\relais.jsonl) : un par ligne, le plus récent d'abord
     var t = '<section class="bloc verre" aria-labelledby="t-rel"><div class="tete"><h2 id="t-rel">Relais</h2>';
@@ -766,13 +820,13 @@
     $("nav").innerHTML = VUES.map(function (o) { return '<button data-vue="' + o[0] + '" aria-label="' + o[1] + '"' + (o[0] === vue ? ' aria-current="page"' : "") + ">" + svg(o[0]) + "<span>" + o[1] + "</span></button>"; }).join("");
     $("pied").textContent = V && V.genere_le ? "Données du " + V.genere_le.slice(8, 10) + "/" + V.genere_le.slice(5, 7) + " à " + V.genere_le.slice(11, 16) + ", relues toutes les 5 min" + retard() : "";
     var foc = document.activeElement && document.activeElement.id === "recherche", pos = foc ? document.activeElement.selectionStart : 0;
-    $("contenu").innerHTML = vue === "agents" ? vueAgents() : vue === "docs" ? vueDocs() : vue === "stats" ? vueStats() : vue === "linkedin" ? vueLinkedin() : vue === "cerveau" ? vueCerveau() : vue === "appels" ? vueAppels() : vue === "architecture" ? vueArchitecture() : vueJour();
+    $("contenu").innerHTML = vue === "agents" ? vueAgents() : vue === "docs" ? vueDocs() : vue === "stats" ? vueStats() : vue === "linkedin" ? vueLinkedin() : vue === "cerveau" ? vueCerveau() : vue === "appels" ? vueAppels() : vue === "architecture" ? vueArchitecture() : vue === "chauds" ? vueChauds() : vueJour();
     bulle(null); if (vue === "stats") graphes();
     var s = $("recherche");
     if (s) { s.oninput = function () { recherche = s.value; rendre(); }; if (foc) { s.focus(); s.setSelectionRange(pos, pos); } }
   }
   function appliquer() {
-    A = window.JARVIS_AGENTS || null; V = window.JARVIS_VENTES || null; D = window.JARVIS_DOCS || null; H = window.JARVIS_HISTO || null; L = window.JARVIS_LEADS || null; R = window.JARVIS_RELAIS || null; LK = window.JARVIS_LINKEDIN || null; CV = window.JARVIS_CERVEAU || null; AP = window.JARVIS_APPELS || null;
+    A = window.JARVIS_AGENTS || null; V = window.JARVIS_VENTES || null; D = window.JARVIS_DOCS || null; H = window.JARVIS_HISTO || null; L = window.JARVIS_LEADS || null; R = window.JARVIS_RELAIS || null; LK = window.JARVIS_LINKEDIN || null; CV = window.JARVIS_CERVEAU || null; AP = window.JARVIS_APPELS || null; CK = window.JARVIS_COCKPIT || null;
     rendre(); if (choisi) panneau(choisi);
   }
   document.addEventListener("click", function (e) {
@@ -788,9 +842,9 @@
   });
   document.addEventListener("keydown", function (e) { if (e.key === "Escape" && choisi) { panneau(null); rendre(); } });
   function recharger(fin) {   // toutes les 5 min : relit agents.js, ventes.js, docs.js et data/historique.js (réécrits par outils\agents-json.py)
-    var f = ["agents.js", "ventes.js", "docs.js", "data/historique.js", "data/leads.js", "data/linkedin.js", "data/cerveau.js", "data/historique-appels.js"], n = 0;
+    var f = ["agents.js", "ventes.js", "docs.js", "data/historique.js", "data/leads.js", "data/linkedin.js", "data/cerveau.js", "data/historique-appels.js", "data/cockpit.js", "data/relais.js"], n = 0;
     f.forEach(function (x) {
-      var s = document.createElement("script"); s.src = x + "?t=" + Date.now() + (x === "data/linkedin.js" || x === "data/cerveau.js" ? "&k=" + encodeURIComponent(secretLk()) : "");
+      var s = document.createElement("script"); s.src = x + "?t=" + Date.now() + (x === "data/linkedin.js" || x === "data/cerveau.js" || x === "data/leads.js" || x === "data/relais.js" ? "&k=" + encodeURIComponent(secretLk()) : "");
       s.onload = s.onerror = function () { s.remove(); if (++n === f.length) { appliquer(); if (typeof fin === "function") fin(); } };
       document.body.appendChild(s);
     });

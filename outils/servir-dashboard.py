@@ -17,12 +17,13 @@ from pathlib import Path
 
 RACINE = Path(__file__).resolve().parent.parent
 DOSSIER = RACINE / "dashboard"
-PERMIS = {"index.html", "agents.js", "agents.json", "docs.js", "data/linkedin.js", "data/cerveau.js"}
-PROTEGES = {"data/linkedin.js", "data/cerveau.js"}   # noms de prospects, extraits de scripts : machine elle-même ou secret
+PERMIS = {"index.html", "agents.js", "agents.json", "docs.js", "data/linkedin.js", "data/cerveau.js",
+          "ventes.js", "data/historique.js", "data/historique-appels.js", "data/cockpit.js", "data/leads.js", "data/relais.js"}   # 25/11/2026 : les chiffres de la page (comptes) étaient en 404 depuis le serveur
+PROTEGES = {"data/linkedin.js", "data/cerveau.js", "data/leads.js", "data/relais.js"}   # noms et numéros de prospects, extraits de scripts : machine elle-même ou secret
 SECRET_FICHIER = RACINE / "B2B" / "config" / "dashboard.local"
 TAILLE_MAX = 512
 ID_OK = re.compile(r"[0-9a-f]{8}\Z")
-ACTIONS_OK = ("demande_envoyee", "accepte", "dm_envoye", "repondu_positif", "repondu_autre", "relance_envoyee", "ignorer", "annuler", "commente")
+ACTIONS_OK = ("demande_envoyee", "accepte", "dm_envoye", "repondu_positif", "repondu_negatif", "repondu_autre", "relance_envoyee", "ignorer", "annuler", "commente")
 ACTIONS_CERVEAU = ("accepter", "refuser", "garder", "abandonner")
 LOOPBACK = ("127.0.0.1", "::1", "::ffff:127.0.0.1")
 VERROU = threading.Lock()   # une écriture à la fois (le serveur traite plusieurs requêtes en parallèle)

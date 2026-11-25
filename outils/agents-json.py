@@ -611,6 +611,192 @@ def ecrire(donnees, chiffres_ventes=None, histo=None, leads=None):
         tmp = SORTIE / (nom + ".tmp"); tmp.write_text(contenu, encoding="utf-8"); os.replace(tmp, SORTIE / nom)
 
 
+# --- Cockpit (25/11/2026) : la page « Aujourd'hui » en 10 secondes. Un seul fichier data/cockpit.json (+ .js), comptes seulement ---------------------------------
+LINKEDIN = RACINE / "B2B" / "linkedin"
+TODO = RACINE / "B2B" / "docs" / "TODO-B2B.md"
+MOTS_VENTE = re.compile(r"sid|appel|lead|client|devis|vente|paiement|recrut|prospect", re.I)
+
+
+def jours_ouvres(j, jours):
+    """jours = liste 0 (lundi) … 6 (dimanche) de serveur-taches.json ; vide = tous les jours."""
+    return not jours or j.weekday() in jours
+
+
+def hhmm(t):
+    try: h, m = str(t).split(":"); return int(h) * 60 + int(m)
+    except (ValueError, TypeError): return None
+
+
+def evenements_linkedin(jour, sept):
+    """Compte par type dans B2B/linkedin/auto-journal.jsonl (la même source que le résumé Discord de 18:05) -> ({type: n aujourd'hui}, {type: n sur 7 jours})."""
+    auj, sem = {}, {}
+    try: lignes = (LINKEDIN / "auto-journal.jsonl").read_text(encoding="utf-8", errors="ignore").splitlines()
+    except OSError: return None, None
+    for l in lignes:
+        try: x = json.loads(l)
+        except ValueError: continue
+        d = str(x.get("le", ""))[:10]; t = x.get("type")
+        if d == jour: auj[t] = auj.get(t, 0) + 1
+        if sept <= d <= jour: sem[t] = sem.get(t, 0) + 1
+    return auj, sem
+
+
+def appels_periode(jour, sept):
+    """Somme des appelants dans data/historique-appels.json (écrit par historique_appels.py) -> (aujourd'hui, 7 jours) ou (None, None)."""
+    h = lire_json(SORTIE / "data" / "historique-appels.json", {}) or {}
+    if not h.get("disponible"): return None, None
+    cols = ("appele", "decroche", "interesse", "rdv"); auj = dict.fromkeys(cols, 0); sem = dict.fromkeys(cols, 0)
+    for e in h.get("jours") or []:
+        d = str(e.get("date", ""))
+        for x in (e.get("par") or {}).values():
+            for c in cols:
+                n = x.get(c); n = n if isinstance(n, int) else 0
+                if d == jour: auj[c] += n
+                if sept <= d <= jour: sem[c] += n
+    return auj, sem
+
+
+def devis_periode(jour, sept, actif_ici):
+    """Devis marqués « envoyé » (devis-etat.json). Fichier absent sur la machine active = aucun devis n'a jamais été créé = 0 ; absent ailleurs = inconnu (None)."""
+    dv = lire_json(AGENTS / "devis-etat.json")
+    if dv is None: return (0, 0) if actif_ici else (None, None)
+    env = [(v.get("historique") or {}).get("envoyé") for v in (dv.get("devis") or {}).values()]
+    return sum(1 for d in env if d == jour), sum(1 for d in env if d and sept <= str(d)[:10] <= jour)
+
+
+def paiements_periode(jour, sept, v, histo):
+    """Aujourd'hui : Stripe (ventes.json) ; 7 jours : somme des jours enregistrés de historique.json (None si aucun jour connu)."""
+    auj = next((x.get("valeur") for x in (v or {}).get("chiffres", []) if x.get("cle") == "paiements"), None)
+    jours = [e for e in (histo or {}).get("jours", []) if sept <= e.get("date", "") <= jour and isinstance(e.get("paiements"), int)]
+    sem = sum(e["paiements"] for e in jours) if jours else None
+    if sem is not None and auj is not None: sem = max(sem, auj)
+    return auj, sem
+
+
+def actions_du_jour(n=3):
+    """Les 3 premières cases non cochées de TODO-B2B.md : URGENT d'abord, puis ce qui touche à la vente (Sid, appels, leads, clients, devis…), puis la section « Liam », puis l'ordre du fichier."""
+    try: lignes = TODO.read_text(encoding="utf-8-sig").splitlines()
+    except OSError: return []
+    sect, items = "", []
+    for i, l in enumerate(lignes):
+        if l.startswith("## "): sect = l[3:].strip(); continue
+        m = re.match(r"\s*- \[ \]\s*(.+)", l)
+        if m: items.append((i, sect, m.group(1).strip()))
+    def cle(x):
+        i, sect, t = x
+        return (0 if t.upper().startswith("URGENT") else 1 if MOTS_VENTE.search(t) else 2, 0 if sect.lower() == "liam" else 1, i)
+    sortie = []
+    for i, sect, t in sorted(items, key=cle)[:n]:
+        urgent = t.upper().startswith("URGENT"); plein = re.sub(r"`([^`]*)`", r"\1", re.sub(r"^URGENT\s*:?\s*", "", t, flags=re.I)); court = plein
+        if len(court) > 120: court = court[:120].rsplit(" ", 1)[0].rstrip(" ,;:") + "…"
+        sortie.append({"texte": court, "complet": plein, "urgent": urgent})
+    return sortie
+
+
+def infos_taches(noms):
+    """Dernier passage et code de retour de tâches planifiées Windows (lecture seule) -> {nom: (date 'AAAA-MM-JJ HH:MM:SS', code)}."""
+    if os.name != "nt" or not noms: return {}
+    cmd = "foreach($n in @(" + ",".join("'" + n + "'" for n in noms) + ")){ try{ $i=Get-ScheduledTaskInfo -TaskName $n -ErrorAction Stop; \"$n|\" + $i.LastRunTime.ToString('yyyy-MM-dd HH:mm:ss') + \"|\" + $i.LastTaskResult }catch{} }"
+    try: out = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", cmd], capture_output=True, text=True, timeout=30, creationflags=SANS_FENETRE).stdout
+    except Exception: return {}
+    r = {}
+    for l in out.splitlines():
+        p = l.strip().split("|")
+        if len(p) == 3 and p[1][:4] != "1999" and p[1][:4] != "0001": r[p[0]] = (p[1], p[2])
+    return r
+
+
+def etat_agent(maintenant, dernier, heure, toutes_min, jours, erreur="", suspendu=False, arret=False, grace=60):
+    """-> (état, raison). États : ok / bloque / auto-stop / attente (pas encore l'heure) / repos (pas prévu aujourd'hui)."""
+    j = maintenant.date(); jour = j.isoformat(); a_tourne = bool(dernier) and str(dernier)[:10] == jour
+    if arret or suspendu: return "auto-stop", "arrêt automatique actif" if arret else "suspendu"
+    if erreur: return "bloque", erreur
+    if not jours_ouvres(j, jours): return "repos", "pas prévu aujourd'hui"
+    now = maintenant.hour * 60 + maintenant.minute
+    if heure and hhmm(heure) is not None:
+        if a_tourne: return "ok", ""
+        return ("attente", "prévu à " + heure) if now < hhmm(heure) + grace else ("bloque", "n'a pas tourné (prévu à " + heure + ")")
+    if toutes_min:
+        if not dernier: return "bloque", "aucun passage visible"
+        try: age = (maintenant - datetime.strptime(str(dernier)[:19], "%Y-%m-%d %H:%M:%S" if len(str(dernier)) > 16 else "%Y-%m-%d %H:%M")).total_seconds() / 60
+        except ValueError: return "ok", ""
+        return ("ok", "") if age <= max(30, 4 * toutes_min) else ("bloque", f"silencieux depuis {int(age // 60)} h {int(age % 60):02d}")
+    return ("ok", "") if a_tourne else ("attente", "pas encore passé aujourd'hui")
+
+
+def cockpit(maintenant, v, agents, leads, histo):
+    jour = maintenant.date().isoformat(); sept = (maintenant.date() - timedelta(days=6)).isoformat()
+    local = lire_json(AGENTS / "b2b.local.json", {}) or {}; machine = str(local.get("machine_active", "") or ""); ce_pc = os.environ.get("COMPUTERNAME") or socket.gethostname()
+    actif_ici = bool(machine) and machine == ce_pc
+    serveur = (lire_json(AGENTS / "serveur-taches.json", {}) or {}).get("agents", {})
+    lk_auj, lk_sem = evenements_linkedin(jour, sept); ap_auj, ap_sem = appels_periode(jour, sept)
+    dv_auj, dv_sem = devis_periode(jour, sept, actif_ici); pa_auj, pa_sem = paiements_periode(jour, sept, v, histo)
+    g = lambda d, k: (d.get(k, 0) if d is not None else None)
+    ligne = lambda lib, a, s, sous="": {"libelle": lib, "auj": a, "sept": s, "sous": sous}
+    stats = {
+        "appels": [ligne("Appels passés", g(ap_auj, "appele"), g(ap_sem, "appele")), ligne("Décrochés", g(ap_auj, "decroche"), g(ap_sem, "decroche")),
+                   ligne("Intéressés", g(ap_auj, "interesse"), g(ap_sem, "interesse")), ligne("Rendez-vous", g(ap_auj, "rdv"), g(ap_sem, "rdv"))],
+        "vente": [ligne("Devis envoyés", dv_auj, dv_sem), ligne("Paiements", pa_auj, pa_sem)],
+        "linkedin": [ligne("Demandes envoyées", g(lk_auj, "demande"), g(lk_sem, "demande")), ligne("Acceptées", g(lk_auj, "acceptee"), g(lk_sem, "acceptee")),
+                     ligne("DM", g(lk_auj, "dm"), g(lk_sem, "dm")), ligne("Réponses", g(lk_auj, "reponse"), g(lk_sem, "reponse")),
+                     ligne("Commentaires", g(lk_auj, "commentaire"), g(lk_sem, "commentaire")), ligne("Posts", g(lk_auj, "post"), g(lk_sem, "post"))]}
+    ls = (leads or {}).get("leads") or []
+    chauds = {"total": len(ls), "dus": sum(1 for x in ls if x.get("due"))}
+    arret_lk = (LINKEDIN / "AUTO-STOP").exists(); stop_global = (RACINE / "B2B" / "STOP").exists()
+    def resultat(a):
+        n = a["nom"]
+        if n == "prospection": return f"{(a.get('chiffre_du_jour') or {}).get('valeur')} prospects trouvés"
+        if n == "appels-sid": return f"{(a.get('chiffre_du_jour') or {}).get('valeur')} fiches préparées pour Sid"
+        if n == "relances": return f"{chauds['dus']} lead(s) à rappeler"
+        if n == "linkedin-equipe": return " · ".join(f"{lk_auj.get(k, 0)} {lib}" for k, lib in (("demande", "demandes"), ("dm", "DM"), ("commentaire", "commentaires"), ("post", "post"))) if lk_auj else "rien d'envoyé"
+        if n == "stripe-alerte": return "paiement(s) aujourd'hui : " + ("—" if pa_auj is None else str(pa_auj))
+        if n == "devis": return "devis envoyé(s) : " + ("—" if dv_auj is None else str(dv_auj))
+        if n == "rendez-vous": return f"{(a.get('chiffre_du_jour') or {}).get('valeur')} rendez-vous aujourd'hui"
+        if a.get("dernier_passage") and str(a["dernier_passage"])[:10] == jour: return "fait aujourd'hui"
+        return "—"
+    liste, inactifs = [], []
+    for a in agents.get("agents", []):
+        s = serveur.get(a["nom"], {})
+        if a.get("sans_script") or s.get("desactive") or not (a.get("planifie_sur_ce_pc") or a.get("tourne_sur_ce_pc") or a.get("statut") == "erreur" or a.get("vu_sur_serveur")):
+            inactifs.append({"nom": a["nom"], "raison": "désactivé" if s.get("desactive") else "à construire" if a.get("sans_script") else "pas planifié"}); continue
+        etat, raison = etat_agent(maintenant, a.get("dernier_passage"), s.get("heure"), s.get("toutes_minutes"), s.get("jours"),
+                                  erreur=("en erreur (" + str((a.get("derniere_erreur") or {}).get("action", ""))[:40] + ")" if a.get("statut") == "erreur" and not a.get("suspendu") else ""),
+                                  suspendu=bool(a.get("suspendu")), arret=(a["nom"] == "linkedin-equipe" and arret_lk) or (stop_global and a["nom"] in ("linkedin-equipe", "prospection", "devis")))
+        if etat == "ok" and a.get("avertissement"): etat, raison = "attention", a["avertissement"]
+        liste.append({"nom": a["nom"], "phrase": (a.get("phrase") or "")[:140], "prevu": s.get("heure") and "chaque jour à " + s["heure"] or s.get("toutes_minutes") and f"toutes les {s['toutes_minutes']} min" or "",
+                      "dernier": a.get("dernier_passage"), "resultat": resultat(a), "etat": etat, "raison": raison})
+    # Agents qui n'ont pas de script dans B2B\agents : résumé Discord de 18:05 (dans linkedin-equipe), surveillant du harness, mise à jour automatique (tâches Windows)
+    r18 = None
+    try:
+        for l in (AGENTS / "linkedin-equipe-journal.log").read_text(encoding="utf-8", errors="ignore").splitlines()[-300:]:
+            m = LIGNE_JOURNAL.match(l)
+            if m and m.group(2) == "auto-resume" and m.group(1)[:10] == jour: r18 = m.group(1)
+    except OSError: pass
+    ouvre = maintenant.date().weekday() < 5
+    e18, raison18 = etat_agent(maintenant, r18, "18:05", None, [0, 1, 2, 3, 4], grace=30)
+    liste.append({"nom": "résumé-discord-18h05", "phrase": "Poste sur Discord le bilan LinkedIn du jour : demandes, acceptées, DM, réponses, commentaires, posts.", "prevu": "chaque jour ouvré à 18:05",
+                  "dernier": r18, "resultat": "bilan envoyé" if r18 else "—", "etat": e18, "raison": raison18})
+    ti = infos_taches(["Jarvis-MajAuto", "Jarvis-B2B-surveillant"]) if os.environ.get("JARVIS_TEST") != "1" else {}
+    for nom, phrase, prevu, heure, mn in (("maj-auto", "Met le serveur à jour depuis git toutes les 10 minutes (Jarvis-MajAuto).", "toutes les 10 min", None, 10),
+                                          ("surveillant", "Lit contrats et traces et signale sur Discord chaque agent en silence ou en erreur.", "chaque jour à 19:45", "19:45", None)):
+        t = ti.get("Jarvis-MajAuto" if nom == "maj-auto" else "Jarvis-B2B-surveillant")
+        if t is None and not actif_ici: continue
+        dernier, code = t if t else (None, None)
+        etat, raison = etat_agent(maintenant, dernier, heure, mn, None, erreur=("code de retour " + code) if code not in (None, "0") else "")
+        liste.append({"nom": nom, "phrase": phrase, "prevu": prevu, "dernier": dernier, "resultat": "dernier passage sans erreur" if dernier and code == "0" else "—", "etat": etat, "raison": raison})
+    rang = {"bloque": 0, "auto-stop": 1, "attention": 2, "attente": 3, "ok": 4, "repos": 5}
+    liste.sort(key=lambda x: (rang.get(x["etat"], 9), x["nom"]))
+    compte = {k: sum(1 for x in liste if x["etat"] == k) for k in rang}
+    return {"jour": jour, "genere_le": maintenant.strftime("%Y-%m-%d %H:%M:%S"), "machine": machine, "stop_global": stop_global, "ouvre": ouvre, "compte": compte,
+            "actions": actions_du_jour(), "stats": stats, "chauds": chauds, "agents": liste, "inactifs": sorted(inactifs, key=lambda x: x["nom"])}
+
+
+def ecrire_cockpit(c):
+    (SORTIE / "data").mkdir(exist_ok=True); t = masquer(json.dumps(c, ensure_ascii=False, indent=1))
+    for p, contenu in ((SORTIE / "data" / "cockpit.json", t), (SORTIE / "data" / "cockpit.js", "window.JARVIS_COCKPIT = " + t + ";\n")):
+        tmp = p.with_name(p.name + ".tmp"); tmp.write_text(contenu, encoding="utf-8"); os.replace(tmp, p)
+
+
 def main():
     maintenant = datetime.now(); rs = None
     if os.environ.get("JARVIS_TEST") != "1":
@@ -625,11 +811,14 @@ def main():
     v["chiffres"].append(dict(cle="potentiel", libelle="Potentiel", **potentiel(dispo_l, lds)))
     leads = {"jour": jour, "genere_le": maintenant.strftime("%Y-%m-%d %H:%M:%S"), "critere": "file unique des leads chauds (registre) : « À rappeler » ou « Je dois réfléchir » noté par Sid, sans STOP ni refus ; rappel par Sid ou un closer",
              "leads": lds if dispo_l else [], "raison": "" if dispo_l else str(lds)}
-    ecrire(construire(maintenant), v, historique(maintenant, v, fs if dispo else None), leads)
+    donnees_agents = construire(maintenant); histo = historique(maintenant, v, fs if dispo else None)
+    ecrire(donnees_agents, v, histo, leads)
     try:      # rubrique « Historique des appels » (24/11/2026) : lue dans B2B/donnees/historique-appels.json (comptes seulement), jamais sur Drive
         if str(AGENTS) not in sys.path: sys.path.insert(0, str(AGENTS))
         import historique_appels as HA; HA.ecrire_tableau_de_bord(SORTIE / "data", maintenant)
     except Exception as e: print(f"historique des appels non écrit ({type(e).__name__})")
+    try: ecrire_cockpit(cockpit(maintenant, v, donnees_agents, leads, histo))      # page « Aujourd'hui » (25/11/2026) : après l'historique des appels, dont il lit le fichier
+    except Exception as e: print(f"cockpit non écrit ({type(e).__name__}: {e})")
     if "--ouvrir" in sys.argv[1:] and os.name == "nt": os.startfile(str(SORTIE / "index.html"))
 
 

@@ -1,0 +1,34 @@
+"""Test silencieux du cockpit « Aujourd'hui » (outils/agents-json.py › etat_agent, actions_du_jour) : aucun réseau, aucun fichier écrit.
+  python tests/test_cockpit_dashboard.py
+"""
+import importlib.util, os, sys
+from datetime import datetime
+from pathlib import Path
+
+os.environ["JARVIS_TEST"] = "1"
+s = importlib.util.spec_from_file_location("aj", Path(__file__).resolve().parent.parent / "outils" / "agents-json.py")
+AJ = importlib.util.module_from_spec(s); s.loader.exec_module(AJ)
+ok = True
+
+
+def verifier(cond, texte):
+    global ok
+    print(("OK  " if cond else "ÉCHEC ") + texte); ok = ok and cond
+
+
+mer = datetime(2026, 11, 25, 20, 30); sam = datetime(2026, 11, 28, 20, 30); matin = datetime(2026, 11, 25, 7, 0)
+e = AJ.etat_agent
+verifier(e(mer, "2026-11-25 19:30:10", "19:30", None, None)[0] == "ok", "agent du soir passé aujourd'hui : ok")
+verifier(e(mer, "2026-11-24 19:30:10", "19:30", None, None)[0] == "bloque", "agent du soir pas passé, heure + 60 min dépassée : bloqué")
+verifier(e(matin, "2026-11-24 19:30:10", "19:30", None, None)[0] == "attente", "agent du soir avant son heure : en attente")
+verifier(e(mer, "2026-11-25 20:25:00", None, 10, None)[0] == "ok", "agent toutes les 10 min, passé il y a 5 min : ok")
+verifier(e(mer, "2026-11-25 18:00:00", None, 10, None)[0] == "bloque", "agent toutes les 10 min, silencieux 2 h 30 : bloqué")
+verifier(e(sam, "2026-11-27 08:00:00", "08:00", None, [0, 1, 2, 3, 4])[0] == "repos", "agent des jours ouvrés un samedi : repos, pas bloqué")
+verifier(e(mer, "2026-11-25 20:25:00", None, 10, None, arret=True)[0] == "auto-stop", "arrêt automatique : AUTO-STOP")
+verifier(e(mer, "2026-11-25 20:25:00", None, 10, None, suspendu=True)[0] == "auto-stop", "agent suspendu : AUTO-STOP")
+verifier(e(mer, "2026-11-25 20:25:00", None, 10, None, erreur="en erreur")[0] == "bloque", "erreur du dernier passage : bloqué")
+verifier(e(mer, None, None, 10, None)[0] == "bloque", "aucun passage visible pour un agent fréquent : bloqué")
+a = AJ.actions_du_jour(3)
+verifier(len(a) <= 3 and all(x["texte"] and len(x["texte"]) <= 125 for x in a), "au plus 3 actions, texte court")
+verifier(not a or a[0]["urgent"] or not any(x["urgent"] for x in a), "URGENT passe en premier")
+sys.exit(0 if ok else 1)
