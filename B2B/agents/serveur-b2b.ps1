@@ -54,7 +54,8 @@ if ($Simulation) {
     foreach ($c in $commandes) { Write-Host ("SIMULATION : {0} {1} {2}" -f $(if ($estPs1) { 'powershell' } else { 'python' }), (Split-Path $script -Leaf), ($c -join ' ')).TrimEnd() }
     Write-Host 'priorité : BelowNormal ; JARVIS_B2B_SERVEUR=1 (aucun navigateur) ; un seul agent à la fois (verrou global)'; exit 0
 }
-# 4) un seul agent à la fois
+# 4) un seul agent à la fois ; « verrou » (serveur-taches.json, 25/11/2026) : l'agent a son propre verrou (il n'attend plus les autres, les autres ne l'attendent pas ; deux cycles du même agent restent exclusifs)
+if ($t.Value.PSObject.Properties['verrou'] -and "$($t.Value.verrou)".Trim()) { $NomMutex = "$NomMutex-$("$($t.Value.verrou)".Trim())" }
 $mx = New-Object System.Threading.Mutex($false, "Global\$NomMutex"); $pris = $false
 try {
     try { $pris = $mx.WaitOne([TimeSpan]::FromMinutes($AttenteMax)) } catch [System.Threading.AbandonedMutexException] { $pris = $true }

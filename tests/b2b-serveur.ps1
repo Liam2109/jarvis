@@ -170,6 +170,16 @@ Verifier ($r.code -ne 0 -and $t.Count -eq 1 -and (Lire "$AGT\serveur-b2b.log") -
 $mu = New-Object System.Threading.Mutex($false, "Global\JarvisB2BTest$($script:mx)"); [void]$mu.WaitOne(0)
 try { Remove-Item $trace -Force -ErrorAction SilentlyContinue; $r = Lance 'devis' '-Python', $fa, '-AttenteMax', '0.05'; Verifier ($r.code -eq 5 -and -not (Test-Path $trace) -and $r.sortie -match 'occup') 'un autre agent tourne : celui-ci n''est PAS lancé (code 5), il repassera au prochain cycle' }
 finally { $mu.ReleaseMutex(); $mu.Dispose() }
+# verrou propre (25/11/2026) : linkedin-equipe ne dépend plus du verrou global, mais reste exclusif avec lui-même
+Verifier ($tableReelle.agents.'linkedin-equipe'.verrou -eq 'linkedin') 'serveur-taches.json : linkedin-equipe a son propre verrou'
+Local @{ machine_active = 'PC-SERVEUR'; agents_actifs = @('devis', 'linkedin-equipe') }
+$mu = New-Object System.Threading.Mutex($false, "Global\JarvisB2BTest$($script:mx)"); [void]$mu.WaitOne(0)
+try { Remove-Item $trace -Force -ErrorAction SilentlyContinue; $r = Lance 'linkedin-equipe' '-Python', $fa, '-AttenteMax', '0.05'; Verifier ($r.code -eq 0 -and (Test-Path $trace) -and @(Get-Content $trace).Count -eq 2 -and $r.sortie -notmatch 'occup') 'verrou global tenu (prospection.py, etc.) : linkedin-equipe tourne quand même (jour puis auto)' }
+finally { $mu.ReleaseMutex(); $mu.Dispose() }
+$mu = New-Object System.Threading.Mutex($false, "Global\JarvisB2BTest$($script:mx)-linkedin"); [void]$mu.WaitOne(0)
+try { Remove-Item $trace -Force -ErrorAction SilentlyContinue; $r = Lance 'linkedin-equipe' '-Python', $fa, '-AttenteMax', '0.05'; Verifier ($r.code -eq 5 -and -not (Test-Path $trace) -and $r.sortie -match 'occup') 'deux cycles de linkedin-equipe en même temps : le second n''est pas lancé (code 5)'
+    $r = Lance 'devis' '-Python', $fa, '-AttenteMax', '0.05'; Verifier ($r.code -eq 0 -and (Test-Path $trace)) 'verrou linkedin tenu : un autre agent (devis) n''est pas bloqué' }
+finally { $mu.ReleaseMutex(); $mu.Dispose() }
 $src = Lire (Join-Path $AG 'serveur-b2b.ps1')
 Verifier ($src -match 'PriorityClass' -and $src -match 'BelowNormal' -and $src -notmatch '(?i)taskkill|Stop-Process\s+-Name|msedge|chrome|node\.exe') 'lanceur : priorité basse, aucun taskkill global, aucun navigateur'
 
