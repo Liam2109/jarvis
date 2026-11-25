@@ -174,10 +174,9 @@ def hm(s): h, m = (s or "00:00").split(":"); return int(h) * 60 + int(m)
 
 
 def quota_demandes(conf, etat, jour):
-    """Demandes autorisées aujourd'hui : auto_demandes_semaine1 pendant les 7 premiers jours d'activité, puis demandes_par_jour ; jamais plus que le plafond de la semaine."""
-    a = etat.setdefault("auto", {}); a.setdefault("debut", jour)
-    q = conf["auto_demandes_semaine1"] if (date.fromisoformat(jour) - date.fromisoformat(a["debut"])).days < 7 else conf["demandes_par_jour"]
-    return max(0, min(q, conf["plafond_semaine"] - (E.envoyees_semaine(etat, jour) - aujourdhui(etat, "demande_envoyee_le", jour))))   # reste de la semaine au début de la journée
+    """Demandes autorisées aujourd'hui : demandes_par_jour (20 dès le premier jour, sans montée progressive), jamais plus que le reste du plafond de la semaine au début de la journée."""
+    etat.setdefault("auto", {}).setdefault("debut", jour)
+    return max(0, min(conf["demandes_par_jour"], conf["plafond_semaine"] - (E.envoyees_semaine(etat, jour) - aujourdhui(etat, "demande_envoyee_le", jour))))
 
 
 def aujourdhui(etat, cle, jour):

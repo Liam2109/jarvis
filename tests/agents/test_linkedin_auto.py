@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Harness - linkedin-equipe, mode automatique : fermé par défaut, un seul geste par passage, quotas (10 puis 20, plafond 100 par semaine), DM avec prix et jamais identiques, relance unique,
+"""Harness - linkedin-equipe, mode automatique : fermé par défaut, un seul geste par passage, quota 20 dès le premier jour, plafond 100 par semaine), DM avec prix et jamais identiques, relance unique,
 réponse négative = exclusion, arrêt d'urgence + alerte Discord à tout avertissement de LinkedIn (aucun contournement), kill-switch, journal des envois. LinkedIn est SIMULÉ : aucun réseau, aucune fenêtre."""
 import json, sys, unittest
 from datetime import datetime, timedelta
@@ -54,14 +54,13 @@ class TestAuto(Auto):
         self.preparer(); self.tick(self.t0); self.assertEqual([x[0] for x in self.nav.envoyes], ["post"]); self.assertIn("alpha", self.nav.envoyes[0][2])
         self.tick(self.t0 + timedelta(minutes=15)); self.assertEqual(len(self.envoyes("post")), 1); self.assertEqual(len(self.envoyes("demande")), 1)
 
-    def test_quota_premiere_semaine_10_puis_20_sans_jamais_depasser_le_plafond(self):
+    def test_quota_20_des_le_premier_jour_sans_jamais_depasser_le_plafond(self):
         self.preparer(); self.passages(40, pas=15)   # 08:00 à 18:00
-        self.assertEqual(len(self.envoyes("demande")), 10)   # semaine 1 : 10 par jour
-        self.conf["plafond_semaine"] = 12; self.preparer("2026-11-25"); self.passages(40, debut=datetime.fromisoformat("2026-11-25T08:00:00"))
-        self.assertEqual(len(self.envoyes("demande")), 12)   # plafond strict de la semaine
-        e = self.etat(); e["auto"]["debut"] = "2026-11-01"; E.etat_ecrire(e); self.conf["plafond_semaine"] = 100
-        self.preparer("2026-11-30"); self.nav.envoyes.clear(); self.passages(40, debut=datetime.fromisoformat("2026-11-30T08:00:00"))
-        self.assertEqual(len(self.envoyes("demande")), 20)   # après la première semaine : 20 par jour ouvré
+        self.assertEqual(len(self.envoyes("demande")), 20)   # 20 dès le premier jour, pas de montée progressive
+        self.conf["plafond_semaine"] = 25; self.preparer("2026-11-25"); self.passages(40, debut=datetime.fromisoformat("2026-11-25T08:00:00"))
+        self.assertEqual(len(self.envoyes("demande")), 25)   # plafond strict de la semaine
+        self.conf["plafond_semaine"] = 100; self.preparer("2026-11-30"); self.nav.envoyes.clear(); self.passages(40, debut=datetime.fromisoformat("2026-11-30T08:00:00"))
+        self.assertEqual(len(self.envoyes("demande")), 20)   # nouvelle semaine : 20
 
     def test_repartition_sur_la_journee(self):
         self.preparer()
