@@ -509,7 +509,7 @@ def main(argv=None):
     sp = p.add_subparsers(dest="cmd", required=True)
     j = sp.add_parser("jour"); j.add_argument("--jour", default=None); j.add_argument("--refaire", action="store_true"); j.add_argument("--essai", "--a-blanc", dest="essai", action="store_true")
     c = sp.add_parser("coche"); c.add_argument("id"); c.add_argument("action", choices=ACTIONS); c.add_argument("--jour", default=None)
-    au = sp.add_parser("auto"); au.add_argument("sous", nargs="?", default="passage", choices=("passage", "connexion", "reprendre", "etat")); au.add_argument("--jour", default=None)
+    au = sp.add_parser("auto"); au.add_argument("sous", nargs="?", default="passage", choices=("passage", "connexion", "reprendre", "etat", "resume")); au.add_argument("--jour", default=None)
     sp.add_parser("etat"); sp.add_parser("exporter")
     a = p.parse_args(argv); M.exiger(AGENT, a.cmd, getattr(a, "essai", False))
     try:
@@ -520,7 +520,11 @@ def main(argv=None):
             if a.sous == "reprendre": return LA.reprendre()
             if a.sous == "connexion": return LA.connexion(conf)
             if a.sous == "etat": return LA.etat_auto(conf, etat_lire(), jour)
-            return LA.tick(conf, jour, datetime.now())
+            if a.sous == "resume": LA.resume(conf, jour, datetime.now(), force=True); return 0   # envoi immédiat (essai à la main)
+            code = LA.tick(conf, jour, datetime.now())
+            try: LA.resume(conf, jour, datetime.now())   # résumé du soir : une fois par jour dès 18:05
+            except Exception: pass
+            return code
         if a.cmd == "jour": return cmd_jour(conf, jour, a.essai, a.refaire)
         if a.cmd == "coche": return cmd_coche(conf, a.id, a.action, jour)
         exporter(etat_lire(), conf, jour); print("tableau de bord mis à jour."); return 0

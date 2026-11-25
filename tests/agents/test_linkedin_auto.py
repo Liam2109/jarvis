@@ -107,6 +107,18 @@ class TestAuto(Auto):
         self.assertEqual(l[0]["type"], "post"); self.assertTrue(all(x["texte"] and x["le"] for x in l)); self.assertEqual(len(l), len(self.nav.envoyes))
 
 
+class TestResume(Auto):
+    def test_resume_du_soir_une_fois_lu_dans_le_journal(self):
+        self.preparer(); self.passages(4)
+        LA.envoi_journal("acceptee", "x", "Nom", "(demande acceptée)"); LA.envoi_journal("reponse", "x", "Nom", "(réponse reçue)")
+        auj = datetime.now().date().isoformat(); t = LA.texte_resume(auj); self.assertIn("1 acceptées", t); self.assertIn("1 réponses", t); self.assertIn("1 posts", t); self.assertIn("AUTO-STOP : non", t)
+        envoyes = []; al = lambda m: envoyes.append(m) or True
+        self.assertFalse(LA.resume(self.conf, JOUR, datetime.fromisoformat(JOUR + "T18:04:00"), al)); self.assertEqual(envoyes, [])
+        self.assertTrue(LA.resume(self.conf, JOUR, datetime.fromisoformat(JOUR + "T18:05:00"), al)); self.assertEqual(len(envoyes), 1)
+        self.assertFalse(LA.resume(self.conf, JOUR, datetime.fromisoformat(JOUR + "T18:15:00"), al)); self.assertEqual(len(envoyes), 1)
+        LA.f_arret().write_text("x", encoding="utf-8"); self.assertIn("AUTO-STOP actif", LA.texte_resume(auj))
+
+
 class TestGardeFous(Auto):
     def alerte_apres_un_envoi(self, url, texte):
         self.preparer(); self.tick(self.t0); self.nav.alerte = (url, texte)

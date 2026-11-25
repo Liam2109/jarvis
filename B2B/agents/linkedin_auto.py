@@ -268,7 +268,7 @@ def action_verifier(conf, etat, s, jour):
     if attendus:
         noms = {norm(x) for x in s.connexions_recentes()}
         for c in attendus:
-            if norm(c["nom_profil"]) in noms: E.appliquer(etat, c["id"], "accepte", jour, conf); n_acc += 1
+            if norm(c["nom_profil"]) in noms: E.appliquer(etat, c["id"], "accepte", jour, conf); n_acc += 1; envoi_journal("acceptee", c["id"], c["nom_profil"], "(demande acceptée)")
     ouverts = [c for c in etat["cibles"].values() if c.get("dm_envoye_le") and not c.get("repondu_le") and not c.get("ignore") and c.get("nom_profil")]
     if ouverts:
         conv = {norm(x["nom"]): x for x in s.conversations_recentes()}
@@ -276,7 +276,7 @@ def action_verifier(conf, etat, s, jour):
             x = conv.get(norm(c["nom_profil"]))
             if not x or x.get("de_moi") or not x.get("dernier"): continue
             sens = classer_reponse(x["dernier"]); c["reponse_texte"] = x["dernier"][:300]
-            E.appliquer(etat, c["id"], {"positive": "repondu_positif", "negative": "repondu_negatif"}.get(sens, "repondu_autre"), jour, conf); n_rep += 1
+            E.appliquer(etat, c["id"], {"positive": "repondu_positif", "negative": "repondu_negatif"}.get(sens, "repondu_autre"), jour, conf); n_rep += 1; envoi_journal("reponse", c["id"], c["nom_profil"], "(réponse reçue)")
     E.journaliser("auto-verif", f"{n_acc} acceptation(s), {n_rep} réponse(s)")
     return f"vérification : {n_acc} acceptation(s), {n_rep} réponse(s)"
 
@@ -407,6 +407,30 @@ def connexion(conf):
     except Exception: pass
     finally: nav.fermer()
     return 0
+
+
+def texte_resume(jour):
+    """Résumé du jour lu dans auto-journal.jsonl (un seul message court) : demandes, acceptées, DM, réponses, commentaires, posts, AUTO-STOP."""
+    n = {}
+    try:
+        for l in f_envois().read_text(encoding="utf-8").splitlines():
+            try: x = json.loads(l)
+            except ValueError: continue
+            if str(x.get("le", ""))[:10] == jour: n[x.get("type")] = n.get(x.get("type"), 0) + 1
+    except OSError: pass
+    stop = "🛑 AUTO-STOP actif" if f_arret().exists() else "AUTO-STOP : non"
+    return (f"📊 LinkedIn auto {jour} : {n.get('demande', 0)} demandes envoyées, {n.get('acceptee', 0)} acceptées, {n.get('dm', 0)} DM (+{n.get('relance', 0)} relances), "
+            f"{n.get('reponse', 0)} réponses, {n.get('commentaire', 0)} commentaires, {n.get('post', 0)} posts. {stop}.")
+
+
+def resume(conf, jour, now, alerter=None, force=False):
+    """Envoie le résumé Discord du jour à partir de 18:05 (jours ouvrés), une seule fois par jour. -> True si envoyé."""
+    if date.fromisoformat(jour).weekday() >= 5 and not force: return False
+    if not force and now.hour * 60 + now.minute < hm(conf.get("auto_resume", "18:05")): return False
+    etat = E.etat_lire(); a = etat.setdefault("auto", {})
+    if a.get("resume_envoye") == jour and not force: return False
+    if not (alerter or alerter_reel)(texte_resume(jour)): print("Résumé : envoi Discord impossible."); return False
+    a["resume_envoye"] = jour; E.etat_ecrire(etat); E.journaliser("auto-resume", jour); print("Résumé Discord envoyé."); return True
 
 
 def etat_auto(conf, etat, jour):
