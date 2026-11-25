@@ -107,6 +107,26 @@ class TestAuto(Auto):
         self.assertEqual(l[0]["type"], "post"); self.assertTrue(all(x["texte"] and x["le"] for x in l)); self.assertEqual(len(l), len(self.nav.envoyes))
 
 
+class TestFile(Auto):
+    def test_auto_sans_closers_et_commerces_inclus(self):
+        (self.t / "trouves.csv").write_text("nom;metier;ville;cp;linkedin;site_actuel;statut\nSalon Belle;coiffeur;ROUEN;76000;;;listé\nResto Avec Site;restaurant;ROUEN;76000;;http://x.fr;listé\nResto Exclu;restaurant;ROUEN;76000;;;exclu\n", encoding="utf-8-sig")
+        self.preparer(); e = self.etat(); self.assertEqual({c["type"] for c in e["cibles"].values()}, {"entreprise"})   # jamais d'appelants/closers
+        noms = [c["nom"] for c in E.candidats(self.conf)]; self.assertIn("Salon Belle", noms); self.assertNotIn("Resto Exclu", noms)
+        self.assertLess(noms.index("Salon Belle"), noms.index("Resto Avec Site"))   # sans site d'abord
+
+    def test_la_file_se_remplit_seule_sans_doublon_quand_les_cibles_sont_introuvables(self):
+        self.jour(modele=lambda t: None)   # aucun résultat de recherche programmé : toutes les cibles du lot sont introuvables
+        for k in range(60): self.tick(self.t0 + timedelta(minutes=15 * k % 600))
+        e = self.etat(); ids = list(e["cibles"]); self.assertEqual(len(ids), len(set(ids))); self.assertGreater(len(ids), 20)   # des cibles neuves ont été ajoutées
+        self.assertLessEqual(e["auto"].get("ajoutees", 0), 60); self.assertEqual(self.envoyes("demande"), [])   # introuvable = écarté, jamais de hasard
+
+    def test_apercu_n_ecrit_rien_et_n_envoie_rien(self):
+        self.preparer(); avant = E.ETAT.read_text(encoding="utf-8")
+        import io, contextlib; buf = io.StringIO()
+        with contextlib.redirect_stdout(buf): LA.apercu(self.conf, self.etat(), JOUR)
+        self.assertEqual(E.ETAT.read_text(encoding="utf-8"), avant); self.assertEqual(self.nav.envoyes, []); self.assertIn("SANS note", buf.getvalue()); self.assertIn("500 €", buf.getvalue())
+
+
 class TestResume(Auto):
     def test_resume_du_soir_une_fois_lu_dans_le_journal(self):
         self.preparer(); self.passages(4)

@@ -192,7 +192,8 @@ $ti = $p.taches | Where-Object { $_.agent -eq 'rendez-vous' }; $ta = $p.taches |
 Verifier ($ti.minutes -eq 5 -and -not $ti.heure -and $ta.heure -eq '07:30' -and -not $ta.minutes) 'rendez-vous : toutes les 5 minutes ; appels-sid : tous les jours à 07:30'
 Verifier ($ti.arguments -match 'serveur-b2b\.ps1' -and $ti.arguments -match '-Agent rendez-vous' -and $ti.arguments -match 'ExecutionPolicy Bypass' -and $ti.arguments -notmatch 'visuels|continu') 'la tâche appelle le lanceur (priorité basse + verrou), jamais un agent directement'
 $script:Reg = @(); $script:Sup = @(); $script:Exist = @('Jarvis-B2B-devis', 'Jarvis-B2B-instagram', 'Jarvis-MajAuto', 'Jarvis-Serveur')
-$script:B2BHooks = @{ Existantes = { $script:Exist }; Enregistrer = { param($t) $script:Reg += $t.nom }; Supprimer = { param($n) $script:Sup += $n } }
+$script:B2BHooks = @{ Existantes = { $script:Exist }; Enregistrer = { param($t) $script:Reg += $t.nom }; Supprimer = { param($n) $script:Sup += $n }; Cadence = { param($n) $script:Cad[$n] } }
+$script:Cad = @{ 'Jarvis-B2B-rendez-vous' = 5 }
 $s = Sync-B2BTaches $RB
 Verifier (($script:Reg | Sort-Object) -join ',' -eq 'Jarvis-B2B-appels-sid,Jarvis-B2B-rendez-vous') 'synchro : les tâches des agents actifs sont (re)créées'
 Verifier ((($script:Sup | Sort-Object) -join ',') -eq 'Jarvis-B2B-devis,Jarvis-B2B-instagram') 'synchro : les tâches d''un agent désactivé (devis) et d''un agent retiré du serveur (instagram, encore listé) sont retirées ; Jarvis-MajAuto et Jarvis-Serveur ne sont JAMAIS touchées'
@@ -212,6 +213,12 @@ Verifier ($script:Reg.Count -eq 0 -and $script:Sup.Count -eq 0 -and -not $s) 'ra
 $script:Reg = @(); $script:Sup = @(); $script:Exist = @('Jarvis-B2B-rendez-vous', 'Jarvis-B2B-appels-sid', 'Jarvis-B2B-instagram', 'Jarvis-MajAuto')
 $s = Sync-B2BTaches $RB -SeulementManquantes
 Verifier ($script:Reg.Count -eq 0 -and (($script:Sup | Sort-Object) -join ',') -eq 'Jarvis-B2B-instagram') 'rattrapage : une tâche en trop est tout de même retirée ; Jarvis-MajAuto jamais touchée'
+# 25/11/2026 : une tâche existante dont la cadence « toutes les N min » n'est plus celle demandée (ex. créée avec un seul déclencheur quotidien) est ré-enregistrée ; cadence identique : jamais touchée.
+$script:Reg = @(); $script:Sup = @(); $script:Exist = @('Jarvis-B2B-rendez-vous', 'Jarvis-B2B-appels-sid'); $script:Cad = @{ 'Jarvis-B2B-rendez-vous' = 0 }
+$s = Sync-B2BTaches $RB -SeulementManquantes
+Verifier ((($script:Reg | Sort-Object) -join ',') -eq 'Jarvis-B2B-rendez-vous' -and $s -match 'rendez-vous') 'rattrapage : une tâche existante sans la répétition demandée (cadence 0 au lieu de 5 min) est ré-enregistrée, une tâche à heure fixe (appels-sid) n''est pas touchée'
+$script:Reg = @(); $script:Cad = @{ 'Jarvis-B2B-rendez-vous' = 5 }; [void](Sync-B2BTaches $RB -SeulementManquantes)
+Verifier ($script:Reg.Count -eq 0) 'rattrapage : cadence identique (5 min) -> jamais ré-enregistrée (l''intervalle ne repart pas de zéro)'
 LocalB @{ machine_active = 'PC-BUREAU'; agents_actifs = @('rendez-vous') }; $script:Reg = @(); $script:Sup = @(); $script:Exist = @('Jarvis-B2B-rendez-vous')
 [void](Sync-B2BTaches $RB -SeulementManquantes)
 Verifier ($script:Reg.Count -eq 0 -and (($script:Sup | Sort-Object) -join ',') -eq 'Jarvis-B2B-rendez-vous') 'rattrapage sur une autre machine : rien n''est créé, les tâches d''ici sont retirées'

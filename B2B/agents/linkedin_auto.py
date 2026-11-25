@@ -322,12 +322,30 @@ def action_relance(conf, etat, s, jour):
     return None
 
 
+def remplir_file(conf, etat, jour, k=5, max_jour=60):
+    """Ajoute k entreprises neuves (sans site d'abord, jamais déjà vues ni contactées, voir linkedin-equipe.candidats) à la file du jour ; au plus max_jour cibles ajoutées par jour."""
+    lot = etat["jours"].setdefault(jour, {"demandes": [], "notes": []}); a = etat.setdefault("auto", {})
+    if a.get("ajoutees_jour") != jour: a["ajoutees_jour"] = jour; a["ajoutees"] = 0
+    k = min(k, max_jour - a["ajoutees"])
+    if k <= 0: return []
+    neufs = E.cibles_entreprises(conf, etat, k);
+    for c in neufs:
+        c["dm"] = E.dm_pour(c, set(etat["textes"])); etat["textes"].append(c["dm"]); c["demande_prevue_le"] = jour; c["cree_le"] = jour
+        etat["cibles"][c["id"]] = c; lot.setdefault("demandes", []).append(c["id"])
+    a["ajoutees"] += len(neufs)
+    if neufs: E.journaliser("auto-file", f"{len(neufs)} cible(s) ajoutée(s) à la file")
+    return [c["id"] for c in neufs]
+
+
 def action_demande(conf, etat, s, jour, now):
     q = quota_demandes(conf, etat, jour); fait = aujourdhui(etat, "demande_envoyee_le", jour)
     if fait >= prevu_a_cette_heure(q, conf, now) or fait >= q: return None
     lot = etat["jours"].get(jour) or {}; ids = [i for i in lot.get("demandes", []) if i in etat["cibles"]]
     for c in etat["cibles"].values():   # les demandes reportées d'un jour précédent passent aussi
         if c.get("demande_prevue_le") and c["id"] not in ids: ids.append(c["id"])
+    ids = [i for i in ids if etat["cibles"][i].get("type") != "closer"]   # jamais d'appelants/closers en automatique (décision du 25/11/2026)
+    if not any(not etat["cibles"][i].get("demande_envoyee_le") and not etat["cibles"][i].get("ignore") and etat["cibles"][i].get("auto_essais", 0) < 2 for i in ids):
+        ids += remplir_file(conf, etat, jour)   # file vide (cibles introuvables, écartées) : elle se remplit seule depuis les fichiers de prospects
     for i in ids:
         c = etat["cibles"][i]
         if c.get("demande_envoyee_le") or c.get("ignore") or c.get("auto_essais", 0) >= 2: continue
@@ -431,6 +449,20 @@ def resume(conf, jour, now, alerter=None, force=False):
     if a.get("resume_envoye") == jour and not force: return False
     if not (alerter or alerter_reel)(texte_resume(jour)): print("Résumé : envoi Discord impossible."); return False
     a["resume_envoye"] = jour; E.etat_ecrire(etat); E.journaliser("auto-resume", jour); print("Résumé Discord envoyé."); return True
+
+
+def apercu(conf, etat, jour, n=20):
+    """Ce qui partira à la prochaine vague, SANS rien envoyer ni écrire : cibles (entreprises seulement), recherche LinkedIn utilisée, DM envoyé à l'acceptation. Les demandes partent sans note."""
+    lot = etat["jours"].get(jour) or {}; ids = [i for i in lot.get("demandes", []) if i in etat["cibles"]]
+    ids += [c["id"] for c in etat["cibles"].values() if c.get("demande_prevue_le") and c["id"] not in ids]
+    cs = [etat["cibles"][i] for i in ids if etat["cibles"][i].get("type") != "closer" and not etat["cibles"][i].get("demande_envoyee_le") and not etat["cibles"][i].get("ignore")]
+    neufs = E.cibles_entreprises(conf, etat, max(0, n - len(cs))) if len(cs) < n else []
+    print(f"Quota du jour : {quota_demandes(conf, etat, jour)} demandes SANS note (plafond {conf['plafond_semaine']} par semaine). Aucun appelant/closer. Cibles ({len(cs) + len(neufs)}), sans site d'abord :")
+    for c in cs[:n] + neufs:
+        print(f"  - {c['nom']} | {c.get('entreprise') or '-'} | {c.get('metier') or '-'} | {c.get('ville')} | recherche : {c['lien']}")
+    ex = dict(cs[0] if cs else (neufs[0] if neufs else {"id": "exemple", "type": "entreprise", "metier": "artisan", "ville": "Rouen", "bat": True})); ex.pop("dm_auto", None)
+    print("DM envoyé seulement après acceptation (exemple, prix de OFFRE-REFERENCE) :"); print("  " + texte_dm({"textes": []}, ex))
+    return 0
 
 
 def etat_auto(conf, etat, jour):

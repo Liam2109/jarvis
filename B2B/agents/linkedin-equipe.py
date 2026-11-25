@@ -232,12 +232,14 @@ def deja_traites():
 def candidats(conf):
     """Entreprises candidates, triées : zone (Seine-Maritime d'abord), dirigeant connu, 1 à 9 personnes, création récente (profils plus actifs). -> liste de dicts."""
     contactes, (nc, tels) = deja_traites(); vus, out = set(), []
+    commerces = conf["commerces_locaux"] or conf["go_linkedin_auto"]   # mode automatique : commerces locaux (coiffeurs, restaurants, garages...) inclus
     fichiers = [(SOURCES["rouen"], True), (SOURCES["large"], True)] + ([(SOURCES["trouves"], False)] if True else [])
     for f, siren_f in fichiers:
         for l in _csv(f):
             nom, ville, metier = (l.get("nom") or "").strip(), (l.get("ville") or "").strip(), (l.get("metier") or "").strip()
             bat = metier_bat(metier)
-            if not nom or (not bat and not conf["commerces_locaux"]) or (f == SOURCES["trouves"] and not (bat or conf["commerces_locaux"])): continue
+            if not nom or (not bat and not commerces) or (f == SOURCES["trouves"] and not (bat or commerces)): continue
+            if f == SOURCES["trouves"] and n(l.get("statut")) in ("exclu", "ecarte", "hors zone"): continue   # écartés / hors zone : jamais ciblés
             if rang_effectif(l.get("effectif")) > 1: continue
             if int(re.sub(r"\D", "", l.get("effectif") or "") or 0) > conf["effectif_max"] and (l.get("effectif") or "") not in ("NN", ""): continue
             cp = (l.get("cp") or "").strip(); dept = cp[:2]
@@ -248,8 +250,8 @@ def candidats(conf):
             vus.add(cle_nv); siren and vus.add(siren)
             dir_, com = dirigeant(nom); an = (l.get("creation") or l.get("date_collecte") or "")[:4]
             out.append({"nom": com or nom.title() if not dir_ else dir_, "entreprise": (com or "") if dir_ else (com or nom.title()), "dirigeant": dir_, "metier": metier, "ville": ville.title(), "cp": cp, "bat": bat,
-                        "effectif": (l.get("effectif") or "").strip(), "niveau": niveau, "creation": an, "siren": siren, "profil_connu": bool((l.get("linkedin") or "").strip())})
-    out.sort(key=lambda c: (c["niveau"], not c["bat"], not c["dirigeant"], not c["profil_connu"], rang_effectif(c["effectif"]), -(int(c["creation"]) if c["creation"].isdigit() else 0), _h(c["nom"] + c["ville"])))
+                        "effectif": (l.get("effectif") or "").strip(), "niveau": niveau, "creation": an, "siren": siren, "profil_connu": bool((l.get("linkedin") or "").strip()), "a_site": bool((l.get("site") or l.get("site_actuel") or "").strip())})
+    out.sort(key=lambda c: (c["niveau"], c["a_site"], not c["bat"], not c["dirigeant"], not c["profil_connu"], rang_effectif(c["effectif"]), -(int(c["creation"]) if c["creation"].isdigit() else 0), _h(c["nom"] + c["ville"])))
     return out
 
 
@@ -375,7 +377,8 @@ def cmd_jour(conf, jour, essai=False, refaire=False, http=None, modele=None, dor
     reportees = [c for c in etat["cibles"].values() if c.get("demande_prevue_le") and c["demande_prevue_le"] < jour and not c.get("demande_envoyee_le") and not c.get("ignore")
                  and (d - date.fromisoformat(c["demande_prevue_le"])).days <= 7]
     reportees.sort(key=lambda c: c["demande_prevue_le"]); reportees = reportees[:total]
-    cible_ent = round(total * conf["part_entreprises"]); cible_clo = total - cible_ent
+    cible_ent = total if conf["go_linkedin_auto"] else round(total * conf["part_entreprises"])   # mode automatique : jamais d'appelants/closers
+    cible_clo = total - cible_ent
     ent_r = sum(1 for c in reportees if c["type"] == "entreprise"); clo_r = len(reportees) - ent_r
     neufs = cibles_entreprises(conf, etat, max(0, cible_ent - ent_r)); neufs_c = cibles_closers(conf, etat, max(0, cible_clo - clo_r))
     if len(neufs) < max(0, cible_ent - ent_r): lot["notes"].append(f"seulement {len(neufs)} entreprise(s) neuve(s) disponible(s) dans les fichiers (zone_niveau {conf['zone_niveau']}) : élargir la zone dans linkedin-equipe-config.json")
@@ -509,7 +512,7 @@ def main(argv=None):
     sp = p.add_subparsers(dest="cmd", required=True)
     j = sp.add_parser("jour"); j.add_argument("--jour", default=None); j.add_argument("--refaire", action="store_true"); j.add_argument("--essai", "--a-blanc", dest="essai", action="store_true")
     c = sp.add_parser("coche"); c.add_argument("id"); c.add_argument("action", choices=ACTIONS); c.add_argument("--jour", default=None)
-    au = sp.add_parser("auto"); au.add_argument("sous", nargs="?", default="passage", choices=("passage", "connexion", "reprendre", "etat", "resume")); au.add_argument("--jour", default=None)
+    au = sp.add_parser("auto"); au.add_argument("sous", nargs="?", default="passage", choices=("passage", "connexion", "reprendre", "etat", "resume", "apercu")); au.add_argument("--jour", default=None)
     sp.add_parser("etat"); sp.add_parser("exporter")
     a = p.parse_args(argv); M.exiger(AGENT, a.cmd, getattr(a, "essai", False))
     try:
@@ -520,6 +523,7 @@ def main(argv=None):
             if a.sous == "reprendre": return LA.reprendre()
             if a.sous == "connexion": return LA.connexion(conf)
             if a.sous == "etat": return LA.etat_auto(conf, etat_lire(), jour)
+            if a.sous == "apercu": return LA.apercu(conf, etat_lire(), jour)
             if a.sous == "resume": LA.resume(conf, jour, datetime.now(), force=True); return 0   # envoi immédiat (essai à la main)
             code = LA.tick(conf, jour, datetime.now())
             try: LA.resume(conf, jour, datetime.now())   # résumé du soir : une fois par jour dès 18:05

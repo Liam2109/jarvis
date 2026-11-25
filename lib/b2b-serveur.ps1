@@ -33,6 +33,17 @@ function Register-TacheB2B($t) {
     $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours 2) -StartWhenAvailable -MultipleInstances IgnoreNew
     Register-ScheduledTask -TaskName $t.nom -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Description "Agent B2B « $($t.agent) » sur le serveur (créée par maj-auto.ps1 ; un seul agent à la fois)" -Force | Out-Null
 }
+function Get-B2BCadenceTache([string]$nom) {
+    # Cadence « toutes les N minutes » réellement enregistrée pour la tâche (0 : aucune répétition). Sert à ré-enregistrer une tâche dont la cadence demandée a changé (25/11/2026 : linkedin-equipe
+    # avait été créée avec un seul déclencheur quotidien, puis `auto` a demandé 10 minutes ; une tâche existante n'était jamais corrigée).
+    if ($script:B2BHooks -and $script:B2BHooks.Cadence) { return [int](& $script:B2BHooks.Cadence $nom) }
+    if (Test-B2BSimulation) { return 0 }
+    try {
+        $t = Get-ScheduledTask -TaskName $nom -ErrorAction Stop; $max = 0
+        foreach ($d in @($t.Triggers)) { $i = "$($d.Repetition.Interval)"; if ($i) { $m = [int][System.Xml.XmlConvert]::ToTimeSpan($i).TotalMinutes; if ($m -gt $max) { $max = $m } } }
+        return $max
+    } catch { return 0 }
+}
 function Unregister-TacheB2B([string]$nom) {
     if ($script:B2BHooks -and $script:B2BHooks.Supprimer) { & $script:B2BHooks.Supprimer $nom; return }
     if (Test-B2BSimulation) { return }
@@ -86,7 +97,10 @@ function Sync-B2BTaches([string]$racine, [switch]$SeulementManquantes) {
         elseif (-not $SeulementManquantes -and (Get-B2BConfigLocale $racine).presente) { $dit += "B2B : aucune tâche ($($plan.raison))" }
     } else {
         foreach ($t in $plan.taches) {
-            if ($SeulementManquantes -and ($t.nom -in $existantes)) { continue }
+            if ($SeulementManquantes -and ($t.nom -in $existantes)) {
+                # une tâche existante n'est ré-enregistrée que si sa cadence « toutes les N min » n'est plus celle demandée (sinon son intervalle repartirait de zéro à chaque passage)
+                if (-not ($t.minutes -gt 0 -and (Get-B2BCadenceTache $t.nom) -ne [int]$t.minutes)) { continue }
+            }
             Register-TacheB2B $t; $dit += "B2B : tâche $($t.nom) $(if ($t.heure) { "chaque jour à $($t.heure)$(if ($t.PSObject.Properties['heures_en_plus'] -and @($t.heures_en_plus).Count) { ', ' + (@($t.heures_en_plus) -join ', ') })$(if ($t.PSObject.Properties['lundi'] -and $t.lundi) { " et le lundi à $($t.lundi)" })" } else { "toutes les $($t.minutes) min" }) créée ou mise à jour$(if (Test-B2BSimulation) { ' (simulation)' })" }
         $voulues = @($plan.taches | ForEach-Object { $_.nom })
         foreach ($n in $existantes) { if ($n -notin $voulues) { Unregister-TacheB2B $n; $dit += "B2B : tâche $n retirée (agent non actif)" } }

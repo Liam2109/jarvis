@@ -30,7 +30,7 @@ class Base(unittest.TestCase):
         LI.DOSSIER = self.t / "linkedin"; LI.DOSSIER.mkdir(); LI.FILE = lambda: LI.DOSSIER / "file.json"
         (LI.DOSSIER / "lot-2026-11-23.md").write_text("# lot\n\n## Post 1\ntype: prospect\nstatut: en file\ntexte:\n" + POST + "\n\n## Post 2\ntype: prospect\ntexte:\n" + POST.replace("alpha", "bravo") + "\n", encoding="utf-8")
         E.RG.FICHIER = self.t / "registre.json"
-        self.conf = E.cfg(); self.conf["commentaires"] = 10
+        self.conf = E.cfg(); self.conf["commentaires"] = 10; self.conf["go_linkedin_auto"] = False   # jamais dépendre du vrai réglage du serveur
         (self.t / "rouen.csv").write_text(ENT + "".join(ligne(i) for i in range(1, 200)), encoding="utf-8-sig")
         (self.t / "large.csv").write_text(ENT, encoding="utf-8-sig"); (self.t / "trouves.csv").write_text("nom;metier;ville;cp;linkedin\n", encoding="utf-8-sig")
         E.SUIVI.write_text("nom;ville;statut;date_envoi\n", encoding="utf-8-sig")
