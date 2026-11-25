@@ -168,6 +168,13 @@ class TestGardeFous(Auto):
         codes = [self.tick(self.t0 + timedelta(minutes=15 * k)) for k in range(1, 6)]
         self.assertIn(6, codes); self.assertTrue(LA.f_arret().exists()); self.assertEqual(len(self.alertes), 1); self.assertEqual(self.envoyes("demande"), [])
 
+    def test_homonyme_sans_lieu_ni_metier_jamais_contacte(self):
+        c = {"type": "entreprise", "dirigeant": "Julien Aubert", "ville": "Melamare", "metier": "peintre", "entreprise": "", "nom": "Julien Aubert"}
+        res = lambda t: [{"nom": "Julien Aubert", "texte": t, "profil": "https://www.linkedin.com/in/ja", "bouton": True}]
+        etat = {"auto": {"profils": []}}
+        self.assertIsNone(LA.choisir(c, res("Directeur marketing, Lyon"), etat)); self.assertIsNone(LA.choisir(c, res("Développeur, Toulouse"), etat))
+        self.assertIsNotNone(LA.choisir(c, res("Peintre en bâtiment, Rouen"), etat)); self.assertIsNotNone(LA.choisir(c, res("Artisan, Normandie"), etat))
+
     def test_reprise_par_liam_seulement(self):
         self.alerte_apres_un_envoi("https://www.linkedin.com/checkpoint/x", ""); self.assertEqual(LA.reprendre(), 0); self.assertFalse(LA.f_arret().exists())
         self.nav.alerte = None; self.nav.url = "https://www.linkedin.com/feed/"; self.assertEqual(self.tick(self.t0 + timedelta(hours=1)), 0)

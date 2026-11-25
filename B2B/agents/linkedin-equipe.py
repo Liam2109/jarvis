@@ -256,9 +256,9 @@ def candidats(conf):
 
 
 def lien_entreprise(c):
-    if c["dirigeant"]: mots = f"{c['dirigeant']} {c['metier']} {c['ville']}".strip()
-    else: mots = f"gérant {c['entreprise'] or c['nom']} {c['ville']}".strip()
-    return lien_recherche(mots)
+    """Recherche de personnes LinkedIn : le NOM seul (dirigeant, sinon entreprise). Nom + métier + petite commune ne rendait « Aucun résultat » (25/11/2026) ; le lieu et le métier sont vérifiés
+    ensuite sur la fiche trouvée (linkedin_auto.choisir), jamais dans la recherche."""
+    return lien_recherche(c.get("dirigeant") or c.get("entreprise") or c["nom"])
 
 
 def id_cible(t, *parts): return hashlib.sha1("|".join([t] + [n(p) for p in parts]).encode("utf-8")).hexdigest()[:8]

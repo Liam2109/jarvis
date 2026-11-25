@@ -256,6 +256,15 @@ def verifier_texte(t, c=None, commentaire=False):
 def nom_cherche(c): return c.get("dirigeant") or ""
 
 
+ZONE = ("rouen", "normandie", "seine maritime", "le havre", "eure", "calvados", "elbeuf", "dieppe", "evreux", "caen")
+
+
+def lieu_ou_metier_concorde(c, texte):
+    """Un homonyme n'est jamais contacté : la fiche doit mentionner la ville de la cible, la région, son entreprise ou son métier (début du mot)."""
+    t = norm(texte); mots = [norm(c.get("ville")), norm(c.get("entreprise")), " ".join(norm(c.get("metier")).split()[:1])[:6]]
+    return any(m and len(m) >= 4 and m in t for m in mots) or any(z in t for z in ZONE)
+
+
 def choisir(c, res, etat):
     """Le résultat de recherche à contacter, ou None. Entreprise : le nom du dirigeant doit correspondre exactement (prénom et nom) ; sans dirigeant connu, le nom de l'entreprise doit figurer
     dans la fiche. Appelant/closer : le premier profil qui n'a jamais été contacté. Jamais de profil déjà vu."""
@@ -264,7 +273,7 @@ def choisir(c, res, etat):
         if r["profil"] in vus or not r.get("bouton"): continue
         if c["type"] == "closer": return r
         if nom_cherche(c):
-            if norm(r["nom"]) == norm(nom_cherche(c)) or set(norm(nom_cherche(c)).split()) <= set(norm(r["nom"]).split()): return r
+            if (norm(r["nom"]) == norm(nom_cherche(c)) or set(norm(nom_cherche(c)).split()) <= set(norm(r["nom"]).split())) and lieu_ou_metier_concorde(c, r["texte"]): return r
         else:
             ent = norm(c.get("entreprise") or c["nom"])
             if ent and len(ent) >= 4 and ent in norm(r["texte"]): return r
@@ -360,7 +369,7 @@ def action_demande(conf, etat, s, jour, now):
         c = etat["cibles"][i]
         if c.get("demande_envoyee_le") or c.get("ignore") or c.get("auto_essais", 0) >= 2: continue
         c["auto_essais"] = c.get("auto_essais", 0) + 1
-        res = s.recherche(c["lien"]); r = choisir(c, res, etat); suite = etat["auto"]
+        res = s.recherche(E.lien_entreprise(c) if c["type"] == "entreprise" else c["lien"]); r = choisir(c, res, etat); suite = etat["auto"]
         if not r:
             diag = f"{len(res)} résultat(s) lu(s), {sum(1 for x in res if x.get('bouton'))} avec bouton Se connecter, premiers noms : {', '.join(x['nom'] for x in res[:3]) or '-'}"
             technique = not res or not any(x.get("bouton") for x in res)   # aucune carte lue, ou aucun bouton : signe d'une page lue de travers, pas d'un simple homonyme absent
