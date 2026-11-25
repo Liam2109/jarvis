@@ -26,11 +26,24 @@ class Test(unittest.TestCase):
         f = self.t / "x.json"; f.write_text("{pas du json", encoding="utf-8"); self.assertEqual(O.hotes(f), [])
         self.assertEqual(O.hotes(self.conf([1, 2])), [])
 
-    def test_choisir_prend_le_premier_qui_repond(self):
-        vus = []
-        def faux(h, p, d): vus.append(h); return h == "B"
-        self.assertEqual(O.choisir(["A", "B", "C"], test=faux), "B"); self.assertEqual(vus, ["A", "B"])
+    def test_choisir_prend_le_plus_prioritaire_qui_repond(self):
+        self.assertEqual(O.choisir(["A", "B", "C"], test=lambda h, p, d: h in ("B", "C")), "B")   # ordre de la liste = priorité
+        self.assertEqual(O.choisir(["NOM", "IP"], test=lambda h, p, d: h == "IP"), "IP")          # nom qui ne répond pas : l'IP prend le relais
         self.assertIsNone(O.choisir(["A"], test=lambda *a: False)); self.assertIsNone(O.choisir([]))
+
+    def test_regler_ecrit_une_seule_cle_et_garde_le_reste(self):
+        f = self.conf({"machine_active": "SERVEUR", "serveur_adresse": "192.168.1.13", "jeton": SECRET})
+        f.write_bytes(b"\xef\xbb\xbf" + f.read_bytes())
+        self.assertTrue(O.regler("192.168.1.12", f, test=lambda *a: True))
+        brut = f.read_bytes(); c = json.loads(brut.decode("utf-8-sig"))
+        self.assertTrue(brut.startswith(b"\xef\xbb\xbf")); self.assertEqual(c, {"machine_active": "SERVEUR", "serveur_adresse": "192.168.1.12", "jeton": SECRET})
+
+    def test_regler_refuse_adresse_muette_ou_bizarre(self):
+        f = self.conf({"serveur_adresse": "192.168.1.13"}); avant = f.read_bytes()
+        self.assertFalse(O.regler("192.168.1.12", f, test=lambda *a: False))
+        for mauvais in ("", "a b", "x;rm", "http://x/", "../x"): self.assertFalse(O.regler(mauvais, f, test=lambda *a: True))
+        self.assertFalse(O.regler("10.0.0.1", self.t / "absent.json", test=lambda *a: True))
+        self.assertEqual(f.read_bytes(), avant)
 
     def test_joignable_vrai_et_faux(self):
         srv = socket.socket(); srv.bind(("127.0.0.1", 0)); srv.listen(1); port = srv.getsockname()[1]
