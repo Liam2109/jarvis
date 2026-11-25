@@ -31,4 +31,10 @@ verifier(e(mer, None, None, 10, None)[0] == "bloque", "aucun passage visible pou
 a = AJ.actions_du_jour(3)
 verifier(len(a) <= 3 and all(x["texte"] and len(x["texte"]) <= 125 for x in a), "au plus 3 actions, texte court")
 verifier(not a or a[0]["urgent"] or not any(x["urgent"] for x in a), "URGENT passe en premier")
+# 25/11/2026 : liste des appels (un appel par ligne, sans téléphone, heure jamais inventée) et source des leads chauds
+ap = AJ.appels_liste()
+verifier(ap["heure_notee"] is False and all(x["heure"] == "" for x in ap["appels"]), "liste des appels : l'heure n'est jamais inventée")
+verifier(all(set(x) == {"nom", "ville", "metier", "date", "heure", "resultat", "note", "appelant"} for x in ap["appels"]), "liste des appels : aucun téléphone, mêmes champs partout")
+verifier(all(x["resultat"] and len(x["date"]) == 10 for x in ap["appels"]), "liste des appels : chaque ligne a un résultat et une date")
+verifier(AJ.sources_drive([{"jour": "2026-11-16", "lignes": [{"nom": "Envog Coiffure"}]}]) == {"2026-11-16": {"envogcoiffure"}}, "sources du Drive : noms normalisés par jour de feuille")
 sys.exit(0 if ok else 1)

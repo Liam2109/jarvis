@@ -27,7 +27,7 @@ class Faux:
 class Base(unittest.TestCase):
     def setUp(self):
         self.t = Path(tempfile.mkdtemp(prefix="srv-test-")); (self.t / "data").mkdir()
-        for n, c in (("index.html", "<html>ok</html>"), ("agents.js", "window.A=1;"), ("data/linkedin.js", "window.JARVIS_LINKEDIN={noms:1};"), ("secret.txt", "ne doit jamais sortir")): (self.t / n).write_text(c, encoding="utf-8")
+        for n, c in (("index.html", "<html>ok</html>"), ("agents.js", "window.A=1;"), ("data/linkedin.js", "window.JARVIS_LINKEDIN={noms:1};"), ("data/leads.js", "window.JARVIS_LEADS={tel:1};"), ("secret.txt", "ne doit jamais sortir")): (self.t / n).write_text(c, encoding="utf-8")
         self.old = (S.SECRET_FICHIER, S.DOSSIER, S._EQUIPE, S.LOOPBACK); S.SECRET_FICHIER = self.t / "config" / "dashboard.local"; S.DOSSIER = self.t
         self.faux = Faux(); S._EQUIPE = self.faux
         self.srv = ThreadingHTTPServer(("127.0.0.1", 0), partial(S.LectureSeule, directory=str(self.t))); self.port = self.srv.server_address[1]
@@ -119,10 +119,11 @@ class TestExposition(Base):
         self.assertEqual(c, 500); self.assertNotIn("Users", b); self.assertNotIn("equipe.json", b)
         self.faux.panne = Faux.ErreurAgent("plafond atteint"); S.equipe().ErreurAgent = Faux.ErreurAgent; c, b = self.post({"id": OK_ID, "action": "accepte"}); self.assertEqual((c, json.loads(b)["message"]), (409, "plafond atteint"))
 
-    def test_noms_de_prospects_proteges(self):
-        self.assertEqual(self.req("GET", "/data/linkedin.js")[0], 200)   # la machine elle-même
-        self.a_distance(); self.assertEqual(self.req("GET", "/data/linkedin.js")[0], 403); self.assertEqual(self.req("GET", "/data/linkedin.js?k=faux")[0], 403); self.assertEqual(self.req("HEAD", "/data/linkedin.js")[0], 403)
-        c, b = self.req("GET", "/data/linkedin.js?t=1&k=" + S.secret()); self.assertEqual(c, 200); self.assertIn("JARVIS_LINKEDIN", b)
+    def test_linkedin_lisible_sans_secret_telephones_proteges(self):   # 25/11/2026 : LinkedIn se lit sans secret depuis le réseau local ; seuls les téléphones (leads.js) restent protégés
+        self.assertEqual(self.req("GET", "/data/linkedin.js")[0], 200); self.assertEqual(self.req("GET", "/data/leads.js")[0], 200)   # la machine elle-même
+        self.a_distance(); c, b = self.req("GET", "/data/linkedin.js"); self.assertEqual(c, 200); self.assertIn("JARVIS_LINKEDIN", b); self.assertEqual(self.req("HEAD", "/data/linkedin.js")[0], 200)
+        self.assertEqual(self.req("GET", "/data/leads.js")[0], 403); self.assertEqual(self.req("GET", "/data/leads.js?k=faux")[0], 403); self.assertEqual(self.req("HEAD", "/data/leads.js")[0], 403)
+        c, b = self.req("GET", "/data/leads.js?t=1&k=" + S.secret()); self.assertEqual(c, 200); self.assertIn("JARVIS_LEADS", b)
 
     def test_tableau_de_bord_existant_intact(self):
         self.a_distance()
@@ -189,10 +190,9 @@ class TestCerveau(Base):
         c, b = self.cpost({"id": OK_ID, "action": "accepter"}); self.assertEqual(c, 409); self.assertIn("proposition inconnue", b)
         self.fc.panne = RuntimeError("C:/Users/x/B2B/cerveau/etat.json"); c, b = self.cpost({"id": OK_ID, "action": "accepter"}); self.assertEqual(c, 500); self.assertNotIn("etat.json", b)
 
-    def test_donnees_du_cerveau_protegees(self):
+    def test_donnees_du_cerveau_lisibles_sans_secret(self):   # 25/11/2026 : lecture libre sur le réseau local ; l'écriture (POST) exige toujours le secret (testée plus haut)
         self.assertEqual(self.req("GET", "/data/cerveau.js")[0], 200); self.a_distance()
-        self.assertEqual(self.req("GET", "/data/cerveau.js")[0], 403); self.assertEqual(self.req("HEAD", "/data/cerveau.js")[0], 403); self.assertEqual(self.req("GET", "/data/cerveau.json")[0], 404)
-        c, b = self.req("GET", "/data/cerveau.js?t=1&k=" + S.secret()); self.assertEqual(c, 200); self.assertIn("JARVIS_CERVEAU", b)
+        c, b = self.req("GET", "/data/cerveau.js"); self.assertEqual(c, 200); self.assertIn("JARVIS_CERVEAU", b); self.assertEqual(self.req("HEAD", "/data/cerveau.js")[0], 200); self.assertEqual(self.req("GET", "/data/cerveau.json")[0], 404)
 
 
 if __name__ == "__main__":

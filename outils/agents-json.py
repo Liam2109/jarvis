@@ -553,7 +553,12 @@ def leads_a_appeler(feuilles, jour, R=None):
     except Exception as e: return False, f"leads chauds illisibles ({type(e).__name__})"
 
 
-def leads_de_la_file(jour):
+def sources_drive(feuilles):
+    """{jour de la feuille: {noms normalisés des lignes notées}} : ce que les feuilles « Appels Sid » encore sur le Drive contiennent VRAIMENT (Google n'en garde que 7 jours)."""
+    return {f.get("jour"): {re.sub(r"\W+", "", str(l.get("nom", "")).lower()) for l in (f.get("lignes") or [])} for f in (feuilles or [])}
+
+
+def leads_de_la_file(jour, drive=None):
     """File unique « leads chauds » (B2B/agents/leads_chauds.py, maillon 2 de CARTE-RELAIS, 23/11/2026), même lecture que le reste : un fichier local, aucune dépendance de plus.
     -> liste au format de leads_a_appeler, ou None si la file n'existe pas (la lecture des feuilles de Sid sert alors de secours)."""
     try:
@@ -562,8 +567,12 @@ def leads_de_la_file(jour):
         file = LC.lire()
     except Exception: return None
     if file is None: return None
+    def sur_drive(l):      # None = on ne sait pas lire le Drive (hors ligne / test) ; sinon la feuille du jour de l'appel est-elle encore là, avec ce lead dedans ?
+        if drive is None: return None
+        return re.sub(r"\W+", "", str(l["nom"]).lower()) in (drive.get(l.get("resultat_le", "")) or set())
     return [{"nom": l["nom"], "ville": l.get("ville", ""), "tel": LC.tel_lisible(l["tel"]), "raison": l.get("resultat", ""), "note": l.get("note", ""), "appel": l.get("resultat_le", ""),
-             "relance": 1, "prevu": l.get("jour", ""), "due": bool(l.get("jour")) and l["jour"] <= jour, "moyen_terme": bool(l.get("moyen_terme")), "rappelle": l.get("rappelle", "Sid")} for l in file]
+             "relance": 1, "prevu": l.get("jour", ""), "due": bool(l.get("jour")) and l["jour"] <= jour, "moyen_terme": bool(l.get("moyen_terme")), "rappelle": l.get("rappelle", "Sid"),
+             "source": "feuille « Appels Sid " + l.get("resultat_le", "?") + " » · registre des entreprises", "sur_drive": sur_drive(l)} for l in file]
 
 
 def potentiel(dispo, leads):
@@ -747,7 +756,9 @@ def cockpit(maintenant, v, agents, leads, histo):
                      ligne("DM", g(lk_auj, "dm"), g(lk_sem, "dm")), ligne("Réponses", g(lk_auj, "reponse"), g(lk_sem, "reponse")),
                      ligne("Commentaires", g(lk_auj, "commentaire"), g(lk_sem, "commentaire")), ligne("Posts", g(lk_auj, "post"), g(lk_sem, "post"))]}
     ls = (leads or {}).get("leads") or []
-    chauds = {"total": len(ls), "dus": sum(1 for x in ls if x.get("due"))}
+    chauds = {"total": len(ls), "dus": sum(1 for x in ls if x.get("due")), "aujourdhui": sum(1 for x in ls if x.get("due") and x.get("prevu") == jour),
+              "en_retard": sum(1 for x in ls if x.get("due") and x.get("prevu") and x["prevu"] < jour), "hors_drive": sum(1 for x in ls if x.get("sur_drive") is False),
+              "liste": [{k: x.get(k) for k in ("nom", "ville", "raison", "note", "appel", "prevu", "due", "source", "sur_drive", "moyen_terme")} for x in sorted(ls, key=lambda x: (not x.get("due"), x.get("prevu") or "", x.get("nom") or ""))]}
     arret_lk = (LINKEDIN / "AUTO-STOP").exists(); stop_global = (RACINE / "B2B" / "STOP").exists()
     def resultat(a):
         n = a["nom"]
@@ -797,6 +808,26 @@ def cockpit(maintenant, v, agents, leads, histo):
             "actions": actions_du_jour(), "stats": stats, "chauds": chauds, "agents": liste, "inactifs": sorted(inactifs, key=lambda x: x["nom"])}
 
 
+def appels_liste():
+    """Un appel par ligne, lu dans le registre des entreprises (B2B/donnees/registre-entreprises.json, « lus » = le Résultat noté par Sid dans chaque feuille) : entreprise, ville, métier,
+    jour de la feuille, résultat, note (celle du dernier résultat seulement), appelant. L'HEURE n'est notée nulle part (ni feuille ni registre) : elle n'est jamais inventée. Aucun téléphone."""
+    reg = lire_json(RACINE / "B2B" / "donnees" / "registre-entreprises.json", {}) or {}; out = []
+    for x in (reg.get("entreprises") or {}).values():
+        for cle, res in sorted((x.get("lus") or {}).items()):
+            qui, _, jour = cle.partition("|")
+            if not res or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", jour): continue
+            out.append({"nom": x.get("nom", ""), "ville": x.get("commune", ""), "metier": x.get("metier", ""), "date": jour, "heure": "", "resultat": res,
+                        "note": (x.get("note", "") if jour == x.get("resultat_le") and res == x.get("dernier_resultat") else ""), "appelant": qui})
+    out.sort(key=lambda a: (a["date"], a["nom"]), reverse=True)
+    return {"genere_le": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "source": "registre des entreprises (résultats notés par Sid dans ses feuilles)", "heure_notee": False, "appels": out}
+
+
+def ecrire_appels():
+    (SORTIE / "data").mkdir(exist_ok=True); t = masquer(json.dumps(appels_liste(), ensure_ascii=False, indent=1))
+    for p, contenu in ((SORTIE / "data" / "appels.json", t), (SORTIE / "data" / "appels.js", "window.JARVIS_LISTE_APPELS = " + t + ";\n")):
+        tmp = p.with_name(p.name + ".tmp"); tmp.write_text(contenu, encoding="utf-8"); os.replace(tmp, p)
+
+
 def ecrire_cockpit(c):
     (SORTIE / "data").mkdir(exist_ok=True); t = masquer(json.dumps(c, ensure_ascii=False, indent=1))
     for p, contenu in ((SORTIE / "data" / "cockpit.json", t), (SORTIE / "data" / "cockpit.js", "window.JARVIS_COCKPIT = " + t + ";\n")):
@@ -812,7 +843,7 @@ def main():
     dispo, fs = feuilles_sid(rs)
     jour = maintenant.date().isoformat()
     if dispo: aligner_jour(v, fs, jour)
-    lds = leads_de_la_file(jour); dispo_l = lds is not None   # la file unique d'abord ; sinon les feuilles de Sid (secours)
+    lds = leads_de_la_file(jour, sources_drive(fs) if dispo else None); dispo_l = lds is not None   # la file unique d'abord ; sinon les feuilles de Sid (secours)
     if not dispo_l: dispo_l, lds = leads_a_appeler(fs, jour) if dispo else (False, fs)
     v["chiffres"].append(dict(cle="potentiel", libelle="Potentiel", **potentiel(dispo_l, lds)))
     leads = {"jour": jour, "genere_le": maintenant.strftime("%Y-%m-%d %H:%M:%S"), "critere": "file unique des leads chauds (registre) : « À rappeler » ou « Je dois réfléchir » noté par Sid, sans STOP ni refus ; rappel par Sid ou un closer",
@@ -823,6 +854,8 @@ def main():
         if str(AGENTS) not in sys.path: sys.path.insert(0, str(AGENTS))
         import historique_appels as HA; HA.ecrire_tableau_de_bord(SORTIE / "data", maintenant)
     except Exception as e: print(f"historique des appels non écrit ({type(e).__name__})")
+    try: ecrire_appels()      # rubrique « Historique des appels » refaite le 25/11/2026 : une liste, un appel par ligne
+    except Exception as e: print(f"liste des appels non écrite ({type(e).__name__}: {e})")
     try: ecrire_cockpit(cockpit(maintenant, v, donnees_agents, leads, histo))      # page « Aujourd'hui » (25/11/2026) : après l'historique des appels, dont il lit le fichier
     except Exception as e: print(f"cockpit non écrit ({type(e).__name__}: {e})")
     if "--ouvrir" in sys.argv[1:] and os.name == "nt": os.startfile(str(SORTIE / "index.html"))

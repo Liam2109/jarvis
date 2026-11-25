@@ -287,6 +287,24 @@
     .rang { grid-template-columns: 16px minmax(0, 1fr) auto; row-gap: 2px; } .rang.entete { display: none; }
     .rang .prevu { grid-column: 2; color: var(--faible); font-size: 12px; } .rang .passe { grid-column: 3; grid-row: 1; justify-self: end; } .rang .etat { grid-column: 3; grid-row: 2; justify-self: end; }
   }
+  /* 25/11/2026 : deux zones (Appels / Agents), liste des appels, graphe d'architecture */
+  .zone { margin: 0 0 32px; } .zone-titre { font-size: 22px; line-height: 30px; font-weight: 600; margin: 0 0 12px; padding-left: 12px; border-left: 4px solid var(--bleu); letter-spacing: -.01em; }
+  .ck-appels { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(0, 2fr); gap: 24px; align-items: start; }
+  .ck-groupes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ck-leads { padding: 20px 24px 16px; } .ck-tete2 { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--ligne); } .ck-tete2 h2 { margin: 0; font-size: 16px; line-height: 24px; }
+  .ck-note { margin: 12px 0 0; } .alerte { color: var(--mal); font-weight: 500; }
+  .ck-diag { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 4px 0 12px; } .ck-diag .ck-etat { margin: 0; gap: 8px; }
+  .ck-diag .ck-etat li { padding: 6px 14px; border-radius: 14px; font-size: 14px; } .ck-diag .ck-etat b { font-size: 20px; line-height: 24px; }
+  .filtres { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+  .filtre { height: 34px; padding: 0 14px; border-radius: 17px; border: 1px solid var(--bord-verre); background: var(--verre-fort); color: var(--doux); cursor: pointer; font: inherit; } .filtre b { margin-left: 6px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .filtre[aria-pressed="true"] { background: var(--bleu); border-color: var(--bleu); color: #fff; }
+  .liste-appels { padding: 8px 24px; margin-bottom: 16px; } .la-l { display: grid; grid-template-columns: minmax(0, 1.3fr) 96px 150px minmax(0, 2fr); column-gap: 16px; align-items: start; padding: 12px 0; border-top: 1px solid var(--ligne); }
+  .la-l.entete { border-top: 0; padding: 8px 0 4px; } .la-l .qui b { display: block; font-weight: 600; } .la-l .qui span { color: var(--faible); font-size: 13px; } .la-note { color: var(--doux); } .la-note .sans { color: var(--faible); }
+  .res-p { font-style: normal; display: inline-block; padding: 2px 10px; border-radius: 12px; background: var(--bleu-pale); color: var(--bleu); font-size: 13px; line-height: 20px; }
+  .archi-graphe { padding: 16px 20px 12px; margin-bottom: 24px; } .graphe-archi { display: block; height: auto; }
+  .legende-archi { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 0 0 8px; color: var(--doux); font-size: 13px; } .leg { display: inline-flex; align-items: center; gap: 6px; }
+  .leg i { width: 12px; height: 12px; border-radius: 6px; display: inline-block; } .leg i.trait { width: 22px; height: 0; border-radius: 0; border-top: 2px solid #2F6FB0; } .leg i.pointille { border-top: 2px dashed #C8372F; }
+  @media (max-width: 1180px) { .ck-appels { grid-template-columns: 1fr; } .la-l { grid-template-columns: minmax(0, 1fr) 90px; row-gap: 4px; } .la-l.entete { display: none; } .la-note { grid-column: 1 / 3; } }
   @media (max-width: 1180px) { .ck-groupes { grid-template-columns: 1fr; } }
   @media (max-width: 760px) { .ck-r { grid-template-columns: minmax(0, 1fr) auto; row-gap: 4px; } .ck-r.entete { display: none; } .ck-r .res, .ck-r .pass { grid-column: 1 / 3; text-align: left; } .ck-r > span:first-child { grid-column: 2; grid-row: 1; } .ck-r .qui { grid-column: 1; grid-row: 1; } .ck-etat b { font-size: 32px; } }
   @media (hover: none) { .carte:hover { transform: none; } }
@@ -312,6 +330,7 @@
 <script src="data/cerveau.js"></script>
 <script src="data/historique-appels.js"></script>
 <script src="data/cockpit.js"></script>
+<script src="data/appels.js"></script>
 <div id="bulle" role="status" aria-live="polite"></div>
 <script>
 (function () {
@@ -339,7 +358,7 @@
   var DOCS = [["pipeline", "Pipeline"], ["sources", "Sources des chiffres"], ["a_faire", "À faire"], ["journal", "Journal"], ["decisions", "Décisions"], ["idees", "Idées"]];
   var JOURS = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"], MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
   var VEDETTE = "appels", CLE = "paiements";   // la carte du haut, et le chiffre qui garde l'ocre
-  var CK = null, A = null, V = null, D = null, L = null, R = null, LK = null, CV = null, AP = null, LKTEXTES = [], vue = "jour", doc = "a_faire", choisi = null, recherche = "", voirInactifs = false;
+  var CK = null, A = null, V = null, D = null, L = null, R = null, LK = null, CV = null, AP = null, AL = null, filtreAppels = "", LKTEXTES = [], vue = "jour", doc = "a_faire", choisi = null, recherche = "", voirInactifs = false;
   try {
     vue = localStorage.getItem("jarvis-vue") || "jour"; periode = { mois: "mois", an: "an" }[localStorage.getItem("jarvis-periode")] || "semaine"; var cc = JSON.parse(localStorage.getItem("jarvis-courbes") || "null"); if (cc) for (var k in COCHES) if (typeof cc[k] === "boolean") COCHES[k] = cc[k]; doc = localStorage.getItem("jarvis-doc") || "a_faire";
     var ancien = localStorage.getItem("jarvis-onglet");   // ancienne page à onglets
@@ -403,23 +422,34 @@
       '<span class="qui"><b>' + esc(a.nom) + '</b><span title="' + esc(a.phrase) + '">' + esc(a.phrase) + '</span></span><span class="res">' + esc(a.resultat || "—") + (a.raison ? "<small>" + esc(a.raison) + "</small>" : "") + "</span>" +
       '<span class="pass num">' + esc(quand(a.dernier)) + "</span></div>";
   }
-  function vueJour() {   // cockpit (25/11/2026) : tout vient de data/cockpit.js, écrit par outils\agents-json.py
+  function leadLigne(x) {   // un lead : qui, pourquoi, note de Sid, et surtout D'OÙ il vient (feuille + jour) et si cette feuille existe encore
+    var auj = aujourdhui();
+    var rel = x.due ? (x.prevu === auj ? "à rappeler aujourd'hui" : "en retard depuis le " + jjmm(x.prevu)) : "relance prévue le " + jjmm(x.prevu) + (x.moyen_terme ? " (moyen terme)" : "");
+    var drive = x.sur_drive === false ? '<span class="alerte">cette feuille n\'est plus sur le Drive</span>' : x.sur_drive === true ? "toujours dans la feuille" : "";
+    return '<li' + (x.due ? ' class="due"' : "") + '><span class="qui"><b>' + esc(x.nom || "(nom absent)") + "</b>" + (x.ville ? " <span>· " + esc(x.ville) + "</span>" : "") + '</span><span class="meta tel">' + esc(x.raison || "") + "</span>" +
+      '<span class="motif">' + (x.note ? "« " + esc(x.note) + " »" : '<span class="sans">aucune note de Sid</span>') + '</span><span class="meta quand">' + rel + " · appel du " + jjmm(x.appel) + " · source : " + esc(x.source || "inconnue") + (drive ? " · " + drive : "") + "</span></li>";
+  }
+  function noteLeads(ch) {
+    return ch.hors_drive ? '<p class="meta ck-note">' + ch.hors_drive + (ch.hors_drive > 1 ? " de ces leads sortent" : " de ces leads sort") + " d'une feuille de Sid qui n'est plus sur le Drive (Google ne garde que 7 jours) : ils restent dans le registre des entreprises tant que personne ne les clôt, d'où leur absence des feuilles actuelles.</p>" : "";
+  }
+  function zoneLeads(ch) {
+    var l = ch.liste || [], t = '<section class="ck-bloc verre ck-leads"><div class="ck-tete2"><h2>Leads à rappeler</h2><span class="meta">' + (l.length ? l.length + " en cours · " + (ch.aujourdhui || 0) + " pour aujourd'hui · " + (ch.en_retard || 0) + " en retard" : "aucun") + "</span></div>";
+    if (!l.length) return t + '<p class="vide">Aucun lead chaud en cours : aucune ligne « À rappeler » ou « Je dois réfléchir » à reprendre.</p></section>';
+    return t + '<ul class="leads">' + l.map(leadLigne).join("") + "</ul>" + noteLeads(ch) + "</section>";
+  }
+  function vueJour() {   // cockpit (25/11/2026, retouché le même jour) : deux zones distinctes, APPELS en haut, AGENTS en bas ; tout vient de data/cockpit.js (outils\agents-json.py)
     var h = '<div class="tete"><h1>Aujourd\'hui</h1><span class="meta">' + esc(dateLongue(aujourdhui())) + (CK && CK.genere_le ? " · calculé à " + esc(CK.genere_le.slice(11, 16)) : "") + "</span></div>";
     if (!CK) return h + '<div class="verre accueil-vide"><h2>Pas encore de données</h2><p>Les chiffres sont recalculés par outils\\agents-json.py (service du tableau de bord ou icône du bureau).</p></div>';
-    var c = CK.compte || {}, ordre = [["bloque", "bloqué"], ["auto-stop", "AUTO-STOP"], ["attention", "à surveiller"], ["attente", "en attente"], ["ok", "OK"]];
-    h += (CK.stop_global ? '<p class="ck-bandeau">STOP global actif (fichier B2B\\STOP) : aucun envoi.</p>' : "") +
-      '<ul class="ck-etat" aria-label="État des agents">' + ordre.map(function (o) { var n = c[o[0]] || 0; return '<li class="' + o[0] + (n ? "" : " zero") + '"><b>' + n + "</b>" + o[1] + "</li>"; }).join("") + "</ul>";
-    h += '<section class="ck-actions verre" aria-label="Prochaines actions"><h2>Prochaines actions</h2>' + ((CK.actions || []).length ?
-      "<ol>" + CK.actions.map(function (a) { return '<li class="' + (a.urgent ? "urgent" : "") + '" title="' + esc(a.complet) + '"><span>' + (a.urgent ? "<b>URGENT</b> " : "") + esc(a.texte) + "</span></li>"; }).join("") + "</ol>" : '<p class="vide">Rien d\'ouvert dans la to-do.</p>') + "</section>";
-    var s = CK.stats || {}, ch = CK.chauds || { total: 0, dus: 0 };
-    h += '<div class="ck-groupes">' + groupe("Appels", s.appels || []) +
-      "<div>" + groupe("Vente", s.vente || []) + '<button class="ck-chauds verre' + (ch.total ? "" : " rien") + '" data-vue="chauds"><b>' + ch.total + "</b><span>lead" + (ch.total > 1 ? "s" : "") + " chaud" + (ch.total > 1 ? "s" : "") + " en attente" +
-      (ch.dus ? " · <strong>" + ch.dus + " à rappeler aujourd'hui</strong>" : "") + "</span></button></div>" + groupe("LinkedIn", s.linkedin || []) + "</div>";
-    var ag = CK.agents || [], ina = CK.inactifs || [];
-    h += '<section class="ck-ag verre" aria-label="Agents"><div class="tete"><h2>Agents actifs</h2><span class="meta">' + ag.length + " en service</span></div>" +
+    var s = CK.stats || {}, ch = CK.chauds || { total: 0, liste: [] };
+    h += (CK.stop_global ? '<p class="ck-bandeau">STOP global actif (fichier B2B\\STOP) : aucun envoi.</p>' : "");
+    h += '<div class="zone"><h2 class="zone-titre">Appels</h2><div class="ck-appels">' + groupe("Appels", s.appels || []) + zoneLeads(ch) + "</div></div>";
+    h += '<div class="ck-groupes">' + groupe("Vente", s.vente || []) + groupe("LinkedIn", s.linkedin || []) + "</div>";
+    var c = CK.compte || {}, ag = CK.agents || [], ina = CK.inactifs || [], ordre = [["bloque", "bloqué"], ["auto-stop", "AUTO-STOP"], ["attention", "à surveiller"], ["attente", "en attente"], ["ok", "OK"]];
+    h += '<div class="zone"><h2 class="zone-titre">Agents</h2><section class="ck-ag verre" aria-label="Agents"><div class="ck-diag"><span class="meta">Diagnostic</span><ul class="ck-etat" aria-label="État des agents">' +
+      ordre.map(function (o) { var n = c[o[0]] || 0; return '<li class="' + o[0] + (n ? "" : " zero") + '"><b>' + n + "</b>" + o[1] + "</li>"; }).join("") + "</ul></div>" +
       '<div class="ck-r entete meta" aria-hidden="true"><span>État</span><span>Agent</span><span>Résultat du jour</span><span class="pass">Dernier passage</span></div>' + ag.map(ligneCk).join("") +
       '<div class="ck-in"><button class="lien" data-inactifs aria-expanded="' + voirInactifs + '">' + ina.length + " inactif" + (ina.length > 1 ? "s" : "") + (voirInactifs ? " (replier)" : " (voir)") + "</button>" +
-      (voirInactifs ? "<p>" + ina.map(function (x) { return "<b>" + esc(x.nom) + "</b> (" + esc(x.raison) + ")"; }).join(" · ") + "</p>" : "") + "</div></section>";
+      (voirInactifs ? "<p>" + ina.map(function (x) { return "<b>" + esc(x.nom) + "</b> (" + esc(x.raison) + ")"; }).join(" · ") + "</p>" : "") + "</div></section></div>";
     return h;
   }
   function vueChauds() {   // les listes nominatives (noms, numéros) : plus sur l'écran d'accueil
@@ -438,7 +468,7 @@
   }
   function jjmm(j) { return j && j.length === 10 ? j.slice(8, 10) + "/" + j.slice(5, 7) : esc(j || ""); }
   function carteARappeler() {   // « À rappeler aujourd'hui » (24/11/2026) : leads dont la relance est due aujourd'hui ou en retard, avec la date de dernière mise à jour ; même source que le message Discord de 08:00
-    var t = '<section class="bloc verre" aria-labelledby="t-arap"><div class="tete"><h2 id="t-arap">' + "À rappeler aujourd'hui" + '</h2>';
+    var t = '<section class="bloc verre" aria-labelledby="t-arap"><div class="tete"><h2 id="t-arap">' + "En retard ou à rappeler aujourd'hui" + '</h2>';
     if (!L) return t + "</div></section>";
     var auj = aujourdhui(), l = (L.leads || []).filter(function (x) { return x.due && x.prevu; }).sort(function (a, b) { return a.prevu < b.prevu ? -1 : a.prevu > b.prevu ? 1 : 0; });
     t += '<span class="meta">' + (l.length ? l.length + " lead" + (l.length > 1 ? "s" : "") + " dû" + (l.length > 1 ? "s" : "") + " ou en retard" : "rien à rappeler aujourd'hui") + "</span></div>";
@@ -458,7 +488,7 @@
       var auj = aujourdhui(), quoi = "relance " + esc(x.relance) + (x.prevu === auj ? " à faire aujourd'hui" : x.due ? " due depuis le " + jjmm(x.prevu) : " prévue le " + jjmm(x.prevu));
       return '<li' + (x.due ? ' class="due"' : "") + '><span class="qui"><b>' + esc(x.nom || "(nom absent)") + "</b>" + (x.ville ? " <span>· " + esc(x.ville) + "</span>" : "") + "</span>" +
         '<span class="num tel">' + esc(x.tel || "—") + '</span><span class="motif">' + (x.raison ? "<i>" + esc(x.raison) + "</i>" : '<span class="sans">raison non notée par Sid</span>') +
-        (x.note ? " · « " + esc(x.note) + " »" : ' · <span class="sans">aucune note de Sid</span>') + '</span><span class="meta quand">appel du ' + jjmm(x.appel) + " · " + quoi + (x.moyen_terme ? " · moyen terme" : "") + "</span></li>";
+        (x.note ? " · « " + esc(x.note) + " »" : ' · <span class="sans">aucune note de Sid</span>') + '</span><span class="meta quand">appel du ' + jjmm(x.appel) + " · " + quoi + (x.moyen_terme ? " · moyen terme" : "") + " · source : " + esc(x.source || "inconnue") + (x.sur_drive === false ? ' · <span class="alerte">cette feuille n\'est plus sur le Drive</span>' : "") + "</span></li>";
     }).join("") + "</ul>";
     return t + '<p class="meta" style="margin:16px 0 0">' + esc(L.critere || "") + ". Liam rappelle lui-même : aucun agent n'appelle ces entreprises.</p></section>";
   }
@@ -548,35 +578,23 @@
   }
   // --- Historique des appels (data/historique-appels.js, écrit par outils\agents-json.py depuis B2B\donnees\historique-appels.json : jamais lu sur Drive) ---
   var COLS_APPELS = [["appele", "Appelés"], ["decroche", "Décrochés"], ["interesse", "Intéressés"], ["rdv", "RDV"], ["refus", "Refus"], ["a_rappeler", "À rappeler"]];
-  function apJour(j, n) {   // jours calendaires, du plus ancien au plus récent, se terminant à j (un jour sans relevé reste vide, jamais comblé)
-    var d = new Date(j + "T12:00:00"), out = []; d.setDate(d.getDate() - n + 1);
-    for (var i = 0; i < n; i++) { out.push(d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2)); d.setDate(d.getDate() + 1); }
-    return out;
-  }
-  function apValeur(e, a, c) { var x = e && e.par && e.par[a]; return x && typeof x[c] === "number" ? x[c] : null; }
-  function vueAppels() {
-    var h = '<div class="tete"><h1>Historique des appels</h1><span class="meta">par jour et par appelant · relevé chaque soir à 19 h 30, sans jamais relire Drive</span></div>';
-    if (!AP || !AP.disponible || !(AP.jours || []).length) return h + '<div class="verre accueil-vide"><h2>Pas encore d\'historique des appels</h2><p>' + esc(AP && AP.raison ? AP.raison : "Le fichier B2B\donnees\historique-appels.json se remplit au passage de 19 h 30 du résumé du soir, et avant chaque mise à la corbeille d'une feuille.") + "</p></div>";
-    var par = {}; AP.jours.forEach(function (e) { par[e.date] = e; });
-    var fin = aujourdhui() || new Date().toISOString().slice(0, 10), sept = apJour(fin, 7), avant = apJour(sept[0], 8).slice(0, 7), qui = AP.appelants || [];
-    var tot = function (jours, a, c) { return jours.reduce(function (s, j) { return s + (apValeur(par[j], a, c) || 0); }, 0); };
-    h += '<ul class="stat-ligne">' + qui.map(function (a) {
-      var n = tot(sept, a, "appele"), p = tot(avant, a, "appele"), dif = n - p;
-      return '<li class="verre"><span>' + esc(a) + " · 7 derniers jours</span><b>" + fmt(n) + "</b><small>appels notés · " + (p ? (dif >= 0 ? "+" : "−") + Math.abs(dif) + " sur les 7 jours d'avant (" + p + ")" : "pas de relevé les 7 jours d'avant") + "</small></li>"; }).join("") + "</ul>";
-    h += qui.map(function (a) {
-      var max = Math.max.apply(null, sept.map(function (j) { return apValeur(par[j], a, "appele") || 0; }).concat([1])), W = 560, H2 = 120, bw = W / 7;
-      var barres = sept.map(function (j, i) { var v = apValeur(par[j], a, "appele"), hh = v ? Math.max(2, (H2 - 28) * v / max) : 0;
-        return '<g data-bulle="' + esc(a + " · " + jourCourt(j) + " : " + (v == null ? "pas de relevé" : v + " appel" + (v > 1 ? "s" : "") + " noté" + (v > 1 ? "s" : ""))) + '" tabindex="0"><rect x="' + (i * bw + 10).toFixed(1) + '" y="' + (H2 - 18 - hh).toFixed(1) + '" width="' + (bw - 20).toFixed(1) + '" height="' + hh.toFixed(1) + '" rx="3" fill="var(--bleu)"/>' +
-          '<text x="' + (i * bw + bw / 2).toFixed(1) + '" y="' + (H2 - 4) + '" text-anchor="middle" font-size="11" fill="var(--faible)">' + jourCourt(j).slice(0, 8) + "</text>" + (v != null ? '<text x="' + (i * bw + bw / 2).toFixed(1) + '" y="' + (H2 - 22 - hh).toFixed(1) + '" text-anchor="middle" font-size="12" fill="var(--nuit)">' + v + "</text>" : "") + "</g>"; }).join("");
-      var lignes = sept.slice().reverse().map(function (j) {
-        var e = par[j]; if (!e || !e.par || !e.par[a]) return '<div class="rang entete" style="grid-template-columns:140px repeat(6,minmax(0,1fr));cursor:default"><span>' + esc(jourCourt(j)) + '</span><span class="meta" style="grid-column:2 / 8">pas de relevé</span></div>';
-        return '<div class="rang entete" style="grid-template-columns:140px repeat(6,minmax(0,1fr));cursor:default"><span>' + esc(jourCourt(j)) + "</span>" + COLS_APPELS.map(function (c) { return "<b>" + fmt(apValeur(e, a, c[0])) + "</b>"; }).join("") + "</div>"; }).join("");
-      var total = '<div class="rang entete" style="grid-template-columns:140px repeat(6,minmax(0,1fr));cursor:default;border-top:1px solid var(--ligne)"><span>Total 7 jours</span>' + COLS_APPELS.map(function (c) { return "<b>" + fmt(tot(sept, a, c[0])) + "</b>"; }).join("") + "</div>";
-      return '<section class="principal verre"><div class="tete"><h2>' + esc(a) + '</h2><span class="meta">évolution sur 7 jours · décrochés = tout sauf « Pas de réponse » · intéressés = RDV + à rappeler + je dois réfléchir</span></div>' +
-        '<svg viewBox="0 0 ' + W + " " + H2 + '" width="100%" role="img" aria-label="Appels notés par jour, ' + esc(a) + '">' + barres + "</svg>" +
-        '<div class="rang entete" style="grid-template-columns:140px repeat(6,minmax(0,1fr));cursor:default"><span></span>' + COLS_APPELS.map(function (c) { return '<span class="meta">' + c[1] + "</span>"; }).join("") + "</div>" + lignes + total + "</section>";
-    }).join("");
-    return h + '<p class="meta">« Exemple envoyé » et « devis » ne sont pas notés dans les feuilles d\'appels : ils ne sont pas comptés ici (les devis sont dans Statistiques).</p>';
+  function dateFr(j) { return j && j.length === 10 ? j.slice(8, 10) + "/" + j.slice(5, 7) + "/" + j.slice(0, 4) : esc(j || ""); }
+  function vueAppels() {   // refait le 25/11/2026 : une liste, un appel par ligne, filtrable par résultat (data/appels.js, lu dans le registre des entreprises)
+    var h = '<div class="tete"><h1>Historique des appels</h1>' + (AL ? '<span class="meta">source : ' + esc(AL.source) + "</span>" : "") + "</div>";
+    var l = AL ? AL.appels || [] : [];
+    if (!l.length) return h + '<div class="verre accueil-vide"><h2>aucun appel enregistré</h2><p>Les résultats notés par Sid dans ses feuilles arrivent ici dès qu\'ils sont relus.</p></div>';
+    var n = {}; l.forEach(function (a) { n[a.resultat] = (n[a.resultat] || 0) + 1; });
+    var noms = Object.keys(n).sort(function (a, b) { return n[b] - n[a] || a.localeCompare(b, "fr"); });
+    if (filtreAppels && !n[filtreAppels]) filtreAppels = "";
+    h += '<div class="filtres" role="group" aria-label="Filtrer par résultat"><button class="filtre" data-filtre="" aria-pressed="' + !filtreAppels + '">Tous <b>' + l.length + "</b></button>" +
+      noms.map(function (r) { return '<button class="filtre" data-filtre="' + esc(r) + '" aria-pressed="' + (filtreAppels === r) + '">' + esc(r) + " <b>" + n[r] + "</b></button>"; }).join("") + "</div>";
+    var v = l.filter(function (a) { return !filtreAppels || a.resultat === filtreAppels; });
+    h += '<section class="verre liste-appels"><div class="la-l entete meta" aria-hidden="true"><span>Entreprise</span><span>Date</span><span>Résultat</span><span>Note</span></div>' + v.map(function (a) {
+      return '<div class="la-l"><span class="qui"><b>' + esc(a.nom || "(nom absent)") + "</b><span>" + esc([a.ville, a.metier, a.appelant].filter(Boolean).join(" · ")) + '</span></span><span class="num">' + dateFr(a.date) + '</span><span><i class="res-p">' + esc(a.resultat) + "</i></span>" +
+        '<span class="la-note">' + (a.note ? esc(a.note) : '<span class="sans">—</span>') + "</span></div>";
+    }).join("") + "</section>" +
+      '<p class="meta">' + v.length + " appel" + (v.length > 1 ? "s" : "") + " affiché" + (v.length > 1 ? "s" : "") + ". L'heure de l'appel n'est notée ni dans les feuilles de Sid ni dans le registre : seule la date de la feuille est connue. Une note n'est gardée que pour le dernier résultat d'une entreprise.</p>"
+    return h;
   }
   function axes(w, h, g, max, pas) {   // grille discrète + libellés mono à gauche
     var s = "";
@@ -730,7 +748,7 @@
   }
   function vueLinkedin() {
     var h = '<div class="tete"><h1>LinkedIn</h1>' + (LK ? '<span class="meta">lot du ' + esc(dateLongue(LK.jour)) + " · préparé, jamais envoyé : vous envoyez vous-même</span>" : "") + "</div>";
-    if (!LK) return h + '<div class="verre accueil-vide"><h2>Pas encore de lot</h2><p>Le lot est préparé chaque jour ouvré à 08:00 sur le serveur (B2B\\agents\\linkedin-equipe.py). Cette rubrique se lit et se coche depuis le tableau de bord du serveur (http://serveur:8080). Depuis un autre PC, saisissez le secret du serveur une fois.</p><div class="boutons"><button class="bouton" data-secret="1">Saisir le secret du serveur</button></div></div>';
+    if (!LK) return h + '<div class="verre accueil-vide"><h2>Pas encore de lot</h2><p>Le lot est préparé chaque jour ouvré à 08:00 sur le serveur (B2B\\agents\\linkedin-equipe.py). Cette rubrique se lit et se coche depuis le tableau de bord du serveur (http://serveur:8080). Cette page se lit sans secret ; le secret du serveur ne sert que pour les boutons qui agissent.</p><div class="boutons"></div></div>';
     LKTEXTES = [];
     var lien = location.protocol === "file:" ? '<p class="meta">Ouvert depuis un fichier : les cases ne peuvent pas être enregistrées. Ouvrez la page du serveur (http://…:8080).</p>' : "";
     h += lien + '<p class="meta lk-msg" id="lk-msg" role="status"></p>';
@@ -752,15 +770,59 @@
     return h;
   }
   function cvBloc(t, meta, corps) { return '<section class="bloc verre lk-bloc"><div class="tete"><h2>' + t + '</h2><span class="meta">' + meta + "</span></div>" + corps + "</section>"; }
-  function vueArchitecture() {   // générée par architecture.py (docs.js) : contrats, tâches, traces ; rien n'est écrit à la main
+  var CAT_COULEUR = { "Vente": "#2F6FB0", "Prospection": "#1F8A5B", "Sites": "#8A5CC8", "Mail": "#B8741A", "Jarvis (CEO)": "#5B6B86", "Manquant": "#C8372F" };
+  function graphe(X) {   // graphe type Obsidian : un nœud par agent (coloré par pôle), un lien par fichier qui passe d'un agent à l'autre, pointillé rouge = maillon manquant ; mise en place par un petit calcul de forces, toujours le même
+    var cat = {}; (A && A.agents || []).forEach(function (a) { cat[a.nom] = a.categorie || "Jarvis (CEO)"; });
+    var noeuds = [], idx = {};
+    (X.agents || []).forEach(function (a) { idx[a.nom] = noeuds.length; noeuds.push({ id: a.nom, cat: cat[a.nom] || "Jarvis (CEO)", etat: a.etat_libelle, mode: a.mode, manque: a.statut === "prevu", deg: 0 }); });
+    var parId = {}; (X.noeuds || []).forEach(function (n) {
+      if (n.agent && idx[n.agent] != null) { parId[n.id] = n.agent; return; }
+      parId[n.id] = n.id; idx[n.id] = noeuds.length; noeuds.push({ id: n.id, label: n.label, cat: "Manquant", etat: "aucun agent", mode: "", manque: true, deg: 0 });
+    });
+    var liens = [], vu = {};
+    function lier(a, b, plein, trajet) {
+      if (a == null || b == null || a === b) return; var k = Math.min(a, b) + "-" + Math.max(a, b);
+      if (vu[k] != null) { if (trajet) { liens[vu[k]].trajet = true; liens[vu[k]].plein = plein; } return; }
+      vu[k] = liens.length; liens.push({ a: a, b: b, plein: plein, trajet: trajet }); noeuds[a].deg++; noeuds[b].deg++;
+    }
+    (X.liens || []).forEach(function (l) { lier(idx[parId[l.de]], idx[parId[l.vers]], !!l.plein, true); });
+    (X.agents || []).forEach(function (a) { (X.agents || []).forEach(function (b) {   // un fichier écrit par l'un et lu par l'autre ; la sauvegarde nocturne lit tout : pas de lien (elle écraserait le dessin)
+      if (a === b || b.nom === "sauvegarde-leads" || a.nom === "sauvegarde-leads") return;
+      var f = (a.ecrit || []).filter(function (x) { return (b.lit || []).indexOf(x) >= 0; });
+      if (f.length) lier(idx[a.nom], idx[b.nom], true, false);
+    }); });
+    var W = 1000, H = 520, cats = Object.keys(CAT_COULEUR), ancre = {}, i, j;
+    cats.forEach(function (c, k) { var t = -Math.PI / 2 + k * 2 * Math.PI / cats.length; ancre[c] = [W / 2 + 330 * Math.cos(t), H / 2 + 200 * Math.sin(t)]; });
+    noeuds.forEach(function (n, k) { var p = ancre[n.cat] || [W / 2, H / 2], t = k * 2.399963; n.x = p[0] + 60 * Math.cos(t); n.y = p[1] + 60 * Math.sin(t); n.vx = 0; n.vy = 0; });
+    for (var it = 0; it < 420; it++) {
+      var f = 1 - it / 420;
+      for (i = 0; i < noeuds.length; i++) for (j = i + 1; j < noeuds.length; j++) {
+        var p = noeuds[i], q = noeuds[j], dx = p.x - q.x, dy = p.y - q.y, d2 = dx * dx + dy * dy + 40, d = Math.sqrt(d2), r = 5200 / d2;
+        p.vx += dx / d * r; p.vy += dy / d * r; q.vx -= dx / d * r; q.vy -= dy / d * r;
+      }
+      liens.forEach(function (l) { var p = noeuds[l.a], q = noeuds[l.b], dx = q.x - p.x, dy = q.y - p.y, d = Math.sqrt(dx * dx + dy * dy) + .01, k = (d - (l.trajet ? 95 : 130)) * (l.trajet ? .05 : .02);
+        p.vx += dx / d * k; p.vy += dy / d * k; q.vx -= dx / d * k; q.vy -= dy / d * k; });
+      noeuds.forEach(function (n) { var p = ancre[n.cat] || [W / 2, H / 2]; n.vx += (p[0] - n.x) * .012 + (W / 2 - n.x) * .002; n.vy += (p[1] - n.y) * .012 + (H / 2 - n.y) * .002;
+        n.x += Math.max(-12, Math.min(12, n.vx)) * f; n.y += Math.max(-12, Math.min(12, n.vy)) * f; n.vx *= .55; n.vy *= .55;
+        n.x = Math.max(70, Math.min(W - 70, n.x)); n.y = Math.max(30, Math.min(H - 34, n.y)); });
+    }
+    var s = '<svg class="graphe-archi" viewBox="0 0 ' + W + " " + H + '" width="100%" role="img" aria-label="Graphe des agents : ' + noeuds.length + " agents, " + liens.length + ' liens">';
+    liens.forEach(function (l) { var p = noeuds[l.a], q = noeuds[l.b], manque = !l.plein;
+      s += '<line x1="' + p.x.toFixed(1) + '" y1="' + p.y.toFixed(1) + '" x2="' + q.x.toFixed(1) + '" y2="' + q.y.toFixed(1) + '" stroke="' + (manque ? "#C8372F" : l.trajet ? "#2F6FB0" : "#A9B4C6") + '" stroke-width="' + (l.trajet ? 2.2 : 1.2) + '"' + (manque ? ' stroke-dasharray="6 5"' : "") + ' opacity="' + (l.trajet ? .9 : .7) + '"/>'; });
+    noeuds.forEach(function (n) { var c = CAT_COULEUR[n.cat] || "#5B6B86", r = 7 + Math.min(n.deg, 7) * 1.4;
+      s += '<g data-bulle="' + esc(n.id + " · " + n.cat + " · " + n.etat + (n.mode ? " · " + n.mode : "")) + '" tabindex="0"><circle cx="' + n.x.toFixed(1) + '" cy="' + n.y.toFixed(1) + '" r="' + r.toFixed(1) + '" fill="' + (n.manque ? "#fff" : c) + '" stroke="' + c + '" stroke-width="2.5"' + (n.manque ? ' stroke-dasharray="4 3"' : "") + "/>" +
+        '<text x="' + n.x.toFixed(1) + '" y="' + (n.y + r + 13).toFixed(1) + '" text-anchor="middle" font-size="11.5" fill="#25324A" paint-order="stroke" stroke="#fff" stroke-width="3" stroke-linejoin="round">' + esc(n.label || n.id) + "</text></g>"; });
+    s += "</svg>";
+    var leg = cats.map(function (c) { return '<span class="leg"><i style="background:' + CAT_COULEUR[c] + '"></i>' + (c === "Manquant" ? "Maillon ou agent manquant" : esc(c)) + "</span>"; }).join("") +
+      '<span class="leg"><i class="trait"></i>fichier qui passe d\'un agent au suivant</span><span class="leg"><i class="trait pointille"></i>maillon manquant</span>';
+    return '<div class="legende-archi">' + leg + "</div>" + s;
+  }
+  function vueArchitecture() {   // générée par architecture.py (docs.js) : contrats, tâches, traces ; rien n'est écrit à la main. Graphe refait le 25/11/2026 ; la liste détaillée reste dessous.
     var h = '<div class="tete"><h1>Architecture</h1>' + (D && D.architecture ? '<span class="meta">générée le ' + esc(D.architecture.genere_le) + " depuis les contrats, les tâches serveur et les traces</span>" : "") + "</div>";
     var X = D && D.architecture;
     if (!X) return h + '<div class="verre accueil-vide"><h2>Pas encore de données</h2><p>Double-cliquez sur l\'icône « Jarvis - Mon entreprise » du bureau pour générer la page.</p></div>';
-    var noeuds = X.noeuds || [], liens = X.liens || [];
-    h += '<section class="table-ag verre"><h2>Trajet d\'un client<span class="meta">trait plein = un fichier passe d\'un agent au suivant · pointillé = maillon manquant</span></h2><div class="archi-chaine">';
-    noeuds.forEach(function (n, i) { h += '<div class="archi-noeud' + (n.manque ? " manque" : "") + '">' + esc(n.label) + '<br><span class="meta">' + esc(n.agent ? n.statut : "aucun agent") + "</span></div>" + (i < liens.length ? '<span class="archi-lien' + (liens[i].plein ? "" : " manque") + '"></span>' : ""); });
-    h += "</div>" + ((X.manquants || []).length ? '<p class="meta">Maillons manquants : ' + esc(X.manquants.join(" ; ")) + "</p>" : "") + "</section>";
-    h += '<section class="table-ag verre"><h2>Agents<span class="num">' + (X.agents || []).length + "</span></h2>";
+    h += '<section class="verre archi-graphe">' + graphe(X) + ((X.manquants || []).length ? '<p class="meta">Maillons manquants : ' + esc(X.manquants.join(" ; ")) + "</p>" : "") + "</section>";
+    h += '<section class="table-ag verre"><h2>Fiches des agents<span class="num">' + (X.agents || []).length + "</span></h2>";
     (X.agents || []).forEach(function (a) {
       h += '<div class="archi-ag"><h3>' + esc(a.nom) + '<span class="meta e-' + esc(a.etat) + '">' + esc(a.etat_libelle) + '</span><span class="meta">' + esc(a.mode) + "</span></h3><ul>" + (a.fiche || []).map(function (l) { return "<li>" + esc(l) + "</li>"; }).join("") + "</ul></div>";
     });
@@ -768,7 +830,7 @@
   }
   function vueCerveau() {
     var h = '<div class="tete"><h1>Cerveau</h1>' + (CV ? '<span class="meta">veille du ' + esc(dateLongue(CV.jour)) + " · il propose, vous décidez : rien ne remplace un script qui marche</span>" : "") + "</div>";
-    if (!CV) return h + '<div class="verre accueil-vide"><h2>Pas encore de veille</h2><p>Le cerveau est fermé tant que vous n\'avez pas dit « go cerveau ». Une fois ouvert, il cherche chaque nuit sur le serveur (gratuit), puis Claude fait une seule passe par jour sur les 5 meilleures trouvailles. Depuis un autre PC, saisissez le secret du serveur une fois.</p><div class="boutons"><button class="bouton" data-secret="1">Saisir le secret du serveur</button></div></div>';
+    if (!CV) return h + '<div class="verre accueil-vide"><h2>Pas encore de veille</h2><p>Le cerveau est fermé tant que vous n\'avez pas dit « go cerveau ». Une fois ouvert, il cherche chaque nuit sur le serveur (gratuit), puis Claude fait une seule passe par jour sur les 5 meilleures trouvailles. Cette page se lit sans secret ; le secret du serveur ne sert que pour les boutons qui agissent.</p><div class="boutons"></div></div>';
     var lien = location.protocol === "file:" ? '<p class="meta">Ouvert depuis un fichier : les décisions ne peuvent pas être enregistrées. Ouvrez la page du serveur (http://…:8080).</p>' : "";
     h += lien + '<p class="meta lk-msg" id="lk-msg" role="status"></p>';
     var t = CV.total || {};
@@ -826,11 +888,12 @@
     if (s) { s.oninput = function () { recherche = s.value; rendre(); }; if (foc) { s.focus(); s.setSelectionRange(pos, pos); } }
   }
   function appliquer() {
-    A = window.JARVIS_AGENTS || null; V = window.JARVIS_VENTES || null; D = window.JARVIS_DOCS || null; H = window.JARVIS_HISTO || null; L = window.JARVIS_LEADS || null; R = window.JARVIS_RELAIS || null; LK = window.JARVIS_LINKEDIN || null; CV = window.JARVIS_CERVEAU || null; AP = window.JARVIS_APPELS || null; CK = window.JARVIS_COCKPIT || null;
+    A = window.JARVIS_AGENTS || null; V = window.JARVIS_VENTES || null; D = window.JARVIS_DOCS || null; H = window.JARVIS_HISTO || null; L = window.JARVIS_LEADS || null; R = window.JARVIS_RELAIS || null; LK = window.JARVIS_LINKEDIN || null; CV = window.JARVIS_CERVEAU || null; AP = window.JARVIS_APPELS || null; AL = window.JARVIS_LISTE_APPELS || null; CK = window.JARVIS_COCKPIT || null;
     rendre(); if (choisi) panneau(choisi);
   }
   document.addEventListener("click", function (e) {
     if (e.target.closest("[data-inactifs]")) { voirInactifs = !voirInactifs; rendre(); return; }
+    var fl = e.target.closest("[data-filtre]"); if (fl) { filtreAppels = fl.dataset.filtre; rendre(); return; }
     var b = e.target.closest("[data-vue]"); if (b) { vue = b.dataset.vue; memoriser(); rendre(); window.scrollTo(0, 0); return; }
     var d = e.target.closest("[data-doc]"); if (d) { doc = d.dataset.doc; memoriser(); rendre(); return; }
     var q = e.target.closest("[data-periode]"); if (q) { periode = q.dataset.periode; memoriser(); rendre(); return; }
@@ -842,9 +905,9 @@
   });
   document.addEventListener("keydown", function (e) { if (e.key === "Escape" && choisi) { panneau(null); rendre(); } });
   function recharger(fin) {   // toutes les 5 min : relit agents.js, ventes.js, docs.js et data/historique.js (réécrits par outils\agents-json.py)
-    var f = ["agents.js", "ventes.js", "docs.js", "data/historique.js", "data/leads.js", "data/linkedin.js", "data/cerveau.js", "data/historique-appels.js", "data/cockpit.js", "data/relais.js"], n = 0;
+    var f = ["agents.js", "ventes.js", "docs.js", "data/historique.js", "data/leads.js", "data/linkedin.js", "data/cerveau.js", "data/historique-appels.js", "data/cockpit.js", "data/relais.js", "data/appels.js"], n = 0;
     f.forEach(function (x) {
-      var s = document.createElement("script"); s.src = x + "?t=" + Date.now() + (x === "data/linkedin.js" || x === "data/cerveau.js" || x === "data/leads.js" || x === "data/relais.js" ? "&k=" + encodeURIComponent(secretLk()) : "");
+      var s = document.createElement("script"); s.src = x + "?t=" + Date.now() + (x === "data/leads.js" || x === "data/relais.js" ? "&k=" + encodeURIComponent(secretLk()) : "");
       s.onload = s.onerror = function () { s.remove(); if (++n === f.length) { appliquer(); if (typeof fin === "function") fin(); } };
       document.body.appendChild(s);
     });

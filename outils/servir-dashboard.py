@@ -2,8 +2,7 @@
 """Sert le tableau de bord en LECTURE SEULE : uniquement le dossier dashboard\\ (jamais le reste du dépôt), GET/HEAD, aucun listage de dossier.
 SEULES écritures (24/11/2026) : POST /api/linkedin {id, action} (cases cochées de la rubrique LinkedIn) et POST /api/cerveau {id, action} (accepter, refuser, garder, abandonner une proposition du cerveau). Sécurité (audit du 24/11/2026) : réservée à la machine elle-même (127.0.0.1 / ::1) OU à un en-tête
 X-Jarvis-Secret égal au secret du serveur (B2B/config/dashboard.local, hors git, créé au premier démarrage, jamais affiché) ; en-tête X-Jarvis et JSON obligatoires, corps limité à 512 octets, id de 8 caractères
-hexadécimaux et action d'une liste fermée vérifiés AVANT toute lecture de fichier ; aucun chemin ne vient de la requête (module et état fixes) ; une écriture à la fois. data/linkedin.js (noms de prospects) et data/cerveau.js (extraits de scripts)
-ne sont servis qu'à la machine elle-même ou avec ?k=SECRET.
+hexadécimaux et action d'une liste fermée vérifiés AVANT toute lecture de fichier ; aucun chemin ne vient de la requête (module et état fixes) ; une écriture à la fois. data/leads.js et data/relais.js (téléphones de prospects) ne sont servis qu'à la machine elle-même ou avec ?k=SECRET ; data/linkedin.js et data/cerveau.js se lisent sans secret (25/11/2026).
 
   python outils/servir-dashboard.py [--port 8080] [--hote 0.0.0.0]
 Sur le serveur, lancé par la tâche « Jarvis-Tableau-Service » (voir outils\\taches-dashboard-serveur.ps1). Ouvrir http://<serveur>:8080/ depuis le réseau local.
@@ -18,8 +17,8 @@ from pathlib import Path
 RACINE = Path(__file__).resolve().parent.parent
 DOSSIER = RACINE / "dashboard"
 PERMIS = {"index.html", "agents.js", "agents.json", "docs.js", "data/linkedin.js", "data/cerveau.js",
-          "ventes.js", "data/historique.js", "data/historique-appels.js", "data/cockpit.js", "data/leads.js", "data/relais.js"}   # 25/11/2026 : les chiffres de la page (comptes) étaient en 404 depuis le serveur
-PROTEGES = {"data/linkedin.js", "data/cerveau.js", "data/leads.js", "data/relais.js"}   # noms et numéros de prospects, extraits de scripts : machine elle-même ou secret
+          "ventes.js", "data/historique.js", "data/historique-appels.js", "data/cockpit.js", "data/leads.js", "data/relais.js", "data/appels.js"}   # 25/11/2026 : les chiffres de la page (comptes) étaient en 404 depuis le serveur
+PROTEGES = {"data/leads.js", "data/relais.js"}   # numéros de téléphone des prospects : machine elle-même ou secret. 25/11/2026 : LinkedIn et Cerveau se LISENT sans secret depuis le réseau local (le secret ne reste exigé que pour les POST qui agissent)
 SECRET_FICHIER = RACINE / "B2B" / "config" / "dashboard.local"
 TAILLE_MAX = 512
 ID_OK = re.compile(r"[0-9a-f]{8}\Z")
