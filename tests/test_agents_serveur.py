@@ -18,6 +18,8 @@ def verifier(cond, texte):
 
 
 verifier(AJ.lire_serveur("SERVEUR-X") is None, "JARVIS_TEST=1 : aucun appel réseau")
+verifier(AJ.adresses_serveur({"machine_active": "SRV", "serveur_adresse": "192.168.1.12"}) == ["SRV", "SRV.home", "192.168.1.12"], "adresses du serveur : nom réseau d'abord, IP en dernier secours")
+verifier(AJ.adresses_serveur({"machine_active": "SRV"}) == ["SRV", "SRV.home"] and AJ.adresses_serveur({}) == [], "sans IP : le nom seul ; sans rien : liste vide")
 
 # --- fusion pure -------------------------------------------------------------------------------------------------------------------------------
 local = [{"nom": "relances", "statut": "inactif", "dernier_passage": None, "journal": [], "note": "docs/agents/x.md", "chiffre_du_jour": {"libelle": "x", "valeur": None}},

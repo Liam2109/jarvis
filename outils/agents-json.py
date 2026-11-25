@@ -250,6 +250,12 @@ def lire_serveur(hote, port=8080, delai=4):
     except Exception: return None
 
 
+def adresses_serveur(local):
+    """Adresses à essayer pour joindre le serveur, dans l'ordre : nom réseau (machine_active), nom + « .home » (suffixe de la box), puis l'IP de secours serveur_adresse. Jamais d'IP seule : elle change au renouvellement du bail DHCP."""
+    nom = str(local.get("machine_active", "") or "").strip(); ip = str(local.get("serveur_adresse", "") or "").strip()
+    return [h for h in dict.fromkeys([nom, nom + ".home" if nom else "", ip]) if h]
+
+
 def fusionner_serveur(agents, photo):
     """Surcharge l'état vivant de chaque agent par celui de la machine active ; notes, rôles et liens restent ceux de ce PC. -> nombre d'agents mis à jour."""
     par_nom = {a.get("nom"): a for a in photo.get("agents", []) if isinstance(a, dict)}; n = 0
@@ -300,7 +306,7 @@ def construire(maintenant=None, photo_serveur=None):
                            "statut": "inactif", "suspendu": False, "dernier_passage": None, "dernier_resultat": None, "derniere_erreur": None, "pole": POLES.get(nom, "Autres"),
                            "journal": [], "responsable": None, "note": None, "note_obsidian": None, "sans_script": True})
     ailleurs = bool(machine_active) and machine_active != ce_pc
-    photo = (photo_serveur or lire_serveur(str(local.get("serveur_adresse", "") or "").strip() or machine_active)) if ailleurs else None   # serveur_adresse : IP du serveur, dans b2b.local.json (jamais en dur ici)
+    photo = (photo_serveur or next((p for p in (lire_serveur(h) for h in adresses_serveur(local)) if p), None)) if ailleurs else None   # nom réseau d'abord, IP (serveur_adresse, b2b.local.json) en secours seulement
     vus = fusionner_serveur(agents, photo) if photo else 0
     for a in agents:
         d = (serveur.get(a["nom"]) or {}).get("desactive")
