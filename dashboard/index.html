@@ -308,11 +308,12 @@
   @media (max-width: 1180px) { .ck-groupes { grid-template-columns: 1fr; } }
   @media (max-width: 760px) { .ck-r { grid-template-columns: minmax(0, 1fr) auto; row-gap: 4px; } .ck-r.entete { display: none; } .ck-r .res, .ck-r .pass { grid-column: 1 / 3; text-align: left; } .ck-r > span:first-child { grid-column: 2; grid-row: 1; } .ck-r .qui { grid-column: 1; grid-row: 1; } .ck-etat b { font-size: 32px; } }
   /* Aujourd'hui épuré (25/11/2026) : un gros chiffre, trois petits, un petit bloc Vente */
-  .jr-appels { padding: 32px 36px; max-width: 760px; } .jr-lib { display: block; font-size: 16px; line-height: 24px; color: var(--doux); }
-  .jr-gros { display: block; font-size: 96px; line-height: 104px; font-weight: 600; letter-spacing: -.03em; font-variant-numeric: tabular-nums; margin: 4px 0 20px; color: var(--nuit); } .jr-gros.zero { color: var(--faible); } .jr-gros.manque { color: var(--faible); font-weight: 400; }
-  .jr-petits { display: flex; flex-wrap: wrap; gap: 12px 48px; } .jr-petits span { display: block; color: var(--faible); font-size: 14px; line-height: 20px; }
-  .jr-petit { display: block; font-size: 32px; line-height: 40px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.02em; color: var(--doux); } .jr-petit.zero { color: var(--faible); font-weight: 400; } .jr-petit.manque { color: var(--faible); font-weight: 400; }
-  .jr-vente { padding: 20px 36px 24px; max-width: 760px; margin-top: 24px; } .jr-vente h2 { font-size: 16px; line-height: 24px; margin-bottom: 8px; }
+  .jr-appels { display: flex; align-items: center; justify-content: space-between; gap: 32px 64px; flex-wrap: wrap; padding: 36px 48px; } .jr-lib { display: block; font-size: 16px; line-height: 24px; color: var(--doux); }
+  .jr-gros { display: block; font-size: 160px; line-height: 168px; font-weight: 600; letter-spacing: -.04em; font-variant-numeric: tabular-nums; color: var(--nuit); } .jr-gros.zero, .jr-gros.manque { color: var(--faible); }
+  .jr-droite { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; min-width: 240px; } .jr-droite li { display: flex; justify-content: space-between; align-items: baseline; gap: 24px; padding: 8px 0; border-bottom: 1px solid var(--ligne); } .jr-droite li:last-child { border-bottom: 0; } .jr-droite span { color: var(--doux); font-size: 16px; }
+  .jr-petit { font-size: 32px; line-height: 40px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--doux); } .jr-petit.zero, .jr-petit.manque { color: var(--faible); font-weight: 400; }
+  .jr-cartes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-top: 24px; } .jr-carte { padding: 24px 32px; } .jr-carte span { display: block; color: var(--doux); font-size: 16px; line-height: 24px; }
+  .jr-moyen { display: block; font-size: 56px; line-height: 64px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.02em; margin-top: 4px; } .jr-moyen.zero, .jr-moyen.manque { color: var(--faible); }
   /* LinkedIn : résumé d'activité et état */
   .lk-resume { padding: 20px 24px 8px; margin-bottom: 24px; } .lk-resume .ck-tete2 { margin-bottom: 8px; } .lk-chiffres { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; padding: 8px 0 12px; } .lk-chiffres span { display: block; color: var(--faible); font-size: 13px; line-height: 18px; } .lk-chiffres b { display: block; font-size: 32px; line-height: 40px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.02em; } .lk-chiffres b.zero { color: var(--faible); font-weight: 400; } .lk-chiffres small { color: var(--faible); font-size: 12px; }
   .badge.gros { height: 32px; padding: 0 16px; font-size: 14px; }
@@ -324,7 +325,7 @@
   .archi-aide { margin: 8px 0 0; }
   #panneau .fichiers { margin: 0; padding-left: 18px; font-size: 13px; color: var(--doux); overflow-wrap: anywhere; }
   @media (max-width: 1180px) { .lk-chiffres { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-  @media (max-width: 760px) { .jr-gros { font-size: 72px; line-height: 80px; } .jr-appels, .jr-vente { padding-left: 20px; padding-right: 20px; } .jr-petits { gap: 12px 28px; } }
+  @media (max-width: 760px) { .jr-gros { font-size: 96px; line-height: 104px; } .jr-appels { padding: 24px 20px; } .jr-cartes { grid-template-columns: 1fr; } }
   @media (hover: none) { .carte:hover { transform: none; } }
   @media (prefers-reduced-motion: reduce) { *, main { transition: none !important; animation: none !important; } .carte:hover { transform: none; } }
 </style>
@@ -461,9 +462,9 @@
     var h = '<div class="tete"><h1>Aujourd\'hui</h1><span class="meta">' + esc(dateLongue(aujourdhui())) + (CK && CK.genere_le ? " · calculé à " + esc(CK.genere_le.slice(11, 16)) : "") + "</span></div>";
     if (!CK) return h + '<div class="verre accueil-vide"><h2>Pas encore de données</h2><p>Les chiffres sont recalculés par outils\\agents-json.py (service du tableau de bord ou icône du bureau).</p></div>';
     var s = CK.stats || {}, ap = s.appels || [], ve = s.vente || [];
-    h += '<section class="verre jr-appels" aria-label="Appels"><span class="jr-lib">Appels passés aujourd\'hui</span>' + gros(chiffreJour(ap, "Appels passés"), "jr-gros") +
-      '<div class="jr-petits">' + [["Décrochés", "Décrochés"], ["Intéressés", "Intéressés"], ["Rendez-vous", "Rendez-vous"]].map(function (x) { return "<div><span>" + x[1] + "</span>" + gros(chiffreJour(ap, x[0]), "jr-petit") + "</div>"; }).join("") + "</div></section>";
-    h += '<section class="verre jr-vente" aria-label="Vente"><h2>Vente</h2><div class="jr-petits">' + [["Devis envoyés", "Devis envoyés"], ["Paiements", "Paiements"]].map(function (x) { return "<div><span>" + x[1] + "</span>" + gros(chiffreJour(ve, x[0]), "jr-petit") + "</div>"; }).join("") + "</div></section>";
+    h += '<section class="verre jr-appels" aria-label="Appels"><div class="jr-gauche"><span class="jr-lib">Appels passés aujourd\'hui</span>' + gros(chiffreJour(ap, "Appels passés"), "jr-gros") + '</div>' +
+      '<ul class="jr-droite">' + ["Décrochés", "Intéressés", "Rendez-vous"].map(function (x) { return "<li><span>" + x + "</span>" + gros(chiffreJour(ap, x), "jr-petit") + "</li>"; }).join("") + "</ul></section>";
+    h += '<div class="jr-cartes">' + ["Devis envoyés", "Paiements"].map(function (x) { return '<section class="verre jr-carte"><span>' + x + "</span>" + gros(chiffreJour(ve, x), "jr-moyen") + "</section>"; }).join("") + "</div>";
     return h;
   }
   function vueChauds() {   // les leads chauds vivent ici et nulle part ailleurs : avec leur source et leur date
