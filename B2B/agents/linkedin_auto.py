@@ -434,7 +434,16 @@ def tick(conf, jour, now, fabrique=None, alerter=None, dormir=time.sleep):
         try: E.etat_ecrire(etat)
         except Exception: pass
         return arret_urgence(f"page inattendue ({ex}) : l'interface de LinkedIn a peut-être changé", alerter, s)
-    except Exception as ex:   # délai dépassé, navigateur qui ne démarre pas...: alerte Discord et arrêt, jamais de deviner (25/11/2026)
+    except Exception as ex:
+        if "net::ERR_" in str(ex) and "net::ERR_BLOCKED" not in str(ex):   # coupure réseau (Internet, DNS) : pas un avertissement de LinkedIn, rien ne s'arrête ; Liam est prévenu une fois par jour
+            try:
+                E.etat_ecrire(etat); E.journaliser("auto-reseau", str(ex)[:80])
+                if a.get("reseau_alerte") != jour: a["reseau_alerte"] = jour; E.etat_ecrire(etat); alerter("⚠️ LinkedIn automatique : réseau indisponible, le passage est sauté (rien n'est arrêté, reprise au passage suivant).")
+            except Exception: pass
+            try: s and s.fermer()
+            except Exception: pass
+            print("Réseau indisponible : passage sauté."); return 0
+        # délai dépassé, navigateur qui ne démarre pas...: alerte Discord et arrêt, jamais de deviner (25/11/2026)
         try: E.etat_ecrire(etat)
         except Exception: pass
         return arret_urgence(f"geste en échec ({type(ex).__name__}) : {str(ex)[:120]}", alerter, s)

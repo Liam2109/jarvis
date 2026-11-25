@@ -175,6 +175,12 @@ class TestGardeFous(Auto):
         self.assertIsNone(LA.choisir(c, res("Directeur marketing, Lyon"), etat)); self.assertIsNone(LA.choisir(c, res("Développeur, Toulouse"), etat))
         self.assertIsNotNone(LA.choisir(c, res("Peintre en bâtiment, Rouen"), etat)); self.assertIsNotNone(LA.choisir(c, res("Artisan, Normandie"), etat))
 
+    def test_coupure_reseau_saute_le_passage_sans_arret(self):
+        self.preparer()
+        def fab(c): raise RuntimeError("Page.goto: net::ERR_INTERNET_DISCONNECTED at https://www.linkedin.com/")
+        for k in range(2): self.assertEqual(LA.tick(self.conf, JOUR, self.t0 + timedelta(minutes=15 * k), fabrique=fab, alerter=lambda t: self.alertes.append(t) or True, dormir=lambda s: None), 0)
+        self.assertFalse(LA.f_arret().exists()); self.assertEqual(len(self.alertes), 1)   # pas d'AUTO-STOP, une seule alerte par jour
+
     def test_reprise_par_liam_seulement(self):
         self.alerte_apres_un_envoi("https://www.linkedin.com/checkpoint/x", ""); self.assertEqual(LA.reprendre(), 0); self.assertFalse(LA.f_arret().exists())
         self.nav.alerte = None; self.nav.url = "https://www.linkedin.com/feed/"; self.assertEqual(self.tick(self.t0 + timedelta(hours=1)), 0)
