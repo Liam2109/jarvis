@@ -155,6 +155,12 @@ class TestGardeFous(Auto):
                 for k in (2, 3): self.assertEqual(self.tick(self.t0 + timedelta(minutes=15 * k)), 6)   # plus aucun passage ne lance le navigateur
                 self.assertEqual(len(self.alertes), 1); self.assertEqual(self.fabr, 0)
 
+    def test_echec_quelconque_arrete_et_alerte(self):
+        self.preparer()
+        def fab(c): raise TimeoutError("page trop lente")
+        code = LA.tick(self.conf, JOUR, self.t0, fabrique=fab, alerter=lambda t: self.alertes.append(t) or True, dormir=lambda s: None)
+        self.assertEqual(code, 6); self.assertTrue(LA.f_arret().exists()); self.assertEqual(len(self.alertes), 1); self.assertIn("TimeoutError", self.alertes[0])
+
     def test_reprise_par_liam_seulement(self):
         self.alerte_apres_un_envoi("https://www.linkedin.com/checkpoint/x", ""); self.assertEqual(LA.reprendre(), 0); self.assertFalse(LA.f_arret().exists())
         self.nav.alerte = None; self.nav.url = "https://www.linkedin.com/feed/"; self.assertEqual(self.tick(self.t0 + timedelta(hours=1)), 0)

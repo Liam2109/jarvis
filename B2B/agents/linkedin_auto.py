@@ -408,6 +408,10 @@ def tick(conf, jour, now, fabrique=None, alerter=None, dormir=time.sleep):
         try: E.etat_ecrire(etat)
         except Exception: pass
         return arret_urgence(f"page inattendue ({ex}) : l'interface de LinkedIn a peut-être changé", alerter, s)
+    except Exception as ex:   # délai dépassé, navigateur qui ne démarre pas...: alerte Discord et arrêt, jamais de deviner (25/11/2026)
+        try: E.etat_ecrire(etat)
+        except Exception: pass
+        return arret_urgence(f"geste en échec ({type(ex).__name__}) : {str(ex)[:120]}", alerter, s)
 
 
 def reprendre():
