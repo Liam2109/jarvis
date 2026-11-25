@@ -117,7 +117,17 @@ class Playwright:
         try: zone.wait_for(state="visible", timeout=8000); zone.click(); self.page.keyboard.insert_text(texte)
         except Exception: raise Inattendu("zone de saisie introuvable")
     def recherche(self, url):
-        self._go(url)
+        self._go(url); out = self._lire_resultats()
+        if not out: self._releve_technique()
+        return out
+    def _releve_technique(self):
+        """Aucune carte lue : écrit de quoi réparer le sélecteur (comptes d'éléments, début du texte), dans B2B\linkedin\auto-diag.txt (hors git). Aucun cookie ni identifiant."""
+        try:
+            d = self.page.evaluate("""() => ({liens_in: document.querySelectorAll('a[href*="/in/"]').length, li: document.querySelectorAll('li').length, listitem: document.querySelectorAll('[role=listitem]').length,
+              boutons: [...document.querySelectorAll('button')].slice(0,40).map(b => (b.innerText||'').trim().slice(0,30)).filter(x=>x), titre: document.title, main: (document.querySelector('main')||document.body).innerText.slice(0,400)})""")
+            f = f_envois().with_name("auto-diag.txt"); f.write_text(f"{datetime.now():%Y-%m-%d %H:%M:%S} {self.page.url.split('?')[0]}\n{json.dumps(d, ensure_ascii=False)}\n", encoding="utf-8")
+        except Exception: pass
+    def _lire_resultats(self):
         return self.page.evaluate("""() => { const out=[], vus=new Set();
           document.querySelectorAll('a[href*="/in/"]').forEach(a => { const href=a.href.split('?')[0]; if (vus.has(href)) return;
             const box=a.closest('li')||a.closest('[role=listitem]'); if (!box) return; vus.add(href);
