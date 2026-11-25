@@ -115,7 +115,8 @@ class TestFile(Auto):
         self.assertLess(noms.index("Salon Belle"), noms.index("Resto Avec Site"))   # sans site d'abord
 
     def test_la_file_se_remplit_seule_sans_doublon_quand_les_cibles_sont_introuvables(self):
-        self.jour(modele=lambda t: None)   # aucun résultat de recherche programmé : toutes les cibles du lot sont introuvables
+        self.jour(modele=lambda t: None)   # la recherche ne rend que des homonymes (bouton lisible, autre nom) : toutes les cibles sont écartées, sans arrêt technique
+        self.nav.recherche = lambda url: [{"nom": "Quelqu Un Autre", "texte": "x", "profil": "https://www.linkedin.com/in/h" + str(abs(hash(url))), "bouton": True}]
         for k in range(60): self.tick(self.t0 + timedelta(minutes=15 * k % 600))
         e = self.etat(); ids = list(e["cibles"]); self.assertEqual(len(ids), len(set(ids))); self.assertGreater(len(ids), 20)   # des cibles neuves ont été ajoutées
         self.assertLessEqual(e["auto"].get("ajoutees", 0), 60); self.assertEqual(self.envoyes("demande"), [])   # introuvable = écarté, jamais de hasard
@@ -160,6 +161,12 @@ class TestGardeFous(Auto):
         def fab(c): raise TimeoutError("page trop lente")
         code = LA.tick(self.conf, JOUR, self.t0, fabrique=fab, alerter=lambda t: self.alertes.append(t) or True, dormir=lambda s: None)
         self.assertEqual(code, 6); self.assertTrue(LA.f_arret().exists()); self.assertEqual(len(self.alertes), 1); self.assertIn("TimeoutError", self.alertes[0])
+
+    def test_trois_recherches_illisibles_de_suite_arretent_et_alertent(self):
+        self.preparer(); e = self.etat()
+        for c in e["cibles"].values(): self.nav.resultats[c["lien"]] = []   # la page de résultats n'est plus lisible
+        codes = [self.tick(self.t0 + timedelta(minutes=15 * k)) for k in range(1, 6)]
+        self.assertIn(6, codes); self.assertTrue(LA.f_arret().exists()); self.assertEqual(len(self.alertes), 1); self.assertEqual(self.envoyes("demande"), [])
 
     def test_reprise_par_liam_seulement(self):
         self.alerte_apres_un_envoi("https://www.linkedin.com/checkpoint/x", ""); self.assertEqual(LA.reprendre(), 0); self.assertFalse(LA.f_arret().exists())

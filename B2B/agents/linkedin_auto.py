@@ -350,8 +350,15 @@ def action_demande(conf, etat, s, jour, now):
         c = etat["cibles"][i]
         if c.get("demande_envoyee_le") or c.get("ignore") or c.get("auto_essais", 0) >= 2: continue
         c["auto_essais"] = c.get("auto_essais", 0) + 1
-        r = choisir(c, s.recherche(c["lien"]), etat)
-        if not r: E.appliquer(etat, i, "ignorer", jour, conf); E.journaliser("auto-introuvable", i); return f"cible {i} : profil introuvable ou ambigu, écartée"
+        res = s.recherche(c["lien"]); r = choisir(c, res, etat); suite = etat["auto"]
+        if not r:
+            diag = f"{len(res)} résultat(s) lu(s), {sum(1 for x in res if x.get('bouton'))} avec bouton Se connecter, premiers noms : {', '.join(x['nom'] for x in res[:3]) or '-'}"
+            technique = not res or not any(x.get("bouton") for x in res)   # aucune carte lue, ou aucun bouton : signe d'une page lue de travers, pas d'un simple homonyme absent
+            suite["introuvables_suite"] = suite.get("introuvables_suite", 0) + 1 if technique else 0
+            E.appliquer(etat, i, "ignorer", jour, conf); E.journaliser("auto-introuvable", f"{i} : {diag}")
+            if suite["introuvables_suite"] >= 3: raise Inattendu(f"3 recherches de suite sans carte ni bouton lisible ({diag}) : la page de résultats a peut-être changé")
+            return f"cible {i} : profil introuvable ou ambigu, écartée ({diag})"
+        suite["introuvables_suite"] = 0
         s.demander(r); c["nom_profil"] = r["nom"]; c["profil_url"] = r["profil"]; etat["auto"]["profils"].append(r["profil"])
         E.appliquer(etat, i, "demande_envoyee", jour, conf); envoi_journal("demande", i, r["nom"], "(demande de connexion sans note)", r["profil"]); return f"demande de connexion envoyée ({i})"
     return None
