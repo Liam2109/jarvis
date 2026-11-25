@@ -43,9 +43,6 @@ Prépare le lot LinkedIn du jour (08:00). Mode automatique fermé tant que go_li
 - encaisser, publier ou signer
 - Engager Liam (envoyer au client, encaisser, publier, signer) : `peut_engager: false`, tout passe par `B2B/a-valider/`.
 
-## Mode automatique (24/11/2026, décision de Liam)
-Fermé (`go_linkedin_auto: false` dans `linkedin-equipe-config.json`) jusqu'au « go linkedin auto ». Fermé = retour au mode « prépare, Liam envoie ». Ouvert : toutes les 10 min de 08:00 à 18:00, un seul geste par passage (post du jour, DM aux acceptés, relance unique J+3, demande sans note à 10/jour la 1re semaine puis 20, plafond 100/semaine, 3 commentaires/jour). Navigateur local au profil dédié (`auto connexion` : Liam se connecte lui-même ; le code ne lit aucun mot de passe ni cookie). Tout avertissement, limite, CAPTCHA, vérification ou déconnexion = arrêt (`B2B\linkedin\AUTO-STOP`) + alerte Discord ; `auto reprendre` après vérification par Liam. Journal des envois : `B2B\linkedinuto-journal.jsonl` (hors git, sauvegardé à 03:30). Code : `B2Bgents\linkedin_auto.py`, tests : `testsgents	est_linkedin_auto.py`.
-
 ## Entrées et sorties
 **Lit :**
 - B2B/prospects_rouen.csv, B2B/prospects.csv, B2B/prospection-trouves.csv (cibles déjà trouvées)
