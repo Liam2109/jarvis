@@ -307,6 +307,24 @@
   @media (max-width: 1180px) { .ck-appels { grid-template-columns: 1fr; } .la-l { grid-template-columns: minmax(0, 1fr) 90px; row-gap: 4px; } .la-l.entete { display: none; } .la-note { grid-column: 1 / 3; } }
   @media (max-width: 1180px) { .ck-groupes { grid-template-columns: 1fr; } }
   @media (max-width: 760px) { .ck-r { grid-template-columns: minmax(0, 1fr) auto; row-gap: 4px; } .ck-r.entete { display: none; } .ck-r .res, .ck-r .pass { grid-column: 1 / 3; text-align: left; } .ck-r > span:first-child { grid-column: 2; grid-row: 1; } .ck-r .qui { grid-column: 1; grid-row: 1; } .ck-etat b { font-size: 32px; } }
+  /* Aujourd'hui épuré (25/11/2026) : un gros chiffre, trois petits, un petit bloc Vente */
+  .jr-appels { padding: 32px 36px; max-width: 760px; } .jr-lib { display: block; font-size: 16px; line-height: 24px; color: var(--doux); }
+  .jr-gros { display: block; font-size: 96px; line-height: 104px; font-weight: 600; letter-spacing: -.03em; font-variant-numeric: tabular-nums; margin: 4px 0 20px; color: var(--nuit); } .jr-gros.zero { color: var(--faible); } .jr-gros.manque { color: var(--faible); font-weight: 400; }
+  .jr-petits { display: flex; flex-wrap: wrap; gap: 12px 48px; } .jr-petits span { display: block; color: var(--faible); font-size: 14px; line-height: 20px; }
+  .jr-petit { display: block; font-size: 32px; line-height: 40px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.02em; color: var(--doux); } .jr-petit.zero { color: var(--faible); font-weight: 400; } .jr-petit.manque { color: var(--faible); font-weight: 400; }
+  .jr-vente { padding: 20px 36px 24px; max-width: 760px; margin-top: 24px; } .jr-vente h2 { font-size: 16px; line-height: 24px; margin-bottom: 8px; }
+  /* LinkedIn : résumé d'activité et état */
+  .lk-resume { padding: 20px 24px 8px; margin-bottom: 24px; } .lk-resume .ck-tete2 { margin-bottom: 8px; } .lk-chiffres { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; padding: 8px 0 12px; } .lk-chiffres span { display: block; color: var(--faible); font-size: 13px; line-height: 18px; } .lk-chiffres b { display: block; font-size: 32px; line-height: 40px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.02em; } .lk-chiffres b.zero { color: var(--faible); font-weight: 400; } .lk-chiffres small { color: var(--faible); font-size: 12px; }
+  .badge.gros { height: 32px; padding: 0 16px; font-size: 14px; }
+  /* Architecture : graphe libre */
+  .archi-barre { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; margin: 0 0 12px; }
+  .filtre .pt-p { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
+  .graphe-archi { touch-action: none; user-select: none; background: rgba(255,255,255,.35); border-radius: 16px; } .graphe-archi .nd { cursor: grab; } .graphe-archi .nd.glisse { cursor: grabbing; } .graphe-archi .nd.choisi circle { stroke-width: 4; } .graphe-archi .nd, .graphe-archi line { transition: opacity .2s var(--courbe); } .graphe-archi .estompe { opacity: .1; pointer-events: none; }
+  .graphe-archi .nd:focus-visible circle { stroke: var(--texte); }
+  .archi-aide { margin: 8px 0 0; }
+  #panneau .fichiers { margin: 0; padding-left: 18px; font-size: 13px; color: var(--doux); overflow-wrap: anywhere; }
+  @media (max-width: 1180px) { .lk-chiffres { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (max-width: 760px) { .jr-gros { font-size: 72px; line-height: 80px; } .jr-appels, .jr-vente { padding-left: 20px; padding-right: 20px; } .jr-petits { gap: 12px 28px; } }
   @media (hover: none) { .carte:hover { transform: none; } }
   @media (prefers-reduced-motion: reduce) { *, main { transition: none !important; animation: none !important; } .carte:hover { transform: none; } }
 </style>
@@ -437,22 +455,18 @@
     if (!l.length) return t + '<p class="vide">Aucun lead chaud en cours : aucune ligne « À rappeler » ou « Je dois réfléchir » à reprendre.</p></section>';
     return t + '<ul class="leads">' + l.map(leadLigne).join("") + "</ul>" + noteLeads(ch) + "</section>";
   }
-  function vueJour() {   // cockpit (25/11/2026, retouché le même jour) : deux zones distinctes, APPELS en haut, AGENTS en bas ; tout vient de data/cockpit.js (outils\agents-json.py)
+  function chiffreJour(l, nom) { var x = (l || []).filter(function (e) { return e.libelle === nom; })[0]; return x ? x.auj : null; }
+  function gros(n, cls) { return n == null ? '<b class="' + cls + ' manque" title="Pas de donnée sur ce PC">—</b>' : '<b class="' + cls + (n === 0 ? " zero" : "") + '">' + fmt(n) + "</b>"; }
+  function vueJour() {   // retouché le 25/11/2026 : épuré. Les APPELS (un gros chiffre, trois petits), un petit bloc Vente. Le reste a chacun sa page.
     var h = '<div class="tete"><h1>Aujourd\'hui</h1><span class="meta">' + esc(dateLongue(aujourdhui())) + (CK && CK.genere_le ? " · calculé à " + esc(CK.genere_le.slice(11, 16)) : "") + "</span></div>";
     if (!CK) return h + '<div class="verre accueil-vide"><h2>Pas encore de données</h2><p>Les chiffres sont recalculés par outils\\agents-json.py (service du tableau de bord ou icône du bureau).</p></div>';
-    var s = CK.stats || {}, ch = CK.chauds || { total: 0, liste: [] };
-    h += (CK.stop_global ? '<p class="ck-bandeau">STOP global actif (fichier B2B\\STOP) : aucun envoi.</p>' : "");
-    h += '<div class="zone"><h2 class="zone-titre">Appels</h2><div class="ck-appels">' + groupe("Appels", s.appels || []) + zoneLeads(ch) + "</div></div>";
-    h += '<div class="ck-groupes">' + groupe("Vente", s.vente || []) + groupe("LinkedIn", s.linkedin || []) + "</div>";
-    var c = CK.compte || {}, ag = CK.agents || [], ina = CK.inactifs || [], ordre = [["bloque", "bloqué"], ["auto-stop", "AUTO-STOP"], ["attention", "à surveiller"], ["attente", "en attente"], ["ok", "OK"]];
-    h += '<div class="zone"><h2 class="zone-titre">Agents</h2><section class="ck-ag verre" aria-label="Agents"><div class="ck-diag"><span class="meta">Diagnostic</span><ul class="ck-etat" aria-label="État des agents">' +
-      ordre.map(function (o) { var n = c[o[0]] || 0; return '<li class="' + o[0] + (n ? "" : " zero") + '"><b>' + n + "</b>" + o[1] + "</li>"; }).join("") + "</ul></div>" +
-      '<div class="ck-r entete meta" aria-hidden="true"><span>État</span><span>Agent</span><span>Résultat du jour</span><span class="pass">Dernier passage</span></div>' + ag.map(ligneCk).join("") +
-      '<div class="ck-in"><button class="lien" data-inactifs aria-expanded="' + voirInactifs + '">' + ina.length + " inactif" + (ina.length > 1 ? "s" : "") + (voirInactifs ? " (replier)" : " (voir)") + "</button>" +
-      (voirInactifs ? "<p>" + ina.map(function (x) { return "<b>" + esc(x.nom) + "</b> (" + esc(x.raison) + ")"; }).join(" · ") + "</p>" : "") + "</div></section></div>";
+    var s = CK.stats || {}, ap = s.appels || [], ve = s.vente || [];
+    h += '<section class="verre jr-appels" aria-label="Appels"><span class="jr-lib">Appels passés aujourd\'hui</span>' + gros(chiffreJour(ap, "Appels passés"), "jr-gros") +
+      '<div class="jr-petits">' + [["Décrochés", "Décrochés"], ["Intéressés", "Intéressés"], ["Rendez-vous", "Rendez-vous"]].map(function (x) { return "<div><span>" + x[1] + "</span>" + gros(chiffreJour(ap, x[0]), "jr-petit") + "</div>"; }).join("") + "</div></section>";
+    h += '<section class="verre jr-vente" aria-label="Vente"><h2>Vente</h2><div class="jr-petits">' + [["Devis envoyés", "Devis envoyés"], ["Paiements", "Paiements"]].map(function (x) { return "<div><span>" + x[1] + "</span>" + gros(chiffreJour(ve, x[0]), "jr-petit") + "</div>"; }).join("") + "</div></section>";
     return h;
   }
-  function vueChauds() {   // les listes nominatives (noms, numéros) : plus sur l'écran d'accueil
+  function vueChauds() {   // les leads chauds vivent ici et nulle part ailleurs : avec leur source et leur date
     return '<div class="tete"><h1>Leads chauds</h1></div>' + carteARappeler() + carteLeads() + carteRelais();
   }
   function carteRelais() {   // les relais automatiques (data/relais.js, lu depuis B2B\donnees\relais.jsonl) : un par ligne, le plus récent d'abord
@@ -508,15 +522,23 @@
     });
     return h + "</div>" + legende() + "</section>";
   }
+  function diagnostic() {   // 25/11/2026 : le diagnostic des agents (ok / bloqué / AUTO-STOP, résultat du jour, dernier passage) vit sur la page Agents
+    if (!CK) return "";
+    var c = CK.compte || {}, ag = CK.agents || [], ordre = [["bloque", "bloqué"], ["auto-stop", "AUTO-STOP"], ["attention", "à surveiller"], ["attente", "en attente"], ["ok", "OK"]];
+    return '<section class="ck-ag verre" aria-label="Diagnostic" style="margin-bottom:24px">' + (CK.stop_global ? '<p class="ck-bandeau">STOP global actif (fichier B2B' + String.fromCharCode(92) + 'STOP) : aucun envoi.</p>' : "") + '<div class="ck-diag"><span class="meta">Diagnostic</span><ul class="ck-etat" aria-label="État des agents">' +
+      ordre.map(function (o) { var n = c[o[0]] || 0; return '<li class="' + o[0] + (n ? "" : " zero") + '"><b>' + n + "</b>" + o[1] + "</li>"; }).join("") + "</ul></div>" +
+      '<div class="ck-r entete meta" aria-hidden="true"><span>État</span><span>Agent</span><span>Résultat du jour</span><span class="pass">Dernier passage</span></div>' + ag.map(ligneCk).join("") + "</section>";
+  }
   function vueAgents() {
     var h = '<div class="tete"><h1>Agents</h1>' + (A ? '<span class="meta">' + A.agents.filter(function (a) { return !estInactif(a); }).length + " agents actifs</span> " + lienInactifs(A.agents.filter(estInactif).length) : "") + '<span class="droite"><input type="search" id="recherche" placeholder="Rechercher" aria-label="Rechercher un agent" value="' + esc(recherche) + '"></span></div>';
     if (!A) return h + '<p class="vide">Pas encore de données sur les agents : double-cliquez sur l\'icône « Jarvis - Mon entreprise » du bureau.</p>';
     if (A.source && A.source.indexOf("pas visible") >= 0) h += '<p class="note">Source : ' + esc(A.source) + ".</p>";
+    h += diagnostic();
     var r = recherche.toLowerCase();
     POLES.forEach(function (p) {
       var ag = A.agents.filter(function (a) { return (voirInactifs || !estInactif(a)) && (a.categorie || "Jarvis (CEO)") === p && (!r || (a.nom + " " + a.role).toLowerCase().indexOf(r) >= 0); });
       if (!ag.length && (p === "Jarvis (CEO)" || r)) return;
-      h += '<section class="table-ag verre"><h2>' + p + '<span class="num">' + ag.length + '</span></h2><div class="rang entete meta" aria-hidden="true"><span></span><span>Agent et rôle</span><span>Prévu</span><span>Dernier passage</span><span>État</span></div>' +
+      h += (p === POLES[0] ? '<h2 class="zone-titre">Agents actifs</h2>' : "") + '<section class="table-ag verre"><h2>' + p + '<span class="num">' + ag.length + '</span></h2><div class="rang entete meta" aria-hidden="true"><span></span><span>Agent et rôle</span><span>Prévu</span><span>Dernier passage</span><span>État</span></div>' +
         (ag.length ? ag.map(rang).join("") : '<p class="vide" style="padding:0 8px 12px">Aucun agent</p>') + "</section>";
     });
     return h + legende();
@@ -582,7 +604,7 @@
   function vueAppels() {   // refait le 25/11/2026 : une liste, un appel par ligne, filtrable par résultat (data/appels.js, lu dans le registre des entreprises)
     var h = '<div class="tete"><h1>Historique des appels</h1>' + (AL ? '<span class="meta">source : ' + esc(AL.source) + "</span>" : "") + "</div>";
     var l = AL ? AL.appels || [] : [];
-    if (!l.length) return h + '<div class="verre accueil-vide"><h2>aucun appel enregistré</h2><p>Les résultats notés par Sid dans ses feuilles arrivent ici dès qu\'ils sont relus.</p></div>';
+    if (!l.length) return h + '<div class="verre accueil-vide"><h2>Aucun appel enregistré</h2><p>Les résultats notés par Sid dans ses feuilles arrivent ici dès qu\'ils sont relus.</p></div>';
     var n = {}; l.forEach(function (a) { n[a.resultat] = (n[a.resultat] || 0) + 1; });
     var noms = Object.keys(n).sort(function (a, b) { return n[b] - n[a] || a.localeCompare(b, "fr"); });
     if (filtreAppels && !n[filtreAppels]) filtreAppels = "";
@@ -746,8 +768,17 @@
     else h += lkCopie(x.relance || "") + lkBouton("Relance envoyée", x.id, "relance_envoyee") + lkBouton("A répondu (positif)", x.id, "repondu_positif") + lkBouton("A répondu (autre)", x.id, "repondu_autre") + '</div><pre class="lk-texte">' + esc(x.relance || "") + "</pre>";
     return h + "</div>";
   }
+  function lkResume() {   // 25/11/2026 : l'activité LinkedIn (demandes, acceptées, DM, réponses, commentaires, posts) et l'état de l'agent, ici et nulle part ailleurs
+    if (!CK) return "";
+    var l = (CK.stats && CK.stats.linkedin) || [], ag = (CK.agents || []).filter(function (a) { return a.nom === "linkedin-equipe"; })[0];
+    var etat = CK.linkedin_stop ? "auto-stop" : ag ? ag.etat : "repos", lib = CK.linkedin_stop ? "AUTO-STOP" : (ETATS[etat] || etat);
+    return '<section class="verre lk-resume" aria-label="Activité LinkedIn"><div class="ck-tete2"><h2>Activité</h2><span class="meta">aujourd\'hui · 7 jours</span>' + '<span class="badge gros ' + esc(etat) + '"' + (ag && ag.raison ? ' title="' + esc(ag.raison) + '"' : "") + ">" + esc(lib) + "</span></div>" +
+      '<div class="lk-chiffres">' + l.map(function (x) { return "<div><span>" + esc(x.libelle) + "</span><b" + (x.auj === 0 ? ' class="zero"' : "") + ">" + fmt(x.auj) + "</b><small>" + fmt(x.sept) + " sur 7 jours</small></div>"; }).join("") + "</div>" +
+      (CK.linkedin_stop ? '<p class="alerte">AUTO-STOP actif (fichier B2B' + String.fromCharCode(92) + 'linkedin' + String.fromCharCode(92) + 'AUTO-STOP) : l\'agent est arrêté, rien n\'est préparé tant que Liam ne l\'a pas levé.</p>' : "") + "</section>";
+  }
   function vueLinkedin() {
     var h = '<div class="tete"><h1>LinkedIn</h1>' + (LK ? '<span class="meta">lot du ' + esc(dateLongue(LK.jour)) + " · préparé, jamais envoyé : vous envoyez vous-même</span>" : "") + "</div>";
+    h += lkResume();
     if (!LK) return h + '<div class="verre accueil-vide"><h2>Pas encore de lot</h2><p>Le lot est préparé chaque jour ouvré à 08:00 sur le serveur (B2B\\agents\\linkedin-equipe.py). Cette rubrique se lit et se coche depuis le tableau de bord du serveur (http://serveur:8080). Cette page se lit sans secret ; le secret du serveur ne sert que pour les boutons qui agissent.</p><div class="boutons"></div></div>';
     LKTEXTES = [];
     var lien = location.protocol === "file:" ? '<p class="meta">Ouvert depuis un fichier : les cases ne peuvent pas être enregistrées. Ouvrez la page du serveur (http://…:8080).</p>' : "";
@@ -770,14 +801,24 @@
     return h;
   }
   function cvBloc(t, meta, corps) { return '<section class="bloc verre lk-bloc"><div class="tete"><h2>' + t + '</h2><span class="meta">' + meta + "</span></div>" + corps + "</section>"; }
-  var CAT_COULEUR = { "Vente": "#2F6FB0", "Prospection": "#1F8A5B", "Sites": "#8A5CC8", "Mail": "#B8741A", "Jarvis (CEO)": "#5B6B86", "Manquant": "#C8372F" };
-  function graphe(X) {   // graphe type Obsidian : un nœud par agent (coloré par pôle), un lien par fichier qui passe d'un agent à l'autre, pointillé rouge = maillon manquant ; mise en place par un petit calcul de forces, toujours le même
-    var cat = {}; (A && A.agents || []).forEach(function (a) { cat[a.nom] = a.categorie || "Jarvis (CEO)"; });
-    var noeuds = [], idx = {};
-    (X.agents || []).forEach(function (a) { idx[a.nom] = noeuds.length; noeuds.push({ id: a.nom, cat: cat[a.nom] || "Jarvis (CEO)", etat: a.etat_libelle, mode: a.mode, manque: a.statut === "prevu", deg: 0 }); });
-    var parId = {}; (X.noeuds || []).forEach(function (n) {
+  // Architecture (refaite le 25/11/2026) : graphe libre type Obsidian. Un point par agent actif, coloré par pôle, relié par des traits ; pointillé rouge = maillon manquant.
+  // Les points se déplacent à la souris (positions mémorisées dans le navigateur), un clic ouvre le panneau de l'agent, des boutons filtrent par pôle.
+  var POLES_ARCHI = ["Prospection", "Vente", "Sites", "Système"];
+  var COULEUR_POLE = { "Prospection": "#2F6FB0", "Vente": "#B8741A", "Sites": "#8A5CC8", "Système": "#4C6B5E", "Manquant": "#C8372F" };
+  var POLE_AGENT = { "prospection": "Prospection", "appels-sid": "Prospection", "linkedin-equipe": "Prospection", "superviseur-prospection": "Prospection",
+    "relances": "Vente", "rendez-vous": "Vente", "reponses": "Vente", "devis": "Vente", "stripe-alerte": "Vente", "chiffres-serveur": "Vente", "superviseur-vente": "Vente",
+    "page-exemple": "Sites", "production": "Sites", "superviseur-sites": "Sites" };
+  var archiPole = "Tout", archiSel = null, archiPos = {}, archiCalc = null;
+  try { archiPole = localStorage.getItem("jarvis-archi-pole") || "Tout"; archiPos = JSON.parse(localStorage.getItem("jarvis-archi-pos") || "{}") || {}; } catch (e) {}
+  function poleDe(nom) { return POLE_AGENT[nom] || "Système"; }
+  function archiCle(X) { return (X.genere_le || "") + "|" + ((CK && CK.agents) || []).length; }
+  function archiGraphe(X) {   // calcule (une fois par jeu de données) les points et les traits, et une mise en place de départ par petit calcul de forces, toujours la même
+    var actifs = {}; ((CK && CK.agents) || []).forEach(function (a) { actifs[a.nom] = a; });
+    var noeuds = [], idx = {}, parId = {};
+    (X.agents || []).forEach(function (a) { if (!actifs[a.nom]) return; idx[a.nom] = noeuds.length; noeuds.push({ id: a.nom, pole: poleDe(a.nom), a: a, deg: 0 }); });
+    (X.noeuds || []).forEach(function (n) {
       if (n.agent && idx[n.agent] != null) { parId[n.id] = n.agent; return; }
-      parId[n.id] = n.id; idx[n.id] = noeuds.length; noeuds.push({ id: n.id, label: n.label, cat: "Manquant", etat: "aucun agent", mode: "", manque: true, deg: 0 });
+      parId[n.id] = n.id; if (idx[n.id] == null) { idx[n.id] = noeuds.length; noeuds.push({ id: n.id, label: n.label, pole: poleDe(n.id), manque: true, deg: 0 }); }
     });
     var liens = [], vu = {};
     function lier(a, b, plein, trajet) {
@@ -786,47 +827,102 @@
       vu[k] = liens.length; liens.push({ a: a, b: b, plein: plein, trajet: trajet }); noeuds[a].deg++; noeuds[b].deg++;
     }
     (X.liens || []).forEach(function (l) { lier(idx[parId[l.de]], idx[parId[l.vers]], !!l.plein, true); });
-    (X.agents || []).forEach(function (a) { (X.agents || []).forEach(function (b) {   // un fichier écrit par l'un et lu par l'autre ; la sauvegarde nocturne lit tout : pas de lien (elle écraserait le dessin)
-      if (a === b || b.nom === "sauvegarde-leads" || a.nom === "sauvegarde-leads") return;
-      var f = (a.ecrit || []).filter(function (x) { return (b.lit || []).indexOf(x) >= 0; });
-      if (f.length) lier(idx[a.nom], idx[b.nom], true, false);
+    (X.agents || []).forEach(function (a) { (X.agents || []).forEach(function (b) {   // un fichier écrit par l'un et lu par l'autre ; la sauvegarde nocturne lit tout : pas de lien
+      if (a === b || a.nom === "sauvegarde-leads" || b.nom === "sauvegarde-leads" || idx[a.nom] == null || idx[b.nom] == null) return;
+      if ((a.ecrit || []).some(function (x) { return (b.lit || []).indexOf(x) >= 0; })) lier(idx[a.nom], idx[b.nom], true, false);
     }); });
-    var W = 1000, H = 520, cats = Object.keys(CAT_COULEUR), ancre = {}, i, j;
-    cats.forEach(function (c, k) { var t = -Math.PI / 2 + k * 2 * Math.PI / cats.length; ancre[c] = [W / 2 + 330 * Math.cos(t), H / 2 + 200 * Math.sin(t)]; });
-    noeuds.forEach(function (n, k) { var p = ancre[n.cat] || [W / 2, H / 2], t = k * 2.399963; n.x = p[0] + 60 * Math.cos(t); n.y = p[1] + 60 * Math.sin(t); n.vx = 0; n.vy = 0; });
+    var W = 1000, H = 600, ancre = { "Prospection": [250, 170], "Vente": [720, 190], "Sites": [820, 470], "Système": [250, 470] }, i, j;
+    noeuds.forEach(function (n, k) { var p = ancre[n.pole] || [W / 2, H / 2], t = k * 2.399963; n.x = p[0] + 70 * Math.cos(t); n.y = p[1] + 70 * Math.sin(t); n.vx = 0; n.vy = 0; });
     for (var it = 0; it < 420; it++) {
       var f = 1 - it / 420;
       for (i = 0; i < noeuds.length; i++) for (j = i + 1; j < noeuds.length; j++) {
-        var p = noeuds[i], q = noeuds[j], dx = p.x - q.x, dy = p.y - q.y, d2 = dx * dx + dy * dy + 40, d = Math.sqrt(d2), r = 5200 / d2;
+        var p = noeuds[i], q = noeuds[j], dx = p.x - q.x, dy = p.y - q.y, d2 = dx * dx + dy * dy + 40, d = Math.sqrt(d2), r = 6200 / d2;
         p.vx += dx / d * r; p.vy += dy / d * r; q.vx -= dx / d * r; q.vy -= dy / d * r;
       }
-      liens.forEach(function (l) { var p = noeuds[l.a], q = noeuds[l.b], dx = q.x - p.x, dy = q.y - p.y, d = Math.sqrt(dx * dx + dy * dy) + .01, k = (d - (l.trajet ? 95 : 130)) * (l.trajet ? .05 : .02);
+      liens.forEach(function (l) { var p = noeuds[l.a], q = noeuds[l.b], dx = q.x - p.x, dy = q.y - p.y, d = Math.sqrt(dx * dx + dy * dy) + .01, k = (d - (l.trajet ? 100 : 140)) * (l.trajet ? .05 : .02);
         p.vx += dx / d * k; p.vy += dy / d * k; q.vx -= dx / d * k; q.vy -= dy / d * k; });
-      noeuds.forEach(function (n) { var p = ancre[n.cat] || [W / 2, H / 2]; n.vx += (p[0] - n.x) * .012 + (W / 2 - n.x) * .002; n.vy += (p[1] - n.y) * .012 + (H / 2 - n.y) * .002;
+      noeuds.forEach(function (n) { var p = ancre[n.pole] || [W / 2, H / 2]; n.vx += (p[0] - n.x) * .014 + (W / 2 - n.x) * .002; n.vy += (p[1] - n.y) * .014 + (H / 2 - n.y) * .002;
         n.x += Math.max(-12, Math.min(12, n.vx)) * f; n.y += Math.max(-12, Math.min(12, n.vy)) * f; n.vx *= .55; n.vy *= .55;
         n.x = Math.max(70, Math.min(W - 70, n.x)); n.y = Math.max(30, Math.min(H - 34, n.y)); });
     }
-    var s = '<svg class="graphe-archi" viewBox="0 0 ' + W + " " + H + '" width="100%" role="img" aria-label="Graphe des agents : ' + noeuds.length + " agents, " + liens.length + ' liens">';
-    liens.forEach(function (l) { var p = noeuds[l.a], q = noeuds[l.b], manque = !l.plein;
-      s += '<line x1="' + p.x.toFixed(1) + '" y1="' + p.y.toFixed(1) + '" x2="' + q.x.toFixed(1) + '" y2="' + q.y.toFixed(1) + '" stroke="' + (manque ? "#C8372F" : l.trajet ? "#2F6FB0" : "#A9B4C6") + '" stroke-width="' + (l.trajet ? 2.2 : 1.2) + '"' + (manque ? ' stroke-dasharray="6 5"' : "") + ' opacity="' + (l.trajet ? .9 : .7) + '"/>'; });
-    noeuds.forEach(function (n) { var c = CAT_COULEUR[n.cat] || "#5B6B86", r = 7 + Math.min(n.deg, 7) * 1.4;
-      s += '<g data-bulle="' + esc(n.id + " · " + n.cat + " · " + n.etat + (n.mode ? " · " + n.mode : "")) + '" tabindex="0"><circle cx="' + n.x.toFixed(1) + '" cy="' + n.y.toFixed(1) + '" r="' + r.toFixed(1) + '" fill="' + (n.manque ? "#fff" : c) + '" stroke="' + c + '" stroke-width="2.5"' + (n.manque ? ' stroke-dasharray="4 3"' : "") + "/>" +
-        '<text x="' + n.x.toFixed(1) + '" y="' + (n.y + r + 13).toFixed(1) + '" text-anchor="middle" font-size="11.5" fill="#25324A" paint-order="stroke" stroke="#fff" stroke-width="3" stroke-linejoin="round">' + esc(n.label || n.id) + "</text></g>"; });
-    s += "</svg>";
-    var leg = cats.map(function (c) { return '<span class="leg"><i style="background:' + CAT_COULEUR[c] + '"></i>' + (c === "Manquant" ? "Maillon ou agent manquant" : esc(c)) + "</span>"; }).join("") +
-      '<span class="leg"><i class="trait"></i>fichier qui passe d\'un agent au suivant</span><span class="leg"><i class="trait pointille"></i>maillon manquant</span>';
-    return '<div class="legende-archi">' + leg + "</div>" + s;
+    return { W: W, H: H, noeuds: noeuds, liens: liens };
   }
-  function vueArchitecture() {   // générée par architecture.py (docs.js) : contrats, tâches, traces ; rien n'est écrit à la main. Graphe refait le 25/11/2026 ; la liste détaillée reste dessous.
+  function archiRayon(n) { return 8 + Math.min(n.deg, 7) * 1.5; }
+  function archiVisible(n) { return archiPole === "Tout" || n.pole === archiPole; }
+  function graphe(X) {
+    var cle = archiCle(X); if (!archiCalc || archiCalc.cle !== cle) { archiCalc = archiGraphe(X); archiCalc.cle = cle; }
+    var G = archiCalc, s;
+    G.noeuds.forEach(function (n) { var m = archiPos[n.id]; if (m && isFinite(m[0]) && isFinite(m[1])) { n.x = m[0]; n.y = m[1]; } });
+    var pn = { Tout: G.noeuds.length }; POLES_ARCHI.forEach(function (p) { pn[p] = G.noeuds.filter(function (n) { return n.pole === p; }).length; });
+    var barre = '<div class="filtres archi-barre" role="group" aria-label="Filtrer par pôle">' + ["Tout"].concat(POLES_ARCHI).map(function (p) {
+      return '<button class="filtre" data-pole="' + p + '" aria-pressed="' + (archiPole === p) + '">' + (p === "Tout" ? "" : '<i class="pt-p" style="background:' + COULEUR_POLE[p] + '"></i>') + p + " <b>" + pn[p] + "</b></button>"; }).join("") + "</div>";
+    s = '<svg class="graphe-archi" id="graphe-archi" viewBox="0 0 ' + G.W + " " + G.H + '" width="100%" role="img" aria-label="Graphe des agents actifs : ' + G.noeuds.length + " points, " + G.liens.length + ' traits">';
+    G.liens.forEach(function (l, k) { var p = G.noeuds[l.a], q = G.noeuds[l.b], manque = !l.plein, off = !(archiVisible(p) && archiVisible(q));
+      s += '<line data-l="' + k + '" class="' + (off ? "estompe" : "") + '" x1="' + p.x.toFixed(1) + '" y1="' + p.y.toFixed(1) + '" x2="' + q.x.toFixed(1) + '" y2="' + q.y.toFixed(1) + '" stroke="' + (manque ? "#C8372F" : l.trajet ? "#2F6FB0" : "#A9B4C6") + '" stroke-width="' + (l.trajet ? 2.2 : 1.2) + '"' + (manque ? ' stroke-dasharray="6 5"' : "") + ' opacity="' + (l.trajet ? .9 : .7) + '"/>'; });
+    G.noeuds.forEach(function (n, k) { var c = n.manque ? COULEUR_POLE.Manquant : COULEUR_POLE[n.pole], r = archiRayon(n);
+      s += '<g class="nd' + (archiVisible(n) ? "" : " estompe") + (archiSel === n.id ? " choisi" : "") + '" data-n="' + k + '" tabindex="0" role="button" aria-label="' + esc(n.label || n.id) + '"><circle cx="' + n.x.toFixed(1) + '" cy="' + n.y.toFixed(1) + '" r="' + r.toFixed(1) + '" fill="' + (n.manque ? "#fff" : c) + '" stroke="' + c + '" stroke-width="2.5"' + (n.manque ? ' stroke-dasharray="4 3"' : "") + "/>" +
+        '<text x="' + n.x.toFixed(1) + '" y="' + (n.y + r + 14).toFixed(1) + '" text-anchor="middle" font-size="12" fill="#25324A" paint-order="stroke" stroke="#fff" stroke-width="3" stroke-linejoin="round">' + esc(n.label || n.id) + "</text></g>"; });
+    s += "</svg>";
+    var leg = '<span class="leg"><i class="trait"></i>fichier qui passe d\'un agent au suivant</span><span class="leg"><i class="trait pointille"></i>maillon manquant</span>';
+    return barre + '<div class="legende-archi">' + leg + "</div>" + s + '<p class="meta archi-aide">Glissez un point pour le déplacer (sa place est mémorisée sur ce navigateur) · cliquez dessus pour voir l\'agent.</p>';
+  }
+  function archiSauver() { try { localStorage.setItem("jarvis-archi-pos", JSON.stringify(archiPos)); } catch (e) {} }
+  function panneauArchi(id) {   // panneau d'un point : ce que fait l'agent, son dernier passage, son état, ses fichiers lus et écrits
+    var p = $("panneau"), X = D && D.architecture, a = X && (X.agents || []).filter(function (x) { return x.nom === id; })[0];
+    archiSel = a || (X && (X.noeuds || []).some(function (n) { return n.id === id; })) ? id : null;
+    document.querySelectorAll("#graphe-archi .nd").forEach(function (g) { var n = archiCalc && archiCalc.noeuds[+g.getAttribute("data-n")]; g.classList.toggle("choisi", !!n && n.id === archiSel); });
+    if (!archiSel) { p.classList.remove("ouvert"); p.setAttribute("aria-hidden", "true"); return; }
+    var bouton = '<button class="bouton fermer" id="fermer" aria-label="Fermer"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>';
+    if (!a) {   // maillon sans agent
+      var nn = (X.noeuds || []).filter(function (n) { return n.id === id; })[0];
+      p.innerHTML = bouton + "<h2>" + esc(nn.label || id) + '</h2><div class="meta" style="margin-top:4px">maillon du trajet client · aucun agent</div><p>Ce maillon n\'a pas d\'agent actif : le trait en pointillé rouge montre où le trajet est coupé.</p>' +
+        ((X.manquants || []).length ? "<h3>Ce qui manque</h3><ul class=\"fichiers\">" + X.manquants.filter(function (m) { return m.toLowerCase().indexOf((nn.label || id).toLowerCase()) >= 0; }).map(function (m) { return "<li>" + esc(m) + "</li>"; }).join("") + "</ul>" : "");
+    } else {
+      var c = ((CK && CK.agents) || []).filter(function (x) { return x.nom === id; })[0], et = c ? c.etat : a.etat, lib = c ? (ETATS[c.etat] || c.etat) : a.etat_libelle;
+      var liste = function (l) { return (l || []).length ? '<ul class="fichiers">' + l.map(function (f) { return "<li>" + esc(f) + "</li>"; }).join("") + "</ul>" : '<p class="vide">rien</p>'; };
+      p.innerHTML = bouton + "<h2>" + esc(a.nom) + '</h2><div class="meta" style="margin-top:4px">' + esc(poleDe(a.nom)) + (c ? ' · <span class="badge ' + esc(et) + '">' + esc(lib) + "</span>" : " · " + esc(lib)) + "</div><p>" + esc(a.but || "") + "</p>" +
+        "<dl><dt>Dernier passage</dt><dd>" + esc(c && c.dernier ? quand(c.dernier) + " (" + c.dernier.slice(0, 16) + ")" : "aucun visible") + "</dd><dt>Dernier résultat</dt><dd>" + esc(c && c.resultat || "—") + "</dd><dt>État</dt><dd>" + esc(lib) + (c && c.raison ? " · " + esc(c.raison) : "") + "</dd><dt>Déclenchement</dt><dd>" + esc(a.declencheur || "—") + "</dd><dt>Mode</dt><dd>" + esc(a.mode || "—") + "</dd></dl>" +
+        "<h3>Fichiers lus</h3>" + liste(a.lit) + "<h3>Fichiers écrits</h3>" + liste(a.ecrit) + "<h3>Utilisé par</h3>" + ((a.utilise_par || []).length ? '<p>' + a.utilise_par.map(esc).join(", ") + "</p>" : '<p class="vide">personne</p>');
+    }
+    p.classList.add("ouvert"); p.setAttribute("aria-hidden", "false");
+    $("fermer").onclick = function () { panneauArchi(null); };
+  }
+  (function () {   // glisser-déposer des points : on déplace les éléments du dessin directement, sans tout redessiner
+    var drag = null;
+    function pointSvg(svg, e) { var m = svg.getScreenCTM(); return m ? [(e.clientX - m.e) / m.a, (e.clientY - m.f) / m.d] : [0, 0]; }
+    function dessiner(svg, n, k) {
+      var g = svg.querySelector('.nd[data-n="' + k + '"]'), r = archiRayon(n); if (!g) return;
+      var c = g.querySelector("circle"), t = g.querySelector("text"); c.setAttribute("cx", n.x.toFixed(1)); c.setAttribute("cy", n.y.toFixed(1)); t.setAttribute("x", n.x.toFixed(1)); t.setAttribute("y", (n.y + r + 14).toFixed(1));
+      archiCalc.liens.forEach(function (l, i) { if (l.a !== k && l.b !== k) return; var ln = svg.querySelector('line[data-l="' + i + '"]'), p = archiCalc.noeuds[l.a], q = archiCalc.noeuds[l.b];
+        ln.setAttribute("x1", p.x.toFixed(1)); ln.setAttribute("y1", p.y.toFixed(1)); ln.setAttribute("x2", q.x.toFixed(1)); ln.setAttribute("y2", q.y.toFixed(1)); });
+    }
+    document.addEventListener("pointerdown", function (e) {
+      var g = e.target.closest && e.target.closest("#graphe-archi .nd"); if (!g || e.button > 0) return;
+      var svg = g.ownerSVGElement, k = +g.getAttribute("data-n"), n = archiCalc.noeuds[k], p = pointSvg(svg, e);
+      drag = { svg: svg, g: g, k: k, n: n, dx: n.x - p[0], dy: n.y - p[1], x0: e.clientX, y0: e.clientY, bouge: false };
+      try { svg.setPointerCapture(e.pointerId); } catch (x) {}
+    });
+    document.addEventListener("pointermove", function (e) {
+      if (!drag) return;
+      if (!drag.bouge && Math.abs(e.clientX - drag.x0) + Math.abs(e.clientY - drag.y0) < 5) return;
+      drag.bouge = true; drag.g.classList.add("glisse");
+      var p = pointSvg(drag.svg, e), W = archiCalc.W, H = archiCalc.H;
+      drag.n.x = Math.max(20, Math.min(W - 20, p[0] + drag.dx)); drag.n.y = Math.max(20, Math.min(H - 20, p[1] + drag.dy));
+      dessiner(drag.svg, drag.n, drag.k);
+    });
+    function fin() {
+      if (!drag) return; var d = drag; drag = null; d.g.classList.remove("glisse");
+      if (d.bouge) { archiPos[d.n.id] = [Math.round(d.n.x), Math.round(d.n.y)]; archiSauver(); } else panneauArchi(d.n.id);
+    }
+    document.addEventListener("pointerup", fin); document.addEventListener("pointercancel", fin);
+    document.addEventListener("keydown", function (e) { var g = e.target.closest && e.target.closest("#graphe-archi .nd"); if (g && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); panneauArchi(archiCalc.noeuds[+g.getAttribute("data-n")].id); } });
+  })();
+  function vueArchitecture() {   // générée par architecture.py (docs.js) : contrats, tâches, traces ; rien n'est écrit à la main. Graphe libre refait le 25/11/2026 (détail d'un agent dans le panneau).
     var h = '<div class="tete"><h1>Architecture</h1>' + (D && D.architecture ? '<span class="meta">générée le ' + esc(D.architecture.genere_le) + " depuis les contrats, les tâches serveur et les traces</span>" : "") + "</div>";
     var X = D && D.architecture;
     if (!X) return h + '<div class="verre accueil-vide"><h2>Pas encore de données</h2><p>Double-cliquez sur l\'icône « Jarvis - Mon entreprise » du bureau pour générer la page.</p></div>';
-    h += '<section class="verre archi-graphe">' + graphe(X) + ((X.manquants || []).length ? '<p class="meta">Maillons manquants : ' + esc(X.manquants.join(" ; ")) + "</p>" : "") + "</section>";
-    h += '<section class="table-ag verre"><h2>Fiches des agents<span class="num">' + (X.agents || []).length + "</span></h2>";
-    (X.agents || []).forEach(function (a) {
-      h += '<div class="archi-ag"><h3>' + esc(a.nom) + '<span class="meta e-' + esc(a.etat) + '">' + esc(a.etat_libelle) + '</span><span class="meta">' + esc(a.mode) + "</span></h3><ul>" + (a.fiche || []).map(function (l) { return "<li>" + esc(l) + "</li>"; }).join("") + "</ul></div>";
-    });
-    return h + "</section>";
+    h += '<section class="verre archi-graphe">' + graphe(X) + ((X.manquants || []).length ? '<p class="meta">' + X.manquants.length + " maillon" + (X.manquants.length > 1 ? "s" : "") + " manquant" + (X.manquants.length > 1 ? "s" : "") + " : traits en pointillé rouge (cliquez un point pour le détail).</p>" : "") + "</section>";
+    return h;
   }
   function vueCerveau() {
     var h = '<div class="tete"><h1>Cerveau</h1>' + (CV ? '<span class="meta">veille du ' + esc(dateLongue(CV.jour)) + " · il propose, vous décidez : rien ne remplace un script qui marche</span>" : "") + "</div>";
@@ -884,6 +980,7 @@
     var foc = document.activeElement && document.activeElement.id === "recherche", pos = foc ? document.activeElement.selectionStart : 0;
     $("contenu").innerHTML = vue === "agents" ? vueAgents() : vue === "docs" ? vueDocs() : vue === "stats" ? vueStats() : vue === "linkedin" ? vueLinkedin() : vue === "cerveau" ? vueCerveau() : vue === "appels" ? vueAppels() : vue === "architecture" ? vueArchitecture() : vue === "chauds" ? vueChauds() : vueJour();
     bulle(null); if (vue === "stats") graphes();
+    if (vue !== "architecture" && archiSel) panneauArchi(null);
     var s = $("recherche");
     if (s) { s.oninput = function () { recherche = s.value; rendre(); }; if (foc) { s.focus(); s.setSelectionRange(pos, pos); } }
   }
@@ -893,6 +990,7 @@
   }
   document.addEventListener("click", function (e) {
     if (e.target.closest("[data-inactifs]")) { voirInactifs = !voirInactifs; rendre(); return; }
+    var po = e.target.closest("[data-pole]"); if (po) { archiPole = po.dataset.pole; try { localStorage.setItem("jarvis-archi-pole", archiPole); } catch (x) {} rendre(); return; }
     var fl = e.target.closest("[data-filtre]"); if (fl) { filtreAppels = fl.dataset.filtre; rendre(); return; }
     var b = e.target.closest("[data-vue]"); if (b) { vue = b.dataset.vue; memoriser(); rendre(); window.scrollTo(0, 0); return; }
     var d = e.target.closest("[data-doc]"); if (d) { doc = d.dataset.doc; memoriser(); rendre(); return; }
@@ -903,7 +1001,7 @@
     var co = e.target.closest("[data-coche]"); if (co) { co.disabled = true; cocher(co.dataset.coche, co.dataset.action, false, co.dataset.api); return; }
     var c = e.target.closest(".agent, .rang:not(.entete)"); if (c) { panneau(c.dataset.nom); rendre(); }
   });
-  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && choisi) { panneau(null); rendre(); } });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && archiSel) panneauArchi(null); else if (e.key === "Escape" && choisi) { panneau(null); rendre(); } });
   function recharger(fin) {   // toutes les 5 min : relit agents.js, ventes.js, docs.js et data/historique.js (réécrits par outils\agents-json.py)
     var f = ["agents.js", "ventes.js", "docs.js", "data/historique.js", "data/leads.js", "data/linkedin.js", "data/cerveau.js", "data/historique-appels.js", "data/cockpit.js", "data/relais.js", "data/appels.js"], n = 0;
     f.forEach(function (x) {

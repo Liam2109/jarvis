@@ -804,7 +804,7 @@ def cockpit(maintenant, v, agents, leads, histo):
     rang = {"bloque": 0, "auto-stop": 1, "attention": 2, "attente": 3, "ok": 4, "repos": 5}
     liste.sort(key=lambda x: (rang.get(x["etat"], 9), x["nom"]))
     compte = {k: sum(1 for x in liste if x["etat"] == k) for k in rang}
-    return {"jour": jour, "genere_le": maintenant.strftime("%Y-%m-%d %H:%M:%S"), "machine": machine, "stop_global": stop_global, "ouvre": ouvre, "compte": compte,
+    return {"jour": jour, "genere_le": maintenant.strftime("%Y-%m-%d %H:%M:%S"), "machine": machine, "stop_global": stop_global, "linkedin_stop": arret_lk, "ouvre": ouvre, "compte": compte,
             "actions": actions_du_jour(), "stats": stats, "chauds": chauds, "agents": liste, "inactifs": sorted(inactifs, key=lambda x: x["nom"])}
 
 

@@ -37,4 +37,10 @@ verifier(ap["heure_notee"] is False and all(x["heure"] == "" for x in ap["appels
 verifier(all(set(x) == {"nom", "ville", "metier", "date", "heure", "resultat", "note", "appelant"} for x in ap["appels"]), "liste des appels : aucun téléphone, mêmes champs partout")
 verifier(all(x["resultat"] and len(x["date"]) == 10 for x in ap["appels"]), "liste des appels : chaque ligne a un résultat et une date")
 verifier(AJ.sources_drive([{"jour": "2026-11-16", "lignes": [{"nom": "Envog Coiffure"}]}]) == {"2026-11-16": {"envogcoiffure"}}, "sources du Drive : noms normalisés par jour de feuille")
+# 25/11/2026 : pages du tableau de bord (structure du fichier, pas de rendu)
+html = (Path(__file__).resolve().parent.parent / "dashboard" / "index.html").read_text(encoding="utf-8")
+jour = html[html.index("function vueJour()"):html.index("function vueChauds()")]
+verifier("zoneLeads" not in jour and "LinkedIn" not in jour and "ck-diag" not in jour and "ck-bandeau" not in jour, "Aujourd'hui : ni leads chauds, ni LinkedIn, ni diagnostic, ni bandeau")
+verifier('"Appels passés"' in jour and '"Décrochés"' in jour and '"Devis envoyés"' in jour and '"Paiements"' in jour, "Aujourd'hui : appels (gros chiffre + trois petits) et bloc Vente")
+verifier("lkResume()" in html and "linkedin_stop" in html and "function diagnostic()" in html and "data-pole" in html and "pointerdown" in html and "jarvis-archi-pos" in html, "LinkedIn avec état, Agents avec diagnostic, architecture déplaçable avec filtres")
 sys.exit(0 if ok else 1)
