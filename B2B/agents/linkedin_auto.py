@@ -117,9 +117,25 @@ class Playwright:
         try: zone.wait_for(state="visible", timeout=8000); zone.click(); self.page.keyboard.insert_text(texte)
         except Exception: raise Inattendu("zone de saisie introuvable")
     def recherche(self, url):
+        if "network=" not in url and "/search/results/people" in url: url += "&network=%5B%22S%22%5D"   # filtre « Relations : 2e »
         self._go(url); out = self._lire_resultats()
         if not out: self._releve_technique()
+        else: self._chercher_sous_plus(out)
         return out
+    def _chercher_sous_plus(self, out, maxi=5):
+        """Profil sans bouton visible : regarde sous « Plus » s'il y a « Se connecter » (lecture seule, le menu est refermé). Sinon le profil reste sans bouton et sera sauté."""
+        import re as _re
+        n = 0
+        for r in out:
+            if r.get("bouton") or n >= maxi: continue
+            try:
+                carte = self.page.locator(f'a[href^="{r["profil"]}"]').first.locator("xpath=ancestor::li[1]")
+                plus = carte.get_by_role("button", name=_re.compile(r"^(Plus|More)\b", _re.I)).first
+                if plus.count() == 0: continue
+                n += 1; plus.click(); self.page.wait_for_timeout(600)
+                if self.page.get_by_role("menuitem", name=_re.compile(r"^(Se connecter|Connect)$", _re.I)).count() > 0: r["bouton"] = True; r["via_plus"] = True
+                self.page.keyboard.press("Escape"); self.page.wait_for_timeout(300)
+            except Exception: continue
     def _releve_technique(self):
         """Aucune carte lue : écrit de quoi réparer le sélecteur (comptes d'éléments, début du texte), dans B2B\linkedin\auto-diag.txt (hors git). Aucun cookie ni identifiant."""
         try:
@@ -138,7 +154,11 @@ class Playwright:
     def demander(self, r):
         import re as _re
         carte = self.page.locator(f'a[href^="{r["profil"]}"]').first.locator("xpath=ancestor::li[1]")
-        try: carte.get_by_role("button", name=_re.compile(r"^(Se connecter|Connect)$|^(Invitez|Invite)\b", _re.I)).first.click()
+        try:
+            if r.get("via_plus"):
+                carte.get_by_role("button", name=_re.compile(r"^(Plus|More)\b", _re.I)).first.click(); self.page.wait_for_timeout(600)
+                self.page.get_by_role("menuitem", name=_re.compile(r"^(Se connecter|Connect)$", _re.I)).first.click()
+            else: carte.get_by_role("button", name=_re.compile(r"^(Se connecter|Connect)$|^(Invitez|Invite)\b", _re.I)).first.click()
         except Exception: raise Inattendu("bouton « Se connecter » introuvable")
         self.page.wait_for_timeout(1200); self._cliquer(r"Envoyer sans note|Send without a note")   # sans note, toujours ; sinon : arrêt
         self.page.wait_for_timeout(1500)
@@ -372,10 +392,10 @@ def action_demande(conf, etat, s, jour, now):
         res = s.recherche(E.lien_entreprise(c) if c["type"] == "entreprise" else c["lien"]); r = choisir(c, res, etat); suite = etat["auto"]
         if not r:
             diag = f"{len(res)} résultat(s) lu(s), {sum(1 for x in res if x.get('bouton'))} avec bouton Se connecter, premiers noms : {', '.join(x['nom'] for x in res[:3]) or '-'}"
-            technique = not res or not any(x.get("bouton") for x in res)   # aucune carte lue, ou aucun bouton : signe d'une page lue de travers, pas d'un simple homonyme absent
+            technique = not res   # (b) aucune carte lisible = vrai changement de page. (a) cartes lues mais sans bouton (3e et +) : on saute ce profil, sans arrêt (26/11/2026)
             suite["introuvables_suite"] = suite.get("introuvables_suite", 0) + 1 if technique else 0
             E.appliquer(etat, i, "ignorer", jour, conf); E.journaliser("auto-introuvable", f"{i} : {diag}")
-            if suite["introuvables_suite"] >= 3: raise Inattendu(f"3 recherches de suite sans carte ni bouton lisible ({diag}) : la page de résultats a peut-être changé")
+            if suite["introuvables_suite"] >= 3: raise Inattendu(f"3 recherches de suite sans carte lisible ({diag}) : la page de résultats a peut-être changé")
             return f"cible {i} : profil introuvable ou ambigu, écartée ({diag})"
         suite["introuvables_suite"] = 0
         s.demander(r); c["nom_profil"] = r["nom"]; c["profil_url"] = r["profil"]; etat["auto"]["profils"].append(r["profil"])

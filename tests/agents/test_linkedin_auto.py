@@ -121,6 +121,18 @@ class TestFile(Auto):
         e = self.etat(); ids = list(e["cibles"]); self.assertEqual(len(ids), len(set(ids))); self.assertGreater(len(ids), 20)   # des cibles neuves ont été ajoutées
         self.assertLessEqual(e["auto"].get("ajoutees", 0), 60); self.assertEqual(self.envoyes("demande"), [])   # introuvable = écarté, jamais de hasard
 
+    def test_3e_et_plus_sans_bouton_est_saute_sans_arret(self):
+        self.jour(modele=lambda t: None)   # cartes lisibles mais sans bouton « Se connecter » (3e et +) : saut, jamais d'AUTO-STOP
+        self.nav.recherche = lambda url: [{"nom": "Autre " + str(k), "texte": "3e et +", "profil": "https://www.linkedin.com/in/s" + str(abs(hash(url))) + str(k), "bouton": False} for k in range(7)]
+        for k in range(12): self.tick(self.t0 + timedelta(minutes=15 * k))
+        self.assertFalse(LA.f_arret().exists()); self.assertEqual(self.envoyes("demande"), []); self.assertEqual(self.alertes, [])
+
+    def test_aucune_carte_lisible_3_fois_de_suite_arrete(self):
+        self.jour(modele=lambda t: None)
+        self.nav.recherche = lambda url: []   # vrai changement de page
+        for k in range(12): self.tick(self.t0 + timedelta(minutes=15 * k))
+        self.assertTrue(LA.f_arret().exists()); self.assertEqual(self.envoyes("demande"), [])
+
     def test_apercu_n_ecrit_rien_et_n_envoie_rien(self):
         self.preparer(); avant = E.ETAT.read_text(encoding="utf-8")
         import io, contextlib; buf = io.StringIO()
