@@ -127,6 +127,12 @@ class TestFile(Auto):
         for k in range(12): self.tick(self.t0 + timedelta(minutes=15 * k))
         self.assertFalse(LA.f_arret().exists()); self.assertEqual(self.envoyes("demande"), []); self.assertEqual(self.alertes, [])
 
+    def test_page_aucun_resultat_est_normale_sans_arret(self):
+        self.jour(modele=lambda t: None)   # page « Aucun résultat » (personne trouvée même en élargissant) : normal, jamais d'AUTO-STOP (26/11/2026)
+        self.nav.vide_normal = True; self.nav.recherche = lambda url: []
+        for k in range(12): self.tick(self.t0 + timedelta(minutes=15 * k))
+        self.assertFalse(LA.f_arret().exists()); self.assertEqual(self.envoyes("demande"), []); self.assertEqual(self.alertes, [])
+
     def test_aucune_carte_lisible_3_fois_de_suite_arrete(self):
         self.jour(modele=lambda t: None)
         self.nav.recherche = lambda url: []   # vrai changement de page

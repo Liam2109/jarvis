@@ -118,10 +118,17 @@ class Playwright:
         except Exception: raise Inattendu("zone de saisie introuvable")
     def recherche(self, url):
         if "network=" not in url and "/search/results/people" in url: url += "&network=%5B%22S%22%5D"   # filtre « Relations : 2e »
+        self.vide_normal = False
         self._go(url); out = self._lire_resultats()
-        if not out: self._releve_technique()
+        if not out and "network=%5B%22S%22%5D" in url and self._page_aucun_resultat():   # « Aucun résultat » avec le filtre 2e = normal : on élargit (2e, 3e et +)
+            self._go(url.replace("&network=%5B%22S%22%5D", "").replace("network=%5B%22S%22%5D", "")); out = self._lire_resultats()
+        if not out and self._page_aucun_resultat(): self.vide_normal = True   # page « Aucun résultat » lue : personne à trouver, pas une panne
+        elif not out: self._releve_technique()
         else: self._chercher_sous_plus(out)
         return out
+    def _page_aucun_resultat(self):
+        try: return bool(re.search(r"aucun r.sultat|no results found", self.page.inner_text("main", timeout=3000), re.I))
+        except Exception: return False
     def _chercher_sous_plus(self, out, maxi=5):
         """Profil sans bouton visible : regarde sous « Plus » s'il y a « Se connecter » (lecture seule, le menu est refermé). Sinon le profil reste sans bouton et sera sauté."""
         import re as _re
@@ -392,7 +399,7 @@ def action_demande(conf, etat, s, jour, now):
         res = s.recherche(E.lien_entreprise(c) if c["type"] == "entreprise" else c["lien"]); r = choisir(c, res, etat); suite = etat["auto"]
         if not r:
             diag = f"{len(res)} résultat(s) lu(s), {sum(1 for x in res if x.get('bouton'))} avec bouton Se connecter, premiers noms : {', '.join(x['nom'] for x in res[:3]) or '-'}"
-            technique = not res   # (b) aucune carte lisible = vrai changement de page. (a) cartes lues mais sans bouton (3e et +) : on saute ce profil, sans arrêt (26/11/2026)
+            technique = not res and not getattr(s, "vide_normal", False)   # (b) aucune carte lisible = vrai changement de page. (a) cartes lues mais sans bouton (3e et +) : on saute ce profil, sans arrêt (26/11/2026)
             suite["introuvables_suite"] = suite.get("introuvables_suite", 0) + 1 if technique else 0
             E.appliquer(etat, i, "ignorer", jour, conf); E.journaliser("auto-introuvable", f"{i} : {diag}")
             if suite["introuvables_suite"] >= 3: raise Inattendu(f"3 recherches de suite sans carte lisible ({diag}) : la page de résultats a peut-être changé")
