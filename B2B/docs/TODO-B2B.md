@@ -54,6 +54,8 @@ _Mise à jour : 24 nov. 2026 (le fait est supprimé ; l'historique est dans le j
 - [ ] Faire passer la publication et le déploiement des pages exemples par la garde (non branchés)
 - [ ] CEO Jarvis autonome, pont Discord de Jarvis (connecte: false) : après la 1re vente
 - [ ] Production (design, code, publication) : après la 1re vente
+- [ ] Agent relances : liste chaque matin les rappels (leads chauds, D+3) avec phrase prête, je valide — après première vente
+- [ ] Agent devis + lien Stripe prêt, je valide — après première vente
 - [ ] Tableau de bord, suite : devis et ventes du serveur dans l'historique du gros PC (feuille « Chiffres serveur », idée du 18/11 dans IDEES-MASTER, à valider par Liam) ; commissions
 - [ ] Fiche d'accueil client (photos, couleurs, logo, avis, spécificités)
 - [ ] Recruter d'autres call callers (15 %, jamais de closers), dont un spécialiste restaurants
